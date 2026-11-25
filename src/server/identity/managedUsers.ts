@@ -6,6 +6,7 @@ import { phpQuery, type PhpValue } from "../http/input"
 import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
 import { queryParams, requestUrl } from "../http/request"
 import { forbidden, apiJson, validationError } from "../http/responses"
+import { listSortOf, MANAGED_USER_SORTS, type ListSort, type ManagedUserSort } from "@/schemas/listSort"
 import { managedUserFiltersSchema } from "@/schemas/people"
 import { validateSchema } from "../http/schemaValidation"
 import { createManagedUserRepository } from "./managedUserQueries"
@@ -24,7 +25,7 @@ export type ManagedUserRow = {
 }
 
 export interface ManagedUserRepository {
-  page(filters: ManagedUserFilters, page: number, perPage: number): Promise<{ total: number; items: ManagedUserRow[] }>
+  page(filters: ManagedUserFilters, page: number, perPage: number, sort?: ListSort<ManagedUserSort>): Promise<{ total: number; items: ManagedUserRow[] }>
   careers(): Promise<{ id: string; nombre: string }[]>
 }
 
@@ -65,7 +66,8 @@ export async function managedUsers(request: Request, deps: ManagedUserDeps = def
   const career = careerInput !== null && isUuid(careerInput) ? careerInput : null
   const query = queryParams(new URL(request.url))
   const currentPage = resolveCurrentPage(query.get("page") ?? null)
-  const { total, items } = await deps.users.page({ search: falsy(search) ? null : search, status, role, career }, currentPage, PER_PAGE)
+  const sort = listSortOf(MANAGED_USER_SORTS, input.sort, input.dir)
+  const { total, items } = await deps.users.page({ search: falsy(search) ? null : search, status, role, career }, currentPage, PER_PAGE, sort)
   const data = items.map((user) => {
     const effective = user.assignments.filter((assignment) => assignment.active)
     return {

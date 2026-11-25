@@ -3,10 +3,11 @@ import { and, asc, desc, eq, exists, inArray, isNotNull, sql, type SQL } from "d
 import { db } from "@/db"
 import { isoText, jsonText } from "@/db/expressions"
 import { aprobaciones, convocatoriasCarreras, convocatoriasUniversidad, docentesVigentesSilabo, enviosBiblioteca, periodosAcademicos, revisionesSilabo, silabos, usuarios } from "@/db/schema"
+import type { CoordinationHistorySort, CoordinationReviewSort, ListSort } from "@/schemas/listSort"
 import { phpJsonDecode } from "../configuration/phpValues"
 import type { CoordinationReviewRepository, HistoryFilters, HistoryRow, ReviewListRow } from "./coordinationReviews"
 import { syllabusFacts } from "./draftFieldStore"
-import { careerIs, convocationWhere, IN_CURRENT_PERIOD, IN_PAST_PERIOD, SYLLABUS_EXISTS } from "./syllabusSql"
+import { careerIs, convocationWhere, IN_CURRENT_PERIOD, IN_PAST_PERIOD, PARALLEL_CODE, SUBJECT_CODE, SUBJECT_NAME, SYLLABUS_EXISTS } from "./syllabusSql"
 import { subjectSearch, syllabusDetails, type Executor } from "./teacherSyllabusQueries"
 
 const REVISION_EXISTS = sql`exists (select 1 from silabos silabo_revision where silabo_revision.silabo_id = revisiones_silabo.silabo_id
@@ -42,6 +43,60 @@ function historyConditions(filters: Pick<HistoryFilters, "careerId">): SQL {
     ],
     sql` and `,
   )
+}
+
+const SUBJECT_OF = (column: SQL): SQL => sql`(select ${column} from paralelos paralelo
+  inner join asignaturas asignatura on asignatura.asignatura_id = paralelo.asignatura_id
+  where paralelo.paralelo_id = silabos.paralelo_id)`
+
+const REVIEW_SORT_KEYS: Record<CoordinationReviewSort, SQL> = {
+  subject: SUBJECT_OF(SUBJECT_NAME),
+  teacher: sql`(select min(usuario_docente.nombre_usuario) from docentes_vigentes_silabo docente
+    inner join usuarios usuario_docente on usuario_docente.usuario_id = docente.usuario_id
+    where docente.silabo_id = silabos.silabo_id)`,
+  revision: sql`(select max(revisiones_silabo.numero_revision) from revisiones_silabo
+    where revisiones_silabo.silabo_id = silabos.silabo_id and ${REVISION_EXISTS})`,
+  submitted: sql`(select revisiones_silabo.enviado_en from revisiones_silabo
+    where revisiones_silabo.silabo_id = silabos.silabo_id and ${REVISION_EXISTS}
+    order by revisiones_silabo.numero_revision desc limit 1)`,
+}
+
+const LATEST_APPROVED = (column: SQL): SQL => sql`(select ${column} from revisiones_silabo
+  inner join aprobaciones on aprobaciones.revision_silabo_id = revisiones_silabo.revision_silabo_id
+  where revisiones_silabo.silabo_id = silabos.silabo_id and ${REVISION_EXISTS}
+  order by revisiones_silabo.numero_revision desc limit 1)`
+
+const HISTORY_SORT_KEYS: Record<CoordinationHistorySort, SQL> = {
+  subject: SUBJECT_OF(SUBJECT_NAME),
+  code: SUBJECT_OF(SUBJECT_CODE),
+  parallel: sql`(select ${PARALLEL_CODE} from paralelos paralelo where paralelo.paralelo_id = silabos.paralelo_id)`,
+  author: LATEST_APPROVED(sql`(select usuarios.nombre_usuario from usuarios where usuarios.usuario_id = revisiones_silabo.enviado_por)`),
+  approved: LATEST_APPROVED(sql`aprobaciones.aprobado_en`),
+}
+
+const SAVED_LAST = sql`${silabos.guardadoEn} desc nulls last`
+
+const PERIOD_END = sql`(select pa.fecha_fin_periodo from convocatorias_carreras as cc
+                inner join convocatorias_universidad as cu on cu.convocatoria_universidad_id = cc.convocatoria_universidad_id
+                inner join periodos_academicos as pa on pa.periodo_academico_id = cu.periodo_academico_id
+                where cc.convocatoria_carrera_id = silabos.convocatoria_carrera_id) desc`
+
+const sortedBy = (key: SQL, sort: NonNullable<ListSort>): SQL => sql`${key} ${sql.raw(sort.direction)} nulls last`
+
+export function reviewOrder(sort: ListSort<CoordinationReviewSort>): SQL[] {
+  if (sort === null) return [SAVED_LAST]
+  return [sortedBy(REVIEW_SORT_KEYS[sort.column], sort), SAVED_LAST, asc(silabos.silaboId)]
+}
+
+export function historyOrder(sort: ListSort<CoordinationHistorySort>): SQL[] {
+  const chosen = sort === null ? [] : [sortedBy(HISTORY_SORT_KEYS[sort.column], sort)]
+  return [
+    PERIOD_END,
+    ...chosen,
+    sql`${silabos.datosAcademicosSilabo}->'subject'->>'name'`,
+    sql`${silabos.datosAcademicosSilabo}->'parallel'->>'code'`,
+    asc(silabos.silaboId),
+  ]
 }
 
 const APPROVED = exists(db.select({ id: aprobaciones.aprobacionId }).from(aprobaciones).where(eq(aprobaciones.revisionSilaboId, revisionesSilabo.revisionSilaboId)))
@@ -101,7 +156,7 @@ export async function teacherNamesOf(executor: Executor, ids: string[]): Promise
 
 export function createCoordinationReviewRepository(executor: Executor = db): CoordinationReviewRepository {
   return {
-    async reviewPage(filters, page, perPage) {
+    async reviewPage(filters, page, perPage, sort = null) {
       const where = reviewConditions(filters)
       const total = await executor.$count(silabos, where)
       if (total === 0) return { total, items: [] }
@@ -110,7 +165,7 @@ export function createCoordinationReviewRepository(executor: Executor = db): Coo
           .select({ id: silabos.silaboId })
           .from(silabos)
           .where(where)
-          .orderBy(sql`${silabos.guardadoEn} desc nulls last`)
+          .orderBy(...reviewOrder(sort))
           .limit(perPage)
           .offset((page - 1) * perPage)
       ).map((row) => row.id)
@@ -134,7 +189,7 @@ export function createCoordinationReviewRepository(executor: Executor = db): Coo
       return { total, items }
     },
     teacherNames: (ids) => teacherNamesOf(executor, ids),
-    async historyPage(filters, page, perPage) {
+    async historyPage(filters, page, perPage, sort = null) {
       const conditions: SQL[] = [historyConditions(filters)]
       if (filters.periodId !== null) {
         conditions.push(convocationWhere(sql`exists (select 1 from convocatorias_universidad proceso_periodo
@@ -149,15 +204,7 @@ export function createCoordinationReviewRepository(executor: Executor = db): Coo
           .select({ id: silabos.silaboId })
           .from(silabos)
           .where(where)
-          .orderBy(
-            sql`(select pa.fecha_fin_periodo from convocatorias_carreras as cc
-                inner join convocatorias_universidad as cu on cu.convocatoria_universidad_id = cc.convocatoria_universidad_id
-                inner join periodos_academicos as pa on pa.periodo_academico_id = cu.periodo_academico_id
-                where cc.convocatoria_carrera_id = silabos.convocatoria_carrera_id) desc`,
-            sql`${silabos.datosAcademicosSilabo}->'subject'->>'name'`,
-            sql`${silabos.datosAcademicosSilabo}->'parallel'->>'code'`,
-            asc(silabos.silaboId),
-          )
+          .orderBy(...historyOrder(sort))
           .limit(perPage)
           .offset((page - 1) * perPage)
       ).map((row) => row.id)

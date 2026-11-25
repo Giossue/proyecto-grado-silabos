@@ -23,7 +23,7 @@ export type ManagedUsersResponse = {
   careers: Array<{ id: string; nombre: string }>;
 };
 
-export const getManagedUsers = (filters: { q?: string; status?: string; role?: string; career?: string; page?: number } = {}) => {
+export const getManagedUsers = (filters: { q?: string; status?: string; role?: string; career?: string; sort?: string; dir?: string; page?: number } = {}) => {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) if (value && value !== 'all') query.set(key, String(value));
   return api<ManagedUsersResponse>(`/admin/users${query.size ? `?${query}` : ''}`);

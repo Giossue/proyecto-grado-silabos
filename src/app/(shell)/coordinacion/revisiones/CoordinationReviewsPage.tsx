@@ -12,13 +12,15 @@ import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { TableCardLine } from "@/components/domain/TableCardLine"
 import { TablePagination } from "@/components/domain/TablePagination"
+import { SortableHead, SortSelect, SortStatus } from "@/components/domain/TableSort"
 import { ConvocationActions } from "@/components/domain/syllabus/ConvocationActions"
 import { ConvocationTrackingTable } from "@/components/domain/syllabus/ConvocationTrackingTable"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableEmpty, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { serverSortOf, useServerSort, type ServerSortColumns, type ServerSortState } from "@/composables/useServerSort"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { paths, reviewAreaPaths } from "@/lib/routes"
@@ -32,6 +34,13 @@ import { setupChecklistState } from "@/state/setupChecklist"
 
 type Tab = "cola" | "seguimiento"
 
+const SORT_COLUMNS = {
+  subject: { label: "Asignatura" },
+  teacher: { label: "Docente" },
+  revision: { label: "Revisión", type: "number" },
+  submitted: { label: "Enviado", type: "date" },
+} satisfies ServerSortColumns
+
 const submittedOn = (value: string | null): string => (value ? formatDateDisplay(value, { dateStyle: "medium" }) : "—")
 
 export default function CoordinationReviewsPage() {
@@ -41,10 +50,16 @@ export default function CoordinationReviewsPage() {
   const [initial] = useState(() => {
     const query = queryOf(searchParams)
 
-    return { page: queryPage(query.page), search: queryText(query.search), tab: (queryText(query.tab) === "seguimiento" ? "seguimiento" : "cola") as Tab }
+    return {
+      page: queryPage(query.page),
+      search: queryText(query.search),
+      sort: serverSortOf(SORT_COLUMNS, queryText(query.sort), queryText(query.dir)),
+      tab: (queryText(query.tab) === "seguimiento" ? "seguimiento" : "cola") as Tab,
+    }
   })
-  const [applied, setApplied] = useState({ page: initial.page, search: initial.search })
-  const reviews = useQuery({ ...coordinationQueueQuery(applied.page, applied.search), placeholderData: keepPreviousData })
+  const [applied, setApplied] = useState({ page: initial.page, search: initial.search, sort: initial.sort })
+  const [sorting, setSorting] = useState<ServerSortState>(initial.sort)
+  const reviews = useQuery({ ...coordinationQueueQuery(applied.page, applied.search, applied.sort), placeholderData: keepPreviousData })
   const summaryQuery = useQuery(dashboardSummaryQuery())
   const data = reviews.data ?? null
   const summary = summaryQuery.data ?? null
@@ -67,12 +82,12 @@ export default function CoordinationReviewsPage() {
       router.replace(paths.dashboard)
       return
     }
-    syncFilters(router, { search: applied.search, tab: tab === "seguimiento" ? "seguimiento" : "" }, applied.page)
+    syncFilters(router, { search: applied.search, ...applied.sort, tab: tab === "seguimiento" ? "seguimiento" : "" }, applied.page)
   }, [applied, reviews.data, reviews.isPlaceholderData, router, tab])
 
-  const load = (page = 1, withSummary = false, currentSearch = search): Promise<void> => {
+  const load = (page = 1, withSummary = false, currentSearch = search, currentSort = sorting): Promise<void> => {
     if (withSummary) void summaryQuery.refetch()
-    const next = { page, search: currentSearch }
+    const next = { page, search: currentSearch, sort: currentSort }
     if (sameKey(next, applied)) return reviews.refetch().then(() => undefined)
     setApplied(next)
     return Promise.resolve()
@@ -87,6 +102,17 @@ export default function CoordinationReviewsPage() {
     setSearch("")
     void load(1, false, "")
   }
+
+  const sort = useServerSort({
+    columns: SORT_COLUMNS,
+    value: sorting,
+    total: data?.syllabi.total,
+    onSort: (next) => {
+      setSorting(next)
+      void load(1, false, search, next)
+    },
+    onChoose: setSorting,
+  })
 
   const changed = async (message: string): Promise<void> => {
     toast.success(message)
@@ -155,15 +181,25 @@ export default function CoordinationReviewsPage() {
                     <Input id="review-search" value={search} type="search" maxLength={120} placeholder="Buscar por asignatura o código" onChange={(event) => setSearch(event.target.value)} />
                   </Field>
                 }
+                filters={<SortSelect sort={sort} inputId="review-sort" />}
               />
             </form>
+            <SortStatus sort={sort} />
             <Table label="Revisiones de coordinación">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Asignatura</TableHead>
-                  <TableHead>Docente</TableHead>
-                  <TableHead className="text-center">Revisión</TableHead>
-                  <TableHead className="text-center">Enviado</TableHead>
+                  <SortableHead sort={sort} column="subject">
+                    Asignatura
+                  </SortableHead>
+                  <SortableHead sort={sort} column="teacher">
+                    Docente
+                  </SortableHead>
+                  <SortableHead sort={sort} column="revision" className="text-center">
+                    Revisión
+                  </SortableHead>
+                  <SortableHead sort={sort} column="submitted" className="text-center">
+                    Enviado
+                  </SortableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

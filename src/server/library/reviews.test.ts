@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
+import type { ListSort } from "@/schemas/listSort"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { libraryHistory, libraryReviews, type LibraryReviewRepository, type ReviewFilters, type ReviewRow, type SyllabusSummary } from "./reviews"
@@ -187,5 +188,64 @@ describe("GET /api/v1/library/history", () => {
   it("is forbidden to coordination", async () => {
     world.assignments = [makeAssignment({ role: "coordinador" })]
     expect((await get(libraryHistory, "/api/v1/library/history")).status).toBe(403)
+  })
+})
+
+describe("ordering the library lists", () => {
+  const subjects = Array.from({ length: 25 }, (_, index) => `Materia ${String(index + 1).padStart(2, "0")}`)
+  let sorts: unknown[]
+
+  const sortingDeps = () => ({
+    bridge: fakeDeps(world),
+    reviews: {
+      ...repository(),
+      async page(_filters: ReviewFilters, page: number, perPage: number, sort?: ListSort) {
+        sorts.push(sort ?? null)
+        const all = subjects.map((subject, index) => row({ revisionId: subject, syllabusId: `s${index}`, sentBy: subject }))
+        const ordered = sort ? all.toSorted((left, right) => (sort.direction === "asc" ? 1 : -1) * left.sentBy.localeCompare(right.sentBy)) : all
+        return { total: all.length, items: ordered.slice((page - 1) * perPage, page * perPage) }
+      },
+    },
+  })
+
+  const sorted = async (handler: typeof libraryReviews, path: string) => {
+    const response = await handler(apiRequest(path, { cookie }), sortingDeps())
+    const text = await response.text()
+    return { status: response.status, text, json: JSON.parse(text) as Record<string, unknown> }
+  }
+
+  const sentBy = (json: Record<string, unknown>): string[] => (json.reviews as { data: { sent_by: string }[] }).data.map((item) => item.sent_by)
+
+  beforeEach(() => {
+    sorts = []
+  })
+
+  it("sorts the current reviews by the chosen column across every page", async () => {
+    const { status, json } = await sorted(libraryReviews, "/api/v1/library/reviews?sort=subject&dir=desc&page=2")
+    expect(status).toBe(200)
+    expect(sorts).toEqual([{ column: "subject", direction: "desc" }])
+    expect(sentBy(json)).toEqual(["Materia 05", "Materia 04", "Materia 03", "Materia 02", "Materia 01"])
+    expect(json.filters).toEqual({ q: null, state: null, faculty: null, period: null, mine: false })
+  })
+
+  it("sorts the history by the chosen column", async () => {
+    const { json } = await sorted(libraryHistory, "/api/v1/library/history?sort=period&dir=asc")
+    expect(sorts).toEqual([{ column: "period", direction: "asc" }])
+    expect(sentBy(json)).toEqual(subjects.slice(0, 20))
+  })
+
+  it("keeps today's order and payload when no column is chosen", async () => {
+    const plain = await get(libraryReviews, "/api/v1/library/reviews")
+    const { json } = await sorted(libraryReviews, "/api/v1/library/reviews")
+    expect(sorts).toEqual([null])
+    expect(Object.keys(json)).toEqual(Object.keys(plain.json))
+    expect(sentBy(json)).toEqual(subjects.slice(0, 20))
+  })
+
+  it("rejects a column or direction outside the whitelist", async () => {
+    const { status, json } = await sorted(libraryHistory, "/api/v1/library/history?sort=email&dir=up")
+    expect(status).toBe(422)
+    expect(json.errors).toEqual({ sort: ["El valor seleccionado en orden no es válido."], dir: ["El valor seleccionado en dirección del orden no es válido."] })
+    expect(sorts).toEqual([])
   })
 })

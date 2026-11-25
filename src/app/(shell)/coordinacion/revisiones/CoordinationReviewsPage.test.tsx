@@ -1,4 +1,4 @@
-import { fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getConvocation } from "@/api/convocations"
@@ -147,5 +147,25 @@ describe("CoordinationReviewsPage", () => {
     expect(tabs.map((tab) => tab.textContent)).toEqual(["Cola de revisión", "Seguimiento"])
     expect(tabs.every((tab) => tab.querySelector("svg") !== null)).toBe(true)
     unmount()
+  })
+
+  it("ordena la cola desde el encabezado en el servidor, vuelve a la página 1 y lo guarda en la dirección", async () => {
+    navigation.reset("/coordinacion/revisiones?page=2")
+    mountPage()
+    await flush()
+    expect(getReviews).toHaveBeenLastCalledWith({ search: "", page: 2 })
+
+    fireEvent.click(screen.getByRole("button", { name: "Enviado" }))
+    await flush()
+    expect(getReviews).toHaveBeenLastCalledWith({ search: "", sort: "submitted", dir: "asc", page: 1 })
+    expect(screen.getByRole("columnheader", { name: "Enviado" }).getAttribute("aria-sort")).toBe("ascending")
+    expect(screen.getByRole("columnheader", { name: "Asignatura" }).hasAttribute("aria-sort")).toBe(false)
+    expect(navigation.fullPath).toBe("/coordinacion/revisiones?sort=submitted&dir=asc")
+    expect(screen.getByRole("status").textContent).toBe("Ordenado por Enviado, ascendente, 1 fila")
+
+    fireEvent.click(screen.getByRole("button", { name: "Enviado" }))
+    await flush()
+    expect(getReviews).toHaveBeenLastCalledWith({ search: "", sort: "submitted", dir: "desc", page: 1 })
+    expect(screen.getByRole("columnheader", { name: "Enviado" }).getAttribute("aria-sort")).toBe("descending")
   })
 })

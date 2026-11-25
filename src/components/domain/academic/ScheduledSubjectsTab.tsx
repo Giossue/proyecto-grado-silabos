@@ -7,12 +7,14 @@ import { ParallelCreationDialog } from "@/components/domain/academic/ParallelCre
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { StatusBadge } from "@/components/domain/StatusBadge"
 import { TablePagination } from "@/components/domain/TablePagination"
+import { SortableHead, SortStatus } from "@/components/domain/TableSort"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { useClientPagination } from "@/composables/useClientPagination"
+import { useTableSort, type SortColumns } from "@/composables/useTableSort"
 import { shiftLabel } from "@/lib/parallelShifts"
 import { activateRow, rowButtonClass } from "@/lib/rowActivation"
 import { cn } from "@/lib/utils"
@@ -36,6 +38,10 @@ const filters: Record<string, ClientFilterDefinition<ScheduledRow>> = {
   paralelo: { matches: (item, value) => item.parallels.some((parallel) => parallel.code === value) },
   jornada: { matches: (item, value) => item.parallels.some((parallel) => shiftKey(parallel.shift) === value) },
 }
+const sortColumns = {
+  subject: { label: "Materia", value: (item: ScheduledRow) => item.subject_name },
+  cycle: { label: "Ciclo", type: "number", value: (item: ScheduledRow) => item.subject_cycle },
+} satisfies SortColumns<ScheduledRow>
 const canPlan = (item: ScheduledRow): boolean => item.editable
 const selectableParallels = (item: ScheduledRow) => item.parallels.filter((parallel) => parallel.editable !== false)
 
@@ -43,7 +49,8 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
   const rows = data.scheduledSubjects
   const shiftOptions = data.options.shiftOptions
   const filter = useClientFilter(rows, searchable, filters)
-  const pagination = useClientPagination(filter.items, 20, filter.criteria)
+  const sort = useTableSort(filter.items, sortColumns)
+  const pagination = useClientPagination(sort.items, 20, `${filter.criteria}|${sort.criteria}`)
   const [planningId, setPlanningId] = useState<string | null>(null)
   const [planningOpen, setPlanningOpen] = useState(false)
   const [selectedParallels, setSelectedParallels] = useState<string[]>([])
@@ -136,6 +143,7 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
         inputId="scheduled-subjects-search"
         label="Buscar materia programada"
         placeholder="Buscar por materia"
+        sort={sort}
         filters={
           <>
             {filterSelect("ciclo", "scheduled-subject-cycle", "Ciclo", "Todos los ciclos", "Todos los ciclos", cycleOptions)}
@@ -169,8 +177,8 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
             <TableHead className="w-10">
               {selectableItems.length ? <Checkbox checked={allSelected} aria-label="Seleccionar las materias visibles" onCheckedChange={(checked) => setSubjects(selectableItems, checked === true)} /> : null}
             </TableHead>
-            <TableHead>Materia</TableHead>
-            <TableHead className="text-center">Ciclo</TableHead>
+            <SortableHead sort={sort} column="subject">Materia</SortableHead>
+            <SortableHead sort={sort} column="cycle" className="text-center">Ciclo</SortableHead>
             <TableHead className="text-center">Paralelos</TableHead>
             <TableHead className="text-center">Jornada</TableHead>
             <TableHead>Docente</TableHead>
@@ -285,6 +293,7 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
           )}
         </TableBody>
       </Table>
+      <SortStatus sort={sort} />
       <TablePagination meta={pagination.meta} label="Paginación de materias programadas" onPageChange={pagination.setPage} />
       {planning ? (
         <ParallelCreationDialog

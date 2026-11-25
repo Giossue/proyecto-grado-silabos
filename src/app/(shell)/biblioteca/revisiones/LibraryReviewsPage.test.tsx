@@ -1,4 +1,4 @@
-import { fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ApiError } from "@/api/client"
 import { getDashboard } from "@/api/dashboard"
@@ -124,5 +124,22 @@ describe("LibraryReviewsPage", () => {
     expect(getLibraryReviews).toHaveBeenLastCalledWith({ q: "", state: "pendiente", faculty: "all", page: 1 })
     expect(localStorage.getItem("silabos:biblioteca:facultad:")).toBeNull()
     expect(container.textContent).not.toContain("no es válida")
+  })
+
+  it("ordena la bandeja desde el encabezado en el servidor y «Quitar filtros» conserva el orden", async () => {
+    vi.mocked(getLibraryReviews).mockResolvedValue(page())
+    await mountPage()
+
+    fireEvent.click(screen.getByRole("button", { name: "Estado" }))
+    await flush()
+
+    expect(getLibraryReviews).toHaveBeenLastCalledWith({ q: "", state: "pendiente", faculty: "all", sort: "state", dir: "asc", page: 1 })
+    expect(screen.getByRole("columnheader", { name: "Estado" }).getAttribute("aria-sort")).toBe("ascending")
+    expect(navigation.fullPath).toBe("/biblioteca/revisiones?state=pendiente&sort=state&dir=asc")
+
+    fireEvent.click([...document.body.querySelectorAll("button")].find((button) => button.textContent === "Quitar filtros")!)
+    await flush()
+    expect(getLibraryReviews).toHaveBeenLastCalledWith({ q: "", state: "all", faculty: "all", sort: "state", dir: "asc", page: 1 })
+    expect(navigation.fullPath).toBe("/biblioteca/revisiones?sort=state&dir=asc")
   })
 })

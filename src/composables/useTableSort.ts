@@ -31,7 +31,7 @@ export const DEFAULT_SORT = "default"
 
 const collator = new Intl.Collator("es", { numeric: true, sensitivity: "base" })
 
-const directionWords: Record<NonNullable<SortColumn<unknown>["type"]>, Record<SortDirection, string>> = {
+export const directionWords: Record<NonNullable<SortColumn<unknown>["type"]>, Record<SortDirection, string>> = {
   text: { ascending: "A a Z", descending: "Z a A" },
   number: { ascending: "de menor a mayor", descending: "de mayor a menor" },
   date: { ascending: "más antiguo primero", descending: "más reciente primero" },

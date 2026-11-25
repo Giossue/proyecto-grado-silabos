@@ -6,6 +6,7 @@ import { phpQuery, type PhpArray } from "../http/input"
 import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
 import { queryParams, requestUrl } from "../http/request"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
+import { COORDINATION_HISTORY_SORTS, COORDINATION_REVIEW_SORTS, listSortOf, type CoordinationHistorySort, type CoordinationReviewSort, type ListSort } from "@/schemas/listSort"
 import { reviewHistorySchema, reviewSearchSchema } from "@/schemas/syllabus"
 import { validateSchema } from "../http/schemaValidation"
 import { hasRole, mayView, ROLE_COORDINATOR, type SyllabusFacts } from "./policy"
@@ -45,9 +46,9 @@ export type RevisionRecord = { id: string; syllabusId: string; number: number; s
 export type SyllabusSummary = { id: string; subject: string; code: string; period: string; revisions: { id: string; number: number; submittedAt: string }[] }
 
 export interface CoordinationReviewRepository {
-  reviewPage(filters: { careerId: string | null; search: string }, page: number, perPage: number): Promise<{ total: number; items: ReviewListRow[] }>
+  reviewPage(filters: { careerId: string | null; search: string }, page: number, perPage: number, sort?: ListSort<CoordinationReviewSort>): Promise<{ total: number; items: ReviewListRow[] }>
   teacherNames(syllabusIds: string[]): Promise<Map<string, string[]>>
-  historyPage(filters: HistoryFilters, page: number, perPage: number): Promise<{ total: number; items: HistoryRow[] }>
+  historyPage(filters: HistoryFilters, page: number, perPage: number, sort?: ListSort<CoordinationHistorySort>): Promise<{ total: number; items: HistoryRow[] }>
   historyPeriods(careerId: string): Promise<{ id: string; code: string }[]>
   periodExists(id: string): Promise<boolean>
   revision(id: string): Promise<RevisionRecord | null>
@@ -90,7 +91,8 @@ export async function coordinationReviews(request: Request, deps: CoordinationRe
   if (errors !== null) return validationError(errors)
   const search = (typeof input.search === "string" ? input.search : "").replace(PHP_TRIM, "")
   const page = currentPage(request)
-  const { total, items } = await deps.reviews.reviewPage({ careerId: session.activeRole?.careerId ?? null, search }, page, PER_PAGE)
+  const sort = listSortOf(COORDINATION_REVIEW_SORTS, input.sort, input.dir)
+  const { total, items } = await deps.reviews.reviewPage({ careerId: session.activeRole?.careerId ?? null, search }, page, PER_PAGE, sort)
   const teachers = await deps.reviews.teacherNames(items.map((item) => item.id))
   const data = items.map((item) => ({
     id: item.id,
@@ -119,7 +121,8 @@ export async function coordinationHistory(request: Request, deps: CoordinationRe
   const periodId = typeof input.period === "string" ? input.period : null
   const page = currentPage(request)
   const periods = await deps.reviews.historyPeriods(careerId)
-  const { total, items } = await deps.reviews.historyPage({ careerId, search, periodId }, page, PER_PAGE)
+  const sort = listSortOf(COORDINATION_HISTORY_SORTS, input.sort, input.dir)
+  const { total, items } = await deps.reviews.historyPage({ careerId, search, periodId }, page, PER_PAGE, sort)
   const data = items.map((item) => ({
     id: item.id,
     revision_id: item.revisionId,

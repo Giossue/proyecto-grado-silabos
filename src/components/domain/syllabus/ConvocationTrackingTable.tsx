@@ -11,11 +11,13 @@ import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { SyllabusStateBadge } from "@/components/domain/SyllabusStateBadge"
 import { TablePagination } from "@/components/domain/TablePagination"
+import { SortableHead, SortStatus } from "@/components/domain/TableSort"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableEmpty, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { useClientPagination } from "@/composables/useClientPagination"
+import { useTableSort, type SortColumns } from "@/composables/useTableSort"
 import { reviewAreaPaths } from "@/lib/routes"
 import { activateRow, rowLinkClass } from "@/lib/rowActivation"
 import { SYLLABUS_STATE_OPTIONS, syllabusStateLabel } from "@/lib/syllabusStates"
@@ -30,6 +32,12 @@ const FILTERS: Record<string, ClientFilterDefinition<TrackedSyllabus>> = {
   estado: { matches: (item, value) => item.state === value },
 }
 
+const SORT_COLUMNS = {
+  subject: { label: "Asignatura", value: (item: TrackedSyllabus) => item.subject },
+  parallels: { label: "Paralelos y docentes", value: (item: TrackedSyllabus) => item.parallels[0] },
+  state: { label: "Estado", value: (item: TrackedSyllabus) => syllabusStateLabel(item.state) },
+} satisfies SortColumns<TrackedSyllabus>
+
 const NO_SYLLABI: TrackedSyllabus[] = []
 
 export function ConvocationTrackingTable({ convocationId }: { convocationId: string | null }) {
@@ -42,7 +50,8 @@ export function ConvocationTrackingTable({ convocationId }: { convocationId: str
 
   const source = useMemo(() => data?.convocation.syllabi ?? NO_SYLLABI, [data])
   const filter = useClientFilter(source, searchable, FILTERS)
-  const { items: page, meta, setPage } = useClientPagination(filter.items, 20, filter.criteria)
+  const sort = useTableSort(filter.items, SORT_COLUMNS)
+  const { items: page, meta, setPage } = useClientPagination(sort.items, 20, `${filter.criteria}|${sort.criteria}`)
 
   const retry = (): void => {
     void query.refetch()
@@ -60,6 +69,7 @@ export function ConvocationTrackingTable({ convocationId }: { convocationId: str
         inputId={`convocation-syllabi-search-${scope}`}
         label="Buscar expediente"
         placeholder="Buscar por asignatura o código"
+        sort={sort}
         filters={
           <Field>
             <FieldLabel htmlFor={`convocation-syllabi-search-state-${scope}`} className="sr-only">
@@ -87,9 +97,9 @@ export function ConvocationTrackingTable({ convocationId }: { convocationId: str
       <Table label="Seguimiento de la convocatoria">
         <TableHeader>
           <TableRow>
-            <TableHead>Asignatura</TableHead>
-            <TableHead>Paralelos y docentes</TableHead>
-            <TableHead className="text-center">Estado</TableHead>
+            <SortableHead sort={sort} column="subject">Asignatura</SortableHead>
+            <SortableHead sort={sort} column="parallels">Paralelos y docentes</SortableHead>
+            <SortableHead sort={sort} column="state" className="text-center">Estado</SortableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -135,6 +145,7 @@ export function ConvocationTrackingTable({ convocationId }: { convocationId: str
           )}
         </TableBody>
       </Table>
+      <SortStatus sort={sort} />
       <TablePagination meta={meta} label="Paginación del seguimiento de convocatoria" onPageChange={setPage} />
     </div>
   )

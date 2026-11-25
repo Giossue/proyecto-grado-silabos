@@ -13,6 +13,8 @@ import {
   silabos,
   usuarios,
 } from "@/db/schema"
+import { libraryStatusLabel } from "@/lib/libraryStates"
+import type { LibrarySort, ListSort } from "@/schemas/listSort"
 import { accentMatches } from "../http/sql"
 import type { LibraryReviewRepository, ReviewFilters, ReviewRow, SyllabusSummary } from "./reviews"
 
@@ -48,6 +50,39 @@ const revision = alias(revisionesSilabo, "revision")
 const silabo = alias(silabos, "silabo")
 const REVISION_JOIN = eq(revision.revisionSilaboId, enviosBiblioteca.revisionSilaboId)
 const SYLLABUS_JOIN = eq(silabo.silaboId, revision.silaboId)
+
+const CONVOCATION_OF = (column: string): SQL => sql`(select ${sql.raw(column)} from convocatorias_carreras as convocatoria_orden
+  inner join carreras as carrera_orden on carrera_orden.carrera_id = convocatoria_orden.carrera_id
+  left join facultades as facultad_orden on facultad_orden.facultad_id = carrera_orden.facultad_id
+  inner join convocatorias_universidad as proceso_orden on proceso_orden.convocatoria_universidad_id = convocatoria_orden.convocatoria_universidad_id
+  inner join periodos_academicos as periodo_orden on periodo_orden.periodo_academico_id = proceso_orden.periodo_academico_id
+  where convocatoria_orden.convocatoria_carrera_id = silabo.convocatoria_carrera_id)`
+
+const USER_NAME = (id: SQL): SQL => sql`(select usuario_orden.nombre_usuario from usuarios as usuario_orden where usuario_orden.usuario_id = ${id})`
+
+const SORT_KEYS: Record<LibrarySort, SQL> = {
+  faculty: CONVOCATION_OF("facultad_orden.nombre_facultad"),
+  career: CONVOCATION_OF("carrera_orden.nombre_carrera"),
+  subject: sql`(select case when jsonb_typeof(silabo.datos_academicos_silabo #> '{subject,name}') = 'string'
+      then silabo.datos_academicos_silabo #>> '{subject,name}' else asignatura_orden.nombre_asignatura end
+    from paralelos as paralelo_orden inner join asignaturas as asignatura_orden on asignatura_orden.asignatura_id = paralelo_orden.asignatura_id
+    where paralelo_orden.paralelo_id = silabo.paralelo_id)`,
+  responsible: USER_NAME(sql`(${RESPONSIBLE_SQL})`),
+  state: sql`case (${OUTCOME_SQL}) ${sql.join(
+    ["pendiente", "firmado", "devuelto", "reemplazado"].map((status) => sql`when ${status} then ${libraryStatusLabel(status)}::text`),
+    sql` `,
+  )} end`,
+  period: CONVOCATION_OF("periodo_orden.fecha_fin_periodo"),
+  teacher: sql`(select min(usuario_docente.nombre_usuario) from docentes_vigentes_silabo as docente_orden
+    inner join usuarios as usuario_docente on usuario_docente.usuario_id = docente_orden.usuario_id
+    where docente_orden.silabo_id = silabo.silabo_id)`,
+  signed: USER_NAME(sql`envios_biblioteca.verificado_por`),
+}
+
+export function libraryOrder(sort: ListSort<LibrarySort>): SQL[] {
+  if (sort === null) return [desc(revision.enviadoEn)]
+  return [sql`${SORT_KEYS[sort.column]} ${sql.raw(sort.direction)} nulls last`, desc(revision.enviadoEn), asc(enviosBiblioteca.envioBibliotecaId)]
+}
 
 async function currentProcessId(): Promise<string | null> {
   const [row] = await db
@@ -118,7 +153,7 @@ export function createLibraryReviewRepository(): LibraryReviewRepository {
     return new Map(found.map((row) => [row.id, row.name]))
   }
   return {
-    async page(filters, page, perPage) {
+    async page(filters, page, perPage, sort = null) {
       const where = and(...conditions(filters, await currentProcessId()))
       const [{ total }] = await db
         .select({ total: count() })
@@ -143,7 +178,7 @@ export function createLibraryReviewRepository(): LibraryReviewRepository {
         .innerJoin(revision, REVISION_JOIN)
         .innerJoin(silabo, SYLLABUS_JOIN)
         .where(where)
-        .orderBy(desc(revision.enviadoEn))
+        .orderBy(...libraryOrder(sort))
         .limit(perPage)
         .offset((page - 1) * perPage)
       const people = await names([...new Set(found.flatMap((row) => [row.sentBy, ...(row.signedBy ? [row.signedBy] : [])]))])

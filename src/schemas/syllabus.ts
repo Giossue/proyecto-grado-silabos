@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { field, is, nullableField, prohibitedField, requiredField, sometimesField } from "./fields"
+import { COORDINATION_HISTORY_SORTS, COORDINATION_REVIEW_SORTS, sortFields } from "./listSort"
 
 type Exists = (value: unknown) => Promise<boolean>
 
@@ -13,12 +14,13 @@ export function listingFiltersSchema(states: readonly string[]) {
   })
 }
 
-export const reviewSearchSchema = z.object({ search: nullableField("búsqueda", [is.string(), is.max(SEARCH_MAX)]) })
+export const reviewSearchSchema = z.object({ search: nullableField("búsqueda", [is.string(), is.max(SEARCH_MAX)]), ...sortFields(COORDINATION_REVIEW_SORTS) })
 
 export function reviewHistorySchema(periodExists?: Exists) {
   return z.object({
     q: nullableField("búsqueda", [is.string(), is.max(SEARCH_MAX)]),
     period: nullableField("período", [is.uuid(), ...(periodExists ? [is.existing(periodExists)] : [])]),
+    ...sortFields(COORDINATION_HISTORY_SORTS),
   })
 }
 

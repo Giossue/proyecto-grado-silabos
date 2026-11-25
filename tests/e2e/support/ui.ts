@@ -39,4 +39,4 @@ export const lettersOnly = (value: string): string => value.replace(/\d/g, (digi
 const pageOf = (scope: Page | Locator): Page => ("goto" in scope ? scope : scope.page())
 
 export const rowNamed = (scope: Page | Locator, name: string | RegExp, role: "link" | "button" = "link"): Locator =>
-  scope.getByRole("row").filter({ has: pageOf(scope).getByRole(role, { name, exact: typeof name === "string" }) })
+  scope.locator("tbody").getByRole("row").filter({ has: pageOf(scope).getByRole(role, { name, exact: typeof name === "string" }) })

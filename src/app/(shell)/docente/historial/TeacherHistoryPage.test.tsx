@@ -29,6 +29,19 @@ describe("TeacherHistoryPage", () => {
     expect(navigation.push).toHaveBeenCalledWith("/docente/historial/c1")
   })
 
+  it("ordena por número de sílabos al pulsar su encabezado y marca aria-sort en esa columna", async () => {
+    vi.mocked(getTeacherHistory).mockResolvedValue({ careers: [{ id: "c1", name: "Software", syllabi_count: 12 }, { id: "c2", name: "Enfermería", syllabi_count: 3 }] })
+    const { container, getByRole } = await mountPage()
+    const names = () => [...container.querySelectorAll("tbody tr a")].map((link) => link.textContent)
+
+    expect(names()).toEqual(["Software", "Enfermería"])
+    fireEvent.click(getByRole("button", { name: "Sílabos" }))
+    expect(names()).toEqual(["Enfermería", "Software"])
+    expect(getByRole("columnheader", { name: "Sílabos" }).getAttribute("aria-sort")).toBe("ascending")
+    expect(getByRole("columnheader", { name: "Carrera" }).hasAttribute("aria-sort")).toBe(false)
+    expect(getByRole("combobox", { name: "Ordenar por" })).toBeInTheDocument()
+  })
+
   it("avisa cuando todavía no hay períodos anteriores", async () => {
     vi.mocked(getTeacherHistory).mockResolvedValue({ careers: [] })
     const { container } = await mountPage()

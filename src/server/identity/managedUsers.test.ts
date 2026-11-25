@@ -117,3 +117,51 @@ describe("GET admin/users", () => {
     expect(await list()).toMatchObject({ status: 403, text: '{"message":"No tiene permiso para hacer esto."}' })
   })
 })
+
+describe("ordering GET admin/users", () => {
+  const names = Array.from({ length: 25 }, (_, index) => `Usuario ${String(index + 1).padStart(2, "0")}`)
+  let sorts: unknown[]
+
+  const sortingRepository = (): ManagedUserRepository => ({
+    ...repository(),
+    async page(_filters, page, perPage, sort) {
+      sorts.push(sort ?? null)
+      const all = names.map((name, index) => user({ id: `u${index}`, name }))
+      const ordered = sort ? all.toSorted((left, right) => (sort.direction === "asc" ? 1 : -1) * left.name.localeCompare(right.name)) : all
+      return { total: all.length, items: ordered.slice((page - 1) * perPage, page * perPage) }
+    },
+  })
+
+  const sorted = async (query: string) => {
+    const response = await managedUsers(apiRequest(`/api/v1/admin/users${query}`, { cookie }), { bridge: fakeDeps(world), users: sortingRepository() })
+    const text = await response.text()
+    return { status: response.status, text, json: JSON.parse(text) as Record<string, ReturnType<typeof JSON.parse>> }
+  }
+
+  beforeEach(() => {
+    sorts = []
+  })
+
+  it("sorts every account by the chosen column before paginating", async () => {
+    const { status, json } = await sorted("?sort=name&dir=desc&page=2")
+    expect(status).toBe(200)
+    expect(sorts).toEqual([{ column: "name", direction: "desc" }])
+    expect(json.users.data.map((item: { nombre: string }) => item.nombre)).toEqual(["Usuario 05", "Usuario 04", "Usuario 03", "Usuario 02", "Usuario 01"])
+    expect(json.filters).toEqual({ q: null, status: null, role: null, career: null })
+  })
+
+  it("keeps today's order and payload when no column is chosen", async () => {
+    const plain = await list("?status=all")
+    const { text } = await sorted("?status=all")
+    expect(sorts).toEqual([null])
+    expect(Object.keys(JSON.parse(text))).toEqual(Object.keys(plain.json!))
+    expect(JSON.parse(text).users.data.map((item: { nombre: string }) => item.nombre)).toEqual(names.slice(0, 20))
+  })
+
+  it("rejects a column or direction outside the whitelist", async () => {
+    const { status, json } = await sorted("?sort=correo&dir=up")
+    expect(status).toBe(422)
+    expect(json.errors).toEqual({ sort: ["El valor seleccionado en orden no es válido."], dir: ["El valor seleccionado en dirección del orden no es válido."] })
+    expect(sorts).toEqual([])
+  })
+})

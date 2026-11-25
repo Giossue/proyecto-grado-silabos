@@ -1,16 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { CatalogActions } from "@/components/domain/academic/CatalogActions"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { StatusBadge } from "@/components/domain/StatusBadge"
 import { TableCardLine } from "@/components/domain/TableCardLine"
 import { TablePagination } from "@/components/domain/TablePagination"
+import { SortableHead, SortStatus } from "@/components/domain/TableSort"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableEmpty, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { useClientPagination } from "@/composables/useClientPagination"
+import { useTableSort, type SortColumns } from "@/composables/useTableSort"
 import { activateRow, rowButtonClass } from "@/lib/rowActivation"
 import type { AcademicStructureProps, CatalogRecord, GovernanceSection } from "@/types/academic"
 
@@ -33,15 +35,33 @@ const careerFilters: Record<string, ClientFilterDefinition<Career>> = {
 
 const NO_LIBRARIES: string[] = []
 
+const facultyColumns = {
+  name: { label: "Facultad", value: (item: CatalogRecord) => item.nombre },
+  campus: { label: "Campus", value: (item: CatalogRecord) => item.campus },
+} satisfies SortColumns<CatalogRecord>
+
 export function CatalogSection({ section, catalogs, options, onChanged }: CatalogSectionProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  const facultyFilter = useClientFilter(catalogs.faculties, facultySearch, facultyFilters)
-  const facultyPage = useClientPagination(facultyFilter.items, 20, facultyFilter.criteria)
-  const careerFilter = useClientFilter(catalogs.careers, careerSearch, careerFilters)
-  const careerPage = useClientPagination(careerFilter.items, 20, careerFilter.criteria)
-  const facultyNames = new Map(catalogs.faculties.map((faculty) => [faculty.id, faculty.nombre]))
+  const facultyNames = useMemo(() => new Map(catalogs.faculties.map((faculty) => [faculty.id, faculty.nombre])), [catalogs.faculties])
   const facultyName = (facultyId: string): string => facultyNames.get(facultyId) ?? "Facultad no disponible"
+  const careerColumns = useMemo(
+    () =>
+      ({
+        name: { label: "Carrera", value: (item: Career) => item.name },
+        faculty: { label: "Facultad", value: (item: Career) => facultyNames.get(item.faculty_id) ?? "Facultad no disponible" },
+        modality: { label: "Modalidad", value: (item: Career) => item.modality_label },
+        campus: { label: "Campus", value: (item: Career) => item.campus_name },
+      }) satisfies SortColumns<Career>,
+    [facultyNames],
+  )
+
+  const facultyFilter = useClientFilter(catalogs.faculties, facultySearch, facultyFilters)
+  const facultySort = useTableSort(facultyFilter.items, facultyColumns)
+  const facultyPage = useClientPagination(facultySort.items, 20, `${facultyFilter.criteria}|${facultySort.criteria}`)
+  const careerFilter = useClientFilter(catalogs.careers, careerSearch, careerFilters)
+  const careerSort = useTableSort(careerFilter.items, careerColumns)
+  const careerPage = useClientPagination(careerSort.items, 20, `${careerFilter.criteria}|${careerSort.criteria}`)
 
   const editRecord = (id: string): void => setEditingId(id)
   const editOpenChange = (id: string) => (open: boolean) => setEditingId((current) => (open ? id : current === id ? null : current))
@@ -79,13 +99,14 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
             inputId="faculties-search"
             label="Buscar facultad"
             placeholder="Buscar por nombre"
+            sort={facultySort}
             filters={campusFilter("faculties-search-campus", facultyFilter)}
           />
           <Table label="Listado académico">
             <TableHeader>
               <TableRow>
-                <TableHead>Facultad</TableHead>
-                <TableHead>Campus</TableHead>
+                <SortableHead sort={facultySort} column="name">Facultad</SortableHead>
+                <SortableHead sort={facultySort} column="campus">Campus</SortableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -129,6 +150,7 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
               )}
             </TableBody>
           </Table>
+          <SortStatus sort={facultySort} />
           <TablePagination meta={facultyPage.meta} label="Paginación de facultades" onPageChange={facultyPage.setPage} />
         </div>
       ) : (
@@ -138,6 +160,7 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
             inputId="careers-search"
             label="Buscar carrera"
             placeholder="Buscar por nombre"
+            sort={careerSort}
             filters={
               <>
                 {campusFilter("careers-search-campus", careerFilter)}
@@ -167,10 +190,10 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
           <Table label="Listado académico">
             <TableHeader>
               <TableRow>
-                <TableHead>Carrera</TableHead>
-                <TableHead>Facultad</TableHead>
-                <TableHead>Modalidad</TableHead>
-                <TableHead>Campus</TableHead>
+                <SortableHead sort={careerSort} column="name">Carrera</SortableHead>
+                <SortableHead sort={careerSort} column="faculty">Facultad</SortableHead>
+                <SortableHead sort={careerSort} column="modality">Modalidad</SortableHead>
+                <SortableHead sort={careerSort} column="campus">Campus</SortableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -220,6 +243,7 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
               )}
             </TableBody>
           </Table>
+          <SortStatus sort={careerSort} />
           <TablePagination meta={careerPage.meta} label="Paginación de carreras" onPageChange={careerPage.setPage} />
         </div>
       )}

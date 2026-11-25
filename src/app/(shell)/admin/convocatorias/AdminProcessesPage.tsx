@@ -8,6 +8,7 @@ import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { MetricTiles } from "@/components/domain/MetricTiles"
 import { PageFrame } from "@/components/domain/PageFrame"
+import { SortableHead, SortStatus } from "@/components/domain/TableSort"
 import { StatusBadge, type StatusTone } from "@/components/domain/StatusBadge"
 import { TableCardLine } from "@/components/domain/TableCardLine"
 import { TablePagination } from "@/components/domain/TablePagination"
@@ -17,10 +18,11 @@ import { ConvocationRowActions, type ConvocationRowActionsHandle } from "@/compo
 import type { ConvocationRow } from "@/components/domain/syllabus/convocationRows"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableEmpty, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { useClientPagination } from "@/composables/useClientPagination"
+import { useTableSort, type SortColumns } from "@/composables/useTableSort"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { paths } from "@/lib/routes"
 import { activateRow, rowButtonClass } from "@/lib/rowActivation"
@@ -42,6 +44,13 @@ const searchable = (row: ConvocationRow): string[] => [row.code]
 const FILTERS: Record<string, ClientFilterDefinition<ConvocationRow>> = {
   estado: { matches: (row, value) => (value === "sin_iniciar" ? row.process === null : row.process?.state === value) },
 }
+
+const SORT_COLUMNS = {
+  period: { label: "Período", value: (row: ConvocationRow) => row.code },
+  classes: { label: "Clases", type: "date", value: (row: ConvocationRow) => row.starts_on },
+  drafting: { label: "Elaboración de sílabos", type: "date", value: (row: ConvocationRow) => row.process?.starts_at },
+  state: { label: "Estado", value: stateLabel },
+} satisfies SortColumns<ConvocationRow>
 
 export default function AdminProcessesPage() {
   const router = useRouter()
@@ -66,7 +75,8 @@ export default function AdminProcessesPage() {
       .map((period) => ({ ...period, process: byPeriod.get(period.id) ?? null }))
   }, [governance, processData])
   const filter = useClientFilter(rows, searchable, FILTERS)
-  const { items: page, meta, setPage } = useClientPagination(filter.items, 20, filter.criteria)
+  const sort = useTableSort(filter.items, SORT_COLUMNS)
+  const { items: page, meta, setPage } = useClientPagination(sort.items, 20, `${filter.criteria}|${sort.criteria}`)
   const inProgress = rows.some((row) => row.process?.state === "abierto" || row.process?.state === "pausado")
   const current = rows.find((row) => row.id === selectedId) ?? null
 
@@ -138,6 +148,7 @@ export default function AdminProcessesPage() {
             inputId="processes-search"
             label="Buscar período"
             placeholder="Buscar por período"
+            sort={sort}
             filters={
               <Field>
                 <FieldLabel htmlFor="processes-search-state" className="sr-only">
@@ -164,10 +175,10 @@ export default function AdminProcessesPage() {
           <Table label="Convocatorias">
             <TableHeader>
               <TableRow>
-                <TableHead>Período</TableHead>
-                <TableHead>Clases</TableHead>
-                <TableHead>Elaboración de sílabos</TableHead>
-                <TableHead className="text-center">Estado</TableHead>
+                <SortableHead sort={sort} column="period">Período</SortableHead>
+                <SortableHead sort={sort} column="classes">Clases</SortableHead>
+                <SortableHead sort={sort} column="drafting">Elaboración de sílabos</SortableHead>
+                <SortableHead sort={sort} column="state" className="text-center">Estado</SortableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -204,6 +215,7 @@ export default function AdminProcessesPage() {
               )}
             </TableBody>
           </Table>
+          <SortStatus sort={sort} />
           <TablePagination meta={meta} label="Paginación de convocatorias" onPageChange={setPage} />
         </div>
       ) : null}

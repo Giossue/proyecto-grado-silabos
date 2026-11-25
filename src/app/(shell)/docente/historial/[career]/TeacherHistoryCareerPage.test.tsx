@@ -48,6 +48,30 @@ describe("TeacherHistoryCareerPage", () => {
     expect(sessionStorage.getItem(SYLLABUS_PREVIEW_KEY)).toBe("s2")
   })
 
+  it("ordena dentro de cada período con un único estado compartido y un solo anuncio", async () => {
+    vi.mocked(getTeacherHistoryCareer).mockResolvedValue({
+      career: { id: "c1", name: "Software" },
+      syllabi: [
+        syllabus({ id: "s1", subject: "Redes", period: "2025-2026" }),
+        syllabus({ id: "s2", subject: "Álgebra Lineal", period: "2025-2026" }),
+        syllabus({ id: "s3", subject: "Cálculo", period: "2024-2025" }),
+        syllabus({ id: "s4", subject: "Bases de Datos", period: "2024-2025" }),
+      ],
+    })
+    const { container, getAllByRole, getByRole } = await mountPage()
+    const subjectsOf = (period: string) => [...container.querySelectorAll(`[aria-label="Sílabos del período ${period}"] tbody a`)].map((link) => link.textContent)
+
+    fireEvent.click(getAllByRole("button", { name: "Asignatura" })[1]!)
+    expect([...container.querySelectorAll("h2")].map((heading) => heading.textContent)).toEqual(["Período 2025-2026", "Período 2024-2025"])
+    expect(subjectsOf("2025-2026")).toEqual(["Álgebra Lineal", "Redes"])
+    expect(subjectsOf("2024-2025")).toEqual(["Bases de Datos", "Cálculo"])
+    expect(getAllByRole("columnheader", { name: "Asignatura" }).map((header) => header.getAttribute("aria-sort"))).toEqual(["ascending", "ascending"])
+    fireEvent.click(getAllByRole("button", { name: "Asignatura" })[0]!)
+    expect(subjectsOf("2025-2026")).toEqual(["Redes", "Álgebra Lineal"])
+    expect(subjectsOf("2024-2025")).toEqual(["Cálculo", "Bases de Datos"])
+    expect(getByRole("status").textContent).toBe("Ordenado por Asignatura, descendente, 4 filas")
+  })
+
   it("avisa cuando la carrera no tiene sílabos de períodos anteriores", async () => {
     vi.mocked(getTeacherHistoryCareer).mockResolvedValue({ career: { id: "c1", name: "Software" }, syllabi: [] })
     const { container } = await mountPage()

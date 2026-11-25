@@ -106,6 +106,25 @@ describe("AdminProcessesPage", () => {
     unmount()
   })
 
+  it("ordena por período al pulsar el encabezado y marca aria-sort en esa columna", async () => {
+    api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
+    api.getAcademicGovernance.mockResolvedValue({ lock_reason: null, catalogs: { faculties: [], careers: [], periods: [
+      { ...period("p1", "Septiembre-Marzo 2026-2027", null), starts_on: "2026-09-29" }, { ...period("p2", "Abril-Agosto 2026", null), starts_on: "2026-04-01" },
+    ] }, options: {} })
+    api.getProcesses.mockResolvedValue({ processes: [], template: null, periods: [], active_process: null })
+    const { container, getByRole, unmount } = mountPage()
+    await flush()
+    const codes = () => [...container.querySelectorAll("tbody tr td:first-child button")].map((cell) => cell.textContent)
+
+    expect(codes()).toEqual(["Septiembre-Marzo 2026-2027", "Abril-Agosto 2026"])
+    fireEvent.click(getByRole("button", { name: "Período" }))
+
+    expect(codes()).toEqual(["Abril-Agosto 2026", "Septiembre-Marzo 2026-2027"])
+    expect(getByRole("columnheader", { name: "Período" }).getAttribute("aria-sort")).toBe("ascending")
+    expect(getByRole("columnheader", { name: "Clases" }).hasAttribute("aria-sort")).toBe(false)
+    unmount()
+  })
+
   it("muestra arriba los indicadores y deja «Nueva convocatoria» deshabilitada", async () => {
     api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
     api.getAcademicGovernance.mockResolvedValue({ lock_reason: null, catalogs: { faculties: [], careers: [], periods: [] }, options: {} })

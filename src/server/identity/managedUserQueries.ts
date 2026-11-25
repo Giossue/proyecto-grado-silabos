@@ -2,6 +2,8 @@ import "server-only"
 import { and, asc, desc, eq, exists, gt, inArray, isNotNull, isNull, or, sql, type SQL } from "drizzle-orm"
 import { db, type Executor } from "@/db"
 import { asignacionesRol, carreras, invitacionesActivacion, usuarios } from "@/db/schema"
+import { managedUserStatus } from "@/lib/managedUserStatus"
+import type { ListSort, ManagedUserSort } from "@/schemas/listSort"
 import { careerLabelSql } from "../academic/careerLabel"
 import { accentMatches } from "../http/sql"
 import type { ManagedUserFilters, ManagedUserRepository, ManagedUserRow } from "./managedUsers"
@@ -29,9 +31,40 @@ function conditions(executor: Executor, filters: ManagedUserFilters): SQL | unde
   return and(...where)
 }
 
+function invitationActive(executor: Executor): SQL {
+  return exists(
+    executor
+      .select({ id: invitacionesActivacion.invitacionActivacionId })
+      .from(invitacionesActivacion)
+      .where(
+        and(
+          eq(invitacionesActivacion.usuarioId, usuarios.usuarioId),
+          isNull(invitacionesActivacion.usadaEn),
+          isNull(invitacionesActivacion.invalidadaEn),
+          gt(invitacionesActivacion.expiraEn, sql`now()`),
+        ),
+      ),
+  )
+}
+
+const statusLabel = (active: boolean, pending: boolean, expired: boolean): string =>
+  managedUserStatus({ active, pending_activation: pending, invitation_expired: expired }).label
+
+export function managedUserOrder(executor: Executor, sort: ListSort<ManagedUserSort>): SQL[] {
+  if (sort === null) return [asc(usuarios.nombreUsuario)]
+  const direction = sql.raw(sort.direction)
+  const key =
+    sort.column === "name"
+      ? sql`${usuarios.nombreUsuario}`
+      : sql`case when ${usuarios.usuarioActivo} = false then ${statusLabel(false, false, false)}::text
+          when ${usuarios.correoVerificadoEn} is null then case when ${invitationActive(executor)} then ${statusLabel(true, true, false)}::text else ${statusLabel(true, true, true)}::text end
+          else ${statusLabel(true, false, false)}::text end`
+  return [sql`${key} ${direction} nulls last`, asc(usuarios.nombreUsuario), asc(usuarios.usuarioId)]
+}
+
 export function managedUserRepositoryOn(executor: Executor): ManagedUserRepository {
   return {
-    async page(filters, page, perPage) {
+    async page(filters, page, perPage, sort = null) {
       const where = conditions(executor, filters)
       const total = await executor.$count(usuarios, where)
       if (total === 0) return { total: 0, items: [] }
@@ -43,23 +76,11 @@ export function managedUserRepositoryOn(executor: Executor): ManagedUserReposito
           active: usuarios.usuarioActivo,
           verified: isNotNull(usuarios.correoVerificadoEn).mapWith(Boolean),
           twoFactor: isNotNull(usuarios.dosFactoresConfirmadoEn).mapWith(Boolean),
-          invitationActive: sql<boolean>`${exists(
-            executor
-              .select({ id: invitacionesActivacion.invitacionActivacionId })
-              .from(invitacionesActivacion)
-              .where(
-                and(
-                  eq(invitacionesActivacion.usuarioId, usuarios.usuarioId),
-                  isNull(invitacionesActivacion.usadaEn),
-                  isNull(invitacionesActivacion.invalidadaEn),
-                  gt(invitacionesActivacion.expiraEn, sql`now()`),
-                ),
-              ),
-          )}`,
+          invitationActive: sql<boolean>`${invitationActive(executor)}`,
         })
         .from(usuarios)
         .where(where)
-        .orderBy(asc(usuarios.nombreUsuario))
+        .orderBy(...managedUserOrder(executor, sort))
         .limit(perPage)
         .offset((page - 1) * perPage)
       const assignments =

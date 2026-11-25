@@ -53,4 +53,29 @@ describe("CatalogSection", () => {
     expect(screen.queryByText("Sin logo")).toBeNull()
     expect(screen.queryByRole("button", { name: /^Ver logo/ })).toBeNull()
   })
+
+  it("ordena facultades y carreras al pulsar los encabezados y marca aria-sort en esa columna", () => {
+    const { unmount } = renderWithProviders(<CatalogSection section="faculties" catalogs={catalogs} options={options} onChanged={vi.fn()} />)
+    const facultyRows = () => screen.getAllByRole("row").slice(1).map((row) => row.querySelector("button")!.textContent)
+
+    expect(facultyRows()).toEqual(["Ciencias", "Salud"])
+    fireEvent.click(screen.getByRole("button", { name: "Facultad" }))
+    fireEvent.click(screen.getByRole("button", { name: "Facultad" }))
+    expect(facultyRows()).toEqual(["Salud", "Ciencias"])
+    expect(screen.getByRole("columnheader", { name: "Facultad" }).getAttribute("aria-sort")).toBe("descending")
+    fireEvent.click(screen.getByRole("button", { name: "Campus" }))
+    expect(facultyRows()).toEqual(["Ciencias", "Salud"])
+    unmount()
+
+    const careers = { ...catalogs, careers: [...catalogs.careers, { ...catalogs.careers[0]!, id: "c2", faculty_id: "f2", code: "EN", name: "Enfermería" }] }
+    renderWithProviders(<CatalogSection section="careers" catalogs={careers} options={options} onChanged={vi.fn()} />)
+    const careerRows = () => screen.getAllByRole("row").slice(1).map((row) => row.querySelector("button")!.textContent)
+
+    expect(careerRows()).toEqual(["Software", "Enfermería"])
+    fireEvent.click(screen.getByRole("button", { name: "Facultad" }))
+    fireEvent.click(screen.getByRole("button", { name: "Facultad" }))
+    expect(careerRows()).toEqual(["Enfermería", "Software"])
+    expect(screen.getByRole("columnheader", { name: "Facultad" }).getAttribute("aria-sort")).toBe("descending")
+    expect(screen.getByRole("columnheader", { name: "Carrera" }).hasAttribute("aria-sort")).toBe(false)
+  })
 })

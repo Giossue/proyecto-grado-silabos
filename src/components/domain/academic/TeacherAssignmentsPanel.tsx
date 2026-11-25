@@ -10,14 +10,16 @@ import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { StatusBadge } from "@/components/domain/StatusBadge"
 import { TableCardLine } from "@/components/domain/TableCardLine"
 import { TablePagination } from "@/components/domain/TablePagination"
+import { SortableHead, SortStatus } from "@/components/domain/TableSort"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
-import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableEmpty, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { useClientPagination } from "@/composables/useClientPagination"
+import { useTableSort, type SortColumns } from "@/composables/useTableSort"
 import { afterDialogExit, useShownWhileClosing } from "@/lib/dialogExit"
 import { activateRow, rowButtonClass } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
@@ -29,10 +31,16 @@ const filters: Record<string, ClientFilterDefinition<TeacherRow>> = {
   estado: { matches: (item, value) => (value === "pending" ? item.pending_activation : !item.pending_activation) },
 }
 const statusOf = (item: TeacherRow): string => (item.pending_activation ? (item.invitation_expired ? "Invitación vencida" : "Pendiente") : "Activa")
+const sortColumns = {
+  name: { label: "Docente", value: (item: TeacherRow) => item.name },
+  email: { label: "Correo", value: (item: TeacherRow) => item.email },
+  status: { label: "Estado", value: statusOf },
+} satisfies SortColumns<TeacherRow>
 
 export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssignments; onChanged: (message: string) => void }) {
   const filter = useClientFilter(data.careerTeachers, searchable, filters)
-  const pagination = useClientPagination(filter.items, 20, filter.criteria)
+  const sort = useTableSort(filter.items, sortColumns)
+  const pagination = useClientPagination(sort.items, 20, `${filter.criteria}|${sort.criteria}`)
   const [editing, setEditing] = useState<TeacherRow | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [removing, setRemoving] = useState<TeacherRow | null>(null)
@@ -94,6 +102,7 @@ export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssi
         inputId="teacher-assignments-search"
         label="Buscar docente"
         placeholder="Buscar por docente o correo"
+        sort={sort}
         filters={
           <Field>
             <FieldLabel htmlFor="teacher-assignments-state" className="sr-only">
@@ -117,9 +126,9 @@ export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssi
       <Table label="Docentes de la carrera">
         <TableHeader>
           <TableRow>
-            <TableHead>Docente</TableHead>
-            <TableHead>Correo</TableHead>
-            <TableHead className="text-center">Estado</TableHead>
+            <SortableHead sort={sort} column="name">Docente</SortableHead>
+            <SortableHead sort={sort} column="email">Correo</SortableHead>
+            <SortableHead sort={sort} column="status" className="text-center">Estado</SortableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -148,6 +157,7 @@ export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssi
           )}
         </TableBody>
       </Table>
+      <SortStatus sort={sort} />
       {editing ? (
         <CareerTeacherEditDialog
           key={editing.id}

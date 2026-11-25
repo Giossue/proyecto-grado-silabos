@@ -67,6 +67,23 @@ describe("ScheduledSubjectsTab", () => {
     expect(document.body.textContent).not.toContain("CálculoSin sílabo")
   })
 
+  it("ordena por materia y por ciclo con «Sin ciclo» al final y los paralelos siguen con su materia", () => {
+    mountTab({ ...data, scheduledSubjects: [...data.scheduledSubjects, row("4", "Ética", "GE-001", null, [{ code: "C", shift: "matutina" }])] })
+    const subjects = () => screen.getAllByRole("row").slice(1).map((item) => item.querySelectorAll("td")[1]!.textContent)
+
+    fireEvent.click(screen.getByRole("button", { name: "Ciclo" }))
+    expect(subjects()).toEqual(["Cálculo", "Bases de Datos", "Arquitectura de Software", "Ética"])
+    expect(screen.getByRole("columnheader", { name: "Ciclo" }).getAttribute("aria-sort")).toBe("ascending")
+    fireEvent.click(screen.getByRole("button", { name: "Ciclo" }))
+    expect(subjects()).toEqual(["Arquitectura de Software", "Bases de Datos", "Cálculo", "Ética"])
+    expect(rowOf("Arquitectura de Software").querySelectorAll("td")[3]!.textContent).toBe("A")
+    fireEvent.click(screen.getByRole("button", { name: "Materia" }))
+    fireEvent.click(screen.getByRole("button", { name: "Materia" }))
+    expect(subjects()).toEqual(["Ética", "Cálculo", "Bases de Datos", "Arquitectura de Software"])
+    expect(screen.getByRole("columnheader", { name: "Materia" }).getAttribute("aria-sort")).toBe("descending")
+    expect(rowOf("Ética").querySelectorAll("td")[3]!.textContent).toBe("C")
+  })
+
   it("no muestra la ficha: vive en Proyecto de carrera", () => {
     mountTab()
     expect(document.body.textContent).not.toContain("Ficha")

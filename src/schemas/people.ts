@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { emailField, type UniqueCheck } from "./account"
+import { MANAGED_USER_SORTS, sortFields } from "./listSort"
 import { messages } from "./messages"
 import { addIssues, codePointLength, isBlank, nullableChoice, nullableInteger, nullableText, requiredBoolean, requiredText, requiredValue, UUID_PATTERN } from "./rules"
 
@@ -154,6 +155,7 @@ export const managedUserFiltersSchema = z.object({
   role: nullableChoice("rol", ["all", ...ROLE_CODES]),
   career: nullableText("carrera", { max: 36 }),
   page: nullableInteger("página", { min: 1 }),
+  ...sortFields(MANAGED_USER_SORTS),
 })
 
 export function managedUserFormSchema({ teacher, roleCode }: { teacher: boolean; roleCode: unknown }) {

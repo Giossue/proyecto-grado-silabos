@@ -114,10 +114,12 @@ export type ReviewComparison = {
 };
 
 export const getReviews = (
-  filters: { search?: string; page?: number } = {},
+  filters: { search?: string; sort?: string; dir?: string; page?: number } = {},
 ) => {
   const query = new URLSearchParams();
   if (filters.search) query.set("search", filters.search);
+  if (filters.sort) query.set("sort", filters.sort);
+  if (filters.sort && filters.dir) query.set("dir", filters.dir);
   if (filters.page && filters.page > 1) query.set("page", String(filters.page));
   return api<ReviewsPage>(
     `/coordination/reviews${query.size ? `?${query}` : ""}`,
@@ -158,10 +160,12 @@ export type CoordinationHistoryPage = {
   periods: Array<{ id: string; code: string }>;
   syllabi: PaginationMeta & { data: CoordinationHistoryItem[] };
 };
-export const getCoordinationHistory = (filters: { q?: string; period?: string; page?: number } = {}) => {
+export const getCoordinationHistory = (filters: { q?: string; period?: string; sort?: string; dir?: string; page?: number } = {}) => {
   const query = new URLSearchParams();
   if (filters.q) query.set("q", filters.q);
   if (filters.period && filters.period !== "all") query.set("period", filters.period);
+  if (filters.sort) query.set("sort", filters.sort);
+  if (filters.sort && filters.dir) query.set("dir", filters.dir);
   if (filters.page && filters.page > 1) query.set("page", String(filters.page));
   return api<CoordinationHistoryPage>(`/coordination/history${query.size ? `?${query}` : ""}`);
 };

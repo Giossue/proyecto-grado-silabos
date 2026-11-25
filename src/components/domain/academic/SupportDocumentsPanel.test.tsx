@@ -85,6 +85,28 @@ describe("Documentos de apoyo", () => {
     expect(tab.focus).toHaveBeenCalled()
   })
 
+  it("ordena por tamaño y por fecha de subida al pulsar los encabezados y marca aria-sort en esa columna", async () => {
+    vi.mocked(getTeacherSupportDocuments).mockResolvedValue({
+      data: [
+        { ...doc("d1", "Proyecto de carrera"), size: 4096, uploaded_at: "2026-11-02T15:00:00Z" },
+        { ...doc("d2", "Reglamento"), size: 1024, uploaded_at: "2026-10-01T15:00:00Z" },
+        { ...doc("d3", "Guía"), size: 20480, uploaded_at: "2026-11-20T15:00:00Z" },
+      ],
+    })
+    await mountPanel("teacher")
+    const titles = () => [...document.body.querySelectorAll("tbody tr td:first-child button")].map((button) => button.textContent)
+
+    expect(titles()).toEqual(["Proyecto de carrera", "Reglamento", "Guía"])
+    fireEvent.click(screen.getByRole("button", { name: "Tamaño" }))
+    expect(titles()).toEqual(["Reglamento", "Proyecto de carrera", "Guía"])
+    expect(screen.getByRole("columnheader", { name: "Tamaño" }).getAttribute("aria-sort")).toBe("ascending")
+    fireEvent.click(screen.getByRole("button", { name: "Subido" }))
+    fireEvent.click(screen.getByRole("button", { name: "Subido" }))
+    expect(titles()).toEqual(["Guía", "Proyecto de carrera", "Reglamento"])
+    expect(screen.getByRole("columnheader", { name: "Subido" }).getAttribute("aria-sort")).toBe("descending")
+    expect(screen.getByRole("columnheader", { name: "Tamaño" }).hasAttribute("aria-sort")).toBe(false)
+  })
+
   it("un documento sin vista previa no se abre al pulsar la fila", async () => {
     await mountPanel("coordination")
 

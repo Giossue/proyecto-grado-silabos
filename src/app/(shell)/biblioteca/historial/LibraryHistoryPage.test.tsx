@@ -1,4 +1,4 @@
-import { fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getLibraryHistory, type LibraryHistoryPage as HistoryPayload } from "@/api/library"
 import { navigation } from "@/test/nextNavigation"
@@ -65,5 +65,21 @@ describe("LibraryHistoryPage", () => {
     expect(getLibraryHistory).toHaveBeenLastCalledWith({ q: "", faculty: "all", period: "all", mine: false, page: 1 })
     expect(navigation.fullPath).toBe("/biblioteca/historial")
     expect(container.textContent).not.toContain("Quitar filtros")
+  })
+
+  it("ordena el historial completo desde el encabezado y lo conserva al recargar", async () => {
+    navigation.reset("/biblioteca/historial?mine=1&sort=signed&dir=desc")
+    await mountPage()
+
+    expect(getLibraryHistory).toHaveBeenCalledWith({ q: "", faculty: "all", period: "all", mine: true, sort: "signed", dir: "desc", page: 1 })
+    expect(screen.getByRole("columnheader", { name: "Firmado por" }).getAttribute("aria-sort")).toBe("descending")
+
+    fireEvent.click(screen.getByRole("button", { name: "Período" }))
+    await flush()
+
+    expect(getLibraryHistory).toHaveBeenLastCalledWith({ q: "", faculty: "all", period: "all", mine: true, sort: "period", dir: "asc", page: 1 })
+    expect(screen.getByRole("columnheader", { name: "Período" }).getAttribute("aria-sort")).toBe("ascending")
+    expect(screen.getByRole("columnheader", { name: "Firmado por" }).hasAttribute("aria-sort")).toBe(false)
+    expect(navigation.fullPath).toBe("/biblioteca/historial?mine=1&sort=period&dir=asc")
   })
 })

@@ -7,6 +7,7 @@ import { queryParams, requestUrl } from "../http/request"
 import { jsonError, apiJson, validationError } from "../http/responses"
 import { validateSchema } from "../http/schemaValidation"
 import { libraryReviewFiltersSchema, REVIEW_OUTCOMES, REVIEW_STATES } from "@/schemas/library"
+import { LIBRARY_SORTS, listSortOf, type LibrarySort, type ListSort } from "@/schemas/listSort"
 import { createLibraryReviewRepository } from "./reviewQueries"
 
 export { REVIEW_OUTCOMES, REVIEW_STATES }
@@ -45,7 +46,7 @@ export type SyllabusSummary = {
 }
 
 export interface LibraryReviewRepository {
-  page(filters: ReviewFilters, page: number, perPage: number): Promise<{ total: number; items: ReviewRow[] }>
+  page(filters: ReviewFilters, page: number, perPage: number, sort?: ListSort<LibrarySort>): Promise<{ total: number; items: ReviewRow[] }>
   summaries(syllabusIds: string[]): Promise<Map<string, SyllabusSummary>>
   userNames(userIds: string[]): Promise<Map<string, string>>
   faculties(): Promise<{ id: string; name: string }[]>
@@ -104,7 +105,8 @@ async function listing(request: Request, deps: LibraryReviewDeps, input: PhpArra
   const url = new URL(request.url)
   const query = queryParams(url)
   const currentPage = resolveCurrentPage(query.get("page") ?? null)
-  const { total, items } = await deps.reviews.page({ state, search, facultyId, period, periodId, handledBy }, currentPage, PER_PAGE)
+  const sort = listSortOf(LIBRARY_SORTS, input.sort, input.dir)
+  const { total, items } = await deps.reviews.page({ state, search, facultyId, period, periodId, handledBy }, currentPage, PER_PAGE, sort)
   const syllabi = await deps.reviews.summaries([...new Set(items.map((item) => item.syllabusId))])
   const names = await deps.reviews.userNames([...new Set(items.flatMap((item) => (item.responsibleId === null ? [] : [item.responsibleId])))])
   const data = items.map((item) => {

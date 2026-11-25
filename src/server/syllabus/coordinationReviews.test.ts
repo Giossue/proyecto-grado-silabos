@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
+import type { ListSort } from "@/schemas/listSort"
 import type { SyllabusFacts } from "./policy"
 import {
   compareRevisions,
@@ -171,6 +172,65 @@ describe("GET /api/v1/coordination/reviews", () => {
     })
     world.assignments = [makeAssignment({ role: "docente", careerId: CAREER })]
     expect((await call((request) => coordinationReviews(request, deps()), "/api/v1/coordination/reviews")).text).toBe(FORBIDDEN)
+  })
+})
+
+describe("ordering the coordination lists", () => {
+  const subjects = Array.from({ length: 25 }, (_, index) => `Materia ${String(index + 1).padStart(2, "0")}`)
+  let sorts: unknown[]
+
+  const sortedPage = <T extends { subject: string }>(rows: T[], sort: ListSort | undefined, page: number, perPage: number) => {
+    sorts.push(sort ?? null)
+    const ordered = sort ? rows.toSorted((left, right) => (sort.direction === "asc" ? 1 : -1) * left.subject.localeCompare(right.subject)) : rows
+    return { total: rows.length, items: ordered.slice((page - 1) * perPage, page * perPage) }
+  }
+
+  const sortingDeps = () => ({
+    bridge: fakeDeps(world),
+    reviews: {
+      ...repository(),
+      reviewPage: async (_filters: unknown, page: number, perPage: number, sort?: ListSort) =>
+        sortedPage(subjects.map((subject, index) => reviewRow({ id: `${SYLLABUS.slice(0, -2)}${String(index).padStart(2, "0")}`, subject })), sort, page, perPage),
+      historyPage: async (_filters: unknown, page: number, perPage: number, sort?: ListSort) =>
+        sortedPage(subjects.map((subject) => ({ ...historyRows[0]!, subject })), sort, page, perPage),
+    },
+  })
+
+  beforeEach(() => {
+    sorts = []
+  })
+
+  it("sorts the review queue by the chosen column across every page", async () => {
+    const { status, json } = await call((request) => coordinationReviews(request, sortingDeps()), "/api/v1/coordination/reviews?sort=subject&dir=desc&page=2")
+    expect(status).toBe(200)
+    expect(sorts).toEqual([{ column: "subject", direction: "desc" }])
+    expect((json?.syllabi as { data: { subject: string }[] }).data.map((item) => item.subject)).toEqual(["Materia 05", "Materia 04", "Materia 03", "Materia 02", "Materia 01"])
+  })
+
+  it("sorts the history by the chosen column and defaults the direction to ascending", async () => {
+    const { json } = await call((request) => coordinationHistory(request, sortingDeps()), "/api/v1/coordination/history?sort=code")
+    expect(sorts).toEqual([{ column: "code", direction: "asc" }])
+    expect(json?.filters).toEqual({ q: null, period: null })
+  })
+
+  it("keeps today's order and payload when no column is chosen", async () => {
+    const plain = await call((request) => coordinationReviews(request, deps()), "/api/v1/coordination/reviews?page=1")
+    const sorting = await call((request) => coordinationReviews(request, sortingDeps()), "/api/v1/coordination/reviews?page=1")
+    expect(sorts).toEqual([null])
+    expect(Object.keys(sorting.json!)).toEqual(Object.keys(plain.json!))
+    expect((sorting.json?.syllabi as { data: { subject: string }[] }).data.map((item) => item.subject)).toEqual(subjects.slice(0, 20))
+  })
+
+  it("rejects a column or direction outside the whitelist", async () => {
+    const reviews = await call((request) => coordinationReviews(request, sortingDeps()), "/api/v1/coordination/reviews?sort=password&dir=sideways")
+    expect(reviews.status).toBe(422)
+    expect(reviews.json?.errors).toEqual({
+      sort: ["El valor seleccionado en orden no es válido."],
+      dir: ["El valor seleccionado en dirección del orden no es válido."],
+    })
+    const history = await call((request) => coordinationHistory(request, sortingDeps()), "/api/v1/coordination/history?sort=teacher")
+    expect(history.status).toBe(422)
+    expect(sorts).toEqual([])
   })
 })
 

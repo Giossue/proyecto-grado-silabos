@@ -10,6 +10,7 @@ import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { StatusBadge } from "@/components/domain/StatusBadge"
+import { SortableHead, SortSelect, SortStatus } from "@/components/domain/TableSort"
 import { TablePagination } from "@/components/domain/TablePagination"
 import { ManagedUserAccessAction } from "@/components/domain/identity/ManagedUserAccessAction"
 import { ManagedUserDetailDialog, type ManagedUserAction } from "@/components/domain/identity/ManagedUserDetailDialog"
@@ -19,6 +20,7 @@ import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { serverSortOf, useServerSort, type ServerSortColumns, type ServerSortState } from "@/composables/useServerSort"
 import { managedUserStatus } from "@/lib/managedUserStatus"
 import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
@@ -31,7 +33,9 @@ import { adminUserKeys, managedUsersQuery, type ManagedUserFilters } from "@/que
 type UserFilters = ManagedUserFilters
 type RoleAssignment = ManagedUser["roles"][number]
 
-const NO_FILTERS: UserFilters = { q: "", status: "all", role: "all", career: "all" }
+const NO_FILTERS: UserFilters = { q: "", status: "all", role: "all", career: "all", sort: "", dir: "" }
+
+const SORT_COLUMNS = { name: { label: "Usuario" }, status: { label: "Estado" } } satisfies ServerSortColumns
 
 const IMPORT_COLUMNS = [
   { key: "nombre", label: "Nombre" },
@@ -58,6 +62,7 @@ export default function AdminUsersPage() {
         status: queryText(query.status) || "all",
         role: queryText(query.role) || "all",
         career: queryText(query.career) || "all",
+        ...serverSortOf(SORT_COLUMNS, queryText(query.sort), queryText(query.dir)),
       },
     }
   })
@@ -98,9 +103,24 @@ export default function AdminUsersPage() {
   }
 
   const clearFilters = (): void => {
-    setFilters(NO_FILTERS)
-    void load(1, NO_FILTERS)
+    const cleared = { ...NO_FILTERS, sort: filters.sort, dir: filters.dir }
+    setFilters(cleared)
+    void load(1, cleared)
   }
+
+  const applySort = (next: ServerSortState): void => {
+    const current = { ...filters, ...next }
+    setFilters(current)
+    void load(1, current)
+  }
+
+  const sort = useServerSort({
+    columns: SORT_COLUMNS,
+    value: filters,
+    total: result?.users.total,
+    onSort: applySort,
+    onChoose: (next) => setFilters((previous) => ({ ...previous, ...next })),
+  })
 
   const changed = async (notice: string): Promise<void> => {
     toast.success(notice)
@@ -217,18 +237,24 @@ export default function AdminUsersPage() {
                       </SelectContent>
                     </Select>
                   </Field>
+                  <SortSelect sort={sort} inputId="users-sort" />
                 </>
               }
             />
           </form>
 
+          <SortStatus sort={sort} />
           <Table label="Usuarios y roles">
             <TableHeader>
               <TableRow>
-                <TableHead>Usuario</TableHead>
+                <SortableHead sort={sort} column="name">
+                  Usuario
+                </SortableHead>
                 <TableHead>Roles</TableHead>
                 <TableHead>Carrera</TableHead>
-                <TableHead className="text-center">Estado</TableHead>
+                <SortableHead sort={sort} column="status" className="text-center">
+                  Estado
+                </SortableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -15,11 +15,13 @@ import { PageFrame } from "@/components/domain/PageFrame"
 import { StatusBadge } from "@/components/domain/StatusBadge"
 import { TableCardLine } from "@/components/domain/TableCardLine"
 import { TablePagination } from "@/components/domain/TablePagination"
+import { SortableHead, SortSelect, SortStatus } from "@/components/domain/TableSort"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableEmpty, TableHeader, TableRow } from "@/components/ui/table"
+import { serverSortOf, useServerSort, type ServerSortColumns, type ServerSortState } from "@/composables/useServerSort"
 import { rememberLibraryFaculty, savedLibraryFaculty } from "@/lib/libraryFaculty"
 import { LIBRARY_STATE_FILTERS, libraryStatus, libraryStatusLabel, libraryStatusTone } from "@/lib/libraryStates"
 import { queryErrorMessage, sameKey } from "@/lib/queryClient"
@@ -30,9 +32,17 @@ import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
 import { dashboardSummaryQuery } from "@/queries/dashboard"
 import { libraryReviewsQuery } from "@/queries/library"
 
-type Filters = { q: string; state: string; faculty: string }
+type Filters = { q: string; state: string; faculty: string; sort: string; dir: string }
 
-const NO_FILTERS: Filters = { q: "", state: "all", faculty: "all" }
+const NO_FILTERS: Filters = { q: "", state: "all", faculty: "all", sort: "", dir: "" }
+
+const SORT_COLUMNS = {
+  faculty: { label: "Facultad" },
+  career: { label: "Carrera" },
+  subject: { label: "Asignatura" },
+  responsible: { label: "Responsable" },
+  state: { label: "Estado" },
+} satisfies ServerSortColumns
 
 const STATE_OPTIONS = Object.entries(LIBRARY_STATE_FILTERS).map(([value, label]) => ({ value, label }))
 
@@ -42,7 +52,12 @@ export default function LibraryReviewsPage() {
   const [initial] = useState(() => {
     const query = queryOf(searchParams)
     return {
-      filters: { q: queryText(query.q), state: queryText(query.state) || "all", faculty: queryText(query.faculty) || savedLibraryFaculty() || "all" },
+      filters: {
+        q: queryText(query.q),
+        state: queryText(query.state) || "all",
+        faculty: queryText(query.faculty) || savedLibraryFaculty() || "all",
+        ...serverSortOf(SORT_COLUMNS, queryText(query.sort), queryText(query.dir)),
+      },
       page: queryPage(query.page),
     }
   })
@@ -68,7 +83,7 @@ export default function LibraryReviewsPage() {
   useEffect(() => {
     if (query.isPlaceholderData || !query.data) return
     rememberLibraryFaculty(applied.filters.faculty)
-    syncFilters(router, { q: applied.filters.q, state: applied.filters.state, faculty: applied.filters.faculty }, applied.page)
+    syncFilters(router, applied.filters, applied.page)
   }, [applied, query.data, query.isPlaceholderData, router])
 
   const load = (page = 1, current: Filters = filters, withSummary = false): Promise<void> => {
@@ -85,9 +100,24 @@ export default function LibraryReviewsPage() {
   }
 
   const clearFilters = (): void => {
-    setFilters(NO_FILTERS)
-    void load(1, NO_FILTERS)
+    const cleared = { ...NO_FILTERS, sort: filters.sort, dir: filters.dir }
+    setFilters(cleared)
+    void load(1, cleared)
   }
+
+  const applySort = (next: ServerSortState): void => {
+    const current = { ...filters, ...next }
+    setFilters(current)
+    void load(1, current)
+  }
+
+  const sort = useServerSort({
+    columns: SORT_COLUMNS,
+    value: filters,
+    total: data?.reviews.total,
+    onSort: applySort,
+    onChoose: (next) => setFilters((current) => ({ ...current, ...next })),
+  })
 
   const open = (revision: string): void => router.push(paths.library.review(revision))
   const firstLoad = !data && !error
@@ -178,18 +208,30 @@ export default function LibraryReviewsPage() {
                       </SelectContent>
                     </Select>
                   </Field>
+                  <SortSelect sort={sort} inputId="library-sort" />
                 </>
               }
             />
           </form>
+          <SortStatus sort={sort} />
           <Table label="Revisiones de biblioteca">
             <TableHeader>
               <TableRow>
-                <TableHead>Facultad</TableHead>
-                <TableHead>Carrera</TableHead>
-                <TableHead>Asignatura</TableHead>
-                <TableHead>Responsable</TableHead>
-                <TableHead className="text-center">Estado</TableHead>
+                <SortableHead sort={sort} column="faculty">
+                  Facultad
+                </SortableHead>
+                <SortableHead sort={sort} column="career">
+                  Carrera
+                </SortableHead>
+                <SortableHead sort={sort} column="subject">
+                  Asignatura
+                </SortableHead>
+                <SortableHead sort={sort} column="responsible">
+                  Responsable
+                </SortableHead>
+                <SortableHead sort={sort} column="state" className="text-center">
+                  Estado
+                </SortableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

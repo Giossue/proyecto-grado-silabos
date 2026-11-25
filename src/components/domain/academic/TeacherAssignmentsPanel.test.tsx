@@ -79,6 +79,19 @@ describe("TeacherAssignmentsPanel", () => {
     expect(document.body.textContent).not.toContain("Editar docente")
   })
 
+  it("ordena por el estado visible al pulsar su encabezado y marca aria-sort en esa columna", () => {
+    mountPanel()
+    const names = () => [...document.body.querySelectorAll("tbody tr td:first-child button")].map((button) => button.textContent)
+
+    expect(names()).toEqual(["Docente pendiente", "Docente activo", "Docente sin paralelo"])
+    fireEvent.click(screen.getByRole("button", { name: "Estado" }))
+    expect(names()).toEqual(["Docente activo", "Docente sin paralelo", "Docente pendiente"])
+    expect(screen.getByRole("columnheader", { name: "Estado" }).getAttribute("aria-sort")).toBe("ascending")
+    fireEvent.click(screen.getByRole("button", { name: "Docente" }))
+    expect(names()).toEqual(["Docente activo", "Docente pendiente", "Docente sin paralelo"])
+    expect(screen.getByRole("columnheader", { name: "Estado" }).hasAttribute("aria-sort")).toBe(false)
+  })
+
   it("muestra al docente pendiente sin datos de paralelos", () => {
     mountPanel(inactivePendingData)
 

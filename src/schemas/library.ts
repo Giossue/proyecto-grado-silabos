@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { addFailures, checkItems, field, fieldFailures, is, itemsAt, nullableField, requiredField } from "./fields"
+import { LIBRARY_SORTS, sortFields } from "./listSort"
 
 export const OTHER_REASON = "otro"
 
@@ -64,6 +65,7 @@ export function libraryReviewFiltersSchema(exists: (table: "facultades" | "perio
     faculty: nullableField("facultad", [is.uuid(), is.existing(exists("facultades"))]),
     period: nullableField("período", [is.uuid(), is.existing(exists("periodos_academicos"))]),
     mine: nullableField("solo los míos", [is.boolean()]),
+    ...sortFields(LIBRARY_SORTS),
   })
 }
 

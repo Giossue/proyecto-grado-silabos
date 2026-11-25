@@ -12,11 +12,13 @@ import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { TableCardLine } from "@/components/domain/TableCardLine"
 import { TablePagination } from "@/components/domain/TablePagination"
+import { SortableHead, SortSelect, SortStatus } from "@/components/domain/TableSort"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableEmpty, TableHeader, TableRow } from "@/components/ui/table"
+import { serverSortOf, useServerSort, type ServerSortColumns, type ServerSortState } from "@/composables/useServerSort"
 import { goBack } from "@/lib/goBack"
 import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { libraryHistoryQuery } from "@/queries/library"
@@ -25,9 +27,16 @@ import { paths } from "@/lib/routes"
 import { activateRow, rowLinkClass } from "@/lib/rowActivation"
 import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
 
-type Filters = { q: string; faculty: string; period: string; who: string }
+type Filters = { q: string; faculty: string; period: string; who: string; sort: string; dir: string }
 
-const NO_FILTERS: Filters = { q: "", faculty: "all", period: "all", who: "all" }
+const NO_FILTERS: Filters = { q: "", faculty: "all", period: "all", who: "all", sort: "", dir: "" }
+
+const SORT_COLUMNS = {
+  period: { label: "Período", type: "date" },
+  career: { label: "Carrera" },
+  teacher: { label: "Docente" },
+  signed: { label: "Firmado por" },
+} satisfies ServerSortColumns
 
 export default function LibraryHistoryPage() {
   const router = useRouter()
@@ -40,6 +49,7 @@ export default function LibraryHistoryPage() {
         faculty: queryText(query.faculty) || savedLibraryFaculty() || "all",
         period: queryText(query.period) || "all",
         who: query.mine === "1" ? "mine" : "all",
+        ...serverSortOf(SORT_COLUMNS, queryText(query.sort), queryText(query.dir)),
       },
       page: queryPage(query.page),
     }
@@ -63,7 +73,7 @@ export default function LibraryHistoryPage() {
     if (query.isPlaceholderData || !query.data) return
     const current = applied.filters
     rememberLibraryFaculty(current.faculty)
-    syncFilters(router, { q: current.q, faculty: current.faculty, period: current.period, mine: current.who === "mine" ? "1" : "" }, applied.page)
+    syncFilters(router, { q: current.q, faculty: current.faculty, period: current.period, mine: current.who === "mine" ? "1" : "", sort: current.sort, dir: current.dir }, applied.page)
   }, [applied, query.data, query.isPlaceholderData, router])
 
   const load = (page = 1, current: Filters = filters): Promise<void> => {
@@ -79,9 +89,24 @@ export default function LibraryHistoryPage() {
   }
 
   const clearFilters = (): void => {
-    setFilters(NO_FILTERS)
-    void load(1, NO_FILTERS)
+    const cleared = { ...NO_FILTERS, sort: filters.sort, dir: filters.dir }
+    setFilters(cleared)
+    void load(1, cleared)
   }
+
+  const applySort = (next: ServerSortState): void => {
+    const current = { ...filters, ...next }
+    setFilters(current)
+    void load(1, current)
+  }
+
+  const sort = useServerSort({
+    columns: SORT_COLUMNS,
+    value: filters,
+    total: data?.reviews.total,
+    onSort: applySort,
+    onChoose: (next) => setFilters((current) => ({ ...current, ...next })),
+  })
 
   const open = (revision: string): void => router.push(paths.library.review(revision))
 
@@ -182,17 +207,27 @@ export default function LibraryHistoryPage() {
                       </SelectContent>
                     </Select>
                   </Field>
+                  <SortSelect sort={sort} inputId="library-history-sort" />
                 </>
               }
             />
           </form>
+          <SortStatus sort={sort} />
           <Table label="Historial de biblioteca">
             <TableHeader>
               <TableRow>
-                <TableHead>Período</TableHead>
-                <TableHead>Carrera</TableHead>
-                <TableHead>Docente</TableHead>
-                <TableHead>Firmado por</TableHead>
+                <SortableHead sort={sort} column="period">
+                  Período
+                </SortableHead>
+                <SortableHead sort={sort} column="career">
+                  Carrera
+                </SortableHead>
+                <SortableHead sort={sort} column="teacher">
+                  Docente
+                </SortableHead>
+                <SortableHead sort={sort} column="signed">
+                  Firmado por
+                </SortableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

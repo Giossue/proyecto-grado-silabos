@@ -14,6 +14,7 @@ import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { TableCardLine } from "@/components/domain/TableCardLine"
 import { TablePagination } from "@/components/domain/TablePagination"
+import { SortableHead, SortStatus } from "@/components/domain/TableSort"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
@@ -22,6 +23,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientFilter } from "@/composables/useClientFilter"
 import { useClientPagination } from "@/composables/useClientPagination"
+import { useTableSort, type SortColumns } from "@/composables/useTableSort"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { useShownWhileClosing } from "@/lib/dialogExit"
@@ -44,6 +46,11 @@ const POLL_MS = 4000
 const EMPTY_UPLOAD = { file: null, title: "" }
 const NO_DOCUMENTS: SupportDocument[] = []
 const searchable = (document: SupportDocument) => [document.title]
+const sortColumns = {
+  title: { label: "Documento", value: (document: SupportDocument) => document.title },
+  size: { label: "Tamaño", type: "number", value: (document: SupportDocument) => document.size },
+  uploaded: { label: "Subido", type: "date", value: (document: SupportDocument) => document.uploaded_at },
+} satisfies SortColumns<SupportDocument>
 
 export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange, onLoadingChange }: SupportDocumentsPanelProps) {
   const queryClient = useQueryClient()
@@ -69,7 +76,8 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
   const [removeProcessing, setRemoveProcessing] = useState(false)
   const removingShown = useShownWhileClosing(removing)
   const filter = useClientFilter(documents, searchable)
-  const pagination = useClientPagination(filter.items, 20, filter.criteria)
+  const sort = useTableSort(filter.items, sortColumns)
+  const pagination = useClientPagination(sort.items, 20, `${filter.criteria}|${sort.criteria}`)
   const initialLoading = loading
 
   useOpened(isUploadOpen, () => uploadForm.reset(EMPTY_UPLOAD))
@@ -151,13 +159,13 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
         <LoadingSkeleton variant="table" rows={4} columns={manages ? 4 : 3} actions={manages} cellLines={[2, 1, 1]} />
       ) : (
         <div className="flex flex-col gap-4">
-          <ClientFilterBar filter={filter} inputId="support-documents-search" label="Buscar documento" placeholder="Buscar documento" />
+          <ClientFilterBar filter={filter} inputId="support-documents-search" label="Buscar documento" placeholder="Buscar documento" sort={sort} />
           <Table label="Documentos de apoyo">
             <TableHeader>
               <TableRow>
-                <TableHead>Documento</TableHead>
-                <TableHead className="text-center">Tamaño</TableHead>
-                <TableHead>Subido</TableHead>
+                <SortableHead sort={sort} column="title">Documento</SortableHead>
+                <SortableHead sort={sort} column="size" className="text-center">Tamaño</SortableHead>
+                <SortableHead sort={sort} column="uploaded">Subido</SortableHead>
                 {manages ? <TableHead className="text-center">Acciones</TableHead> : null}
               </TableRow>
             </TableHeader>
@@ -216,6 +224,7 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
               )}
             </TableBody>
           </Table>
+          <SortStatus sort={sort} />
           <TablePagination meta={pagination.meta} label="Paginación de documentos de apoyo" onPageChange={pagination.setPage} />
         </div>
       )}

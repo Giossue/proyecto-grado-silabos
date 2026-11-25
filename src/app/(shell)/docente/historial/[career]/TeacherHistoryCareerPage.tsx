@@ -14,11 +14,14 @@ import { SyllabusStateBadge } from "@/components/domain/SyllabusStateBadge"
 import { rememberSyllabusPreview } from "@/components/domain/syllabus/syllabusPreview"
 import { TableCardLine } from "@/components/domain/TableCardLine"
 import { TablePagination } from "@/components/domain/TablePagination"
+import { SortableHead, SortSelect, SortStatus } from "@/components/domain/TableSort"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableEmpty, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientPagination } from "@/composables/useClientPagination"
+import { useTableSort, type SortColumns, type TableSort } from "@/composables/useTableSort"
 import { formatDateDisplay } from "@/lib/dateDisplay"
+import { syllabusStateLabel } from "@/lib/syllabusStates"
 import { goBack } from "@/lib/goBack"
 import { failedQuery, queryErrorMessage } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
@@ -29,14 +32,23 @@ const NO_SYLLABI: HistorySyllabus[] = []
 
 const formatSavedAt = (value: string | null): string => (value ? formatDateDisplay(value, { dateStyle: "medium", timeStyle: "short" }) : "Sin guardados")
 
-function HistoryHeader() {
+const SORT_COLUMNS = {
+  subject: { label: "Asignatura", value: (syllabus: HistorySyllabus) => syllabus.subject },
+  parallels: { label: "Paralelos", value: (syllabus: HistorySyllabus) => syllabus.parallels.join(", ") },
+  state: { label: "Estado", value: (syllabus: HistorySyllabus) => syllabusStateLabel(syllabus.state) },
+  saved: { label: "Último guardado", type: "date", value: (syllabus: HistorySyllabus) => syllabus.guardado_en },
+} satisfies SortColumns<HistorySyllabus>
+
+type HistorySort = TableSort<Extract<keyof typeof SORT_COLUMNS, string>>
+
+function HistoryHeader({ sort }: { sort: HistorySort }) {
   return (
     <TableHeader>
       <TableRow>
-        <TableHead>Asignatura</TableHead>
-        <TableHead>Paralelos</TableHead>
-        <TableHead className="text-center">Estado</TableHead>
-        <TableHead>Último guardado</TableHead>
+        <SortableHead sort={sort} column="subject">Asignatura</SortableHead>
+        <SortableHead sort={sort} column="parallels">Paralelos</SortableHead>
+        <SortableHead sort={sort} column="state" className="text-center">Estado</SortableHead>
+        <SortableHead sort={sort} column="saved">Último guardado</SortableHead>
       </TableRow>
     </TableHeader>
   )
@@ -52,7 +64,15 @@ export default function TeacherHistoryCareerPage() {
   const status = failed && query.error instanceof ApiError ? query.error.status : null
   const error = status === 401 || status === 404 ? null : queryErrorMessage(query, "No se pudo cargar el historial de la carrera")
   const loading = syllabi === null && error === null
-  const { items: pagedSyllabi, meta, setPage } = useClientPagination(syllabi ?? NO_SYLLABI, 20)
+  const sort = useTableSort(syllabi ?? NO_SYLLABI, SORT_COLUMNS)
+  const sortedSyllabi = useMemo(() => {
+    if (sort.sortKey === null) return sort.items
+    const periodRank = new Map<string, number>()
+    for (const syllabus of syllabi ?? NO_SYLLABI) if (!periodRank.has(syllabus.period)) periodRank.set(syllabus.period, periodRank.size)
+
+    return sort.items.toSorted((left, right) => (periodRank.get(left.period) ?? 0) - (periodRank.get(right.period) ?? 0))
+  }, [syllabi, sort.items, sort.sortKey])
+  const { items: pagedSyllabi, meta, setPage } = useClientPagination(sortedSyllabi, 20, sort.criteria)
   const groups = useMemo(() => {
     const byPeriod = new Map<string, HistorySyllabus[]>()
     for (const syllabus of pagedSyllabi) byPeriod.set(syllabus.period, [...(byPeriod.get(syllabus.period) ?? []), syllabus])
@@ -95,11 +115,12 @@ export default function TeacherHistoryCareerPage() {
         <LoadingSkeleton variant="table-body" columns={4} rows={3} actions={false} badges={[3]} heading />
       ) : (
         <>
+          <SortSelect sort={sort} inputId="teacher-history-career-sort" />
           {groups.map((group) => (
             <div key={group.period} className="flex flex-col gap-3">
               <h2 className="text-sm font-semibold">Período {group.period}</h2>
               <Table label={`Sílabos del período ${group.period}`}>
-                <HistoryHeader />
+                <HistoryHeader sort={sort} />
                 <TableBody>
                   {group.items.map((syllabus) => (
                     <TableRow
@@ -131,12 +152,13 @@ export default function TeacherHistoryCareerPage() {
           ))}
           {groups.length === 0 ? (
             <Table label="Sílabos de la carrera">
-              <HistoryHeader />
+              <HistoryHeader sort={sort} />
               <TableBody>
                 <TableEmpty colSpan={4}>Todavía no tiene sílabos de períodos anteriores en esta carrera</TableEmpty>
               </TableBody>
             </Table>
           ) : null}
+          <SortStatus sort={sort} />
           <TablePagination meta={meta} label="Paginación del historial de la carrera" onPageChange={setPage} />
         </>
       )}

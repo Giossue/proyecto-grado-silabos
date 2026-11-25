@@ -14,12 +14,14 @@ import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { TableCardLine } from "@/components/domain/TableCardLine"
 import { TablePagination } from "@/components/domain/TablePagination"
+import { SortableHead, SortSelect, SortStatus } from "@/components/domain/TableSort"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { serverSortOf, useServerSort, type ServerSortColumns, type ServerSortState } from "@/composables/useServerSort"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { goBack } from "@/lib/goBack"
 import { openRevisionPdf } from "@/lib/openPdf"
@@ -30,9 +32,17 @@ import { toast } from "@/lib/toast"
 import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
 import { coordinationHistoryQuery } from "@/queries/reviews"
 
-type Filters = { q: string; period: string }
+type Filters = { q: string; period: string; sort: string; dir: string }
 
-const NO_FILTERS: Filters = { q: "", period: "all" }
+const NO_FILTERS: Filters = { q: "", period: "all", sort: "", dir: "" }
+
+const SORT_COLUMNS = {
+  subject: { label: "Asignatura" },
+  code: { label: "Código" },
+  parallel: { label: "Paralelos" },
+  author: { label: "Elaborado por" },
+  approved: { label: "Aprobado", type: "date" },
+} satisfies ServerSortColumns
 
 const formatApprovedAt = (value: string | null): string => (value ? formatDateDisplay(value, { dateStyle: "medium" }) : "—")
 
@@ -41,7 +51,10 @@ export default function CoordinationHistoryPage() {
   const searchParams = useSearchParams()
   const [initial] = useState(() => {
     const query = queryOf(searchParams)
-    return { filters: { q: queryText(query.q), period: queryText(query.period) || "all" }, page: queryPage(query.page) }
+    return {
+      filters: { q: queryText(query.q), period: queryText(query.period) || "all", ...serverSortOf(SORT_COLUMNS, queryText(query.sort), queryText(query.dir)) },
+      page: queryPage(query.page),
+    }
   })
   const [filters, setFilters] = useState<Filters>(initial.filters)
   const [applied, setApplied] = useState(initial)
@@ -67,7 +80,7 @@ export default function CoordinationHistoryPage() {
 
   useEffect(() => {
     if (query.isPlaceholderData || !query.data) return
-    syncFilters(router, { q: applied.filters.q, period: applied.filters.period }, applied.page)
+    syncFilters(router, applied.filters, applied.page)
   }, [applied, query.data, query.isPlaceholderData, router])
 
   const load = (page = 1, current: Filters = filters): Promise<void> => {
@@ -83,9 +96,24 @@ export default function CoordinationHistoryPage() {
   }
 
   const clearFilters = (): void => {
-    setFilters(NO_FILTERS)
-    void load(1, NO_FILTERS)
+    const cleared = { ...NO_FILTERS, sort: filters.sort, dir: filters.dir }
+    setFilters(cleared)
+    void load(1, cleared)
   }
+
+  const applySort = (next: ServerSortState): void => {
+    const current = { ...filters, ...next }
+    setFilters(current)
+    void load(1, current)
+  }
+
+  const sort = useServerSort({
+    columns: SORT_COLUMNS,
+    value: filters,
+    total: data?.syllabi.total,
+    onSort: applySort,
+    onChoose: (next) => setFilters((current) => ({ ...current, ...next })),
+  })
 
   const open = (item: CoordinationHistoryItem): void => router.push(paths.coordination.review(item.revision_id))
 
@@ -136,29 +164,33 @@ export default function CoordinationHistoryPage() {
                 </Field>
               }
               filters={
-                <Field>
-                  <FieldLabel htmlFor="coordination-history-period" className="sr-only">
-                    Período
-                  </FieldLabel>
-                  <Select value={filters.period} name="period" onValueChange={(period) => setFilters((current) => ({ ...current, period }))}>
-                    <SelectTrigger id="coordination-history-period">
-                      <SelectValue placeholder="Todos los períodos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="all">Todos los períodos</SelectItem>
-                        {data.periods.map((period) => (
-                          <SelectItem key={period.id} value={period.id}>
-                            {period.code}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </Field>
+                <>
+                  <Field>
+                    <FieldLabel htmlFor="coordination-history-period" className="sr-only">
+                      Período
+                    </FieldLabel>
+                    <Select value={filters.period} name="period" onValueChange={(period) => setFilters((current) => ({ ...current, period }))}>
+                      <SelectTrigger id="coordination-history-period">
+                        <SelectValue placeholder="Todos los períodos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="all">Todos los períodos</SelectItem>
+                          {data.periods.map((period) => (
+                            <SelectItem key={period.id} value={period.id}>
+                              {period.code}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <SortSelect sort={sort} inputId="coordination-history-sort" />
+                </>
               }
             />
           </form>
+          <SortStatus sort={sort} />
           {groups.length === 0 ? (
             <Table label="Historial de Coordinación">
               <TableBody>
@@ -172,11 +204,21 @@ export default function CoordinationHistoryPage() {
               <Table label={`Sílabos aprobados del período ${group.period}`}>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Asignatura</TableHead>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Paralelos</TableHead>
-                    <TableHead>Elaborado por</TableHead>
-                    <TableHead>Aprobado</TableHead>
+                    <SortableHead sort={sort} column="subject">
+                      Asignatura
+                    </SortableHead>
+                    <SortableHead sort={sort} column="code">
+                      Código
+                    </SortableHead>
+                    <SortableHead sort={sort} column="parallel">
+                      Paralelos
+                    </SortableHead>
+                    <SortableHead sort={sort} column="author">
+                      Elaborado por
+                    </SortableHead>
+                    <SortableHead sort={sort} column="approved">
+                      Aprobado
+                    </SortableHead>
                     <TableHead className="w-12 text-center">
                       <span className="sr-only">PDF</span>
                     </TableHead>

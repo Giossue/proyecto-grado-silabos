@@ -1,4 +1,5 @@
-import { fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getManagedUsers, type ManagedUser, type ManagedUsersResponse } from "@/api/admin-users"
 import { getSession, type Session } from "@/api/session"
@@ -85,5 +86,47 @@ describe("AdminUsersPage", () => {
 
     expect(getManagedUsers).toHaveBeenLastCalledWith({ q: "", status: "all", role: "all", career: "all", page: 1 })
     expect(navigation.fullPath).toBe("/admin/usuarios")
+  })
+
+  it("ordena todas las cuentas desde el encabezado: vuelve a la página 1, lo guarda en la dirección y lo anuncia", async () => {
+    navigation.reset("/admin/usuarios?page=3")
+    vi.mocked(getManagedUsers).mockResolvedValue(response([user]))
+    renderWithProviders(<AdminUsersPage />)
+    await flush()
+
+    const button = screen.getByRole("button", { name: "Usuario" })
+    expect(button.closest("th")!.hasAttribute("aria-sort")).toBe(false)
+    fireEvent.click(button)
+    await flush()
+
+    expect(getManagedUsers).toHaveBeenLastCalledWith({ q: "", status: "all", role: "all", career: "all", sort: "name", dir: "asc", page: 1 })
+    expect(screen.getByRole("columnheader", { name: "Usuario" }).getAttribute("aria-sort")).toBe("ascending")
+    expect(navigation.fullPath).toBe("/admin/usuarios?sort=name&dir=asc")
+    expect(screen.getByRole("status").textContent).toBe("Ordenado por Usuario, ascendente, 1 fila")
+
+    fireEvent.click(screen.getByRole("button", { name: "Usuario" }))
+    await flush()
+    expect(getManagedUsers).toHaveBeenLastCalledWith({ q: "", status: "all", role: "all", career: "all", sort: "name", dir: "desc", page: 1 })
+    expect(screen.getByRole("columnheader", { name: "Usuario" }).getAttribute("aria-sort")).toBe("descending")
+  })
+
+  it("el selector «Ordenar por» conserva los filtros y pide la lista una sola vez", async () => {
+    navigation.reset("/admin/usuarios?q=ana&sort=status&dir=desc&page=2")
+    vi.mocked(getManagedUsers).mockResolvedValue(response([user]))
+    renderWithProviders(<AdminUsersPage />)
+    await flush()
+
+    expect(getManagedUsers).toHaveBeenCalledWith({ q: "ana", status: "all", role: "all", career: "all", sort: "status", dir: "desc", page: 2 })
+    expect(screen.getByRole("columnheader", { name: "Estado" }).getAttribute("aria-sort")).toBe("descending")
+    vi.mocked(getManagedUsers).mockClear()
+
+    const actor = userEvent.setup()
+    await actor.click(screen.getByRole("combobox", { name: "Ordenar por" }))
+    await actor.click(await screen.findByRole("option", { name: "Usuario: Z a A" }))
+    await flush()
+
+    expect(getManagedUsers).toHaveBeenCalledTimes(1)
+    expect(getManagedUsers).toHaveBeenCalledWith({ q: "ana", status: "all", role: "all", career: "all", sort: "name", dir: "desc", page: 1 })
+    expect(navigation.fullPath).toBe("/admin/usuarios?q=ana&sort=name&dir=desc")
   })
 })

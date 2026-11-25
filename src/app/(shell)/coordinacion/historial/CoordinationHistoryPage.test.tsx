@@ -1,4 +1,4 @@
-import { fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getCoordinationHistory, type CoordinationHistoryPage as HistoryPayload } from "@/api/reviews"
 import { openRevisionPdf } from "@/lib/openPdf"
@@ -104,5 +104,20 @@ describe("CoordinationHistoryPage", () => {
     const { container } = await mountPage()
 
     expect(container.textContent).toContain("No hay sílabos aprobados de períodos anteriores con estos filtros")
+  })
+
+  it("un solo orden para todas las tablas del historial, pedido al servidor y guardado en la dirección", async () => {
+    navigation.reset("/coordinacion/historial?period=p1&page=2")
+    await mountPage()
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Aprobado" })[1]!)
+    await flush()
+
+    expect(getCoordinationHistory).toHaveBeenLastCalledWith({ q: "", period: "p1", sort: "approved", dir: "asc", page: 1 })
+    expect(screen.getAllByRole("columnheader", { name: "Aprobado" }).map((header) => header.getAttribute("aria-sort"))).toEqual(["ascending", "ascending"])
+    expect(screen.getAllByRole("columnheader", { name: "Asignatura" }).every((header) => !header.hasAttribute("aria-sort"))).toBe(true)
+    expect(screen.getAllByRole("status")).toHaveLength(1)
+    expect(screen.getByRole("status").textContent).toBe("Ordenado por Aprobado, ascendente, 3 filas")
+    expect(navigation.fullPath).toBe("/coordinacion/historial?period=p1&sort=approved&dir=asc")
   })
 })

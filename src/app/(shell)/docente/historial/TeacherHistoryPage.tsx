@@ -11,9 +11,11 @@ import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { TablePagination } from "@/components/domain/TablePagination"
+import { SortableHead, SortSelect, SortStatus } from "@/components/domain/TableSort"
 import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableEmpty, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientPagination } from "@/composables/useClientPagination"
+import { useTableSort, type SortColumns } from "@/composables/useTableSort"
 import { goBack } from "@/lib/goBack"
 import { failedQuery, queryErrorMessage } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
@@ -21,6 +23,11 @@ import { teacherHistoryQuery } from "@/queries/teacher"
 import { activateRow, rowLinkClass } from "@/lib/rowActivation"
 
 const NO_CAREERS: HistoryCareer[] = []
+
+const SORT_COLUMNS = {
+  name: { label: "Carrera", value: (career: HistoryCareer) => career.name },
+  syllabi: { label: "Sílabos", type: "number", value: (career: HistoryCareer) => career.syllabi_count },
+} satisfies SortColumns<HistoryCareer>
 
 export default function TeacherHistoryPage() {
   const router = useRouter()
@@ -30,7 +37,8 @@ export default function TeacherHistoryPage() {
   const status = failed && query.error instanceof ApiError ? query.error.status : null
   const error = status === 401 ? null : queryErrorMessage(query, "No se pudo cargar su historial")
   const loading = careers === null && error === null
-  const { items: pagedCareers, meta, setPage } = useClientPagination(careers ?? NO_CAREERS, 20)
+  const sort = useTableSort(careers ?? NO_CAREERS, SORT_COLUMNS)
+  const { items: pagedCareers, meta, setPage } = useClientPagination(sort.items, 20, sort.criteria)
 
   useEffect(() => {
     if (status === 401) router.replace(paths.login)
@@ -61,11 +69,12 @@ export default function TeacherHistoryPage() {
         <LoadingSkeleton variant="table-body" columns={2} actions={false} />
       ) : careers ? (
         <>
+          <SortSelect sort={sort} inputId="teacher-history-sort" />
           <Table label="Carreras con historial">
             <TableHeader>
               <TableRow>
-                <TableHead>Carrera</TableHead>
-                <TableHead className="text-center">Sílabos</TableHead>
+                <SortableHead sort={sort} column="name">Carrera</SortableHead>
+                <SortableHead sort={sort} column="syllabi" className="text-center">Sílabos</SortableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -87,6 +96,7 @@ export default function TeacherHistoryPage() {
               )}
             </TableBody>
           </Table>
+          <SortStatus sort={sort} />
           <TablePagination meta={meta} label="Paginación del historial" onPageChange={setPage} />
         </>
       ) : null}
