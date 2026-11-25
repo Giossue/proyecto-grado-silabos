@@ -3,12 +3,11 @@ import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import { requestCorrection, resetSyllabus, type DecisionRevision, type DecisionSyllabus, type ReviewDecisionDeps } from "./reviewDecisions"
 import type { ReviewRevision } from "./reviewDetails"
 import type { DetailSyllabus } from "./syllabusDetail"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
@@ -143,7 +142,7 @@ describe("POST /api/v1/coordination/reviews/{revision}/request-correction", () =
   it("requests the correction, bumps the draft version and notifies the teacher after commit", async () => {
     const response = await post({ justification: `  ${JUSTIFICATION}  ` })
     expect(response.status).toBe(200)
-    expect(response.text).toBe(phpJsonEncode({ message: "Corrección solicitada; el docente ya puede editar una nueva versión de trabajo." }))
+    expect(response.text).toBe(JSON.stringify({ message: "Corrección solicitada; el docente ya puede editar una nueva versión de trabajo." }))
     expect(log).toEqual([
       "begin",
       "lock:process+convocation",
@@ -182,7 +181,7 @@ describe("POST /api/v1/coordination/reviews/{revision}/request-correction", () =
 
   it("validates the justification with its Spanish attribute name", async () => {
     expect((await post({ justification: "Corto" })).text).toBe(
-      phpJsonEncode({ message: "El campo justificación debe tener al menos 10 caracteres.", errors: { justification: ["El campo justificación debe tener al menos 10 caracteres."] } }),
+      JSON.stringify({ message: "El campo justificación debe tener al menos 10 caracteres.", errors: { justification: ["El campo justificación debe tener al menos 10 caracteres."] } }),
     )
     expect((await post({})).json).toEqual({ message: "El campo justificación es obligatorio.", errors: { justification: ["El campo justificación es obligatorio."] } })
     expect((await post({ justification: ["x"] })).json?.errors).toEqual({
@@ -204,9 +203,9 @@ describe("POST /api/v1/coordination/reviews/{revision}/request-correction", () =
 
   it("answers 403 with the block while the career is paused or the convocation is closed, before validating", async () => {
     syllabus = { ...syllabus, convocationState: "pausada" }
-    expect(await post({ justification: "x" })).toMatchObject({ status: 403, text: phpJsonEncode({ message: PAUSED }) })
+    expect(await post({ justification: "x" })).toMatchObject({ status: 403, text: JSON.stringify({ message: PAUSED }) })
     syllabus = { ...syllabus, convocationState: "cerrada" }
-    expect((await post({ justification: JUSTIFICATION })).text).toBe(phpJsonEncode({ message: CLOSED }))
+    expect((await post({ justification: JUSTIFICATION })).text).toBe(JSON.stringify({ message: CLOSED }))
     syllabus = { ...syllabus, convocationState: "abierta", processState: "pausado" }
     expect((await post({ justification: JUSTIFICATION })).json).toEqual({
       message: "Administración pausó la convocatoria institucional: las revisiones se retoman cuando se reanude.",
@@ -268,7 +267,7 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
   it("restarts an approved syllabus with all its history and notifies the teacher", async () => {
     const response = await reset({ reason: `  ${REASON}  ` })
     expect(response.status).toBe(200)
-    expect(response.text).toBe(phpJsonEncode({ message: "Sílabo reiniciado con todo su historial. El docente empieza de cero con la malla y la plantilla actuales." }))
+    expect(response.text).toBe(JSON.stringify({ message: "Sílabo reiniciado con todo su historial. El docente empieza de cero con la malla y la plantilla actuales." }))
     expect(log).toEqual(["begin", `lock:syllabus:${SYLLABUS}`, `restart:${SYLLABUS}:${syllabus.convocationId}:d0000000-0000-4000-8000-000000000001`, "commit"])
     const message = `Coordinación eliminó el sílabo aprobado de Biología; elabórelo con la malla y la plantilla actuales. Motivo: ${REASON}`
     expect(notices.notifications).toMatchObject([
@@ -299,9 +298,9 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
 
   it("answers 403 with the block while paused or closed, before validating", async () => {
     syllabus = { ...syllabus, convocationState: "pausada" }
-    expect((await reset({ reason: "no" })).text).toBe(phpJsonEncode({ message: PAUSED }))
+    expect((await reset({ reason: "no" })).text).toBe(JSON.stringify({ message: PAUSED }))
     syllabus = { ...syllabus, convocationState: "cerrada" }
-    expect((await reset({ reason: REASON })).text).toBe(phpJsonEncode({ message: CLOSED }))
+    expect((await reset({ reason: REASON })).text).toBe(JSON.stringify({ message: CLOSED }))
     expect(log).toEqual([])
   })
 

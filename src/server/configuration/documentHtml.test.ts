@@ -1,12 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import golden from "./__fixtures__/html-golden.json"
-import { phpJsonEncode } from "../http/phpJson"
 import { documentFromHtml, documentLines } from "./documentHtml"
 
 describe("documentFromHtml", () => {
   it("produces the same document nodes as DocumentHtml::fromHtml for every golden case", () => {
-    const mismatches = golden.filter((item) => phpJsonEncode(documentFromHtml(item.html, item.layout)) !== item.document)
+    const mismatches = golden.filter((item) => JSON.stringify(documentFromHtml(item.html, item.layout)) !== JSON.stringify(JSON.parse(item.document)))
     expect(mismatches.map((item) => item.html)).toEqual([])
     expect(golden.length).toBeGreaterThan(500)
   })
@@ -14,7 +13,7 @@ describe("documentFromHtml", () => {
   it("round-trips the lines it reads back into the same document", () => {
     for (const item of golden.slice(0, 40)) {
       const document = documentFromHtml(item.html, item.layout)
-      expect(phpJsonEncode(documentFromHtml(documentLines(document), item.layout))).toBe(phpJsonEncode(document))
+      expect(JSON.stringify(documentFromHtml(documentLines(document), item.layout))).toBe(JSON.stringify(document))
     }
   })
 

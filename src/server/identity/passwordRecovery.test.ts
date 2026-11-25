@@ -12,8 +12,8 @@ import { activateAccount, resetPassword, sendResetLink, type Invitation, type Re
 const USER = golden.userId
 const EMAIL = "docente@silabos.test"
 const TOKEN = "token-de-restablecimiento"
-const RESET_OK = '{"message":"Contrase\\u00f1a restablecida. Ya puede iniciar sesi\\u00f3n."}'
-const INVALID_LINK = "El enlace para restablecer la contrase\\u00f1a no es v\\u00e1lido o ya venci\\u00f3."
+const RESET_OK = '{"message":"Contraseña restablecida. Ya puede iniciar sesión."}'
+const INVALID_LINK = "El enlace para restablecer la contraseña no es válido o ya venció."
 
 type Account = { id: string; email: string; passwordHash: string; remember: string | null; active: boolean; verifiedAt: number | null }
 
@@ -149,7 +149,7 @@ describe("POST authentication/password-reset (PasswordResetTest)", () => {
     const empty = await resetPassword(post("password-reset", {}), deps())
     expect(empty.status).toBe(422)
     expect(await empty.text()).toBe(
-      '{"message":"El campo correo electr\\u00f3nico es obligatorio. (y 2 errores m\\u00e1s)","errors":{"email":["El campo correo electr\\u00f3nico es obligatorio."],"token":["El campo enlace de activaci\\u00f3n es obligatorio."],"password":["El campo contrase\\u00f1a es obligatorio."]}}',
+      '{"message":"El campo correo electrónico es obligatorio. (y 2 errores más)","errors":{"email":["El campo correo electrónico es obligatorio."],"token":["El campo enlace de activación es obligatorio."],"password":["El campo contraseña es obligatorio."]}}',
     )
     const weak = await resetPassword(post("password-reset", resetBody({ email: "no-es-correo", password: "corta", password_confirmation: "otra" })), deps())
     expect((await weak.json()).errors).toEqual({
@@ -163,7 +163,7 @@ describe("POST authentication/password-reset (PasswordResetTest)", () => {
     for (let attempt = 0; attempt < 3; attempt++) expect((await resetPassword(post("password-reset", resetBody({ token: "otro" })), shared)).status).toBe(422)
     const response = await resetPassword(post("password-reset", resetBody()), shared)
     expect(response.status).toBe(429)
-    expect(await response.text()).toBe('{\n    "message": "Too Many Attempts."\n}')
+    expect(await response.text()).toBe('{"message":"Too Many Attempts."}')
   })
 
   it("serves a request from outside the SPA without session cookies", async () => {
@@ -187,7 +187,7 @@ describe("POST authentication/account-activation (ManagedUserTest)", () => {
   it("sets the password, verifies the email, uses the invitation, closes sessions", async () => {
     const response = await activateAccount(post("account-activation", activation()), deps())
     expect(response.status).toBe(200)
-    expect(await response.text()).toBe('{"message":"Cuenta activada. Ya puede iniciar sesi\\u00f3n."}')
+    expect(await response.text()).toBe('{"message":"Cuenta activada. Ya puede iniciar sesión."}')
     expect(accounts[0]).toMatchObject({ passwordHash: "hash:Nueva-clave-2026!", verifiedAt: NOW })
     expect(accounts[0].remember).toMatch(/^[A-Z]{60}$/)
     expect(invitations).toMatchObject([{ id: "inv-1", usedAt: NOW, invalidatedAt: null }, { id: "inv-0", usedAt: null, invalidatedAt: NOW }])
@@ -199,7 +199,7 @@ describe("POST authentication/account-activation (ManagedUserTest)", () => {
       invitations = [invitation(changes)]
       const response = await activateAccount(post("account-activation", activation()), deps())
       expect(response.status).toBe(422)
-      expect(await response.text()).toBe('{"message":"El enlace de activaci\\u00f3n no es v\\u00e1lido o ya venci\\u00f3.","errors":{"token":["El enlace de activaci\\u00f3n no es v\\u00e1lido o ya venci\\u00f3."]}}')
+      expect(await response.text()).toBe('{"message":"El enlace de activación no es válido o ya venció.","errors":{"token":["El enlace de activación no es válido o ya venció."]}}')
     }
     expect(accounts[0].verifiedAt).toBeNull()
   })
@@ -224,7 +224,7 @@ describe("POST authentication/account-activation (ManagedUserTest)", () => {
 })
 
 describe("POST authentication/password-recovery (PasswordRecoveryTest)", () => {
-  const SENT = '{"message":"Si el correo pertenece a una cuenta activa, recibir\\u00e1 un enlace para restablecer su contrase\\u00f1a."}'
+  const SENT = '{"message":"Si el correo pertenece a una cuenta activa, recibirá un enlace para restablecer su contraseña."}'
 
   it("replaces the token, stores its hash and sends the reset mail right away", async () => {
     resets.set(EMAIL, { token: "hash:viejo", createdAt: NOW - 61 })
@@ -255,12 +255,12 @@ describe("POST authentication/password-recovery (PasswordRecoveryTest)", () => {
 
   it("validates like SendPasswordResetLinkRequest", async () => {
     const cases: [unknown, string][] = [
-      [{}, '{"message":"El campo correo electr\\u00f3nico es obligatorio.","errors":{"email":["El campo correo electr\\u00f3nico es obligatorio."]}}'],
+      [{}, '{"message":"El campo correo electrónico es obligatorio.","errors":{"email":["El campo correo electrónico es obligatorio."]}}'],
       [
         { email: 123 },
-        '{"message":"El campo correo electr\\u00f3nico debe ser una cadena de texto. (y 1 error m\\u00e1s)","errors":{"email":["El campo correo electr\\u00f3nico debe ser una cadena de texto.","El campo correo electr\\u00f3nico debe ser un correo electr\\u00f3nico v\\u00e1lido."]}}',
+        '{"message":"El campo correo electrónico debe ser una cadena de texto. (y 1 error más)","errors":{"email":["El campo correo electrónico debe ser una cadena de texto.","El campo correo electrónico debe ser un correo electrónico válido."]}}',
       ],
-      [{ email: "ana@localhost" }, '{"message":"El campo correo electr\\u00f3nico debe ser un correo electr\\u00f3nico v\\u00e1lido.","errors":{"email":["El campo correo electr\\u00f3nico debe ser un correo electr\\u00f3nico v\\u00e1lido."]}}'],
+      [{ email: "ana@localhost" }, '{"message":"El campo correo electrónico debe ser un correo electrónico válido.","errors":{"email":["El campo correo electrónico debe ser un correo electrónico válido."]}}'],
     ]
     for (const [body, expected] of cases) {
       const response = await sendResetLink(post("password-recovery", body), deps())
@@ -273,7 +273,7 @@ describe("POST authentication/password-recovery (PasswordRecoveryTest)", () => {
   it("fails like Laravel's limiter when the address is an array", async () => {
     const response = await sendResetLink(post("password-recovery", { email: ["a@b.ec"] }), deps())
     expect(response.status).toBe(500)
-    expect(await response.text()).toBe('{\n    "message": "Server Error"\n}')
+    expect(await response.text()).toBe('{"message":"Server Error"}')
     expect(response.headers.get("x-ratelimit-limit")).toBeNull()
   })
 

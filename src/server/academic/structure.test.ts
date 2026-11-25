@@ -21,7 +21,7 @@ const OTHER = "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const SHIFTS = '"shiftOptions":[{"value":"matutina","label":"Matutina"},{"value":"vespertina","label":"Vespertina"},{"value":"nocturna","label":"Nocturna"}]'
 const MODALITIES =
-  '[{"value":"Presencial","label":"Presencial"},{"value":"Semipresencial","label":"Semipresencial"},{"value":"En l\\u00ednea","label":"En l\\u00ednea"},{"value":"A distancia","label":"A distancia"},{"value":"H\\u00edbrida","label":"H\\u00edbrida"}]'
+  '[{"value":"Presencial","label":"Presencial"},{"value":"Semipresencial","label":"Semipresencial"},{"value":"En línea","label":"En línea"},{"value":"A distancia","label":"A distancia"},{"value":"Híbrida","label":"Híbrida"}]'
 const BASE_OPTIONS = `"faculties":[],"careers":[],"periods":[],"campusOptions":[],"modalityOptions":${MODALITIES},${SHIFTS},"currentCurricula":[],"activeSubjects":[],"scheduledSubjects":[]`
 
 let world: FakeWorld
@@ -122,16 +122,16 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
     ]
     const response = await curriculumBuilder(get(path), CAREER, deps())
     const fixed =
-      '"fixedFields":[{"id":"horas_ac","key":"acd","label":"ACD","type":"entero","system_key":"horas_ac","system_label":"Horas AC \\/ ACD","position":1,"visible_on_card":true,"totalizable":true},' +
-      '{"id":"horas_pae","key":"ape","label":"APE","type":"entero","system_key":"horas_pae","system_label":"Horas PAE \\/ APE","position":2,"visible_on_card":true,"totalizable":true},' +
+      '"fixedFields":[{"id":"horas_ac","key":"acd","label":"ACD","type":"entero","system_key":"horas_ac","system_label":"Horas AC / ACD","position":1,"visible_on_card":true,"totalizable":true},' +
+      '{"id":"horas_pae","key":"ape","label":"APE","type":"entero","system_key":"horas_pae","system_label":"Horas PAE / APE","position":2,"visible_on_card":true,"totalizable":true},' +
       '{"id":"horas_aa","key":"aa","label":"AA","type":"entero","system_key":"horas_aa","system_label":"Horas AA","position":3,"visible_on_card":true,"totalizable":true},' +
-      '{"id":"creditos","key":"cred","label":"CRED","type":"numero","system_key":"creditos","system_label":"Cr\\u00e9ditos","position":4,"visible_on_card":true,"totalizable":true},' +
+      '{"id":"creditos","key":"cred","label":"CRED","type":"numero","system_key":"creditos","system_label":"Créditos","position":4,"visible_on_card":true,"totalizable":true},' +
       '{"id":"horas_totales","key":"total","label":"TOTAL","type":"entero","system_key":"horas_totales","system_label":"Horas totales","position":5,"visible_on_card":true,"totalizable":true}]'
     const totals =
-      '"fixedFieldTotals":[{"id":"horas_ac","label":"ACD","value":48.0},{"id":"horas_pae","label":"APE","value":49.5},{"id":"horas_aa","label":"AA","value":48.0},' +
-      '{"id":"creditos","label":"CRED","value":3.0},{"id":"horas_totales","label":"TOTAL","value":144}]'
+      '"fixedFieldTotals":[{"id":"horas_ac","label":"ACD","value":48},{"id":"horas_pae","label":"APE","value":49.5},{"id":"horas_aa","label":"AA","value":48},' +
+      '{"id":"creditos","label":"CRED","value":3},{"id":"horas_totales","label":"TOTAL","value":144}]'
     const first =
-      '{"id":"01a1c5bc-7cbf-7091-860c-63a02b91e998","code":"SW-B1-001","name":"Algoritmos","cycle":1,"position":0,"organization_unit":"basica","organization_unit_label":"Unidad b\\u00e1sica",' +
+      '{"id":"01a1c5bc-7cbf-7091-860c-63a02b91e998","code":"SW-B1-001","name":"Algoritmos","cycle":1,"position":0,"organization_unit":"basica","organization_unit_label":"Unidad básica",' +
       '"modality":"Presencial","modality_label":"Presencial","credits":"3.00","total_hours":144,"active":true,"generates_syllabus":true,' +
       '"system_values":{"horas_ac":"48.00","horas_pae":"48.00","horas_aa":"48.00","creditos":"3.00","horas_totales":144},' +
       '"display_fields":[{"id":"horas_ac","label":"ACD","value":"48.00"},{"id":"horas_pae","label":"APE","value":"48.00"},{"id":"horas_aa","label":"AA","value":"48.00"},{"id":"creditos","label":"CRED","value":"3.00"},{"id":"horas_totales","label":"TOTAL","value":144}]}'
@@ -148,7 +148,7 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
         `${fixed},${totals},"subjects":[${first},${second}],` +
         `"requirements":[{"id":"r-1","subject_id":"01a1c5bc-7d0a-7172-b554-6ae09a4da972","requirement_id":"01a1c5bc-7cbf-7091-860c-63a02b91e998","type":"prerrequisito"}],` +
         `"modalityOptions":${MODALITIES},` +
-        '"organizationUnitOptions":[{"value":"basica","label":"Unidad b\\u00e1sica"},{"value":"profesional","label":"Unidad profesional"},{"value":"integracion_curricular","label":"Unidad de integraci\\u00f3n curricular"}],' +
+        '"organizationUnitOptions":[{"value":"basica","label":"Unidad básica"},{"value":"profesional","label":"Unidad profesional"},{"value":"integracion_curricular","label":"Unidad de integración curricular"}],' +
         `"options":{${BASE_OPTIONS},"parallels":[],"teacherUsers":[]}}`,
     })
     expect(calls).toEqual(["requirements:01a1c5bc-7cbf-7091-860c-63a02b91e998,01a1c5bc-7d0a-7172-b554-6ae09a4da972"])
@@ -185,8 +185,8 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
   })
 
   it("aborts another career's curriculum with 404 and answers the router 404 for a non-UUID path", async () => {
-    expect(await read(await curriculumBuilder(get(`/api/v1/coordination/academic/curriculum/${OTHER}`), OTHER, deps()))).toEqual({ status: 404, text: '{\n    "message": ""\n}' })
-    expect(await read(await curriculumBuilder(get("/api/v1/coordination/academic/curriculum/abc"), "abc", deps()))).toEqual({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/curriculum/abc could not be found."\n}' })
+    expect(await read(await curriculumBuilder(get(`/api/v1/coordination/academic/curriculum/${OTHER}`), OTHER, deps()))).toEqual({ status: 404, text: '{"message":""}' })
+    expect(await read(await curriculumBuilder(get("/api/v1/coordination/academic/curriculum/abc"), "abc", deps()))).toEqual({ status: 404, text: '{"message":"The route api/v1/coordination/academic/curriculum/abc could not be found."}' })
   })
 
   it("answers 401 without a session and 409 when the stale session role leaves no single eligible role", async () => {
@@ -235,7 +235,7 @@ describe("GET /api/v1/coordination/academic/teacher-assignments", () => {
         '{"id":"u-3","name":"Nuevo docente","email":"nuevo@silabos.test","pending_activation":true,"invitation_expired":false},' +
         '{"id":"u-4","name":"Vencido","email":"vencido@silabos.test","pending_activation":true,"invitation_expired":true}],' +
         '"pendingTeachers":[{"id":"u-3","name":"Nuevo docente","email":"nuevo@silabos.test"}],' +
-        `"options":{${BASE_OPTIONS},"parallels":[{"id":"p-2","label":"Algoritmos \\u00b7 Paralelo B"}],"teacherUsers":[{"id":"u-1","name":"Ana","email":"ana@silabos.test"}]},` +
+        `"options":{${BASE_OPTIONS},"parallels":[{"id":"p-2","label":"Algoritmos · Paralelo B"}],"teacherUsers":[{"id":"u-1","name":"Ana","email":"ana@silabos.test"}]},` +
         '"canCreateTeacher":true}',
     })
   })

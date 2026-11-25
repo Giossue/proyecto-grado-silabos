@@ -19,7 +19,7 @@ const SUBJECTS = [
   { id: "01a1c5bc-7a00-7000-8000-0000000000a2", code: "SW-102", name: "Programación", cycle: 1 },
 ]
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
-const EMPTY_FORBIDDEN = '{\n    "message": ""\n}'
+const EMPTY_FORBIDDEN = '{"message":""}'
 const BASE = ["Aula", "Laboratorio"]
 const OWN = ["Aula", "Taller", "Campo"]
 

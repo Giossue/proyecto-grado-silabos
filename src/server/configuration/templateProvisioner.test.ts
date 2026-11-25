@@ -107,7 +107,7 @@ describe("POST /api/v1/admin/template", () => {
     exists = false
     expect(await read(await createTemplate(send("POST", "/api/v1/admin/template"), deps()))).toEqual({
       status: 201,
-      text: '{"message":"Plantilla vac\\u00eda creada.","template_id":"01a2bbbb-0000-7000-8000-000000000001"}',
+      text: '{"message":"Plantilla vacía creada.","template_id":"01a2bbbb-0000-7000-8000-000000000001"}',
     })
     expect(log).toEqual(["begin", "lock all", "insert 01a2bbbb-0000-7000-8000-000000000001", "sync 01a2bbbb-0000-7000-8000-000000000001 0", "commit"])
   })
@@ -124,7 +124,7 @@ describe("POST /api/v1/admin/template", () => {
   it("refuses a second template, an open process and other roles", async () => {
     expect(await read(await createTemplate(send("POST", "/api/v1/admin/template"), deps()))).toEqual({
       status: 422,
-      text: '{"message":"La plantilla institucional ya existe. Ed\\u00edtela en lugar de crear otra.","errors":{"template":["La plantilla institucional ya existe. Ed\\u00edtela en lugar de crear otra."]}}',
+      text: '{"message":"La plantilla institucional ya existe. Edítela en lugar de crear otra.","errors":{"template":["La plantilla institucional ya existe. Edítela en lugar de crear otra."]}}',
     })
     locked = true
     expect(await read(await createTemplate(send("POST", "/api/v1/admin/template"), deps()))).toEqual({ status: 422, text: '{"message":"Proceso activo","errors":{"process":["Proceso activo"]}}' })

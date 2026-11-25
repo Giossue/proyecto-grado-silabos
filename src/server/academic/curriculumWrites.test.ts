@@ -137,7 +137,7 @@ beforeEach(() => {
 describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/configuration", () => {
   it("changes the cycle count and keeps the syllabi in sync", async () => {
     const response = await configure({ cycle_count: "10" })
-    expect(response.text).toBe('{"message":"Configuraci\\u00f3n de la malla actualizada."}')
+    expect(response.text).toBe('{"message":"Configuración de la malla actualizada."}')
     expect(log).toEqual(["begin", `guard:false:${CAREER}`, `cycles:${CAREER}:10`, `sync:false:${CAREER}`, "commit"])
   })
 
@@ -150,8 +150,8 @@ describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/configurat
     locked = true
     expect((await configure({ cycle_count: 5 })).json?.errors).toEqual({ process: ["Convocatoria activa"] })
     locked = false
-    expect(await configure({ cycle_count: 5 }, "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9")).toMatchObject({ status: 404, text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Career] 01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"\n}' })
-    expect(await configure({ cycle_count: 5 }, "abc")).toMatchObject({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/curriculum/abc/configuration could not be found."\n}' })
+    expect(await configure({ cycle_count: 5 }, "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9")).toMatchObject({ status: 404, text: '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Career] 01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"}' })
+    expect(await configure({ cycle_count: 5 }, "abc")).toMatchObject({ status: 404, text: '{"message":"The route api/v1/coordination/academic/curriculum/abc/configuration could not be found."}' })
     world.assignments = [makeAssignment({ role: "coordinador", careerId: OTHER_CAREER })]
     expect((await configure({ cycle_count: 5 })).text).toBe(FORBIDDEN)
   })
@@ -220,7 +220,7 @@ describe("DELETE /api/v1/coordination/academic/curriculum/{curriculum}/requireme
   })
 
   it("answers Laravel's model 404 for an unknown relation and reads the confirmation from the query", async () => {
-    expect(await unrelate("01a2cccc-0000-7000-8000-000000000001")).toMatchObject({ status: 404, text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\SubjectRequirement] 01a2cccc-0000-7000-8000-000000000001"\n}' })
+    expect(await unrelate("01a2cccc-0000-7000-8000-000000000001")).toMatchObject({ status: 404, text: '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\SubjectRequirement] 01a2cccc-0000-7000-8000-000000000001"}' })
     finalized = true
     const confirmed = await deleteSubjectRequirement(
       new Request(apiRequest(`${base(CAREER)}/requirements/${REQUIREMENT}?confirm_purge=1`, { cookie, method: "DELETE", headers: { "x-csrf-token": golden.csrfToken } })),
@@ -248,7 +248,7 @@ describe("DELETE /api/v1/coordination/academic/curriculum/{curriculum}/subjects/
     expect((await removeSubject(OOP)).json?.errors).toEqual({
       subject: ["No se puede eliminar «Programación»: tiene 3 paralelos. Estos son registros de otros procesos, no las relaciones de la malla. Archívela para conservar el historial."],
     })
-    expect(await removeSubject("01a2cccc-0000-7000-8000-000000000001")).toMatchObject({ status: 404, text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a2cccc-0000-7000-8000-000000000001"\n}' })
+    expect(await removeSubject("01a2cccc-0000-7000-8000-000000000001")).toMatchObject({ status: 404, text: '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a2cccc-0000-7000-8000-000000000001"}' })
   })
 })
 

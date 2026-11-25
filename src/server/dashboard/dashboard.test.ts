@@ -246,7 +246,7 @@ describe("dashboard", () => {
       deadline: deadline(),
       coordination_convocation: null,
     })
-    expect(response.text).toContain('"label":"En revisi\\u00f3n"')
+    expect(response.text).toContain('"label":"En revisión"')
   })
 
   it("serves the teacher dashboard without metrics", async () => {
@@ -287,7 +287,7 @@ describe("dashboard", () => {
       deadline: null,
       coordination_convocation: null,
     })
-    expect(response.text).toContain('"hint":"1 de 13 s\\u00edlabos aprobados"')
+    expect(response.text).toContain('"hint":"1 de 13 sílabos aprobados"')
     expect(calls).toContain(`counts:${PROCESS}`)
   })
 

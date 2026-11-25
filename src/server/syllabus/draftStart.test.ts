@@ -11,10 +11,10 @@ import type { TemplateDefinition } from "../configuration/templateRuntime"
 import { copySyllabusContent, startDraft, type DraftStartDeps, type DraftStartTx } from "./draftStart"
 import type { CopySource, DetailSyllabus, SyllabusDetailStore } from "./syllabusDetail"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
-const EMPTY_FORBIDDEN = '{\n    "message": ""\n}'
+const EMPTY_FORBIDDEN = '{"message":""}'
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
 const TARGET = "50000000-0000-4000-8000-000000000001"

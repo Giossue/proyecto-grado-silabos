@@ -8,7 +8,7 @@ const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
 const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 const OTHER = "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"
-const FORBIDDEN = '{\n    "message": ""\n}'
+const FORBIDDEN = '{"message":""}'
 
 let world: FakeWorld
 let activeCareers: Set<string>

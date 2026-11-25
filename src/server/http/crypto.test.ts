@@ -4,7 +4,6 @@ import golden from "./__fixtures__/laravel-golden.json"
 import { DecryptError, decrypt, encrypt, parseAppKey } from "./encrypter"
 import { cookiePrefix, parseCookieHeader, stripValidCookiePrefix } from "./cookies"
 import { serializeString, unserializeString } from "./phpSerialize"
-import { phpJsonEncode } from "./phpJson"
 import { hashPasswordForCookie, loginSessionKey, recallerCookieName } from "./sessionGuard"
 
 const key = parseAppKey(golden.appKey)
@@ -96,19 +95,5 @@ describe("Session guard keys", () => {
 
   it("hashes the password with the app key string as HMAC key", () => {
     expect(hashPasswordForCookie(golden.passwordHash, golden.appKey)).toBe(golden.passwordHashForCookie)
-  })
-})
-
-describe("PHP json_encode", () => {
-  it("escapes slashes and non-ASCII characters like PHP", () => {
-    for (const sample of golden.jsonSamples) {
-      expect(phpJsonEncode(sample.value)).toBe(sample.json)
-    }
-  })
-
-  it("pretty prints with four spaces like JSON_PRETTY_PRINT", () => {
-    expect(phpJsonEncode({ message: "La cuenta está desactivada." }, { pretty: true })).toBe(
-      JSON.parse(JSON.stringify(golden.errors.inactive.body)),
-    )
   })
 })

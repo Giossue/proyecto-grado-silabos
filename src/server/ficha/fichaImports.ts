@@ -13,7 +13,7 @@ import type { TemplateStore } from "../configuration/templateStore"
 import { importSession, readUpload, type ImportDeps, type ImportFileRules } from "../excel/importRequest"
 import { xlsxDownload } from "../excel/workbook"
 import type { UploadedFile } from "../files/uploads"
-import { phpJsonEncode } from "../http/phpJson"
+import { definitionHash } from "./definitionHash"
 import { jsonError, apiJson, validationError } from "../http/responses"
 import { sharedRateLimiter } from "../http/throttle"
 import { fichaApplySchema } from "@/schemas/imports"
@@ -104,7 +104,7 @@ async function fichaContext(careerId: string, reader: FichaReader): Promise<Cont
       id: field.id,
       section: section?.title ?? "",
       sheet: sheetName(index, schema.label),
-      definition_hash: createHash("sha256").update(phpJsonEncode(field.content), "utf8").digest("hex"),
+      definition_hash: definitionHash(field.content),
     }
   })
   const subjects = await reader.subjects(careerId)

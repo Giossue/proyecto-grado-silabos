@@ -1,7 +1,6 @@
 import "server-only"
 import { sql } from "drizzle-orm"
 import { uuidList } from "../http/sql"
-import { phpJsonEncode } from "../http/phpJson"
 import { phpEquals, phpShape, type PhpRecord } from "../configuration/phpValues"
 import { recipientsOn } from "../notifications/queries"
 import { storeInternalNotifications } from "../notifications/store"
@@ -142,7 +141,7 @@ export async function reopenProcess(work: InProgressWork, processId: string): Pr
   for (const syllabus of syllabi) {
     if (Object.prototype.hasOwnProperty.call(syllabus.context, CLOSED_DOCUMENT)) {
       const context = Object.fromEntries(Object.entries(syllabus.context).filter(([key]) => key !== CLOSED_DOCUMENT))
-      await executor.execute(sql`update silabos set datos_academicos_silabo = ${phpJsonEncode(phpShape(context))}::jsonb where silabo_id = ${syllabus.id}::uuid`)
+      await executor.execute(sql`update silabos set datos_academicos_silabo = ${JSON.stringify(phpShape(context))}::jsonb where silabo_id = ${syllabus.id}::uuid`)
     }
   }
   const reopened = convocations.filter((row) => row.previous === "abierta").map((row) => row.id)

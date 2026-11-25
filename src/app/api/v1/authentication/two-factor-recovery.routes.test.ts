@@ -52,6 +52,6 @@ describe("two-factor, password reset and account activation routes", () => {
     vi.stubEnv("APP_KEY", `base64:${Buffer.alloc(32).toString("base64")}`)
     const response = await challenge.POST(new Request("http://localhost:3000/api/v1/authentication/two-factor/challenge", { method: "POST", headers: { accept: "application/json" } }))
     expect(response.status).toBe(400)
-    expect(await response.text()).toBe('{"message":"Inicie sesi\\u00f3n desde la aplicaci\\u00f3n web."}')
+    expect(await response.text()).toBe('{"message":"Inicie sesión desde la aplicación web."}')
   })
 })

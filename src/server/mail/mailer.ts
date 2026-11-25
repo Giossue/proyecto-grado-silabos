@@ -37,7 +37,7 @@ export function createMailer(config: MailConfig, options: MailerOptions = {}): M
   return {
     sent,
     async send(mail) {
-      const rendered = renderMailable(mail, config.app)
+      const rendered = await renderMailable(mail, config.app)
       const info = await transport.sendMail({
         from: { name: config.from.name, address: config.from.address },
         to: mail.to,

@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import { fakeTemplateStore, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "./testing"
 import type { SyllabusTemplate } from "./templatePresentation"
 import {
@@ -153,11 +152,11 @@ async function read(response: Promise<Response>) {
 }
 
 const sectionKeys = (sections: DocumentSection[]) => sections.map((section) => `${section.position}:${section.key}`)
-const message = (text: string, extra: Record<string, unknown> = {}) => phpJsonEncode({ message: text, ...extra })
+const message = (text: string, extra: Record<string, unknown> = {}) => JSON.stringify({ message: text, ...extra })
 const invalid = (errors: Record<string, string[]>) => {
   const messages = Object.values(errors).flat()
   const more = messages.length - 1
-  return phpJsonEncode({ message: more > 0 ? `${messages[0]} (y ${more} ${more === 1 ? "error más" : "errores más"})` : messages[0], errors })
+  return JSON.stringify({ message: more > 0 ? `${messages[0]} (y ${more} ${more === 1 ? "error más" : "errores más"})` : messages[0], errors })
 }
 
 beforeEach(() => {
@@ -241,7 +240,7 @@ describe("PATCH admin/template/{template}/structure/sections/{section}", () => {
     })
     expect(await read(updateSection(request("PATCH", `sections/${missing}`, { title: "X" }), TEMPLATE_ID, missing, deps()))).toEqual({
       status: 404,
-      text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\SyllabusTemplate] 01a1c5ba-2222-7000-8000-999999999999"\n}',
+      text: '{"message":"No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\SyllabusTemplate] 01a1c5ba-2222-7000-8000-999999999999"}',
     })
   })
 })
@@ -352,10 +351,10 @@ describe("PATCH admin/template/{template}/structure/fields/{field}", () => {
   })
 
   it("aborts fields of another template with 404 and answers Laravel's model 404 for unknown fields", async () => {
-    expect(await read(updateField(request("PATCH", "fields/x", { label: "A" }), TEMPLATE_ID, "01a1c5ba-9999-7000-8000-000000000001", deps()))).toEqual({ status: 404, text: '{\n    "message": ""\n}' })
+    expect(await read(updateField(request("PATCH", "fields/x", { label: "A" }), TEMPLATE_ID, "01a1c5ba-9999-7000-8000-000000000001", deps()))).toEqual({ status: 404, text: '{"message":""}' })
     expect(await read(updateField(request("PATCH", "fields/x", { label: "A" }), TEMPLATE_ID, "01a1c5ba-9999-7000-8000-000000000003", deps()))).toEqual({
       status: 404,
-      text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\FieldDefinition] 01a1c5ba-9999-7000-8000-000000000003"\n}',
+      text: '{"message":"No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\FieldDefinition] 01a1c5ba-9999-7000-8000-000000000003"}',
     })
     expect(log).toEqual([])
   })

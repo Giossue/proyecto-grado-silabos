@@ -103,7 +103,7 @@ describe("GET /api/v1/teacher/library-catalog/search", () => {
     expect(sent[0].url.href).toBe("http://koha.test/cgi-bin/koha/opac-search.pl?q=isbn%3A9789563431063&format=rss2&count=20&offset=0")
     expect(sent[0].accept).toBe("application/xml, text/xml")
     expect(sent[1].url.href).toBe("http://koha.test/cgi-bin/koha/opac-export.pl?op=export&bib=10525&format=marcxml")
-    expect(result.text).toContain('"title":"Proyectos de inversi\\u00f3n"')
+    expect(result.text).toContain('"title":"Proyectos de inversión"')
   })
 
   it("uses each field's own Koha index", async () => {
@@ -165,7 +165,7 @@ describe("GET /api/v1/teacher/library-catalog/search", () => {
   })
 
   it("reports an unavailable catalog with Laravel's messages", async () => {
-    const unavailable = (message: string) => JSON.stringify({ message, code: "catalog_unavailable" }).replace(/[\u007f-￿]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"))
+    const unavailable = (message: string) => JSON.stringify({ message, code: "catalog_unavailable" })
     respond = () => {
       throw new KohaTransportError("sin red")
     }
@@ -202,7 +202,7 @@ describe("GET /api/v1/teacher/library-catalog/search", () => {
     expect((await search({ field: "any", q: "a" })).json.errors).toEqual({ q: ["El campo texto a buscar debe tener al menos 2 caracteres."] })
     expect((await search({ field: "any", q: "a".repeat(121) })).json.errors).toEqual({ q: ["El campo texto a buscar no debe tener más de 120 caracteres."] })
     expect((await search({})).text).toBe(
-      '{"message":"El campo campo de b\\u00fasqueda es obligatorio. (y 1 error m\\u00e1s)","errors":{"field":["El campo campo de b\\u00fasqueda es obligatorio."],"q":["El campo texto a buscar es obligatorio."]}}',
+      '{"message":"El campo campo de búsqueda es obligatorio. (y 1 error más)","errors":{"field":["El campo campo de búsqueda es obligatorio."],"q":["El campo texto a buscar es obligatorio."]}}',
     )
     expect(sent).toEqual([])
   })
@@ -212,7 +212,7 @@ describe("GET /api/v1/teacher/library-catalog/search", () => {
     for (let attempt = 0; attempt < 30; attempt += 1) expect((await search({ field: "any", q: "inversión" })).status).toBe(200)
     const limited = await search({ field: "any", q: "inversión" })
     expect(limited.status).toBe(429)
-    expect(limited.text).toBe('{\n    "message": "Too Many Attempts."\n}')
+    expect(limited.text).toBe('{"message":"Too Many Attempts."}')
     expect(limited.headers.get("x-ratelimit-limit")).toBe("30")
   })
 

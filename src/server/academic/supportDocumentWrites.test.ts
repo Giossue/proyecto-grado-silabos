@@ -226,7 +226,7 @@ describe("POST /api/v1/coordination/support-documents", () => {
     const id = JSON.parse((await read(await storeSupportDocument(upload("Malla en Excel", { name: "malla.xlsx", content: fixture("workbook.xlsx") }), deps()))).text).document.id as string
     await prepareSupportDocumentView(id, viewDeps())
     expect(documents.get(id)?.view).toBe("sin_vista")
-    expect(await read(await viewSupportDocument(request("GET", `/api/v1/support-documents/${id}/view`), id, deps()))).toEqual({ status: 404, text: '{\n    "message": ""\n}' })
+    expect(await read(await viewSupportDocument(request("GET", `/api/v1/support-documents/${id}/view`), id, deps()))).toEqual({ status: 404, text: '{"message":""}' })
   })
 
   it("marks the view as missing when the job fails for good", async () => {
@@ -246,7 +246,7 @@ describe("POST /api/v1/coordination/support-documents", () => {
     asRole("coordinador")
     expect(await read(await storeSupportDocument(upload("", { name: "notas.txt", content: "texto" }), deps()))).toEqual({
       status: 422,
-      text: '{"message":"Escriba el nombre del documento. (y 1 error m\\u00e1s)","errors":{"title":["Escriba el nombre del documento."],"file":["Use un PDF, Word o Excel."]}}',
+      text: '{"message":"Escriba el nombre del documento. (y 1 error más)","errors":{"title":["Escriba el nombre del documento."],"file":["Use un PDF, Word o Excel."]}}',
     })
     expect(await read(await storeSupportDocument(upload("Disfrazado", { name: "notas.pdf", content: "texto" }), deps()))).toMatchObject({ status: 422 })
     expect(await read(await storeSupportDocument(upload("Sin archivo", null), deps()))).toEqual({
@@ -255,7 +255,7 @@ describe("POST /api/v1/coordination/support-documents", () => {
     })
     expect(await read(await storeSupportDocument(upload("Texto", null, { file: "no es archivo" }), deps()))).toEqual({
       status: 422,
-      text: '{"message":"El campo archivo debe ser un archivo. (y 1 error m\\u00e1s)","errors":{"file":["El campo archivo debe ser un archivo.","Use un PDF, Word o Excel."]}}',
+      text: '{"message":"El campo archivo debe ser un archivo. (y 1 error más)","errors":{"file":["El campo archivo debe ser un archivo.","Use un PDF, Word o Excel."]}}',
     })
     expect(await read(await storeSupportDocument(upload("x".repeat(181), { name: "a.pdf", content: PDF }), deps()))).toEqual({
       status: 422,
@@ -267,17 +267,17 @@ describe("POST /api/v1/coordination/support-documents", () => {
 
   it("lets only the career coordinator manage, and hides documents of other careers", async () => {
     asRole("docente")
-    expect(await read(await storeSupportDocument(upload("Intento", { name: "a.pdf", content: PDF }), deps()))).toEqual({ status: 403, text: '{\n    "message": ""\n}' })
-    expect(await read(await storeSupportDocument(upload("Datos", { name: "datos.xlsx", content: fixture("datos-5001.xlsx") }), deps()))).toEqual({ status: 403, text: '{\n    "message": ""\n}' })
+    expect(await read(await storeSupportDocument(upload("Intento", { name: "a.pdf", content: PDF }), deps()))).toEqual({ status: 403, text: '{"message":""}' })
+    expect(await read(await storeSupportDocument(upload("Datos", { name: "datos.xlsx", content: fixture("datos-5001.xlsx") }), deps()))).toEqual({ status: 403, text: '{"message":""}' })
 
     asRole("coordinador", OTHER_CAREER)
     const other = JSON.parse((await read(await storeSupportDocument(upload("Ajeno", { name: "ajeno.pdf", content: PDF }), deps()))).text).document.id as string
     asRole("docente")
-    expect(await read(await viewSupportDocument(request("GET", `/api/v1/support-documents/${other}/view`), other, deps()))).toEqual({ status: 404, text: '{\n    "message": ""\n}' })
+    expect(await read(await viewSupportDocument(request("GET", `/api/v1/support-documents/${other}/view`), other, deps()))).toEqual({ status: 404, text: '{"message":""}' })
     asRole("bibliotecario", null)
-    expect(await read(await viewSupportDocument(request("GET", `/api/v1/support-documents/${other}/view`), other, deps()))).toEqual({ status: 403, text: '{\n    "message": ""\n}' })
+    expect(await read(await viewSupportDocument(request("GET", `/api/v1/support-documents/${other}/view`), other, deps()))).toEqual({ status: 403, text: '{"message":""}' })
     asRole("coordinador")
-    expect(await read(await destroySupportDocument(request("DELETE", `/api/v1/coordination/support-documents/${other}`), other, deps()))).toEqual({ status: 404, text: '{\n    "message": ""\n}' })
+    expect(await read(await destroySupportDocument(request("DELETE", `/api/v1/coordination/support-documents/${other}`), other, deps()))).toEqual({ status: 404, text: '{"message":""}' })
     expect(documents.has(other)).toBe(true)
   })
 
@@ -330,7 +330,7 @@ describe("DELETE /api/v1/coordination/support-documents/{document}", () => {
     const missing = "01a1c5bc-79ca-7331-8f0f-000000000000"
     expect(await read(await destroySupportDocument(request("DELETE", `/api/v1/coordination/support-documents/${missing}`), missing, deps()))).toEqual({
       status: 404,
-      text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\SupportDocument] 01a1c5bc-79ca-7331-8f0f-000000000000"\n}',
+      text: '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\SupportDocument] 01a1c5bc-79ca-7331-8f0f-000000000000"}',
     })
   })
 })

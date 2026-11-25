@@ -16,7 +16,7 @@ const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 const OTHER_CAREER = "01a1c5bc-79ca-7331-8f0f-000000000009"
 const FACULTY = "01a1c5bc-798f-72af-b64b-3cd174a1687b"
 const SUBJECT = "01a1c5bc-7a00-7000-8000-0000000000aa"
-const EMPTY_FORBIDDEN = '{\n    "message": ""\n}'
+const EMPTY_FORBIDDEN = '{"message":""}'
 
 const SUBJECT_ROW: SubjectContextRow = {
   id: SUBJECT,
@@ -180,11 +180,11 @@ describe("GET academic/asignaturas/{asignatura}/ficha/vista-previa", () => {
   it("answers Laravel's model 404 for unknown subjects and a missing template, and the router 404 for non-UUID ids", async () => {
     asRole("coordinador", CAREER)
     const unknown = await get("01a1c5bc-7a00-7000-8000-0000000000ff")
-    expect([unknown.status, await unknown.text()]).toEqual([404, '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a1c5bc-7a00-7000-8000-0000000000ff"\n}'])
+    expect([unknown.status, await unknown.text()]).toEqual([404, '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a1c5bc-7a00-7000-8000-0000000000ff"}'])
     expect((await get("abc")).status).toBe(404)
     templates.template = null
     const missing = await get()
-    expect([missing.status, await missing.text()]).toEqual([404, '{\n    "message": "No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\SyllabusTemplate]."\n}'])
+    expect([missing.status, await missing.text()]).toEqual([404, '{"message":"No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\SyllabusTemplate]."}'])
   })
 
   it("answers 401 without a session", async () => {

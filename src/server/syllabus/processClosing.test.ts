@@ -7,7 +7,7 @@ import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW
 import { closeProcess, type ClosingDeps } from "./processClosing"
 import type { ProcessRow } from "./processes"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'

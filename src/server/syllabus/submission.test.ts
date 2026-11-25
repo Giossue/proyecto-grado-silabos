@@ -219,7 +219,7 @@ describe("POST teacher/syllabi/{s}/submit", () => {
     expect((await submit({ version_bloqueo: 1, idempotency_key: KEY })).json).toEqual({ message: "Revisión 3 enviada.", syllabus: { id: SYLLABUS, state: "en_revision" } })
     expect(log).toEqual([])
     keyed = { id: PREVIOUS, number: 3, submittedBy: "someone-else" }
-    expect(await submit({ version_bloqueo: 1, idempotency_key: KEY })).toMatchObject({ status: 403, text: '{\n    "message": ""\n}' })
+    expect(await submit({ version_bloqueo: 1, idempotency_key: KEY })).toMatchObject({ status: 403, text: '{"message":""}' })
   })
 
   it("stops when the validation still has blocking errors", async () => {

@@ -42,10 +42,10 @@ describe("session", () => {
     const response = await call(showSession, "/api/v1/session")
     expect(response.status).toBe(200)
     expect(response.text).toBe(
-      `{"user":{"id":"${golden.userId}","name":"ANA P\\u00c9REZ","email":"ana@ueb.edu.ec","email_verified":true,"can_edit_identity":false,"formation":null,"accessibility":[]},` +
-        `"active_role":{"id":"${golden.roleId}","code":"docente","career_id":"c-1","career_name":"Software \\u00b7 SW-8"},` +
-        `"available_roles":[{"id":"${golden.roleId}","code":"docente","career_id":"c-1","career_name":"Software \\u00b7 SW-8"}],` +
-        `"institution":{"today":"2026-10-21","timezone":"America\\/Guayaquil"}}`,
+      `{"user":{"id":"${golden.userId}","name":"ANA PÉREZ","email":"ana@ueb.edu.ec","email_verified":true,"can_edit_identity":false,"formation":null,"accessibility":[]},` +
+        `"active_role":{"id":"${golden.roleId}","code":"docente","career_id":"c-1","career_name":"Software · SW-8"},` +
+        `"available_roles":[{"id":"${golden.roleId}","code":"docente","career_id":"c-1","career_name":"Software · SW-8"}],` +
+        `"institution":{"today":"2026-10-21","timezone":"America/Guayaquil"}}`,
     )
   })
 

@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import type { SyllabusFacts } from "./policy"
 import {
   compareRevisions,
@@ -15,7 +14,7 @@ import {
   type RevisionRecord,
 } from "./coordinationReviews"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
@@ -156,7 +155,7 @@ describe("GET /api/v1/coordination/reviews", () => {
         submitted_at: "2026-11-20T14:00:00+00:00",
       },
     ])
-    expect(text).toBe(phpJsonEncode(JSON.parse(text)))
+    expect(text).toBe(JSON.stringify(JSON.parse(text)))
   })
 
   it("keeps an empty search as an empty string and computes the stage of each revision", async () => {
@@ -211,7 +210,7 @@ describe("GET /api/v1/coordination/reviews/{before}/compare/{after}", () => {
     const { status, text } = await compare(REVISION_2, REVISION_1)
     expect(status).toBe(200)
     expect(text).toBe(
-      phpJsonEncode({
+      JSON.stringify({
         syllabus: {
           id: SYLLABUS,
           subject: "Redes",
@@ -255,7 +254,7 @@ describe("GET /api/v1/coordination/reviews/{before}/compare/{after}", () => {
     facts.set(OTHER_SYLLABUS, syllabusFacts({ id: OTHER_SYLLABUS, careerId: "c0000000-0000-4000-8000-000000000009" }))
     const denied = await compare(REVISION_1, FOREIGN_REVISION)
     expect(denied.status).toBe(403)
-    expect(denied.text).toBe('{\n    "message": ""\n}')
+    expect(denied.text).toBe('{"message":""}')
     world.assignments = [makeAssignment({ role: "docente", careerId: CAREER })]
     facts.set(SYLLABUS, syllabusFacts({ writtenByUser: true }))
     expect((await compare(REVISION_1, REVISION_2)).status).toBe(200)

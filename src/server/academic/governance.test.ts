@@ -154,8 +154,8 @@ describe("GET admin/academic/{section?}", () => {
     const text = await response.text()
     expect(text.startsWith('{"lock_reason":"Convocatoria activa","convocation_in_progress":true,"catalogs":{"faculties":[{"id":"')).toBe(true)
     expect(text).toContain(
-      `{"id":"${FACULTY}","nombre":"Ciencias Administrativas","campus":"${MATRIZ.replace("ó", "\\u00f3")}","catalog_libraries":["BIB-1"],"activo":true,` +
-        `"deactivate_block":"Desactive primero las carreras activas de esta facultad.","lock_reason":null,"logo_url":"http:\\/\\/localhost:3000\\/logos\\/facultad\\/${FACULTY}?v=1794318825"}`,
+      `{"id":"${FACULTY}","nombre":"Ciencias Administrativas","campus":"${MATRIZ}","catalog_libraries":["BIB-1"],"activo":true,` +
+        `"deactivate_block":"Desactive primero las carreras activas de esta facultad.","lock_reason":null,"logo_url":"http://localhost:3000/logos/facultad/${FACULTY}?v=1794318825"}`,
     )
     expect(text.endsWith('"section":"faculties"}')).toBe(true)
     const body = JSON.parse(text)
@@ -221,7 +221,7 @@ describe("GET admin/academic/{section?}", () => {
     expect((await json("periodos-academicos")).section).toBe("academic-periods")
     const unknown = await list("otra")
     expect(unknown.status).toBe(404)
-    expect(await unknown.text()).toBe('{\n    "message": ""\n}')
+    expect(await unknown.text()).toBe('{"message":""}')
   })
 
   it("is reserved to the Administrator role", async () => {

@@ -2,13 +2,12 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import { fakeTemplateStore, fieldId, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "../configuration/testing"
 import type { PhpRecord } from "../configuration/phpValues"
 import { updateDraftField, type DraftFieldDeps, type DraftFieldRecord, type DraftSyllabus } from "./draftField"
 import type { IdentificationSource } from "./identificationCard"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
@@ -165,14 +164,14 @@ describe("PATCH /api/v1/teacher/syllabi/{syllabus}/fields/{field}", () => {
       type: "doc",
       content: [{ type: "paragraph", attrs: { textAlign: "left" }, content: [{ type: "text", text: "Docente: " }, { type: "text", text: "Ana Pérez", marks: [] }] }],
     })
-    expect(text).toBe(phpJsonEncode(JSON.parse(text)))
+    expect(text).toBe(JSON.stringify(JSON.parse(text)))
   })
 
   it("answers a stale version with the recoverable conflict and writes nothing", async () => {
     const { status, text } = await patch({ version_bloqueo: 1, value: doc("Escritura obsoleta.") })
     expect(status).toBe(409)
     expect(text).toBe(
-      phpJsonEncode({ message: "El borrador cambió en otra sesión. Recarga antes de continuar.", code: "conflicto_version_borrador", version_bloqueo_actual: 3 }),
+      JSON.stringify({ message: "El borrador cambió en otra sesión. Recarga antes de continuar.", code: "conflicto_version_borrador", version_bloqueo_actual: 3 }),
     )
     expect(saved).toEqual([])
     expect(drafts).toEqual([])
@@ -182,7 +181,7 @@ describe("PATCH /api/v1/teacher/syllabi/{syllabus}/fields/{field}", () => {
   it("keeps only the message of the conflict when the client does not expect JSON", async () => {
     const { status, text } = await patch({ version_bloqueo: 1, value: doc("x") }, { headers: { accept: "text/html" } })
     expect(status).toBe(409)
-    expect(text).toBe(phpJsonEncode({ message: "El borrador cambió en otra sesión. Recarga antes de continuar." }))
+    expect(text).toBe(JSON.stringify({ message: "El borrador cambió en otra sesión. Recarga antes de continuar." }))
   })
 
   it("saves the empty document when the value is null", async () => {

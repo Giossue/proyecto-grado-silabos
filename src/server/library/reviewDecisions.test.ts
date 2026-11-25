@@ -8,11 +8,11 @@ import type { ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
 import { commentLibraryReview, verifyLibraryReview, type LibraryDecisionDeps } from "./reviewDecisions"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
-const ABORTED = '{\n    "message": ""\n}'
+const ABORTED = '{"message":""}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
 const SYLLABUS = "01a2094b-56da-719b-a847-c1c9a1aa0584"
 const REVISION = "70000000-0000-4000-8000-000000000001"

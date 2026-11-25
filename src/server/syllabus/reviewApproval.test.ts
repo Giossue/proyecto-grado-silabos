@@ -11,7 +11,7 @@ import type { DetailSyllabus } from "./syllabusDetail"
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
-const APPROVED = '{"message":"S\\u00edlabo firmado y aprobado."}'
+const APPROVED = '{"message":"Sílabo firmado y aprobado."}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
 const SYLLABUS = "01a2094b-56da-719b-a847-c1c9a1aa0584"
 const REVISION = "70000000-0000-4000-8000-000000000001"
@@ -188,11 +188,11 @@ describe("POST coordination/reviews/{revision}/approve", () => {
   it("asks for the coordination signature and rejects a statement for another decision", async () => {
     expect(await approve({})).toEqual({
       status: 422,
-      text: '{"message":"Firme con su firma electr\\u00f3nica.","errors":{"signature":["Firme con su firma electr\\u00f3nica."]}}',
+      text: '{"message":"Firme con su firma electrónica.","errors":{"signature":["Firme con su firma electrónica."]}}',
     })
     expect(await approve(signature(STATEMENT.replace("aprobacion_coordinacion", "aprobacion_biblioteca")))).toEqual({
       status: 422,
-      text: '{"message":"La declaraci\\u00f3n firmada no corresponde. Vuelva a firmar.","errors":{"signature":["La declaraci\\u00f3n firmada no corresponde. Vuelva a firmar."]}}',
+      text: '{"message":"La declaración firmada no corresponde. Vuelva a firmar.","errors":{"signature":["La declaración firmada no corresponde. Vuelva a firmar."]}}',
     })
     expect([signatures, reviews, approvals, artifacts, dispatched]).toEqual([[], [], [], [], []])
   })
@@ -200,11 +200,11 @@ describe("POST coordination/reviews/{revision}/approve", () => {
   it("validates the signature shape like Laravel", async () => {
     expect(await approve({ signature: "firma" })).toEqual({
       status: 422,
-      text: '{"message":"El campo firma electr\\u00f3nica debe ser una lista.","errors":{"signature":["El campo firma electr\\u00f3nica debe ser una lista."]}}',
+      text: '{"message":"El campo firma electrónica debe ser una lista.","errors":{"signature":["El campo firma electrónica debe ser una lista."]}}',
     })
     expect(await approve({ signature: { statement: "", cms: "x" } })).toEqual({
       status: 422,
-      text: '{"message":"La firma no es v\\u00e1lida.","errors":{"signature":["La firma no es v\\u00e1lida."]}}',
+      text: '{"message":"La firma no es válida.","errors":{"signature":["La firma no es válida."]}}',
     })
   })
 
@@ -212,17 +212,17 @@ describe("POST coordination/reviews/{revision}/approve", () => {
     stage = "biblioteca"
     expect(await approve(signature())).toEqual({
       status: 422,
-      text: '{"message":"La revisi\\u00f3n ya no espera la decisi\\u00f3n de coordinaci\\u00f3n.","errors":{"revision":["La revisi\\u00f3n ya no espera la decisi\\u00f3n de coordinaci\\u00f3n."]}}',
+      text: '{"message":"La revisión ya no espera la decisión de coordinación.","errors":{"revision":["La revisión ya no espera la decisión de coordinación."]}}',
     })
     stage = "coordinacion"
     latest = "70000000-0000-4000-8000-000000000002"
     expect(await approve(signature())).toEqual({
       status: 422,
-      text: '{"message":"Solo puede aprobarse la revisi\\u00f3n vigente.","errors":{"revision":["Solo puede aprobarse la revisi\\u00f3n vigente."]}}',
+      text: '{"message":"Solo puede aprobarse la revisión vigente.","errors":{"revision":["Solo puede aprobarse la revisión vigente."]}}',
     })
     latest = REVISION
     lockedBlock = PAUSED
-    expect((await approve(signature())).text).toBe(`{"message":"${PAUSED.replace("á", "\\u00e1")}","errors":{"revision":["${PAUSED.replace("á", "\\u00e1")}"]}}`)
+    expect((await approve(signature())).text).toBe(`{"message":"${PAUSED}","errors":{"revision":["${PAUSED}"]}}`)
     expect(approvals).toEqual([])
   })
 
@@ -233,7 +233,7 @@ describe("POST coordination/reviews/{revision}/approve", () => {
     expect(await approve(signature())).toEqual({ status: 403, text: FORBIDDEN })
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
     syllabus = { ...syllabus, convocationState: "pausada" }
-    expect(await approve(signature())).toEqual({ status: 403, text: `{"message":"${PAUSED.replace("á", "\\u00e1")}"}` })
+    expect(await approve(signature())).toEqual({ status: 403, text: `{"message":"${PAUSED}"}` })
     expect(approvals).toEqual([])
   })
 

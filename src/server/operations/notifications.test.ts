@@ -74,33 +74,33 @@ describe("GET /api/v1/notifications", () => {
   it("answers Laravel's 401 to a guest", async () => {
     const response = await listNotifications(apiRequest("/api/v1/notifications"), deps())
     expect(response.status).toBe(401)
-    expect(await response.text()).toBe(golden.errors.unauthenticated.body)
+    expect(JSON.parse(await response.text())).toEqual(JSON.parse(golden.errors.unauthenticated.body))
   })
 
   it("answers 403 to an unverified user", async () => {
     world.users = [makeUser({ emailVerifiedAt: null })]
     const { status, text } = await getJson("/api/v1/notifications")
     expect(status).toBe(403)
-    expect(text).toBe(golden.errors.unverified.body)
+    expect(JSON.parse(text)).toEqual(JSON.parse(golden.errors.unverified.body))
   })
 
   it("rejects an unknown status filter with Laravel's 422 body", async () => {
     const invalid = await getJson("/api/v1/notifications?status=x")
     expect(invalid.status).toBe(422)
-    expect(invalid.text).toBe(golden.errors.invalidStatus.body)
+    expect(JSON.parse(invalid.text)).toEqual(JSON.parse(golden.errors.invalidStatus.body))
     const array = await getJson("/api/v1/notifications?status[]=x")
     expect(array.status).toBe(422)
-    expect(array.text).toBe(golden.errors.arrayStatus.body)
+    expect(JSON.parse(array.text)).toEqual(JSON.parse(golden.errors.arrayStatus.body))
   })
 
   it("renders the exact JSON Laravel renders for one notification", async () => {
     notifications = [notification({ id: "0193-n", title: "Título «ñ» / 1" })]
     const { status, text } = await getJson("/api/v1/notifications")
     expect(status).toBe(200)
-    const url = "http:\\/\\/localhost:3000\\/api\\/v1\\/notifications"
+    const url = "http://localhost:3000/api/v1/notifications"
     expect(text).toBe(
       `{"filters":{"status":"all"},"notifications":{"current_page":1,"data":[{"id":"0193-n","tipo":"documento.exportacion_fallida",` +
-        `"titulo":"T\\u00edtulo \\u00ab\\u00f1\\u00bb \\/ 1","mensaje":"Mensaje de prueba.","leido_en":null,"notificado_en":"2026-11-23T15:04:05+00:00",` +
+        `"titulo":"Título «ñ» / 1","mensaje":"Mensaje de prueba.","leido_en":null,"notificado_en":"2026-11-23T15:04:05+00:00",` +
         `"has_destination":false,"context":null}],"first_page_url":"${url}?page=1","from":1,"last_page":1,` +
         `"last_page_url":"${url}?page=1","links":[{"url":null,"label":"pagination.previous","page":null,"active":false},` +
         `{"url":"${url}?page=1","label":"1","page":1,"active":true},{"url":null,"label":"pagination.next","page":null,"active":false}],` +
@@ -238,10 +238,10 @@ describe("GET /api/v1/notifications/email-preferences", () => {
     world.assignments = [makeAssignment({ id: "r", role: "bibliotecario", careerId: null })]
     const response = await showEmailPreferences(apiRequest("/api/v1/notifications/email-preferences", { cookie }), { bridge: fakeDeps(world) })
     expect(await response.text()).toBe(
-      '{"options":[{"type":"biblioteca.resumen_diario","label":"Resumen diario","description":"S\\u00edlabos por revisar, de lunes a viernes, solo si hay pendientes","enabled":true},' +
-        '{"type":"silabo.enviado","label":"S\\u00edlabo por revisar","description":"Un docente envi\\u00f3 un s\\u00edlabo y espera la revisi\\u00f3n de biblioteca","enabled":true},' +
-        '{"type":"silabo.reenviado_biblioteca","label":"S\\u00edlabo reenviado","description":"El docente corrigi\\u00f3 la bibliograf\\u00eda y la reenvi\\u00f3","enabled":true},' +
-        '{"type":"proceso.reanudado","label":"Convocatoria reanudada por Administraci\\u00f3n","description":"Se retoman las revisiones tras una pausa institucional","enabled":true}]}',
+      '{"options":[{"type":"biblioteca.resumen_diario","label":"Resumen diario","description":"Sílabos por revisar, de lunes a viernes, solo si hay pendientes","enabled":true},' +
+        '{"type":"silabo.enviado","label":"Sílabo por revisar","description":"Un docente envió un sílabo y espera la revisión de biblioteca","enabled":true},' +
+        '{"type":"silabo.reenviado_biblioteca","label":"Sílabo reenviado","description":"El docente corrigió la bibliografía y la reenvió","enabled":true},' +
+        '{"type":"proceso.reanudado","label":"Convocatoria reanudada por Administración","description":"Se retoman las revisiones tras una pausa institucional","enabled":true}]}',
     )
   })
 
@@ -251,6 +251,6 @@ describe("GET /api/v1/notifications/email-preferences", () => {
     world.users = [makeUser({ emailVerifiedAt: null })]
     const unverified = await showEmailPreferences(apiRequest("/api/v1/notifications/email-preferences", { cookie }), { bridge: fakeDeps(world) })
     expect(unverified.status).toBe(403)
-    expect(await unverified.text()).toBe(golden.errors.unverified.body)
+    expect(JSON.parse(await unverified.text())).toEqual(JSON.parse(golden.errors.unverified.body))
   })
 })

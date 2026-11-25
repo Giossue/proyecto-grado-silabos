@@ -15,7 +15,7 @@ const RETIRED = "01a1c5bc-7cbf-7091-860c-63a02b91e990"
 const RETIRED_WITH_PARALLEL = "01a1c5bc-7cbf-7091-860c-63a02b91e991"
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const MODALITIES =
-  '[{"value":"Presencial","label":"Presencial"},{"value":"Semipresencial","label":"Semipresencial"},{"value":"En l\\u00ednea","label":"En l\\u00ednea"},{"value":"A distancia","label":"A distancia"},{"value":"H\\u00edbrida","label":"H\\u00edbrida"}]'
+  '[{"value":"Presencial","label":"Presencial"},{"value":"Semipresencial","label":"Semipresencial"},{"value":"En línea","label":"En línea"},{"value":"A distancia","label":"A distancia"},{"value":"Híbrida","label":"Híbrida"}]'
 const SHIFTS = '[{"value":"matutina","label":"Matutina"},{"value":"vespertina","label":"Vespertina"},{"value":"nocturna","label":"Nocturna"}]'
 
 let world: FakeWorld
@@ -105,12 +105,12 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
     expect(response.text).toBe(
       `{"career":{"id":"${CAREER}","name":"Software","lock_reason":"Convocatoria activa","lock":{"scope":"convocation","period":"2026-1","institutional_pause":true,"delivery_on":"2026-08-14"}},` +
         `"scheduledSubjects":[` +
-        `{"subject_id":"${ALGORITHMS}","label":"SW-B1-001 \\u00b7 Algoritmos","subject_code":"SW-B1-001","subject_name":"Algoritmos","subject_cycle":1,"profile_complete":false,"generates_syllabus":true,"campus_name":"Campus Laguacoto","modality_name":"Presencial","parallels":[` +
+        `{"subject_id":"${ALGORITHMS}","label":"SW-B1-001 · Algoritmos","subject_code":"SW-B1-001","subject_name":"Algoritmos","subject_cycle":1,"profile_complete":false,"generates_syllabus":true,"campus_name":"Campus Laguacoto","modality_name":"Presencial","parallels":[` +
         `{"id":"p-a","code":"A","shift":"matutina","editable":true,"deletable":false,"sent_syllabus":true,"started_syllabus":true},` +
         `{"id":"p-b","code":"B","shift":"nocturna","editable":true,"deletable":false,"sent_syllabus":false,"started_syllabus":false}],"editable":true},` +
-        `{"subject_id":"${RETIRED_WITH_PARALLEL}","label":"SW-B1-003 \\u00b7 Retirada con paralelo","subject_code":"SW-B1-003","subject_name":"Retirada con paralelo","subject_cycle":null,"profile_complete":false,"generates_syllabus":false,"campus_name":null,"modality_name":null,"parallels":[` +
+        `{"subject_id":"${RETIRED_WITH_PARALLEL}","label":"SW-B1-003 · Retirada con paralelo","subject_code":"SW-B1-003","subject_name":"Retirada con paralelo","subject_cycle":null,"profile_complete":false,"generates_syllabus":false,"campus_name":null,"modality_name":null,"parallels":[` +
         `{"id":"p-r","code":"C","shift":"vespertina","editable":true,"deletable":true,"sent_syllabus":false,"started_syllabus":true}],"editable":true},` +
-        `{"subject_id":"${NETWORKS}","label":"SW-B2-004 \\u00b7 Redes","subject_code":"SW-B2-004","subject_name":"Redes","subject_cycle":2,"profile_complete":true,"generates_syllabus":true,"campus_name":"Campus Laguacoto","modality_name":"Presencial","parallels":[],"editable":true}],` +
+        `{"subject_id":"${NETWORKS}","label":"SW-B2-004 · Redes","subject_code":"SW-B2-004","subject_name":"Redes","subject_cycle":2,"profile_complete":true,"generates_syllabus":true,"campus_name":"Campus Laguacoto","modality_name":"Presencial","parallels":[],"editable":true}],` +
         `"options":{"faculties":[],"careers":[],"periods":[],"campusOptions":[],"modalityOptions":${MODALITIES},"shiftOptions":${SHIFTS},"currentCurricula":[],` +
         `"activeSubjects":[` +
         `{"id":"${ALGORITHMS}","codigo_asignatura":"SW-B1-001","nombre":"Algoritmos","ciclo":1,"generates_syllabus":true,"profile_complete":false,"profile_filled":12,"profile_total":13},` +

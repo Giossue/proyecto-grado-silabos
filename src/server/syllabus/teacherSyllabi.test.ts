@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import { teacherHistory, teacherHistoryCareer, teacherSyllabi, type PastSyllabusRow, type TeacherPageFilters, type TeacherSyllabusRepository, type TeacherSyllabusRow } from "./teacherSyllabi"
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
@@ -105,8 +104,8 @@ describe("GET /api/v1/teacher/syllabi", () => {
     expect(json?.filters).toEqual({ q: "bio", state: null })
     expect(json?.convocation_open).toBe(true)
     expect(syllabi.first_page_url).toBe("http://localhost:3000/api/v1/teacher/syllabi?q=bio&page=1")
-    expect(text).toBe(phpJsonEncode(JSON.parse(text)))
-    expect(text).toContain('"subject":"Biolog\\u00eda"')
+    expect(text).toBe(JSON.stringify(JSON.parse(text)))
+    expect(text).toContain('"subject":"Biología"')
   })
 
   it("keeps a falsy search out of the query and the filters, and ignores state=all", async () => {
@@ -166,7 +165,7 @@ describe("GET /api/v1/teacher/history", () => {
     expect(status).toBe(200)
     expect(pastCalls).toEqual([{ userId: golden.userId, careerId: null }])
     expect(text).toBe(
-      phpJsonEncode({
+      JSON.stringify({
         careers: [
           { id: CAREER, name: "Software", syllabi_count: 2 },
           { id: "c0000000-0000-4000-8000-000000000003", name: "software 2", syllabi_count: 1 },
@@ -195,7 +194,7 @@ describe("GET /api/v1/teacher/history/{career}", () => {
     expect(status).toBe(200)
     expect(pastCalls).toEqual([{ userId: golden.userId, careerId: career }])
     expect(text).toBe(
-      phpJsonEncode({
+      JSON.stringify({
         career: { id: career, name: "Software" },
         syllabi: [
           { id: "50000000-0000-4000-8000-00000000000c", subject: "Álgebra", period: "2025-2", state: "borrador", parallels: ["A"], guardado_en: null },
@@ -208,12 +207,12 @@ describe("GET /api/v1/teacher/history/{career}", () => {
   it("aborts with an empty 404 when the teacher wrote nothing there", async () => {
     const { status, text } = await historyCareer(`/api/v1/teacher/history/${OTHER_CAREER}`, OTHER_CAREER)
     expect(status).toBe(404)
-    expect(text).toBe('{\n    "message": ""\n}')
+    expect(text).toBe('{"message":""}')
   })
 
   it("answers a non UUID career like Laravel's router", async () => {
     const { status, text } = await historyCareer("/api/v1/teacher/history/abc", "abc")
     expect(status).toBe(404)
-    expect(text).toBe('{\n    "message": "The route api/v1/teacher/history/abc could not be found."\n}')
+    expect(text).toBe('{"message":"The route api/v1/teacher/history/abc could not be found."}')
   })
 })

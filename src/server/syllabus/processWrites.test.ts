@@ -2,16 +2,15 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
 import type { ProcessRow } from "./processes"
 import { deleteProcess, extendProcessDeadline, resumeProcess, type LockedSyllabusProcess, type ProcessWriteDeps } from "./processWrites"
 import type { ReopenPlan, TemplateChange } from "./reopenCatchUp"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
-const FORBIDDEN = phpJsonEncode({ message: "No tiene permiso para hacer esto." })
+const FORBIDDEN = JSON.stringify({ message: "No tiene permiso para hacer esto." })
 const PROCESS = "cd000000-0000-4000-8000-000000000001"
 const PERIOD = "ce000000-0000-4000-8000-000000000001"
 const CONVOCATION = "cc000000-0000-4000-8000-000000000001"
@@ -173,7 +172,7 @@ beforeEach(() => {
 describe("DELETE /api/v1/admin/processes/{process}", () => {
   it("erases the process with all its work and tells everyone involved except the administrator", async () => {
     const response = await destroy({ mensaje: `  ${NOTICE}  ` })
-    expect(response.text).toBe(phpJsonEncode({ message: "Convocatoria institucional eliminada." }))
+    expect(response.text).toBe(JSON.stringify({ message: "Convocatoria institucional eliminada." }))
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, "lock:convocations", "lock:syllabi", "purge:2", `delete:${PROCESS}:${CONVOCATION}`, "commit"])
     const message = `Se borraron todos los sílabos de 2026-2. Mensaje de Administración: ${NOTICE}`
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType, item.resourceId, item.periodId])).toEqual([
@@ -217,7 +216,7 @@ describe("POST /api/v1/admin/processes/{process}/reanudar", () => {
 
   it("reopens the process and tells teachers, coordination and the library", async () => {
     const response = await resume()
-    expect(response.text).toBe(phpJsonEncode({ message: "Proceso reanudado. Los envíos vuelven a admitirse." }))
+    expect(response.text).toBe(JSON.stringify({ message: "Proceso reanudado. Los envíos vuelven a admitirse." }))
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, "template-change:pause", `state:${PROCESS}:abierto`, "commit"])
     const at = "20270115080000007"
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
@@ -263,7 +262,7 @@ describe("POST /api/v1/admin/processes/{process}/reanudar", () => {
     const response = await resume()
     expect(response.status).toBe(422)
     expect(response.text).toBe(
-      phpJsonEncode({
+      JSON.stringify({
         message:
           "La plantilla cambió durante la pausa. Confirme para adaptar los sílabos del período: se conserva lo escrito y los enviados o aprobados vuelven a borrador.",
         code: "plantilla_cambiada",
@@ -278,7 +277,7 @@ describe("POST /api/v1/admin/processes/{process}/reanudar", () => {
   it("adapts the syllabi to the new template when confirmed, then reopens the process", async () => {
     templateChange = CHANGE
     const response = await resume({ confirmar_rehacer: "1" })
-    expect(response.text).toBe(phpJsonEncode({ message: "Proceso reanudado. Los envíos vuelven a admitirse." }))
+    expect(response.text).toBe(JSON.stringify({ message: "Proceso reanudado. Los envíos vuelven a admitirse." }))
     expect(log).toEqual([
       "begin",
       `lock:process:${PROCESS}`,
@@ -296,7 +295,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
 
   it("moves the deadline to the end of the chosen day, counts the extension and tells teachers with pending work", async () => {
     const response = await extend({ due_at: "2026-12-20" })
-    expect(response.text).toBe(phpJsonEncode({ message: "Plazo prorrogado para todas las convocatorias del proceso." }))
+    expect(response.text).toBe(JSON.stringify({ message: "Plazo prorrogado para todas las convocatorias del proceso." }))
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, `deadline:${PROCESS}:2026-12-21T04:59:59+00:00:1`, "commit"])
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
       [
@@ -335,7 +334,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
 
     it("reopens the process, catches up the changes and generates the missing syllabi", async () => {
       const response = await extend({ due_at: "2026-12-20" })
-      expect(response.text).toBe(phpJsonEncode({ message: "Plazo prorrogado. La convocatoria se volvió a abrir." }))
+      expect(response.text).toBe(JSON.stringify({ message: "Plazo prorrogado. La convocatoria se volvió a abrir." }))
       expect(log).toEqual([
         "begin",
         `lock:process:${PROCESS}`,
@@ -358,7 +357,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
       const response = await extend({ due_at: "2026-12-20" })
       expect(response.status).toBe(422)
       expect(response.text).toBe(
-        phpJsonEncode({
+        JSON.stringify({
           message:
             "La plantilla cambió después de finalizar. Confirme para adaptar los sílabos del período: se conserva lo escrito y los enviados o aprobados vuelven a borrador.",
           code: "plantilla_cambiada",
@@ -375,7 +374,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
       const response = await extend({ due_at: "2026-12-20", confirmar_rehacer: true })
       expect(response.status).toBe(422)
       expect(response.text).toBe(
-        phpJsonEncode({
+        JSON.stringify({
           message:
             "Hubo cambios mientras la convocatoria estuvo finalizada. Confirme para aplicarlos: hay sílabos que volverán a borrador, volverán a Coordinación o perderán su contenido.",
           code: "cambios_pendientes",

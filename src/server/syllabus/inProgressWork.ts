@@ -5,7 +5,6 @@ import { randomUUID } from "node:crypto"
 import { unlink } from "node:fs/promises"
 import { sql, type SQL } from "drizzle-orm"
 import { diskPath } from "../http/storage"
-import { phpJsonEncode } from "../http/phpJson"
 import { uuidList } from "../http/sql"
 import { uuid7 } from "../http/uuid7"
 import type { AfterCommit } from "../queue/dispatch"
@@ -379,7 +378,7 @@ export class InProgressWork {
 
   private async saveContext(syllabus: WorkSyllabus, context: PhpRecord): Promise<void> {
     if (phpIdentical(context, syllabus.context)) return
-    await this.executor.execute(sql`update silabos set datos_academicos_silabo = ${phpJsonEncode(phpShape(context))}::jsonb where silabo_id = ${syllabus.id}::uuid`)
+    await this.executor.execute(sql`update silabos set datos_academicos_silabo = ${JSON.stringify(phpShape(context))}::jsonb where silabo_id = ${syllabus.id}::uuid`)
     syllabus.context = context
   }
 
@@ -449,7 +448,7 @@ export class InProgressWork {
       const document = teacherEditable(field, templates) ? this.stillFits(field, previous.get(field.key) ?? null, template, context) : template
       const value = document === null || documentIsEmpty(document, context.definition) ? template : document
       await this.executor.execute(sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
-        values (${uuid7()}::uuid, ${syllabus.id}::uuid, ${field.id}::uuid, ${phpJsonEncode(phpShape(value))}::jsonb)`)
+        values (${uuid7()}::uuid, ${syllabus.id}::uuid, ${field.id}::uuid, ${JSON.stringify(phpShape(value))}::jsonb)`)
     }
     await this.executor.execute(sql`update silabos set estado_silabo = ${state}, version_borrador = ${syllabus.version + 1}, guardado_en = to_timestamp(${this.now()})
       where silabo_id = ${syllabus.id}::uuid`)
@@ -632,7 +631,7 @@ export class InProgressWork {
           this.executor,
           sql`select valor_campo_id::text as id, valor_campo::text as value from valores_campo where silabo_id = ${syllabus.id}::uuid and definicion_campo_id = ${fieldId}::uuid limit 1`,
         )
-        const encoded = phpJsonEncode(phpShape(document))
+        const encoded = JSON.stringify(phpShape(document))
         if (existing) {
           if (!phpIdentical(phpJsonDecode(existing.value), phpJsonDecode(encoded))) {
             await this.executor.execute(sql`update valores_campo set valor_campo = ${encoded}::jsonb where valor_campo_id = ${existing.id}::uuid`)
@@ -643,7 +642,7 @@ export class InProgressWork {
         }
       }
       if (item.backToDraft) {
-        await this.executor.execute(sql`update silabos set datos_academicos_silabo = ${phpJsonEncode(phpShape(item.context))}::jsonb, estado_silabo = 'borrador',
+        await this.executor.execute(sql`update silabos set datos_academicos_silabo = ${JSON.stringify(phpShape(item.context))}::jsonb, estado_silabo = 'borrador',
           version_borrador = ${syllabus.version + 1}, guardado_en = to_timestamp(${this.now()}) where silabo_id = ${syllabus.id}::uuid`)
         await scheduleWorkflowNotification(this.scope(), {
           syllabusId: syllabus.id,
@@ -760,14 +759,14 @@ export class InProgressWork {
     const context = await this.academicContext(parallel, periodId)
     const id = uuid7()
     await this.executor.execute(sql`insert into silabos (silabo_id, convocatoria_carrera_id, paralelo_id, datos_academicos_silabo, estado_silabo)
-      values (${id}::uuid, ${convocationId}::uuid, ${parallel.id}::uuid, ${phpJsonEncode(phpShape(context))}::jsonb, 'sin_iniciar')`)
+      values (${id}::uuid, ${convocationId}::uuid, ${parallel.id}::uuid, ${JSON.stringify(phpShape(context))}::jsonb, 'sin_iniciar')`)
     const template = await this.institutionalTemplate()
     const templates = await profileTemplates({ template, definition: template.definition!, store: this.templates }, parallel.subject_id)
     for (const field of templateFields(template)) {
       if (!isCareerField(field)) continue
       const value = templates[field.id] ?? field.content
       await this.executor.execute(sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
-        values (${uuid7()}::uuid, ${id}::uuid, ${field.id}::uuid, ${phpJsonEncode(phpShape(value))}::jsonb)`)
+        values (${uuid7()}::uuid, ${id}::uuid, ${field.id}::uuid, ${JSON.stringify(phpShape(value))}::jsonb)`)
     }
     return id
   }

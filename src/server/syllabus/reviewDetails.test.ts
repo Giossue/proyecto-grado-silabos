@@ -11,10 +11,10 @@ import { coordinationReviewDetail, libraryReviewDetail, type HistoryEntry, type 
 import type { DetailSyllabus, ReviewComment } from "./syllabusDetail"
 import type { SignatureRecord } from "./snapshotDocuments"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
-const EMPTY_403 = '{\n    "message": ""\n}'
+const EMPTY_403 = '{"message":""}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
 const SYLLABUS = "50000000-0000-4000-8000-000000000001"
 const FIRST = "70000000-0000-4000-8000-000000000001"
@@ -270,7 +270,7 @@ describe("GET library/reviews/{revision}", () => {
   it("rejects other roles, invalid filters and revisions that never went to the library", async () => {
     expect((await library(FIRST, "?state=otro")).status).toBe(422)
     submission = null
-    expect(await library()).toMatchObject({ status: 404, text: '{\n    "message": ""\n}' })
+    expect(await library()).toMatchObject({ status: 404, text: '{"message":""}' })
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
     expect(await library()).toMatchObject({ status: 403, text: '{"message":"No tiene permiso para hacer esto."}' })
     expect(await library("70000000-0000-4000-8000-000000000099")).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", "70000000-0000-4000-8000-000000000099") })

@@ -2,11 +2,10 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import { fakeTemplateStore, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import { createProcess, pauseProcess, processImpact, syllabusProcesses, type ProcessDeps, type ProcessRow } from "./processes"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
@@ -125,7 +124,7 @@ describe("GET /api/v1/admin/processes", () => {
     const { status, text } = await send((request) => syllabusProcesses(request, deps()), "/api/v1/admin/processes")
     expect(status).toBe(200)
     expect(text).toBe(
-      phpJsonEncode({
+      JSON.stringify({
         processes: [
           {
             id: PROCESS,
@@ -197,7 +196,7 @@ describe("GET /api/v1/admin/processes", () => {
 describe("GET /api/v1/admin/processes/{process}/impact", () => {
   it("counts the syllabi of the process by state", async () => {
     const { text } = await send((request) => processImpact(request, PROCESS, deps()), `/api/v1/admin/processes/${PROCESS}/impact`)
-    expect(text).toBe(phpJsonEncode({ syllabi: { sin_iniciar: 5, borrador: 3, en_revision: 0, correccion_solicitada: 0, aprobado: 0 }, total: 8 }))
+    expect(text).toBe(JSON.stringify({ syllabi: { sin_iniciar: 5, borrador: 3, en_revision: 0, correccion_solicitada: 0, aprobado: 0 }, total: 8 }))
   })
 
   it("forbids other roles and leaves unknown processes to Laravel", async () => {
@@ -214,7 +213,7 @@ describe("POST /api/v1/admin/processes/{process}/pausar", () => {
   it("pauses an open process under a row lock", async () => {
     const { status, text } = await pause({ reason: "Se corrige la configuración institucional." })
     expect(status).toBe(200)
-    expect(text).toBe(phpJsonEncode({ message: "Proceso en pausa. Los envíos se detienen y la plantilla queda editable." }))
+    expect(text).toBe(JSON.stringify({ message: "Proceso en pausa. Los envíos se detienen y la plantilla queda editable." }))
     expect(log).toEqual(["begin", `lock:${PROCESS}`, `pause:${PROCESS}`, "commit"])
   })
 
@@ -326,8 +325,8 @@ describe("POST /api/v1/admin/processes", () => {
   })
 
   it("reads dates like ProcessDates and the date rule, and validates forms and malformed periods natively", async () => {
-    expect(await store(payload({ starts_at: "mañana" }))).toMatchObject({ status: 422, text: expect.stringContaining("El campo fecha de inicio debe ser una fecha v\\u00e1lida.") })
-    expect(await store(payload({ period_id: "abc" }))).toMatchObject({ status: 422, text: expect.stringContaining("periodo acad\\u00e9mico debe ser un UUID") })
+    expect(await store(payload({ starts_at: "mañana" }))).toMatchObject({ status: 422, text: expect.stringContaining("El campo fecha de inicio debe ser una fecha válida.") })
+    expect(await store(payload({ period_id: "abc" }))).toMatchObject({ status: 422, text: expect.stringContaining("periodo académico debe ser un UUID") })
     const form = await createProcess(
       new Request(apiRequest("/api/v1/admin/processes", { cookie, method: "POST", headers: { "x-csrf-token": golden.csrfToken, "content-type": "application/x-www-form-urlencoded" } }), {
         body: "period_id=x",
@@ -344,6 +343,6 @@ describe("POST /api/v1/admin/processes", () => {
     expect((await store(payload({ due_at: "2026-11-31" }))).status).toBe(201)
     expect(created.at(-1)?.dueAt).toBe("2026-12-02T04:59:59+00:00")
     templates.template = null
-    expect(await store(payload())).toMatchObject({ status: 422, text: expect.stringContaining("La plantilla institucional est\\u00e1 vac\\u00eda.") })
+    expect(await store(payload())).toMatchObject({ status: 422, text: expect.stringContaining("La plantilla institucional está vacía.") })
   })
 })

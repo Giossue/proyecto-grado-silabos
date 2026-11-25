@@ -183,10 +183,10 @@ describe("two-factor setup (ApiSessionTest, SecurityHardeningTest)", () => {
   it("requires the current password to begin and to remove the setup", async () => {
     const missing = await enableTwoFactor(call("two-factor", "POST", {}), deps())
     expect(missing.status).toBe(422)
-    expect(await missing.text()).toBe('{"message":"El campo contrase\\u00f1a actual es obligatorio.","errors":{"current_password":["El campo contrase\\u00f1a actual es obligatorio."]}}')
+    expect(await missing.text()).toBe('{"message":"El campo contraseña actual es obligatorio.","errors":{"current_password":["El campo contraseña actual es obligatorio."]}}')
     const wrong = await disableTwoFactor(call("two-factor", "DELETE", { current_password: "incorrecta" }), deps())
     expect(wrong.status).toBe(422)
-    expect(await wrong.text()).toBe('{"message":"La contrase\\u00f1a actual no es correcta.","errors":{"current_password":["La contrase\\u00f1a actual no es correcta."]}}')
+    expect(await wrong.text()).toBe('{"message":"La contraseña actual no es correcta.","errors":{"current_password":["La contraseña actual no es correcta."]}}')
   })
 
   it("begins the setup with a QR code and cancels it with the password alone", async () => {
@@ -234,7 +234,7 @@ describe("two-factor setup (ApiSessionTest, SecurityHardeningTest)", () => {
     accounts.set(golden.userId, account({ secret: sealed(SECRET), recoveryCodes: sealed('["a-b"]') }))
     const pending = await regenerateRecoveryCodes(call("two-factor/recovery-codes", "POST", { current_password: PASSWORD }), deps())
     expect(pending.status).toBe(422)
-    expect(await pending.text()).toBe('{\n    "message": "Active primero la verificaci\\u00f3n en dos pasos."\n}')
+    expect(await pending.text()).toBe('{"message":"Active primero la verificación en dos pasos."}')
     accounts.set(golden.userId, enabledAccount())
     const response = await regenerateRecoveryCodes(call("two-factor/recovery-codes", "POST", { current_password: PASSWORD }), deps())
     expect(response.status).toBe(200)
@@ -263,7 +263,7 @@ describe("POST authentication/two-factor/challenge (ApiSessionTest)", () => {
       body: JSON.stringify({ code: "123456" }),
     }), deps())
     expect(response.status).toBe(400)
-    expect(await response.text()).toBe('{"message":"Inicie sesi\\u00f3n desde la aplicaci\\u00f3n web."}')
+    expect(await response.text()).toBe('{"message":"Inicie sesión desde la aplicación web."}')
   })
 
   it("logs the user in with a valid authenticator code", async () => {
@@ -289,7 +289,7 @@ describe("POST authentication/two-factor/challenge (ApiSessionTest)", () => {
   it("rejects an invalid code and keeps the user as a guest", async () => {
     const response = await twoFactorChallenge(call("two-factor/challenge", "POST", { code: "000000" }), deps())
     expect(response.status).toBe(422)
-    expect(await response.text()).toBe(`{"message":"El c\\u00f3digo de autenticaci\\u00f3n no es v\\u00e1lido.","errors":{"code":["El c\\u00f3digo de autenticaci\\u00f3n no es v\\u00e1lido."]}}`)
+    expect(await response.text()).toBe(`{"message":"El código de autenticación no es válido.","errors":{"code":["El código de autenticación no es válido."]}}`)
     expect(JSON.parse(storedJson(world, golden.sessionId) ?? "{}")).not.toHaveProperty(LOGIN_KEY)
   })
 
@@ -303,7 +303,7 @@ describe("POST authentication/two-factor/challenge (ApiSessionTest)", () => {
     withSession(pendingChallenge(NOW - 601))
     const response = await twoFactorChallenge(call("two-factor/challenge", "POST", { code: current() }), deps())
     expect(response.status).toBe(422)
-    expect(await response.text()).toBe('{"message":"La sesi\\u00f3n de verificaci\\u00f3n ya no es v\\u00e1lida. Ingrese nuevamente."}')
+    expect(await response.text()).toBe('{"message":"La sesión de verificación ya no es válida. Ingrese nuevamente."}')
     expect(JSON.parse(storedJson(world, golden.sessionId) ?? "{}").login).toEqual([])
   })
 

@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import golden from "./__fixtures__/block-golden.json"
-import { phpJsonEncode } from "../http/phpJson"
 import { defineBlock } from "./blockDefinition"
 import { phpShape, type PhpRecord } from "./phpValues"
 import { blockDesigns, buildTable, designWithKeys, readTable, tableKey } from "./repeatableTable"
@@ -40,9 +39,9 @@ function run(item: Case): unknown {
 
 function outcome(item: Case): string {
   try {
-    return phpJsonEncode(phpShape({ ok: run(item) }))
+    return JSON.stringify(phpShape({ ok: run(item) }))
   } catch (error) {
-    if (error instanceof TemplateValidationError) return phpJsonEncode({ errors: error.errors })
+    if (error instanceof TemplateValidationError) return JSON.stringify({ errors: error.errors })
     throw error
   }
 }
@@ -50,12 +49,12 @@ function outcome(item: Case): string {
 describe("block definitions and repeatable tables", () => {
   it("define, read, key and build every golden case exactly as the Laravel classes", () => {
     const cases = golden.cases as unknown as Case[]
-    const mismatches = cases.filter((item) => outcome(item) !== item.expected).map((item) => ({ op: item.op, kind: item.kind, set: item.set, text: item.text }))
+    const mismatches = cases.filter((item) => outcome(item) !== JSON.stringify(JSON.parse(item.expected))).map((item) => ({ op: item.op, kind: item.kind, set: item.set, text: item.text }))
     expect(mismatches).toEqual([])
     expect(cases.length).toBeGreaterThan(350)
   })
 
   it("presents the designs of the official template blocks like TemplatePresentation::blockDesigns", () => {
-    expect(phpJsonEncode(phpShape(blockDesigns(goldenTemplate().definition!)))).toBe(golden.designs)
+    expect(JSON.stringify(phpShape(blockDesigns(goldenTemplate().definition!)))).toBe(JSON.stringify(JSON.parse(golden.designs)))
   })
 })

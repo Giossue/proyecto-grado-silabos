@@ -100,18 +100,18 @@ describe("GET /api/v1/library/reviews", () => {
     ])
     expect(result.text).toBe(
       '{"filters":{"q":null,"state":null,"faculty":null,"period":null,"mine":false},' +
-        `"faculties":[{"id":"${OTHER_FACULTY}","name":"Facultad de Ciencias de la Salud"},{"id":"${FACULTY}","name":"Facultad de Ingenier\\u00eda"}],` +
+        `"faculties":[{"id":"${OTHER_FACULTY}","name":"Facultad de Ciencias de la Salud"},{"id":"${FACULTY}","name":"Facultad de Ingeniería"}],` +
         '"reviews":{"current_page":1,"data":[{' +
-        `"syllabus_id":"${SYLLABUS}","subject":"C\\u00e1lculo","code":"MAT-101","faculty":"Facultad de Ingenier\\u00eda","career":"Software \\u00b7 SW-1",` +
+        `"syllabus_id":"${SYLLABUS}","subject":"Cálculo","code":"MAT-101","faculty":"Facultad de Ingeniería","career":"Software · SW-1",` +
         '"period":"2026-2","parallels":["A"],"teachers":["Docente Uno","Docente Dos"],"revision_number":1,' +
         `"revision_id":"${REVISION}","sent_at":"2026-11-20T14:00:00+00:00","sent_by":"Docente Uno","signed_by":null,` +
-        '"responsible":"Bibliotecaria \\u00d1","state":"atendido","outcome":"devuelto"}],' +
-        '"first_page_url":"http:\\/\\/localhost:3000\\/api\\/v1\\/library\\/reviews?page=1","from":1,"last_page":1,' +
-        '"last_page_url":"http:\\/\\/localhost:3000\\/api\\/v1\\/library\\/reviews?page=1",' +
+        '"responsible":"Bibliotecaria Ñ","state":"atendido","outcome":"devuelto"}],' +
+        '"first_page_url":"http://localhost:3000/api/v1/library/reviews?page=1","from":1,"last_page":1,' +
+        '"last_page_url":"http://localhost:3000/api/v1/library/reviews?page=1",' +
         '"links":[{"url":null,"label":"pagination.previous","page":null,"active":false},' +
-        '{"url":"http:\\/\\/localhost:3000\\/api\\/v1\\/library\\/reviews?page=1","label":"1","page":1,"active":true},' +
+        '{"url":"http://localhost:3000/api/v1/library/reviews?page=1","label":"1","page":1,"active":true},' +
         '{"url":null,"label":"pagination.next","page":null,"active":false}],' +
-        '"next_page_url":null,"path":"http:\\/\\/localhost:3000\\/api\\/v1\\/library\\/reviews","per_page":20,"prev_page_url":null,"to":1,"total":1}}',
+        '"next_page_url":null,"path":"http://localhost:3000/api/v1/library/reviews","per_page":20,"prev_page_url":null,"to":1,"total":1}}',
     )
   })
 

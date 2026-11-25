@@ -37,7 +37,7 @@ async function expectError(result: unknown, status: number, body: string): Promi
   expect(result).toBeInstanceOf(Response)
   const response = result as Response
   expect(response.status).toBe(status)
-  expect(await response.text()).toBe(body)
+  expect(JSON.parse(await response.text())).toEqual(JSON.parse(body))
   expect(response.headers.get("content-type")).toBe("application/json")
 }
 
@@ -206,7 +206,7 @@ describe("requireSession", () => {
     const wrong = `${recallerCookieName()}=${encodeURIComponent(recallerCookie(`${golden.userId}|otro|hash`))}`
     await expectError(await requireSession(apiRequest("/api/v1/notifications", { cookie: `${cookie}; ${wrong}` }), {}, fakeDeps(world)), 401, '{"message":"Unauthenticated."}')
     const malformed = `${recallerCookieName()}=${encodeURIComponent(recallerCookie("abc|recordar|hash"))}`
-    await expectError(await requireSession(apiRequest("/api/v1/notifications", { cookie: `${cookie}; ${malformed}` }), {}, fakeDeps(world)), 500, '{\n    "message": "Server Error"\n}')
+    await expectError(await requireSession(apiRequest("/api/v1/notifications", { cookie: `${cookie}; ${malformed}` }), {}, fakeDeps(world)), 500, '{"message":"Server Error"}')
     await expectError(await requireSession(apiRequest("/api/v1/notifications", { cookie: `${cookie}; ${recallerCookieName()}=x` }), {}, fakeDeps(world)), 401, '{"message":"Unauthenticated."}')
   })
 
@@ -244,7 +244,7 @@ describe("requireSession", () => {
     withSession(loggedInAttributes())
     world.users = [makeUser({ emailVerifiedAt: null })]
     const request = apiRequest("/api/v1/notifications", { cookie, headers: { accept: "text/html" } })
-    await expectError(await requireSession(request, { verified: true }, fakeDeps(world)), 500, '{\n    "message": "Server Error"\n}')
+    await expectError(await requireSession(request, { verified: true }, fakeDeps(world)), 500, '{"message":"Server Error"}')
   })
 
   describe("CSRF", () => {
@@ -293,7 +293,7 @@ describe("session keep-alive", () => {
     await expectError(
       await requireSession(apiRequest("/api/v1/dashboard", { cookie }), { verified: true, activeRole: "required" }, fakeDeps(world)),
       409,
-      '{\n    "message": "Seleccione un rol vigente."\n}',
+      '{"message":"Seleccione un rol vigente."}',
     )
     expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW)
   })

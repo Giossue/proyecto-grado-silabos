@@ -3,7 +3,6 @@ import { and, eq, sql } from "drizzle-orm"
 import { db } from "@/db"
 import { jsonbValue } from "@/db/expressions"
 import { asignaturas, valoresCampo } from "@/db/schema"
-import { phpJsonEncode } from "../http/phpJson"
 import { uuid7 } from "../http/uuid7"
 import { notificationScope, systemNow, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
@@ -49,7 +48,7 @@ export function subjectProfileTx(executor: Executor, afterCommit: AfterCommit, n
       if (row) await executor.delete(valoresCampo).where(eq(valoresCampo.valorCampoId, row.id))
     },
     async saveValue(subjectId, fieldId, document) {
-      const encoded = phpJsonEncode(phpShape(document))
+      const encoded = JSON.stringify(phpShape(document))
       const row = await subjectValue(executor, subjectId, fieldId)
       if (row) await executor.update(valoresCampo).set({ valorCampo: jsonbValue(encoded) }).where(eq(valoresCampo.valorCampoId, row.id))
       else await executor.insert(valoresCampo).values({ valorCampoId: uuid7(), asignaturaId: subjectId, definicionCampoId: fieldId, valorCampo: jsonbValue(encoded) })

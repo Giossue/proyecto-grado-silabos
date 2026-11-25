@@ -2,7 +2,6 @@ import "server-only"
 import { randomBytes, randomInt } from "node:crypto"
 import { cookiePrefix } from "../http/cookies"
 import { decrypt, DecryptError, encrypt } from "../http/encrypter"
-import { phpJsonEncode } from "../http/phpJson"
 import type { BridgeDeps, OutgoingCookie, StoredSession } from "./types"
 
 export const SESSION_ID_LENGTH = 40
@@ -138,7 +137,7 @@ function ageFlashData(attributes: Record<string, unknown>): void {
 
 export function sessionJson(attributes: Record<string, unknown>): string {
   ageFlashData(attributes)
-  return phpJsonEncode(phpArrayCast(attributes))
+  return JSON.stringify(phpArrayCast(attributes))
 }
 
 const DEFAULT_TRUSTED_PROXIES = "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"

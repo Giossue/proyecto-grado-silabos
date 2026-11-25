@@ -3,7 +3,6 @@ import { and, eq, inArray, notExists, notInArray } from "drizzle-orm"
 import { db, type Executor } from "@/db"
 import { hasRows, jsonbValue, jsonText } from "@/db/expressions"
 import { camposPlantilla, convocatoriasUniversidad, definicionesCampo, plantillaSilabo, seccionesPlantilla, valoresCampo } from "@/db/schema"
-import { phpJsonEncode } from "../http/phpJson"
 import { phpJsonDecode } from "./phpValues"
 import type { DocumentSection, FieldRecord, StructureStore, StructureTx } from "./templateStructure"
 import { loadTemplate } from "./templateStore"
@@ -104,14 +103,14 @@ export function structureTx(executor: Executor): StructureTx {
         plantillaId: field.templateId,
         campoPlantillaId: field.blockId,
         quienLlenaDefinicionCampo: field.responsible,
-        contenidoDefinicionCampo: jsonbValue(phpJsonEncode(field.content)),
+        contenidoDefinicionCampo: jsonbValue(JSON.stringify(field.content)),
         definicionCampoId: field.id,
       })
     },
     async updateField(id, changes) {
       const values: Partial<typeof definicionesCampo.$inferInsert> = {}
       if (changes.responsible !== undefined) values.quienLlenaDefinicionCampo = changes.responsible
-      if (changes.content !== undefined) values.contenidoDefinicionCampo = jsonbValue(phpJsonEncode(changes.content))
+      if (changes.content !== undefined) values.contenidoDefinicionCampo = jsonbValue(JSON.stringify(changes.content))
       if (Object.keys(values).length === 0) return
       await executor.update(definicionesCampo).set(values).where(eq(definicionesCampo.definicionCampoId, id))
     },

@@ -10,7 +10,7 @@ import { createStorageWriter, type StorageWriter } from "../http/storageWriter"
 import type { TemplateStore } from "./templateStore"
 import { uploadTemplateLogo } from "./templateLogo"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const TEMPLATE = "01a1c5bc-7d00-7000-8000-000000000001"
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
@@ -51,7 +51,7 @@ describe("POST /api/v1/admin/template/{template}/logo", () => {
     const stored = storage.path("private", "logos/institucion.png")
     const version = String(Math.floor(statSync(stored).mtimeMs / 1000))
     expect(response.status).toBe(200)
-    expect(await response.text()).toBe(`{"message":"Logo actualizado.","logo":"http:\\/\\/localhost:3000\\/logos\\/institucion?v=${version}"}`)
+    expect(await response.text()).toBe(`{"message":"Logo actualizado.","logo":"http://localhost:3000/logos/institucion?v=${version}"}`)
     const image = decodePng(readFileSync(stored))
     expect([image.width, image.height]).toEqual([1012, 190])
     expect(statSync(stored).mode & 0o777).toBe(0o600)

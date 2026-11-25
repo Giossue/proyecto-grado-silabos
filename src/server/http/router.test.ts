@@ -52,13 +52,13 @@ describe("unmatchedRoute", () => {
       contentType: "application/json",
       cacheControl: "no-cache, private",
       allow: null,
-      body: '{\n    "message": "The route api/v1/nope could not be found."\n}',
+      body: '{"message":"The route api/v1/nope could not be found."}',
     })
   })
 
   it("treats the bare /api path as a route outside the API, like Request::is('api/*')", async () => {
     expect((await snapshot(unmatchedRoute(request("GET", "/api")))).body).toBe(NOT_FOUND_PAGE)
-    expect((await snapshot(unmatchedRoute(request("GET", "/api", { accept: "application/json" })))).body).toBe('{\n    "message": "The route api could not be found."\n}')
+    expect((await snapshot(unmatchedRoute(request("GET", "/api", { accept: "application/json" })))).body).toBe('{"message":"The route api could not be found."}')
   })
 
   it("answers an unknown route outside the API with Laravel's HTML 404 page unless JSON is expected", async () => {
@@ -70,7 +70,7 @@ describe("unmatchedRoute", () => {
       body: NOT_FOUND_PAGE,
     })
     expect((await snapshot(unmatchedRoute(request("GET", "/sanctum/nope", { accept: "application/json" })))).body).toBe(
-      '{\n    "message": "The route sanctum/nope could not be found."\n}',
+      '{"message":"The route sanctum/nope could not be found."}',
     )
   })
 
@@ -80,10 +80,10 @@ describe("unmatchedRoute", () => {
       contentType: "application/json",
       cacheControl: "no-cache, private",
       allow: "GET, HEAD",
-      body: '{\n    "message": "The PUT method is not supported for route api/v1/session. Supported methods: GET, HEAD."\n}',
+      body: '{"message":"The PUT method is not supported for route api/v1/session. Supported methods: GET, HEAD."}',
     })
     expect((await snapshot(unmatchedRoute(request("DELETE", "/api/v1/admin/academic/carrera")))).body).toBe(
-      '{\n    "message": "The DELETE method is not supported for route api/v1/admin/academic/carrera. Supported methods: GET, HEAD, POST."\n}',
+      '{"message":"The DELETE method is not supported for route api/v1/admin/academic/carrera. Supported methods: GET, HEAD, POST."}',
     )
   })
 
@@ -110,7 +110,7 @@ describe("unmatchedRoute", () => {
 
   it("keeps the raw path of the request in the message, as Request::path() does", async () => {
     expect((await snapshot(unmatchedRoute(request("GET", "/api/v1/caf%C3%A9/")))).body).toBe(
-      '{\n    "message": "The route api/v1/caf%C3%A9 could not be found."\n}',
+      '{"message":"The route api/v1/caf%C3%A9 could not be found."}',
     )
   })
 })
@@ -122,7 +122,7 @@ describe("modelNotFound", () => {
       contentType: "application/json",
       cacheControl: "no-cache, private",
       allow: null,
-      body: '{\n    "message": "No query results for model [App\\\\Models\\\\User] abc"\n}',
+      body: '{"message":"No query results for model [App\\\\Models\\\\User] abc"}',
     })
   })
 })
@@ -165,7 +165,7 @@ describe("Auditoría and Reportes removed from the system", () => {
       contentType: "application/json",
       cacheControl: "no-cache, private",
       allow: null,
-      body: `{\n    "message": "The route ${path} could not be found."\n}`,
+      body: `{"message":"The route ${path} could not be found."}`,
     })
   })
 })

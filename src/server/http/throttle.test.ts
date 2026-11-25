@@ -24,7 +24,7 @@ function behavesLikeThrottle(limiter: () => RateLimiter) {
     const third = await throttle(store, limit, () => now).hit()
     expect(third?.status).toBe(429)
     expect(third?.headers.get("content-type")).toBe("application/json")
-    expect(await third?.text()).toBe('{\n    "message": "Too Many Attempts."\n}')
+    expect(await third?.text()).toBe('{"message":"Too Many Attempts."}')
     expect(third?.headers.get("retry-after")).toBe("40")
     expect(third?.headers.get("x-ratelimit-reset")).toBe("1060")
     expect(third?.headers.get("x-ratelimit-limit")).toBe("2")

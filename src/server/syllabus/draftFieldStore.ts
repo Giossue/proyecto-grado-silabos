@@ -16,7 +16,6 @@ import {
   valoresCampo,
 } from "@/db/schema"
 import { institutionDateSql } from "../http/sql"
-import { phpJsonEncode } from "../http/phpJson"
 import { phpShape } from "../configuration/phpValues"
 import { phpJsonDecode } from "../configuration/phpValues"
 import { createTemplateStore } from "../configuration/templateStore"
@@ -100,7 +99,7 @@ function draftTx(executor: Executor): DraftFieldTx {
     valueExists: (syllabusId, fieldId) =>
       hasRows(executor.select({ id: valoresCampo.valorCampoId }).from(valoresCampo).where(syllabusValue(syllabusId, fieldId)).limit(1)),
     async saveValue(syllabusId, fieldId, document, newId) {
-      const value = jsonbValue(phpJsonEncode(phpShape(document)))
+      const value = jsonbValue(JSON.stringify(phpShape(document)))
       const [existing] = await executor.select({ id: valoresCampo.valorCampoId }).from(valoresCampo).where(syllabusValue(syllabusId, fieldId)).limit(1)
       if (existing) {
         await executor.update(valoresCampo).set({ valorCampo: value }).where(eq(valoresCampo.valorCampoId, existing.id))

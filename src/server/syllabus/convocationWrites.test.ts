@@ -2,16 +2,15 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
 import { createConvocation, resumeConvocation, type ConvocationWriteDeps, type LockedConvocation, type LockedProcess } from "./convocationWrites"
 import type { ConvocationRecord } from "./convocations"
 import { GenerationRejected } from "./inProgressWork"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
-const FORBIDDEN = phpJsonEncode({ message: "No tiene permiso para hacer esto." })
+const FORBIDDEN = JSON.stringify({ message: "No tiene permiso para hacer esto." })
 const CAREER = "c0000000-0000-4000-8000-000000000001"
 const PROCESS = "cd000000-0000-4000-8000-000000000001"
 const PERIOD = "ce000000-0000-4000-8000-000000000001"
@@ -124,7 +123,7 @@ describe("POST /api/v1/coordination/convocations", () => {
   it("starts the career convocation, opens it, generates its syllabi and tells each teacher what to write", async () => {
     const response = await store({ process_id: PROCESS })
     expect(response.status).toBe(201)
-    expect(response.text).toBe(phpJsonEncode({ message: "Convocatoria iniciada: se generó un sílabo por cada paralelo.", convocation_id: CONVOCATION }))
+    expect(response.text).toBe(JSON.stringify({ message: "Convocatoria iniciada: se generó un sílabo por cada paralelo.", convocation_id: CONVOCATION }))
     expect(log).toEqual([
       "begin",
       `lock:process:${PROCESS}`,
@@ -192,7 +191,7 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
     generation = 1
     const response = await resume()
     expect(response.text).toBe(
-      phpJsonEncode({ message: "Convocatoria reanudada. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla queda protegida." }),
+      JSON.stringify({ message: "Convocatoria reanudada. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla queda protegida." }),
     )
     expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierta`, "commit"])
     const at = "20270115080000123"

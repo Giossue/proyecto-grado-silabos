@@ -1,4 +1,3 @@
-import { phpJsonEncode } from "../http/phpJson"
 import { FIELD_LIMIT_INVALID, KEY_PATTERN, RESPONSIBLES, templateDraftSchema } from "@/schemas/template"
 import { validateSchema } from "../http/schemaValidation"
 import { isList, isPhpArray, isRecord, list, phpCount, phpIntCast, phpString, phpTrim, record, type PhpRecord } from "./phpValues"
@@ -429,7 +428,7 @@ export async function draftProblems(payload: PhpRecord, current: TemplateDefinit
     entries(fieldsOf(section)).forEach(([fieldIndex, field]) => {
       if (!isPhpArray(field) || given(field, "quien_llena") !== INSTITUTIONAL || !Object.prototype.hasOwnProperty.call(field, "content")) return
       const content = at(field, "content")
-      const encoded = phpJsonEncode(content)
+      const encoded = JSON.stringify(content)
       if (!encoded.includes("data-response") && !encoded.includes('"type":"response"')) return
       try {
         contentForField(INSTITUTIONAL, normalizeFieldDocument(fieldDocument(content), current))

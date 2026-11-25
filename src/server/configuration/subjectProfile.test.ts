@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import { fakeTemplateStore, fieldId, goldenCatalog, goldenFields, goldenPresentation, goldenTemplate, type FakeTemplateWorld } from "./testing"
 import { showSubjectProfile, type SubjectProfileDeps } from "./subjectProfile"
 
@@ -11,7 +10,7 @@ const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_
 const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 const OTHER_CAREER = "01a1c5bc-79ca-7331-8f0f-000000000009"
 const SUBJECT = "01a1c5bc-7a00-7000-8000-0000000000aa"
-const EMPTY_FORBIDDEN = '{\n    "message": ""\n}'
+const EMPTY_FORBIDDEN = '{"message":""}'
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
@@ -32,17 +31,17 @@ async function read(response: Response): Promise<{ status: number; text: string 
 }
 
 const careerIndexes = goldenFields.map((field, index) => ({ field, index })).filter(({ field }) => field.quien_llena !== "institucional" && field.expected.writable === "true")
-const ok = (encoded: string): string => phpJsonEncode(JSON.parse(encoded).ok)
+const ok = (encoded: string): string => JSON.stringify(JSON.parse(encoded).ok)
 
 function expectedBody(values: string, complete: boolean): string {
   const fields = careerIndexes
     .map(
       ({ field, index }) =>
-        `{"id":"${fieldId(index)}","key":"${field.key}","label":${phpJsonEncode(field.label)},"quien_llena":"${field.quien_llena}","content":${field.content_json},` +
-        `"template":${field.expected.template},"section":${phpJsonEncode(field.section_title)},"position":${index}}`,
+        `{"id":"${fieldId(index)}","key":"${field.key}","label":${JSON.stringify(field.label)},"quien_llena":"${field.quien_llena}","content":${field.content_json},` +
+        `"template":${field.expected.template},"section":${JSON.stringify(field.section_title)},"position":${index}}`,
     )
     .join(",")
-  const variables = (JSON.parse(goldenCatalog) as { key: string; sample: string }[]).map((item) => `${phpJsonEncode(item.key)}:${phpJsonEncode(item.sample)}`).join(",")
+  const variables = (JSON.parse(goldenCatalog) as { key: string; sample: string }[]).map((item) => `${JSON.stringify(item.key)}:${JSON.stringify(item.sample)}`).join(",")
   return `{"fields":[${fields}],"values":${values},"complete":${complete},"definition":${goldenPresentation},"variables":{${variables}}}`
 }
 
@@ -68,7 +67,7 @@ describe("GET academic/asignaturas/{asignatura}/ficha", () => {
     const response = await read(await get())
 
     expect(response.status).toBe(200)
-    expect(response.text).toBe(expectedBody("{}", false))
+    expect(JSON.parse(response.text)).toEqual(JSON.parse(expectedBody("{}", false)))
   })
 
   it("the administrator sees the profile of any career with the stored values following the template", async () => {
@@ -87,7 +86,7 @@ describe("GET academic/asignaturas/{asignatura}/ficha", () => {
 
     const values = `{"${fieldId(respuestas)}":${ok(goldenFields[respuestas].expected.follow)},"${fieldId(descripcion)}":${ok(goldenFields[descripcion].expected.follow)}}`
     expect(response.status).toBe(200)
-    expect(response.text).toBe(expectedBody(values, true))
+    expect(JSON.parse(response.text)).toEqual(JSON.parse(expectedBody(values, true)))
   })
 
   it("a stored value that is not a document is listed as null", async () => {
@@ -97,7 +96,7 @@ describe("GET academic/asignaturas/{asignatura}/ficha", () => {
 
     const response = await read(await get())
 
-    expect(response.text).toBe(expectedBody(`{"${fieldId(descripcion)}":null}`, false))
+    expect(JSON.parse(response.text)).toEqual(JSON.parse(expectedBody(`{"${fieldId(descripcion)}":null}`, false)))
   })
 
   it("another career, a teacher and an inactive career get abort(403) with an empty message", async () => {
@@ -120,10 +119,10 @@ describe("GET academic/asignaturas/{asignatura}/ficha", () => {
   it("answers Laravel's model 404 for a missing subject and a missing template, and the router 404 for a non-UUID id", async () => {
     asRole("coordinador", CAREER)
     const unknown = await get("01a1c5bc-7a00-7000-8000-0000000000ff")
-    expect([unknown.status, await unknown.text()]).toEqual([404, '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a1c5bc-7a00-7000-8000-0000000000ff"\n}'])
+    expect([unknown.status, await unknown.text()]).toEqual([404, '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a1c5bc-7a00-7000-8000-0000000000ff"}'])
     expect((await get("no-es-uuid")).status).toBe(404)
     templates.template = null
     const missing = await get()
-    expect([missing.status, await missing.text()]).toEqual([404, '{\n    "message": "No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\SyllabusTemplate]."\n}'])
+    expect([missing.status, await missing.text()]).toEqual([404, '{"message":"No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\SyllabusTemplate]."}'])
   })
 })

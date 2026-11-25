@@ -63,7 +63,7 @@ describe("session JSON, against Laravel's Store", () => {
         if (operation[0] === "flush") attributes = {}
         if (operation[0] === "save") attributes = JSON.parse(sessionJson(attributes))
       }
-      expect(sessionJson(attributes)).toBe(json)
+      expect(sessionJson(attributes)).toBe(JSON.stringify(JSON.parse(json)))
     })
   }
 

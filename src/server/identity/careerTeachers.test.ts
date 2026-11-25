@@ -35,7 +35,7 @@ describe("POST /api/v1/coordination/academic/teachers", () => {
   it("creates only a teacher of the current career and is idempotent", async () => {
     const test = coordination()
     const first = await store(test, { nombres: "Nueva", apellidos: "Docente Uno", correo_electronico: "  Nueva.Docente@Silabos.test " })
-    expect(await first.text()).toBe('{"message":"Docente creado para su carrera. Recibir\\u00e1 un enlace de activaci\\u00f3n por correo."}')
+    expect(await first.text()).toBe('{"message":"Docente creado para su carrera. Recibirá un enlace de activación por correo."}')
     const created = test.identity.accounts.at(-1)
     expect(created).toMatchObject({ name: "NUEVA DOCENTE UNO", email: "nueva.docente@silabos.test", verified: false })
     expect(test.identity.grants.filter((row) => row.userId === created?.id).map((row) => [row.role, row.careerId, row.active])).toEqual([["docente", CAREER, true]])

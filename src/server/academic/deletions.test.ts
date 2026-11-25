@@ -112,7 +112,7 @@ describe("DELETE /api/v1/admin/academic/{entity}/{record}", () => {
   it("keeps a period with a convocation and answers Laravel's 422", async () => {
     asRole("administrador", null)
     periods.set(PERIOD, { code: "Abril-Agosto 2027", hasProcess: true })
-    const message = "Este per\\u00edodo ya tiene una convocatoria con su historial, por eso no se puede eliminar."
+    const message = "Este período ya tiene una convocatoria con su historial, por eso no se puede eliminar."
     expect(await read(await deleteGovernanceRecord(remove(path), "periodo", PERIOD, deps()))).toEqual({
       status: 422,
       text: `{"message":"${message}","errors":{"record":["${message}"]}}`,
@@ -124,7 +124,7 @@ describe("DELETE /api/v1/admin/academic/{entity}/{record}", () => {
     asRole("administrador", null)
     expect(await read(await deleteGovernanceRecord(remove(`/api/v1/admin/academic/${entity}/${PERIOD}`), entity, PERIOD, deps()))).toEqual({
       status: 403,
-      text: '{"message":"Este registro no se elimina: desact\\u00edvelo."}',
+      text: '{"message":"Este registro no se elimina: desactívelo."}',
     })
     expect(transactions).toBe(0)
   })
@@ -147,7 +147,7 @@ describe("DELETE /api/v1/admin/academic/{entity}/{record}", () => {
     periods.clear()
     const response = await deleteGovernanceRecord(remove(path), "periodo", PERIOD, deps())
     expect(response.status).toBe(404)
-    expect(await response.text()).toBe(`{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\AcademicPeriod] ${PERIOD}"\n}`)
+    expect(await response.text()).toBe(`{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\AcademicPeriod] ${PERIOD}"}`)
     expect(committed).toEqual([])
   })
 
@@ -155,7 +155,7 @@ describe("DELETE /api/v1/admin/academic/{entity}/{record}", () => {
     asRole("administrador", null)
     const response = await deleteGovernanceRecord(remove("/api/v1/admin/academic/periodo/abc"), "periodo", "abc", deps())
     expect(response.status).toBe(500)
-    expect(await response.text()).toBe('{\n    "message": "Server Error"\n}')
+    expect(await response.text()).toBe('{"message":"Server Error"}')
     expect(transactions).toBe(0)
   })
 })
@@ -167,7 +167,7 @@ describe("DELETE /api/v1/coordination/academic/{entity}/{record}", () => {
     asRole("coordinador", CAREER)
     expect(await read(await deleteCareerRecord(remove(path), "asignacion_docente", ASSIGNMENT, deps()))).toEqual({
       status: 200,
-      text: '{"message":"Registro acad\\u00e9mico eliminado."}',
+      text: '{"message":"Registro académico eliminado."}',
     })
     expect(locks).toEqual([`asignacion_docente:${ASSIGNMENT}:${CAREER}`])
     expect(committed).toEqual([
@@ -180,7 +180,7 @@ describe("DELETE /api/v1/coordination/academic/{entity}/{record}", () => {
     assignments.set(ASSIGNMENT, { careerId: "otra" })
     const foreign = await deleteCareerRecord(remove(path), "asignacion_docente", ASSIGNMENT, deps())
     expect(foreign.status).toBe(404)
-    expect(await foreign.text()).toBe(`{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\TeacherAssignment] ${ASSIGNMENT}"\n}`)
+    expect(await foreign.text()).toBe(`{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\TeacherAssignment] ${ASSIGNMENT}"}`)
     expect((await deleteCareerRecord(remove("/api/v1/coordination/academic/asignacion_docente/x"), "asignacion_docente", "x", deps())).status).toBe(404)
     expect((await deleteCareerRecord(remove(`/api/v1/coordination/academic/teachers/${ASSIGNMENT}`), "teachers", ASSIGNMENT, deps())).status).toBe(404)
     expect(committed).toEqual([])
@@ -212,7 +212,7 @@ describe("DELETE /api/v1/coordination/academic/parallels/{parallel}", () => {
   it("keeps a parallel with a teacher assignment", async () => {
     asRole("coordinador", CAREER)
     parallels.set(PARALLEL, { careerId: CAREER, code: "A", teacherAssignments: 1, syllabi: [] })
-    const message = "El paralelo tiene un docente asignado. Quite primero la asignaci\\u00f3n docente."
+    const message = "El paralelo tiene un docente asignado. Quite primero la asignación docente."
     expect(await read(await deleteParallel(remove(path), PARALLEL, deps()))).toEqual({
       status: 422,
       text: `{"message":"${message}","errors":{"record":["${message}"]}}`,
@@ -223,7 +223,7 @@ describe("DELETE /api/v1/coordination/academic/parallels/{parallel}", () => {
   it("keeps a parallel whose syllabus already has work", async () => {
     asRole("coordinador", CAREER)
     parallels.set(PARALLEL, { careerId: CAREER, code: "A", teacherAssignments: 0, syllabi: [{ touched: false }, { touched: true }] })
-    const message = "El paralelo ya tiene s\\u00edlabo y no puede eliminarse."
+    const message = "El paralelo ya tiene sílabo y no puede eliminarse."
     expect(await read(await deleteParallel(remove(path), PARALLEL, deps()))).toEqual({
       status: 422,
       text: `{"message":"${message}","errors":{"record":["${message}"]}}`,
@@ -236,7 +236,7 @@ describe("DELETE /api/v1/coordination/academic/parallels/{parallel}", () => {
     parallels.set(PARALLEL, { careerId: "otra", code: "A", teacherAssignments: 0, syllabi: [] })
     const foreign = await deleteParallel(remove(path), PARALLEL, deps())
     expect(foreign.status).toBe(404)
-    expect(await foreign.text()).toBe('{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Parallel]."\n}')
+    expect(await foreign.text()).toBe('{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Parallel]."}')
     expect((await deleteParallel(remove("/api/v1/coordination/academic/parallels/x"), "x", deps())).status).toBe(404)
     expect(committed).toEqual([])
   })

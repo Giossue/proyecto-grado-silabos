@@ -3,7 +3,6 @@ import { and, eq, isNotNull, ne, sql } from "drizzle-orm"
 import { db, type Executor } from "@/db"
 import { hasRows, jsonbValue } from "@/db/expressions"
 import { camposPlantilla, definicionesCampo, plantillaSilabo, seccionesPlantilla, valoresCampo } from "@/db/schema"
-import { phpJsonEncode } from "../http/phpJson"
 import { randomUUID } from "node:crypto"
 import { uuid7 } from "../http/uuid7"
 import { officialDefinition, officialSections } from "./officialTemplate"
@@ -19,7 +18,7 @@ export function provisionTx(executor: Executor): ProvisionTx {
     anyTemplate: () => hasRows(executor.select({ id: plantillaSilabo.plantillaId }).from(plantillaSilabo).limit(1).for("update")),
     lockTemplate: (templateId) => structure.lockTemplate(templateId),
     async insertTemplate(templateId, definition) {
-      await executor.insert(plantillaSilabo).values({ definicionPlantilla: jsonbValue(phpJsonEncode(phpShape(definition))), plantillaId: templateId })
+      await executor.insert(plantillaSilabo).values({ definicionPlantilla: jsonbValue(JSON.stringify(phpShape(definition))), plantillaId: templateId })
     },
     async hasStructure(templateId) {
       return (
@@ -65,7 +64,7 @@ export function provisionTx(executor: Executor): ProvisionTx {
     async saveDefinition(templateId, definition) {
       await executor
         .update(plantillaSilabo)
-        .set({ definicionPlantilla: jsonbValue(phpJsonEncode(phpShape(definition))) })
+        .set({ definicionPlantilla: jsonbValue(JSON.stringify(phpShape(definition))) })
         .where(eq(plantillaSilabo.plantillaId, templateId))
     },
     async coordinationFields(templateId) {

@@ -87,7 +87,7 @@ describe("POST /api/v1/notifications/read-all", () => {
     stored.push(old)
     expect(await read(await markAllNotificationsRead(post("/api/v1/notifications/read-all"), deps()))).toEqual({
       status: 200,
-      text: '{"message":"Todas las notificaciones quedaron marcadas como le\\u00eddas."}',
+      text: '{"message":"Todas las notificaciones quedaron marcadas como leídas."}',
     })
     expect(writes).toEqual([`read-all:${golden.userId}:${NOW}`])
     expect(stored[0].readAt).toBe(String(NOW))
@@ -109,7 +109,7 @@ describe("POST /api/v1/notifications/read-all", () => {
 describe("POST /api/v1/notifications/{notification}/read", () => {
   it("marks the user's own notice once and keeps the first read time", async () => {
     const first = await read(await markNotificationRead(post(`/api/v1/notifications/${OWN}/read`), OWN, deps()))
-    expect(first).toEqual({ status: 200, text: '{"message":"Notificaci\\u00f3n marcada como le\\u00edda."}' })
+    expect(first).toEqual({ status: 200, text: '{"message":"Notificación marcada como leída."}' })
     expect(stored[0].readAt).toBe(String(NOW))
     writes = []
     expect((await markNotificationRead(post(`/api/v1/notifications/${OWN}/read`), OWN, deps())).status).toBe(200)
@@ -129,11 +129,11 @@ describe("POST /api/v1/notifications/{notification}/read", () => {
     world.users = [makeUser({ active: false })]
     expect(await read(await markNotificationRead(post(`/api/v1/notifications/${MISSING}/read`), MISSING, deps()))).toEqual({
       status: 404,
-      text: `{\n    "message": "No query results for model [${MODEL}] ${MISSING}"\n}`,
+      text: `{"message":"No query results for model [${MODEL}] ${MISSING}"}`,
     })
     expect(await read(await markNotificationRead(post("/api/v1/notifications/abc/read"), "abc", deps()))).toEqual({
       status: 404,
-      text: `{\n    "message": "No query results for model [${MODEL}] abc"\n}`,
+      text: `{"message":"No query results for model [${MODEL}] abc"}`,
     })
     expect(writes).toEqual([`find:${MISSING}`])
   })
@@ -154,7 +154,7 @@ describe("POST /api/v1/notifications/{notification}/open", () => {
     lookups = { ...noLookups(), convocationCareerIds: async () => ["c-1"] }
     expect(await read(await openNotification(post(`/api/v1/notifications/${OWN}/open`), OWN, deps()))).toEqual({
       status: 200,
-      text: '{"path":"\\/docente\\/mis-silabos","role_changed":false}',
+      text: '{"path":"/docente/mis-silabos","role_changed":false}',
     })
     expect(stored[0].readAt).toBe(String(NOW))
   })

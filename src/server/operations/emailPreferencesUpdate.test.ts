@@ -64,7 +64,7 @@ describe("PUT /api/v1/notifications/email-preferences", () => {
     expect(options[5]).toMatchObject({ type: "silabo.aprobado", enabled: false })
     expect(options.filter((option) => !option.enabled)).toHaveLength(1)
     expect(saved).toEqual([[golden.userId, { "silabo.aprobado": false }]])
-    expect(result.text).toContain('"label":"S\\u00edlabo aprobado"')
+    expect(result.text).toContain('"label":"Sílabo aprobado"')
     expect(result.headers.get("x-ratelimit-limit")).toBe("20")
     expect(result.headers.get("x-ratelimit-remaining")).toBe("19")
   })
@@ -102,7 +102,7 @@ describe("PUT /api/v1/notifications/email-preferences", () => {
     expect((await send({ preferences: "si" })).json.errors).toEqual({ preferences: ["El campo avisos por correo debe ser una lista."] })
     const mixed = await send({ preferences: { "silabo.aprobado": "true", otro: true, "silabo.reiniciado": null } })
     expect(mixed.text).toBe(
-      '{"message":"El campo aviso por correo debe ser verdadero o falso. (y 2 errores m\\u00e1s)","errors":{' +
+      '{"message":"El campo aviso por correo debe ser verdadero o falso. (y 2 errores más)","errors":{' +
         '"preferences.silabo.aprobado":["El campo aviso por correo debe ser verdadero o falso."],' +
         '"preferences.silabo.reiniciado":["El campo aviso por correo debe ser verdadero o falso."],' +
         '"preferences":["Hay avisos que no corresponden a sus roles."]}}',
@@ -114,7 +114,7 @@ describe("PUT /api/v1/notifications/email-preferences", () => {
     for (let attempt = 0; attempt < 20; attempt += 1) expect((await send({ preferences: {} })).status).toBe(422)
     const limited = await send({ preferences: { "silabo.aprobado": false } })
     expect(limited.status).toBe(429)
-    expect(limited.text).toBe('{\n    "message": "Too Many Attempts."\n}')
+    expect(limited.text).toBe('{"message":"Too Many Attempts."}')
     expect(limited.headers.get("retry-after")).toBe("60")
     expect(saved).toEqual([])
   })

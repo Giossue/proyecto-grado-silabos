@@ -13,7 +13,7 @@ const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_
 const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 const OTHER_CAREER = "01a1c5bc-79ca-7331-8f0f-000000000009"
 const SUBJECT = "01a1c5bc-7a00-7000-8000-0000000000aa"
-const EMPTY_FORBIDDEN = '{\n    "message": ""\n}'
+const EMPTY_FORBIDDEN = '{"message":""}'
 const STRUCTURE = "Complete solo los espacios de respuesta. El texto, los encabezados y la estructura los define Administración."
 
 const index = (key: string) => goldenFields.findIndex((field) => field.key === key)
@@ -202,7 +202,7 @@ describe("PUT academic/asignaturas/{asignatura}/ficha", () => {
     )
     expect(anonymous.status).toBe(419)
     const unknown = await put({ values: [] }, "01a1c5bc-7a00-7000-8000-0000000000ff")
-    expect([unknown.status, unknown.text]).toEqual([404, '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a1c5bc-7a00-7000-8000-0000000000ff"\n}'])
+    expect([unknown.status, unknown.text]).toEqual([404, '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a1c5bc-7a00-7000-8000-0000000000ff"}'])
     expect((await put({ values: [] }, "no-es-uuid")).status).toBe(404)
   })
 })

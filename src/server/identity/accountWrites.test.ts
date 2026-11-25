@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { destroyManagedUser, removeManagedUserRole, resendManagedUserActivation, storeManagedUser, updateManagedUser } from "./accountWrites"
 import { account, ACTOR, ACTOR_ROLE, CAREER, FORBIDDEN, grant, harness, jsonRequest, NOW, OTHER_CAREER, SESSION_ID } from "./testing"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Models\\${model}] ${id}` })
 
 const TEACHER = "01a1c5bc-1111-7000-8000-000000000001"
 const TEACHER_ROLE = "01a1c5bc-1111-7000-8000-0000000000a1"
@@ -244,7 +244,7 @@ describe("POST /api/v1/admin/users/{user}/resend-activation", () => {
     const test = seeded()
     test.identity.invitations.push({ userId: PENDING, hash: "old", expiresAt: NOW - 1, issuerId: ACTOR, createdAt: NOW - 100, usedAt: null, invalidatedAt: null })
     const response = await resend(test, PENDING)
-    expect(await response.text()).toBe('{"message":"Invitaci\\u00f3n de activaci\\u00f3n enviada a pendiente@silabos.test."}')
+    expect(await response.text()).toBe('{"message":"Invitación de activación enviada a pendiente@silabos.test."}')
     expect(response.headers.get("x-ratelimit-limit")).toBe("3")
     expect(response.headers.get("x-ratelimit-remaining")).toBe("2")
     expect(test.identity.mails).toHaveLength(1)
@@ -309,7 +309,7 @@ describe("DELETE /api/v1/admin/users/{user}/roles/{assignment}", () => {
     })
     const notFound = await remove(test, TEACHER, COORDINATOR_ROLE)
     expect(notFound.status).toBe(404)
-    expect(await notFound.text()).toBe('{\n    "message": ""\n}')
+    expect(await notFound.text()).toBe('{"message":""}')
     const coordinator = harness({ role: "coordinador", careerId: CAREER })
     coordinator.identity.accounts.push(account({ id: COORDINATOR }))
     coordinator.identity.grants.push(grant({ id: COORDINATOR_ROLE, userId: COORDINATOR, role: "coordinador" }))

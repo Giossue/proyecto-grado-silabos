@@ -1,35 +1,64 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import golden from "./__fixtures__/mail-golden.json"
 import { mailConfig } from "./config"
-import type { QueuedMail } from "./mailables"
+import { renderMailable, type QueuedMail } from "./mailables"
 import { createMailer, smtpOptions } from "./mailer"
 import { createSendMailJob, sendMailJob } from "./sendMailJob"
 
-type GoldenCase = { mail: QueuedMail; expected: { subject: string; from: unknown; to: unknown; headers: Record<string, string>; html: string; text: string } }
-
 const env = {
   MAIL_MAILER: "array",
-  MAIL_FROM_ADDRESS: golden.from.address,
-  MAIL_FROM_NAME: golden.from.name,
-  APP_NAME: golden.app.name,
-  FRONTEND_URL: `${golden.app.frontendUrl},http://localhost:5173`,
-  APP_LOCALE: golden.app.locale,
+  MAIL_FROM_ADDRESS: "no-reply@example.test",
+  MAIL_FROM_NAME: "Sílabos UEB",
+  APP_NAME: "Sílabos UEB",
+  FRONTEND_URL: "http://localhost:3000,http://localhost:5173",
+  APP_LOCALE: "es",
 }
 
+const app = { name: "Sílabos UEB", frontendUrl: "http://localhost:3000", locale: "es" }
+
+const mails: Array<{ mail: QueuedMail; subject: string; headers: Record<string, string> }> = [
+  {
+    mail: { mailable: "activation", to: "maria@example.test", data: { name: "María Pérez", roleName: "Docente", activationUrl: "http://localhost:3000/activar-cuenta?token=abc", careerName: null } },
+    subject: "Su invitación a Sílabos UEB",
+    headers: { Importance: "high", "X-Priority": "1", Priority: "urgent" },
+  },
+  { mail: { mailable: "workflow", to: "ana@example.test", data: { name: "Ana", title: "Aviso", body: "Hola", url: "http://localhost:3000/" } }, subject: "Aviso", headers: {} },
+  {
+    mail: { mailable: "daily", to: "luis@example.test", data: { name: "Luis", lines: ["Derecho: 1 sílabo por corregir."], buttonLabel: "Abrir mis sílabos", url: "http://localhost:3000/docente/mis-silabos" } },
+    subject: "Resumen del día: sílabos pendientes",
+    headers: {},
+  },
+  {
+    mail: { mailable: "coordinator", to: "carlos@example.test", data: { name: "Carlos", careers: [{ career: "Derecho", review: 2 }], url: "http://localhost:3000/coordinacion/revisiones" } },
+    subject: "Resumen del día: sílabos pendientes",
+    headers: {},
+  },
+  { mail: { mailable: "resetPassword", to: "docente@example.test", data: { token: "abc", email: "docente@example.test", expireMinutes: 60 } }, subject: "Solicitud de cambio de contraseña", headers: {} },
+]
+
 describe("mailer", () => {
-  it("sends each mailable with Laravel's sender, recipient, subject, priority headers and bodies", async () => {
+  it("sends each mailable with the configured sender, its recipient, subject, priority headers and both bodies", async () => {
     const mailer = createMailer(mailConfig(env))
-    for (const item of golden.cases as unknown as GoldenCase[]) {
+    for (const item of mails) {
       const sent = await mailer.send(item.mail)
-      expect(sent.from).toEqual(item.expected.from)
-      expect(sent.to).toEqual(item.expected.to)
-      expect(sent.subject).toBe(item.expected.subject)
-      expect(sent.html).toBe(item.expected.html)
-      expect(sent.text).toBe(item.expected.text)
-      for (const [name, value] of Object.entries(item.expected.headers)) expect(sent.raw).toContain(`${name}: ${value}\n`)
+      const rendered = await renderMailable(item.mail, app)
+      expect(sent.from).toEqual([{ address: "no-reply@example.test", name: "Sílabos UEB" }])
+      expect(sent.to).toEqual([{ address: item.mail.to, name: "" }])
+      expect(sent.subject).toBe(item.subject)
+      expect(sent.html).toBe(rendered.html)
+      expect(sent.text).toBe(rendered.text)
+      for (const [name, value] of Object.entries(item.headers)) expect(sent.raw).toContain(`${name}: ${value}\n`)
     }
-    expect(mailer.sent).toHaveLength(golden.cases.length)
+    expect(mailer.sent).toHaveLength(mails.length)
+  })
+
+  it("keeps the reset link readable in the logged message", async () => {
+    const lines: string[] = []
+    const mailer = createMailer(mailConfig({ ...env, MAIL_MAILER: "log" }), { log: (line) => lines.push(line) })
+    await mailer.send({ mailable: "resetPassword", to: "docente@example.test", data: { token: "a1b2", email: "docente@example.test", expireMinutes: 60 } })
+    const raw = lines[0].replace(/=\r?\n/g, "").replace(/=3D/g, "=")
+    expect(raw).toContain("To: docente@example.test")
+    expect(raw.match(/https?:\/\/[^\s"<>]*restablecer-contrasena[^\s"<>]*/)?.[0]).toBe("http://localhost:3000/restablecer-contrasena?token=a1b2&email=docente%40example.test")
   })
 
   it("writes the whole message to the log with the log mailer, like Laravel's log transport", async () => {
@@ -62,7 +91,7 @@ describe("mailer", () => {
 
   it("sends queued mail from the general queue job", async () => {
     const mailer = createMailer(mailConfig(env))
-    const mail = (golden.cases as unknown as GoldenCase[])[0].mail
+    const mail = mails[0].mail
     const job = createSendMailJob(() => mailer)
     expect({ name: job.name, queue: job.queue }).toEqual({ name: sendMailJob.name, queue: "general" })
     await job.handle(mail, { attempt: 1, jobId: "1", signal: new AbortController().signal })

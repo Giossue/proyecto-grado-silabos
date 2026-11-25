@@ -201,7 +201,7 @@ describe("POST /api/v1/admin/academic/careers/import", () => {
     expect(forbidden.status).toBe(403)
     expect(await forbidden.text()).toBe('{"message":"No puede importar carreras con el rol activo."}')
     signIn("administrador", null)
-    expect(await (await curriculum(unreadable)).text()).toBe('{"message":"Solo la coordinaci\\u00f3n de la carrera puede importar la malla."}')
+    expect(await (await curriculum(unreadable)).text()).toBe('{"message":"Solo la coordinación de la carrera puede importar la malla."}')
   })
 
   it("rejects files that are not .xlsx and confirmations that are not booleans", async () => {

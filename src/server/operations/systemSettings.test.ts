@@ -50,10 +50,10 @@ describe("system settings", () => {
     expect(response.status).toBe(200)
     expect(response.text).toBe(
       '{"notifications":{"emails":{"value":true,"source":"entorno"},"digest_time":{"value":"08:00","source":"entorno"}},' +
-        '"ai":{"driver":{"value":"deepseek","source":"entorno"},"base_url":{"value":"https:\\/\\/api.deepseek.com","source":"entorno"},' +
+        '"ai":{"driver":{"value":"deepseek","source":"entorno"},"base_url":{"value":"https://api.deepseek.com","source":"entorno"},' +
         '"model":{"value":"deepseek-chat","source":"entorno"},"api_key":{"configured":true,"source":"entorno"},' +
         '"connect_timeout":{"value":2,"source":"entorno"},"timeout":{"value":50,"source":"entorno"}},' +
-        '"library":{"driver":{"value":"koha","source":"entorno"},"base_url":{"value":"https:\\/\\/biblioteca.ueb.edu.ec","source":"entorno"}}}',
+        '"library":{"driver":{"value":"koha","source":"entorno"},"base_url":{"value":"https://biblioteca.ueb.edu.ec","source":"entorno"}}}',
     )
     expect(response.text).not.toContain("4c2e")
   })

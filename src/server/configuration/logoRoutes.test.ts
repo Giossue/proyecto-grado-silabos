@@ -133,7 +133,7 @@ describe("GET /logos/facultad/{faculty}", () => {
     expect(await html.text()).toBe(NOT_FOUND_PAGE)
     expect(cookieNames(html)).toEqual(["XSRF-TOKEN", golden.cookieName])
     const json = await facultyLogo(get(`/logos/facultad/${MISSING}`, { accept: "application/json" }), MISSING, { writer: writer(), store })
-    expect(await json.text()).toBe(`{\n    "message": "No query results for model [${MODEL}] ${MISSING}"\n}`)
+    expect(await json.text()).toBe(`{"message":"No query results for model [${MODEL}] ${MISSING}"}`)
     world.sessions.clear()
     const malformed = await facultyLogo(get("/logos/facultad/abc"), "abc", { writer: writer(), store })
     expect([malformed.status, await malformed.text(), cookieNames(malformed)]).toEqual([404, NOT_FOUND_PAGE, []])

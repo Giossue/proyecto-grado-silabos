@@ -6,7 +6,6 @@ import { convocatoriasUniversidad, mensajesIaPlantilla, plantillaSilabo, propues
 import { phpJsonDecode, phpShape, record, type PhpRecord } from "../configuration/phpValues"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
 import { loadTemplate } from "../configuration/templateStore"
-import { phpJsonEncode } from "../http/phpJson"
 
 export type StoredMessage = { id: string; templateId: string; userId: string; content: PhpRecord; sentAt: string; hiddenAt: string | null }
 
@@ -105,7 +104,7 @@ function proposalOf(row: ProposalRow): StoredProposal {
 }
 
 export function jsonbOf(value: unknown): SQL {
-  return jsonbValue(phpJsonEncode(phpShape(value)))
+  return jsonbValue(JSON.stringify(phpShape(value)))
 }
 
 const conversationOf = (templateId: string, userId: string) =>

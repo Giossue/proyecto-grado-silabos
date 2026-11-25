@@ -4,7 +4,6 @@ import path from "node:path"
 import { describe, expect, it } from "vitest"
 import golden from "./__fixtures__/ficha-golden.json"
 import { parts } from "../excel/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import { phpShape } from "../configuration/phpValues"
 import { TemplateValidationError } from "../configuration/templateRuntime"
 import { createFichaWorkbook, fichaFingerprint, readFichaWorkbook, type FichaDefinition } from "./fichaWorkbook"
@@ -17,7 +16,7 @@ const masked = (xml: string) => xml.replace(/([pP]assword)="[0-9A-F]+"/g, '$1="X
 
 function outcome(bytes: Buffer): unknown {
   try {
-    return { subjects: JSON.parse(phpJsonEncode(phpShape(readFichaWorkbook(bytes, definition)))) }
+    return { subjects: JSON.parse(JSON.stringify(phpShape(readFichaWorkbook(bytes, definition)))) }
   } catch (error) {
     if (error instanceof TemplateValidationError) return { errors: error.errors }
     throw error

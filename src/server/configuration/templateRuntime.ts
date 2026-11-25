@@ -3,7 +3,6 @@ import { holds } from "@/lib/blocks/condition"
 import { Scope } from "@/lib/blocks/scope"
 import type { BlockDefinition as LibBlockDefinition, BlockRule, Condition } from "@/lib/blocks/types"
 import { filledText, resolveBlock, toDocument } from "@/lib/blocks/walk"
-import { phpJsonEncode } from "../http/phpJson"
 import {
   isList,
   isPhpArray,
@@ -618,7 +617,7 @@ function repeatsCells(table: PhpRecord): boolean {
 }
 
 export function normalizeTemplateDocument(document: unknown, variables: string[], definition: TemplateDefinition, layout: LayoutRules | null = null): PhpRecord {
-  if (phpJsonEncode(document).length > 2000000) fail("El diseño pasa el límite de 2 MB. Divida el contenido en varias secciones.")
+  if (Buffer.byteLength(JSON.stringify(document)) > 2000000) fail("El diseño pasa el límite de 2 MB. Divida el contenido en varias secciones.")
   let count = 0
   const visit = (raw: unknown, parent: string, depth: number, insideTable: boolean): PhpRecord => {
     if (++count > 6000 || depth > 12 || !isPhpArray(raw)) fail("El diseño es demasiado grande o está mal formado.")

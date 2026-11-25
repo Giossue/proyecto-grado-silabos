@@ -2,13 +2,12 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import { phpShape, type PhpRecord } from "./phpValues"
 import { fakeTemplateStore, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "./testing"
 import { designTemplateTable, templateIndex, templateShow, type TemplateBuilderDeps, type TemplateLock } from "./templateBuilder"
 import { institutionUrl } from "./institutionalLogos"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
@@ -136,7 +135,7 @@ describe("GET admin/template and admin/template/{template}", () => {
     templates.template = null
     lock = { period: null, deliveryOn: "2026-12-01" }
     expect(await (await index()).text()).toBe(
-      phpJsonEncode({ processLock: "Proceso activo", processLockDetail: { scope: "process", period: null, institutional_pause: false, delivery_on: "2026-12-01" }, template: null }),
+      JSON.stringify({ processLock: "Proceso activo", processLockDetail: { scope: "process", period: null, institutional_pause: false, delivery_on: "2026-12-01" }, template: null }),
     )
   })
 
@@ -201,7 +200,7 @@ describe("POST admin/template/{template}/blocks/design", () => {
 
   it("designs an untouched table back to the same definition", async () => {
     const { body } = await json(await design(await booksDesign()))
-    expect(phpJsonEncode(phpShape(body.definition))).toBe(phpJsonEncode(phpShape(goldenTemplate().definition!.blocks.bibliografia)))
+    expect(JSON.stringify(phpShape(body.definition))).toBe(JSON.stringify(phpShape(goldenTemplate().definition!.blocks.bibliografia)))
   })
 
   it("says in Spanish what is wrong with a design", async () => {

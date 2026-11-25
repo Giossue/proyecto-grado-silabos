@@ -171,7 +171,7 @@ describe("faculties with their logo", () => {
   it("requires a transparent PNG logo and a known campus when creating", async () => {
     expect(await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "F", campus: "Otro" }, null, (request) => createGovernanceRecord(request, "facultad", deps()))).toEqual({
       status: 422,
-      text: '{"message":"El valor seleccionado en campus no es v\\u00e1lido. (y 1 error m\\u00e1s)","errors":{"campus":["El valor seleccionado en campus no es v\\u00e1lido."],"logo":["El campo logotipo es obligatorio."]}}',
+      text: '{"message":"El valor seleccionado en campus no es válido. (y 1 error más)","errors":{"campus":["El valor seleccionado en campus no es válido."],"logo":["El campo logotipo es obligatorio."]}}',
     })
     expect(await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "F", campus: "Campus Laguacoto" }, { name: "logo.png", content: logo("opaque-64.png") }, (request) => createGovernanceRecord(request, "facultad", deps()))).toEqual({
       status: 422,

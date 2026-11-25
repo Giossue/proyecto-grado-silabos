@@ -2,7 +2,6 @@
 import { describe, expect, it } from "vitest"
 import golden from "./__fixtures__/laravel-golden.json"
 import { lengthAwarePaginator, resolveCurrentPage } from "./pagination"
-import { phpJsonEncode } from "./phpJson"
 import { queryParams } from "./request"
 
 describe("LengthAwarePaginator", () => {
@@ -17,7 +16,7 @@ describe("LengthAwarePaginator", () => {
       path: "http://localhost:3000/api/v1/notifications",
       query: new Map(Object.entries(query as Record<string, string>)),
     })
-    expect(phpJsonEncode(paginator)).toBe(json)
+    expect(JSON.parse(JSON.stringify(paginator))).toEqual(JSON.parse(json))
   })
 
   it.each(golden.pageInputs)("resolves page input '$input' to $page", ({ input, page }) => {

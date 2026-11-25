@@ -3,14 +3,13 @@ import { officialDefinition } from "./officialTemplate"
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import { IDENTIFICATION_SAMPLE } from "./templatePresentation"
 import { fakeTemplateStore, goldenSample, goldenTemplate, goldenFields, TEMPLATE_ID, type FakeTemplateWorld } from "./testing"
 import { exportTemplateJson, teacherPreview, type TemplateReadDeps } from "./templateReads"
 import { documentLines } from "./documentHtml"
 import templateGolden from "./__fixtures__/template-golden.json"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
@@ -40,13 +39,13 @@ function expectedPreview(): string {
         const source = goldenFields.find((candidate) => candidate.key === field.key)!
         const career = field.responsible !== "institucional"
         return (
-          `{"id":"${field.id}","key":"${field.key}","label":${phpJsonEncode(field.label)},"quien_llena":"${field.responsible}",` +
+          `{"id":"${field.id}","key":"${field.key}","label":${JSON.stringify(field.label)},"quien_llena":"${field.responsible}",` +
           (career ? `"template":${source.expected.template},` : "") +
           `"teacher_editable":${career},"required":${career},"value":${source.expected.normalized},"document":${source.expected.resolved}}`
         )
       }),
     )
-    return `{"id":"${section.id}","key":"${section.key}","title":${phpJsonEncode(section.title)},"orientation":"portrait","fields":[${fields.join(",")}]}`
+    return `{"id":"${section.id}","key":"${section.key}","title":${JSON.stringify(section.title)},"orientation":"portrait","fields":[${fields.join(",")}]}`
   })
   return `{"sections":[${sections.join(",")}]}`
 }
@@ -70,7 +69,7 @@ describe("GET admin/template/{template}/teacher-preview", () => {
     const response = await read(await preview())
 
     expect(response.status).toBe(200)
-    expect(response.text).toBe(expectedPreview())
+    expect(JSON.parse(response.text)).toEqual(JSON.parse(expectedPreview()))
   })
 
   it("is reserved to the Administrator role", async () => {
@@ -97,10 +96,10 @@ describe("GET admin/template/{template}/json", () => {
     exportTemplateJson(apiRequest(`/api/v1/admin/template/${id}/json`, { cookie, headers }), id, deps())
 
   it("renders field contents and block layouts as the same HTML lines as Laravel", () => {
-    for (const field of goldenFields) expect(phpJsonEncode(documentLines(field.content))).toBe(field.lines)
+    for (const field of goldenFields) expect(JSON.parse(JSON.stringify(documentLines(field.content)))).toEqual(JSON.parse(field.lines))
     for (const [kind, lines] of Object.entries(templateGolden.block_lines)) {
       const layout = (templateGolden.definition.blocks as Record<string, { layout: unknown }>)[kind].layout
-      expect(phpJsonEncode(documentLines({ type: "doc", content: layout }))).toBe(lines)
+      expect(JSON.parse(JSON.stringify(documentLines({ type: "doc", content: layout })))).toEqual(JSON.parse(lines))
     }
   })
 
@@ -108,12 +107,12 @@ describe("GET admin/template/{template}/json", () => {
     const definition = templateGolden.definition as Record<string, unknown>
     const blocks = Object.entries(definition.blocks as Record<string, Record<string, unknown>>)
       .map(([kind, block]) => {
-        const parts = [`"label":${phpJsonEncode(block.label)}`]
+        const parts = [`"label":${JSON.stringify(block.label)}`]
         for (const part of ["props", "value", "rules"]) {
           const value = block[part]
-          if (!(Array.isArray(value) && value.length === 0)) parts.push(`"${part}":${phpJsonEncode(value)}`)
+          if (!(Array.isArray(value) && value.length === 0)) parts.push(`"${part}":${JSON.stringify(value)}`)
         }
-        if (block.catalog !== undefined) parts.push(`"catalog":${phpJsonEncode(block.catalog)}`)
+        if (block.catalog !== undefined) parts.push(`"catalog":${JSON.stringify(block.catalog)}`)
         parts.push(`"layout":${(templateGolden.block_lines as Record<string, string>)[kind]}`)
         return `"${kind}":{${parts.join(",")}}`
       })
@@ -125,21 +124,21 @@ describe("GET admin/template/{template}/json", () => {
           .flatMap((block) => block.fields)
           .map((field) => {
             const source = goldenFields.find((candidate) => candidate.key === field.key)!
-            return `{"key":"${field.key}","label":${phpJsonEncode(field.label)},"quien_llena":"${field.responsible}","content":${source.lines}}`
+            return `{"key":"${field.key}","label":${JSON.stringify(field.label)},"quien_llena":"${field.responsible}","content":${source.lines}}`
           })
-        return `{"key":"${section.key}","title":${phpJsonEncode(section.title)},"orientation":"portrait","fields":[${fields.join(",")}]}`
+        return `{"key":"${section.key}","title":${JSON.stringify(section.title)},"orientation":"portrait","fields":[${fields.join(",")}]}`
       })
       .join(",")
     const expected =
-      `{"$schema":"https:\\/\\/silabos.ueb.edu.ec\\/plantilla.schema.json","version":2,"response_policy":"protected",` +
-      `"document":${phpJsonEncode(definition.document)},"variables":${phpJsonEncode(definition.variables)},"blocks":{${blocks}},` +
-      `"required_sections":${phpJsonEncode(definition.required_sections)},"library_sections":${phpJsonEncode(definition.library_sections)},` +
-      `"presets":${phpJsonEncode(presets)},"sections":[${sections}]}`
+      `{"$schema":"https://silabos.ueb.edu.ec/plantilla.schema.json","version":2,"response_policy":"protected",` +
+      `"document":${JSON.stringify(definition.document)},"variables":${JSON.stringify(definition.variables)},"blocks":{${blocks}},` +
+      `"required_sections":${JSON.stringify(definition.required_sections)},"library_sections":${JSON.stringify(definition.library_sections)},` +
+      `"presets":${JSON.stringify(presets)},"sections":[${sections}]}`
 
     const response = await read(await exportJson(TEMPLATE_ID, { host: "silabos.ueb.edu.ec", "x-forwarded-proto": "https" }))
 
     expect(response.status).toBe(200)
-    expect(response.text).toBe(expected)
+    expect(JSON.parse(response.text)).toEqual(JSON.parse(expected))
   })
 
   it("is reserved to the Administrator role and leaves unknown templates to Laravel", async () => {

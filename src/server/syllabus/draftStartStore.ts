@@ -3,7 +3,6 @@ import { and, eq, inArray, ne, sql } from "drizzle-orm"
 import { db } from "@/db"
 import { fromEpoch } from "@/db/expressions"
 import { definicionesCampo, silabos, valoresCampo } from "@/db/schema"
-import { phpJsonEncode } from "../http/phpJson"
 import { uuid7 } from "../http/uuid7"
 import { phpJsonDecode, phpShape } from "../configuration/phpValues"
 import { createTemplateStore } from "../configuration/templateStore"
@@ -56,7 +55,7 @@ export function draftStartTx(executor: Executor): DraftStartTx {
       await executor.delete(valoresCampo).where(and(eq(valoresCampo.silaboId, syllabusId), inArray(valoresCampo.definicionCampoId, fieldIds)))
     },
     async insertValue(syllabusId, fieldId, document) {
-      await executor.insert(valoresCampo).values({ silaboId: syllabusId, definicionCampoId: fieldId, valorCampo: jsonbValue(phpJsonEncode(phpShape(document))), valorCampoId: uuid7() })
+      await executor.insert(valoresCampo).values({ silaboId: syllabusId, definicionCampoId: fieldId, valorCampo: jsonbValue(JSON.stringify(phpShape(document))), valorCampoId: uuid7() })
     },
     async start(syllabusId, now) {
       await executor

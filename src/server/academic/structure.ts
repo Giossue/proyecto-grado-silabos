@@ -5,7 +5,6 @@ import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { phpIsNumeric } from "@/schemas/php"
 import { CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES } from "@/schemas/academic"
-import { phpFloat } from "../http/phpJson"
 import { apiJson } from "../http/responses"
 import { createAcademicStructureRepository } from "./structureQueries"
 import { unmatchedRoute, routeAllows } from "../http/router"
@@ -142,19 +141,16 @@ function systemValue(subject: SubjectRecord, key: string): string | number | nul
 
 function phpSum(subjects: SubjectRecord[], key: string): unknown {
   let total = 0
-  let isFloat = false
   for (const subject of subjects) {
     const value = systemValue(subject, key)
     if (!phpIsNumeric(value ?? undefined)) continue
     if (typeof value === "string") {
-      const parsed = Number(value.trim())
-      isFloat = isFloat || !/^\s*[+-]?\d+\s*$/.test(value)
-      total += parsed
+      total += Number(value.trim())
     } else if (value !== null) {
       total += value
     }
   }
-  return isFloat ? phpFloat(total) : total
+  return total
 }
 
 function subjectPayload(subject: SubjectRecord): Record<string, unknown> {

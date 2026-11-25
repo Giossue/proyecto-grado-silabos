@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../http/phpJson"
 import {
   convocationDetail,
   convocations,
@@ -14,7 +13,7 @@ import {
   type ProcessListRow,
 } from "./convocations"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
@@ -111,7 +110,7 @@ describe("GET /api/v1/coordination/convocations", () => {
       { id: CONVOCATION, process_id: PROCESS, name: "2026-2", state: "abierta", process_state: "abierto", period: "2026-2", template: "Plantilla institucional de sílabo", syllabi_count: 7 },
       { id: null, process_id: "cd000000-0000-4000-8000-000000000002", name: "2026-1", state: "sin_iniciar", process_state: "cerrado", period: "2026-1", template: "Plantilla institucional de sílabo", syllabi_count: 0 },
     ])
-    expect(text).toBe(phpJsonEncode(json))
+    expect(text).toBe(JSON.stringify(json))
   })
 
   it("filters by state and validates like Laravel", async () => {
@@ -158,7 +157,7 @@ describe("GET /api/v1/coordination/convocations/{convocation}", () => {
   it("aborts with an empty 403 for another career and leaves unknown ones to Laravel", async () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: "c0000000-0000-4000-8000-000000000009" })]
     const denied = await send((request) => convocationDetail(request, CONVOCATION, deps()), `/api/v1/coordination/convocations/${CONVOCATION}`)
-    expect(denied).toMatchObject({ status: 403, text: '{\n    "message": ""\n}' })
+    expect(denied).toMatchObject({ status: 403, text: '{"message":""}' })
     expect(await send((request) => convocationDetail(request, "cc000000-0000-4000-8000-00000000ffff", deps()), "/api/v1/coordination/convocations/x")).toMatchObject({ status: 404, text: modelNotFound("Convocation", "cc000000-0000-4000-8000-00000000ffff") })
     expect(await send((request) => convocationDetail(request, "x", deps()), "/api/v1/coordination/convocations/x")).toMatchObject({ status: 404, text: modelNotFound("Convocation", "x") })
   })
@@ -170,7 +169,7 @@ describe("POST /api/v1/coordination/convocations/{convocation}/pausar", () => {
   it("pauses an open convocation under a row lock", async () => {
     const { status, text } = await pause()
     expect(status).toBe(200)
-    expect(text).toBe(phpJsonEncode({ message: "Convocatoria en pausa. Los docentes de la carrera no editan ni envían; la malla queda editable." }))
+    expect(text).toBe(JSON.stringify({ message: "Convocatoria en pausa. Los docentes de la carrera no editan ni envían; la malla queda editable." }))
     expect(log).toEqual(["begin", `lock:${CONVOCATION}`, `state:${CONVOCATION}:pausada`, "commit"])
   })
 

@@ -1,5 +1,3 @@
-import { phpJsonEncode } from "./phpJson"
-
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
@@ -9,19 +7,15 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Cross-Origin-Resource-Policy": "same-origin",
 }
 
-function jsonResponse(body: string, status: number): Response {
-  return new Response(body, {
+export function apiJson(payload: unknown, status = 200): Response {
+  return Response.json(payload, {
     status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-cache, private", ...(status < 300 ? SECURITY_HEADERS : {}) },
+    headers: { "Cache-Control": "no-cache, private", ...(status < 300 ? SECURITY_HEADERS : {}) },
   })
 }
 
-export function apiJson(payload: unknown, status = 200): Response {
-  return jsonResponse(phpJsonEncode(payload), status)
-}
-
 export function jsonError(status: number, message: string): Response {
-  return jsonResponse(phpJsonEncode({ message }, { pretty: true, unescapedSlashes: true }), status)
+  return apiJson({ message }, status)
 }
 
 export function serverError(): Response {

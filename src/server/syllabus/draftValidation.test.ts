@@ -7,7 +7,7 @@ import type { PhpRecord } from "../configuration/phpValues"
 import type { DraftSyllabus } from "./draftField"
 import { validateDraft, type DraftValidationDeps, type ValidationField, type ValidationTeacher } from "./draftValidation"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const CAREER = "c0000000-0000-4000-8000-000000000001"
@@ -145,7 +145,7 @@ describe("POST teacher/syllabi/{syllabus}/validate", () => {
 
   it("forbids reviewers and syllabi outside the editable window", async () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
-    expect(await validate()).toMatchObject({ status: 403, text: '{\n    "message": ""\n}' })
+    expect(await validate()).toMatchObject({ status: 403, text: '{"message":""}' })
     world.assignments = [makeAssignment({ role: "docente", careerId: CAREER })]
     facts = { ...facts!, convocationState: "pausada" }
     expect((await validate()).status).toBe(403)

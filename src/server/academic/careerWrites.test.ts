@@ -16,7 +16,7 @@ import {
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
-const CREATED = '{"message":"Registro acad\\u00e9mico creado dentro de su carrera."}'
+const CREATED = '{"message":"Registro académico creado dentro de su carrera."}'
 const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 const OTHER_CAREER = "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"
 const SUBJECT = "01a1c5bc-7cbf-7091-860c-63a02b91e998"
@@ -376,7 +376,7 @@ describe("PATCH /api/v1/coordination/academic/asignatura/{record}", () => {
       horas_pae: "40.5",
       horas_aa: "47.5",
     })
-    expect(response.text).toBe('{"message":"Registro acad\\u00e9mico actualizado."}')
+    expect(response.text).toBe('{"message":"Registro académico actualizado."}')
     expect(log).toEqual([
       "begin",
       `keep:false:${CAREER}`,
@@ -409,9 +409,9 @@ describe("PATCH /api/v1/coordination/academic/asignatura/{record}", () => {
     locked = true
     expect((await update("asignatura", SUBJECT, subjectBody)).json?.errors).toEqual({ process: ["Convocatoria activa"] })
     locked = false
-    expect(await update("asignatura", SUBJECT, { ...subjectBody, position: null })).toMatchObject({ status: 500, text: '{\n    "message": "Server Error"\n}' })
+    expect(await update("asignatura", SUBJECT, { ...subjectBody, position: null })).toMatchObject({ status: 500, text: '{"message":"Server Error"}' })
     expect((await update("paralelo", SUBJECT, subjectBody)).status).toBe(404)
-    expect(await update("asignatura", "abc", subjectBody)).toMatchObject({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/asignatura/abc could not be found."\n}' })
+    expect(await update("asignatura", "abc", subjectBody)).toMatchObject({ status: 404, text: '{"message":"The route api/v1/coordination/academic/asignatura/abc could not be found."}' })
   })
 })
 
@@ -496,8 +496,8 @@ describe("PATCH /api/v1/coordination/academic/parallels/{parallel}", () => {
   })
 
   it("a parallel of another career answers Laravel's model 404 and a malformed one the router 404", async () => {
-    expect(await editParallel(OTHER_PARALLEL, { code: "B", shift: "nocturna" })).toMatchObject({ status: 404, text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Parallel]."\n}' })
-    expect(await editParallel("abc", { code: "B", shift: "nocturna" })).toMatchObject({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/parallels/abc could not be found."\n}' })
+    expect(await editParallel(OTHER_PARALLEL, { code: "B", shift: "nocturna" })).toMatchObject({ status: 404, text: '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Parallel]."}' })
+    expect(await editParallel("abc", { code: "B", shift: "nocturna" })).toMatchObject({ status: 404, text: '{"message":"The route api/v1/coordination/academic/parallels/abc could not be found."}' })
     expect((await editParallel(PARALLEL, { code: "B", shift: "nocturna", confirm_purge: "x" })).json?.errors).toEqual({
       confirm_purge: ["El campo confirmación de borrado debe ser verdadero o falso."],
     })
@@ -531,6 +531,6 @@ describe("PUT /api/v1/coordination/academic/parallels/{parallel}/teacher", () =>
 
   it("validates the teacher with its own label and answers Laravel's model 404 for a foreign parallel", async () => {
     expect((await replaceTeacher(PARALLEL, {})).json?.errors).toEqual({ user_id: ["El campo docente es obligatorio."] })
-    expect(await replaceTeacher(OTHER_PARALLEL, { user_id: TEACHER })).toMatchObject({ status: 404, text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Parallel]."\n}' })
+    expect(await replaceTeacher(OTHER_PARALLEL, { user_id: TEACHER })).toMatchObject({ status: 404, text: '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Parallel]."}' })
   })
 })

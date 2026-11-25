@@ -14,7 +14,7 @@ import { strSlug } from "./slug"
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
-const NOT_FOUND = '{\n    "message": ""\n}'
+const NOT_FOUND = '{"message":""}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
 const SYLLABUS = "50000000-0000-4000-8000-000000000001"
 const REVISION = "70000000-0000-4000-8000-000000000001"
@@ -195,7 +195,7 @@ describe("POST revisions/{r}/documents", () => {
   })
 
   it("requests the PDF of an approved revision once per idempotency key", async () => {
-    expect(await post({ idempotency_key: KEY })).toEqual({ status: 202, text: `{"message":"El PDF se est\\u00e1 generando.","artifact_id":"${NEW_ARTIFACT}"}`, limit: "20", remaining: "19" })
+    expect(await post({ idempotency_key: KEY })).toEqual({ status: 202, text: `{"message":"El PDF se está generando.","artifact_id":"${NEW_ARTIFACT}"}`, limit: "20", remaining: "19" })
     expect(requested).toEqual([{ id: NEW_ARTIFACT, revisionId: REVISION, key: KEY, requestedBy: golden.userId, requestedAt: NOW, state: "pendiente" }])
     expect(dispatched).toEqual([NEW_ARTIFACT])
     expect((await post({ idempotency_key: KEY })).status).toBe(202)
@@ -217,14 +217,14 @@ describe("POST revisions/{r}/documents", () => {
     approved = false
     expect(await post({ idempotency_key: KEY })).toMatchObject({
       status: 422,
-      text: '{"message":"Solo una revisi\\u00f3n aprobada puede generar documentos.","errors":{"revision":["Solo una revisi\\u00f3n aprobada puede generar documentos."]}}',
+      text: '{"message":"Solo una revisión aprobada puede generar documentos.","errors":{"revision":["Solo una revisión aprobada puede generar documentos."]}}',
     })
     expect(requested).toEqual([])
   })
 
   it("validates the idempotency key and authorizes like viewing the revision", async () => {
     expect((await post({ idempotency_key: "no-es-uuid" })).text).toBe(
-      '{"message":"El campo identificador de la solicitud debe ser un UUID v\\u00e1lido.","errors":{"idempotency_key":["El campo identificador de la solicitud debe ser un UUID v\\u00e1lido."]}}',
+      '{"message":"El campo identificador de la solicitud debe ser un UUID válido.","errors":{"idempotency_key":["El campo identificador de la solicitud debe ser un UUID válido."]}}',
     )
     expect((await post({})).text).toBe('{"message":"El campo identificador de la solicitud es obligatorio.","errors":{"idempotency_key":["El campo identificador de la solicitud es obligatorio."]}}')
     world.assignments = [makeAssignment({ role: "administrador", careerId: null, careerLabel: null })]

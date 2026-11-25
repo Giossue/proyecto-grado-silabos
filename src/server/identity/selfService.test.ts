@@ -100,7 +100,7 @@ describe("POST /api/v1/authentication/account-activation/resend", () => {
     const test = harness()
     const response = await post(test)
     expect(response.status).toBe(202)
-    expect(await response.text()).toBe('{"message":"Si su cuenta a\\u00fan no estaba activada, se envi\\u00f3 un enlace de activaci\\u00f3n."}')
+    expect(await response.text()).toBe('{"message":"Si su cuenta aún no estaba activada, se envió un enlace de activación."}')
     expect(test.identity.invitations).toEqual([])
   })
 
@@ -122,7 +122,7 @@ describe("DELETE /api/v1/authentication/sessions/{session}", () => {
   it("closes another session of the same account", async () => {
     const test = harness()
     test.identity.sessions.push({ id: "otra-sesion", userId: ACTOR })
-    expect(await (await remove(test, "otra-sesion")).text()).toBe('{"message":"La sesi\\u00f3n seleccionada fue cerrada."}')
+    expect(await (await remove(test, "otra-sesion")).text()).toBe('{"message":"La sesión seleccionada fue cerrada."}')
     expect(test.identity.sessions.map((row) => row.id)).toEqual([SESSION_ID])
   })
 
@@ -130,7 +130,7 @@ describe("DELETE /api/v1/authentication/sessions/{session}", () => {
     const test = harness()
     const response = await remove(test, SESSION_ID)
     expect(response.status).toBe(422)
-    expect(await response.text()).toBe('{\n    "message": "La sesi\\u00f3n actual se cierra desde la opci\\u00f3n Cerrar sesi\\u00f3n."\n}')
+    expect(await response.text()).toBe('{"message":"La sesión actual se cierra desde la opción Cerrar sesión."}')
   })
 })
 
@@ -153,7 +153,7 @@ describe("DELETE /api/v1/authentication/sessions/others", () => {
     test.identity.sessions.push({ id: "uno", userId: ACTOR })
     const response = await remove(test, { current_password: "secreto-actual" }, `${COOKIE}; ${recallerCookieName()}=valor`)
     expect(response.status).toBe(200)
-    expect(await response.text()).toBe('{"message":"Se cerr\\u00f3 una sesi\\u00f3n adicional.","closed_sessions":1}')
+    expect(await response.text()).toBe('{"message":"Se cerró una sesión adicional.","closed_sessions":1}')
     const headers = response.headers.getSetCookie()
     expect(headers.map((header) => header.slice(0, header.indexOf("=")))).toEqual(["XSRF-TOKEN", golden.cookieName, recallerCookieName()])
     const value = (header: string) => decrypt(decodeURIComponent(header.slice(header.indexOf("=") + 1, header.indexOf(";"))), testKey, false).slice(41)

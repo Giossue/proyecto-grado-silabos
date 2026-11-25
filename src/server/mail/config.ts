@@ -1,4 +1,4 @@
-import type { MailApp } from "./layout"
+import type { MailApp } from "./templates/MailLayout"
 
 export type MailConfig = {
   mailer: string

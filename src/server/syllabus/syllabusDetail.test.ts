@@ -13,10 +13,10 @@ import { teacherSyllabusDetail, type CopySource, type DetailRevision, type Detai
 import type { SignatureRecord } from "./snapshotDocuments"
 import type { ArchivedField } from "./syllabusDetailQueries"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
-const FORBIDDEN = '{\n    "message": ""\n}'
+const FORBIDDEN = '{"message":""}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
 const SYLLABUS = "50000000-0000-4000-8000-000000000001"
 const SOURCE = "50000000-0000-4000-8000-000000000002"

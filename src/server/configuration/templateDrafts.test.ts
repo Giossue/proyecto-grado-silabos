@@ -8,7 +8,7 @@ import { fakeTemplateStore, fieldId, goldenTemplate, TEMPLATE_ID, type FakeTempl
 import { checkTemplateDraft, previewTemplateDraft, templateDraftImpact, type TemplateDraftDeps } from "./templateDrafts"
 import type { RehearsalReads, RehearsalStore } from "./templateRehearsal"
 
-const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
@@ -96,7 +96,7 @@ describe("POST admin/template/{template}/draft/check", () => {
     it(`reports the same problems as Laravel for the «${name}» draft`, async () => {
       const response = await send("check", golden.payload)
       expect(response.status).toBe(200)
-      expect(response.text).toBe(golden.problems)
+      expect(JSON.parse(response.text)).toEqual(JSON.parse(golden.problems))
       expect(response.headers.get("x-ratelimit-limit")).toBe("120")
       expect(response.headers.get("x-ratelimit-remaining")).toBe("119")
       expect(rehearsals).toEqual([])
@@ -107,7 +107,7 @@ describe("POST admin/template/{template}/draft/check", () => {
     for (let attempt = 0; attempt < 120; attempt++) expect((await send("check", { version: 1, sections: [] })).status).toBe(200)
     const limited = await send("check", { version: 1, sections: [] })
     expect(limited.status).toBe(429)
-    expect(limited.text).toBe('{\n    "message": "Too Many Attempts."\n}')
+    expect(limited.text).toBe('{"message":"Too Many Attempts."}')
   })
 
   it("forbids anyone who is not an administrator with the authorization message", async () => {
@@ -122,7 +122,7 @@ describe("POST admin/template/{template}/draft/preview", () => {
     it(`builds the same preview as Laravel for the «${name}» draft`, async () => {
       const response = await send("preview", golden.payload)
       expect(response.status).toBe(golden.preview.status)
-      expect(response.status === 200 ? masked(response.text) : response.text).toBe(golden.preview.body)
+      expect(JSON.parse(response.status === 200 ? masked(response.text) : response.text)).toEqual(JSON.parse(golden.preview.body))
       expect(rehearsals).toEqual(golden.preview.status === 200 || name === "institutional_response" ? ["begin", `lock ${TEMPLATE_ID}`, "rollback"] : [])
     })
   }
@@ -142,7 +142,7 @@ describe("POST admin/template/{template}/draft/impact", () => {
     it(`gives the same impact as Laravel for the «${name}» draft when no process is paused`, async () => {
       const response = await send("impact", golden.payload)
       expect(response.status).toBe(golden.impact.status)
-      expect(response.text).toBe(golden.impact.body)
+      expect(JSON.parse(response.text)).toEqual(JSON.parse(golden.impact.body))
       expect(rehearsals).toEqual([])
     })
   }
@@ -194,7 +194,7 @@ describe("POST admin/template/{template}/draft/impact", () => {
     const response = await templateDraftImpact(post("impact", cases.official.payload), TEMPLATE_ID, { ...deps(), rehearsal: { ...store, rehearse: async () => null } })
     expect(response.status).toBe(200)
     expect(await response.text()).toBe(
-      '{"affected":true,"counted":false,"message":"No se pudo calcular qu\\u00e9 s\\u00edlabos cambian ahora.","in_progress":0,"keep":0,"lose":0,"back_to_draft":0,"careers":[]}',
+      '{"affected":true,"counted":false,"message":"No se pudo calcular qué sílabos cambian ahora.","in_progress":0,"keep":0,"lose":0,"back_to_draft":0,"careers":[]}',
     )
   })
 })
@@ -210,7 +210,7 @@ describe("draft routes that stay in Laravel", () => {
 
   it("checks the CSRF token and the session before anything else", async () => {
     world.sessions.clear()
-    expect(await send("preview", { version: 1, sections: [] })).toMatchObject({ status: 419, text: '{\n    "message": "CSRF token mismatch."\n}' })
+    expect(await send("preview", { version: 1, sections: [] })).toMatchObject({ status: 419, text: '{"message":"CSRF token mismatch."}' })
     const response = await send("preview", { version: 1, sections: [] }, { headers: { "sec-fetch-site": "same-origin" } })
     expect(response).toMatchObject({ status: 401, text: '{"message":"Unauthenticated."}' })
   })

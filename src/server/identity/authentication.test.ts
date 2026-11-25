@@ -132,7 +132,7 @@ describe("GET /sanctum/csrf-cookie", () => {
     const set = cookies(response)
     expect(set["XSRF-TOKEN"].value).toBe("B".repeat(40))
     expect(set[golden.cookieName]).toEqual({ value: "A".repeat(40), attributes: `; expires=${new Date((NOW + 7200) * 1000).toUTCString()}; Max-Age=7200; path=/; httponly; samesite=lax` })
-    expect(storedJson(world, "A".repeat(40))).toBe(JSON.stringify({ ...anonymous(), _token: "B".repeat(40) }).replaceAll("/", "\\/"))
+    expect(storedJson(world, "A".repeat(40))).toBe(JSON.stringify({ ...anonymous(), _token: "B".repeat(40) }).replaceAll("/", "/"))
     expect(world.sessions.get("A".repeat(40))).toMatchObject({ userId: null, ipAddress: "::1" })
   })
 
@@ -158,7 +158,7 @@ describe("POST /api/v1/authentication/login", () => {
     })
     const response = await login(request, deps({ verifyPassword: async () => (checked = true) }))
     expect(response.status).toBe(400)
-    expect(await response.text()).toBe('{"message":"Inicie sesi\\u00f3n desde la aplicaci\\u00f3n web."}')
+    expect(await response.text()).toBe('{"message":"Inicie sesión desde la aplicación web."}')
     expect(response.headers.getSetCookie()).toEqual([])
     expect(world.sessions.size).toBe(0)
     expect(checked).toBe(false)
@@ -167,7 +167,7 @@ describe("POST /api/v1/authentication/login", () => {
   it("answers 419 on a token mismatch and still stores the session, without the XSRF cookie", async () => {
     const response = await login(call("/api/v1/authentication/login", "POST", { email: EMAIL, password: PASSWORD }, { cookie: "", "x-xsrf-token": "" }), deps())
     expect(response.status).toBe(419)
-    expect(await response.text()).toBe('{\n    "message": "CSRF token mismatch."\n}')
+    expect(await response.text()).toBe('{"message":"CSRF token mismatch."}')
     expect(Object.keys(cookies(response))).toEqual([golden.cookieName])
     expect(storedJson(world, "A".repeat(40))).toBe(`{"_token":"${"B".repeat(40)}","_flash":{"old":[],"new":[]}}`)
   })
@@ -189,7 +189,7 @@ describe("POST /api/v1/authentication/login", () => {
     expect(world.sessions.has(golden.sessionId)).toBe(false)
     expect(world.sessions.has("A".repeat(40))).toBe(false)
     expect(storedJson(world, id)).toBe(
-      JSON.stringify({ ...anonymous(), _token: "D".repeat(40), [LOGIN_KEY]: golden.userId, password_hash_web: hashPasswordForCookie(HASH, golden.appKey), active_role_assignment_id: golden.roleId }).replaceAll("/", "\\/"),
+      JSON.stringify({ ...anonymous(), _token: "D".repeat(40), [LOGIN_KEY]: golden.userId, password_hash_web: hashPasswordForCookie(HASH, golden.appKey), active_role_assignment_id: golden.roleId }).replaceAll("/", "/"),
     )
     expect(set["XSRF-TOKEN"].value).toBe("D".repeat(40))
     expect(world.sessions.get(id)).toMatchObject({ userId: golden.userId, ipAddress: "::1", userAgent: "Prueba/1.0", lastActivity: NOW })
@@ -199,7 +199,7 @@ describe("POST /api/v1/authentication/login", () => {
     withSession(anonymous())
     const response = await login(call("/api/v1/authentication/login", "POST", { email: EMAIL, password: "otra" }), deps())
     expect(response.status).toBe(422)
-    expect(await response.text()).toBe('{"message":"Las credenciales proporcionadas no son v\\u00e1lidas."}')
+    expect(await response.text()).toBe('{"message":"Las credenciales proporcionadas no son válidas."}')
     expect(cookies(response)[golden.cookieName].value).toBe(golden.sessionId)
     expect(JSON.parse(storedJson(world, golden.sessionId) ?? "{}")).toEqual(anonymous())
   })
@@ -209,7 +209,7 @@ describe("POST /api/v1/authentication/login", () => {
     const response = await login(call("/api/v1/authentication/login", "POST", { email: "no-es-correo", password: "" }), deps())
     expect(response.status).toBe(422)
     expect(await response.text()).toBe(
-      '{"message":"Ingrese un correo electr\\u00f3nico v\\u00e1lido. (y 1 error m\\u00e1s)","errors":{"email":["Ingrese un correo electr\\u00f3nico v\\u00e1lido."],"password":["Ingrese su contrase\\u00f1a."]}}',
+      '{"message":"Ingrese un correo electrónico válido. (y 1 error más)","errors":{"email":["Ingrese un correo electrónico válido."],"password":["Ingrese su contraseña."]}}',
     )
     const missing = await login(call("/api/v1/authentication/login", "POST", {}), deps())
     expect(JSON.parse(await missing.text()).errors).toEqual({ email: ["Ingrese su correo electrónico."], password: ["Ingrese su contraseña."] })
@@ -230,7 +230,7 @@ describe("POST /api/v1/authentication/login", () => {
     for (let attempt = 1; attempt <= 5; attempt += 1) await login(call("/api/v1/authentication/login", "POST", { email: EMAIL, password: "incorrecta" }), shared)
     const response = await login(call("/api/v1/authentication/login", "POST", { email: EMAIL, password: PASSWORD }), shared)
     expect(response.status).toBe(429)
-    expect(await response.text()).toBe('{\n    "message": "Too Many Attempts."\n}')
+    expect(await response.text()).toBe('{"message":"Too Many Attempts."}')
     expect(Object.keys(cookies(response))).toEqual(["XSRF-TOKEN", golden.cookieName])
   })
 
@@ -249,7 +249,7 @@ describe("POST /api/v1/authentication/login", () => {
     twoFactor = true
     const response = await login(call("/api/v1/authentication/login", "POST", { email: EMAIL, password: PASSWORD }), deps())
     expect(response.status).toBe(202)
-    expect(await response.text()).toBe('{"two_factor_required":true,"message":"Ingrese el c\\u00f3digo de su aplicaci\\u00f3n de autenticaci\\u00f3n."}')
+    expect(await response.text()).toBe('{"two_factor_required":true,"message":"Ingrese el código de su aplicación de autenticación."}')
     expect(cookies(response)[golden.cookieName].value).toBe(golden.sessionId)
     expect(JSON.parse(storedJson(world, golden.sessionId) ?? "{}")).toEqual({ ...anonymous(), login: { id: golden.userId, at: NOW } })
   })
@@ -325,7 +325,7 @@ describe("PUT and DELETE /api/v1/active-role", () => {
     expect(JSON.parse(await malformed.text()).message).toBe("El rol seleccionado no es válido.")
     const missing = await selectActiveRole(call("/api/v1/active-role", "PUT", { role_assignment_id: "0193a3c2-9999-7000-8000-000000000009" }), deps())
     expect(missing.status).toBe(404)
-    expect(await missing.text()).toBe('{\n    "message": ""\n}')
+    expect(await missing.text()).toBe('{"message":""}')
   })
 
   it("sends a user with several roles back to choose again", async () => {
@@ -349,7 +349,7 @@ describe("PUT and DELETE /api/v1/active-role", () => {
     withSession(loggedIn())
     const response = await selectActiveRole(call("/api/v1/active-role", "PUT", { role_assignment_id: OTHER_ROLE }), deps())
     expect(response.status).toBe(403)
-    expect(await response.text()).toBe('{\n    "message": "Your email address is not verified."\n}')
+    expect(await response.text()).toBe('{"message":"Your email address is not verified."}')
   })
 })
 

@@ -45,7 +45,7 @@ describe("screen help", () => {
     const found = await call(showScreenHelp, "/api/v1/help?screen=%2Fdocente%2Fmis-silabos")
     expect(found.status).toBe(200)
     expect(JSON.parse(found.text)).toEqual({ help: { screen: "/docente/mis-silabos", ...HELP["/docente/mis-silabos"] } })
-    expect(found.text.startsWith('{"help":{"screen":"\\/docente\\/mis-silabos","title":"Mis s\\u00edlabos","content":"Arriba ve')).toBe(true)
+    expect(found.text.startsWith('{"help":{"screen":"/docente/mis-silabos","title":"Mis sílabos","content":"Arriba ve')).toBe(true)
 
     const missing = await call(showScreenHelp, "/api/v1/help?screen=/docente/panel")
     expect(missing).toEqual({ status: 200, text: '{"help":null}' })
@@ -54,7 +54,7 @@ describe("screen help", () => {
   it("validates the screen like Laravel", async () => {
     expect(await call(showScreenHelp, "/api/v1/help?screen=sin-barra")).toEqual({
       status: 422,
-      text: '{"message":"El formato del campo pantalla no es v\\u00e1lido.","errors":{"screen":["El formato del campo pantalla no es v\\u00e1lido."]}}',
+      text: '{"message":"El formato del campo pantalla no es válido.","errors":{"screen":["El formato del campo pantalla no es válido."]}}',
     })
     expect(await call(showScreenHelp, "/api/v1/help")).toEqual({
       status: 422,
@@ -95,7 +95,7 @@ describe("screen help", () => {
   it("asks for an active role before answering", async () => {
     world.assignments = []
     world.sessions.set(SESSION_ID, { payload: sessionPayload(loggedInAttributes({ active_role_assignment_id: undefined })), lastActivity: NOW })
-    expect(await call(availableScreenHelp, "/api/v1/help/available")).toEqual({ status: 409, text: '{\n    "message": "Seleccione un rol vigente."\n}' })
+    expect(await call(availableScreenHelp, "/api/v1/help/available")).toEqual({ status: 409, text: '{"message":"Seleccione un rol vigente."}' })
     expect((await call(showScreenHelp, "/api/v1/help?screen=/admin")).status).toBe(409)
   })
 })
