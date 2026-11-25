@@ -28,15 +28,16 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 | Lenguaje | TypeScript | 5.9 |
 | Entorno de ejecución | Node.js | 24 |
 | Gestor de paquetes | pnpm | 12.15 |
-| Framework web (interfaz y API) | Next.js (App Router, Turbopack) | 16.4 |
+| Interfaz web | Next.js (App Router, Turbopack) | 16.4 |
+| API | NestJS sobre Express, con Swagger UI (OpenAPI) | 12.6 |
 | Interfaz | React | 19.3 |
 | Componentes | shadcn/ui sobre Radix UI, Tailwind CSS 4, íconos Lucide | — |
-| Formularios y validación | react-hook-form + Zod (el mismo esquema en el cliente y el servidor) | 7.92 / 4.6 |
+| Formularios y validación | react-hook-form + Zod; en la API, DTO de `nestjs-zod` hechos con los mismos esquemas | 7.92 / 4.6 / 5.6 |
 | Datos en el cliente | TanStack Query (caché, reintentos, invalidación) | 5.108 |
 | Editor de plantilla y sílabo | Tiptap (ProseMirror) | 3.32 |
 | Malla visual | React Flow (@xyflow/react) | 13 |
 | Base de datos | PostgreSQL | 17 |
-| ORM y migraciones | Drizzle ORM + drizzle-kit | 0.45 / 0.31 |
+| ORM y migraciones | Prisma ORM y Prisma Migrate (Drizzle ORM convive en los módulos aún no portados) | 7.10 / 0.45 |
 | Colas, límites y bloqueos | Redis + BullMQ (ioredis) | 7 / 6.7 |
 | Autenticación | Better Auth (usuario y contraseña, 2FA TOTP) | 1.7 |
 | Correos | Nodemailer + React Email | 10.6 |
@@ -45,7 +46,8 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 | Excel (importaciones y ficha) | ExcelJS | 4.4 |
 | Firma digital | node-forge, PKI.js, asn1js (verificación CMS de certificados .p12) | — |
 | IA | Vercel AI SDK con DeepSeek | 7 |
-| Pruebas | Vitest + Testing Library (unitarias) · Playwright (de extremo a extremo) | 5.1 / 1.65 |
+| Pruebas | Vitest + Testing Library + Supertest (unitarias) · Playwright (de extremo a extremo) | 5.1 / 1.65 |
+| Repositorio | pnpm workspaces: `apps/web`, `apps/api` y `packages/shared` | — |
 | Contenedores | Docker y Docker Compose | — |
 
 ---
@@ -54,16 +56,26 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 
 ```
  Navegador (React)
-      │  HTTPS · cookie de sesión
+      │  HTTPS · cookie de sesión (mismo origen que la interfaz)
       ▼
 ┌──────────────────────────────────────────────┐
-│  Next.js (servicio «web»)                    │
+│  apps/web · Next.js (puerto 3000)            │
 │  · Páginas React (App Router)                │
-│  · API REST /api/v1 (route handlers)         │
-│  · Autenticación (Better Auth)               │
-│  · Validación (Zod) y permisos por rol       │
+│  · Reenvía /api/*, /logos/*, /images/silabo/*│
+│    y /plantilla.schema.json a la API         │
+└───────┬──────────────────────────────────────┘
+        │ rewrites (proxy HTTP)
+        ▼
+┌──────────────────────────────────────────────┐
+│  apps/api · NestJS (puerto 8000)             │
+│  · /api/v1: controladores por módulo         │
+│  · Swagger UI en /api/docs                   │
+│  · Sesión (Better Auth) y roles como guards  │
+│  · Validación (Zod + nestjs-zod)             │
+│  · Puente temporal a los route handlers      │
+│    que todavía no tienen controlador         │
 └───────┬───────────────────┬──────────────────┘
-        │                   │ encola trabajos
+        │ Prisma / Drizzle  │ encola trabajos
         ▼                   ▼
   ┌───────────┐       ┌───────────┐
   │PostgreSQL │       │  Redis    │  colas, límites de intentos y bloqueos
@@ -71,7 +83,7 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
         ▲                   │
         │                   ▼
 ┌───────┴──────────────────────────────────────┐
-│  Worker (servicio «worker», BullMQ)          │
+│  Worker (apps/api, entrada worker.ts)        │
 │  · Genera Word → PDF (Gotenberg)             │
 │  · Envía correos (SMTP)                      │
 │  · Responde al asistente de IA (DeepSeek)    │
@@ -81,14 +93,20 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
  Archivos (logos, PDF, documentos de apoyo): disco del servidor (STORAGE_PATH)
 ```
 
-- **Un solo proyecto:** interfaz y API viven en la misma aplicación Next.js. El **worker** es el mismo código, ejecutado como un proceso aparte para el trabajo pesado o lento.
-- **Organización del código** (`src/`):
-  - `app/`: páginas por rol (`(shell)`, `(auth)`, `(editor)`, `(workspace)`) y la API (`app/api/v1`)
-  - `components/`: componentes reutilizables (`ui/` de shadcn y `domain/` del negocio)
-  - `server/`: lógica de negocio por módulo. Los módulos son: `academic`, `ai`, `auth`, `configuration` (plantilla), `dashboard`, `documents`, `excel`, `ficha`, `files`, `http`, `identity`, `library`, `mail`, `notifications`, `operations`, `queue`, `redis`, `signatures` y `syllabus`
-  - `db/schema/`: esquema de la base (Drizzle)
-  - `schemas/`: validaciones Zod compartidas entre el cliente y el servidor
-  - `queries/`, `api/`: consultas y acceso a la API desde el cliente
+- **Un repositorio pnpm con tres paquetes:**
+  - `apps/web` (`@silabos/web`): la interfaz Next.js. No toca la base ni Redis; todo pasa por la API.
+  - `apps/api` (`@silabos/api`): la API NestJS y el worker. Toda la lógica de negocio vive aquí.
+  - `packages/shared` (`@silabos/shared`): esquemas Zod con sus mensajes, reglas de bloques y textos de estados que usan ambos lados. La interfaz lo importa como paquete; la API lo compila dentro de su salida con el alias `@silabos/shared/*` de su `tsconfig.json`.
+- **Mismo origen en desarrollo:** el navegador solo habla con `http://localhost:3000`; Next reenvía la API a `API_INTERNAL_URL` (por defecto `http://localhost:8000`) con `rewrites`. Así la cookie de sesión, el `Origin` y las reglas 401/409 siguen iguales. La API también acepta CORS con credenciales para los orígenes de `FRONTEND_URL` y `STATEFUL_DOMAINS`.
+- **Organización de la API** (`apps/api/src/`):
+  - `main.ts`, `bootstrap.ts` y `app.module.ts`: arranque, prefijo global `api/v1`, CORS, `cookie-parser`, Swagger y los componentes globales.
+  - `common/`: `decorators` (`@Authenticated()`, `@Roles()`, `@CurrentSession()`, `@QueryInput()`), `guards` (sesión y roles), `pipes` (`ZodValidationPipe`), `filters` (formato de errores), `interceptors` (respuesta JSON con las cabeceras de siempre), `middleware` (cuerpo crudo y entrada al estilo PHP), `dtos`.
+  - `modules/`: un módulo Nest por área (`auth`, `notifications`, `academic`, `syllabus`, `template`, `ai`, `library`, `dashboard`, `help`, `exports`, `files`, `users`, `settings`, `ficha`, `mail`, `queue` y `legacy`). `notifications` ya está portado completo (controlador, servicio, DTO, repositorio Prisma) y es el modelo para los demás.
+  - `prisma/`: `PrismaService` (cliente con el adaptador `pg`).
+  - `server/`: la lógica de negocio por módulo, en TypeScript, que los servicios reutilizan.
+  - `app/`: los route handlers que aún no tienen controlador. El módulo `legacy` los sirve con un adaptador Request→Response sobre Express; se borran a medida que cada área se porta.
+  - `db/`: esquema Drizzle y semilla.
+- **Organización de la interfaz** (`apps/web/src/`): `app/` (páginas por rol), `components/` (`ui/` de shadcn y `domain/`), `queries/` y `api/` (acceso a la API), `lib/`, `composables/`, `state/`.
 
 ---
 
@@ -106,7 +124,7 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 | IA | `mensajes_ia_plantilla`, `propuestas_ia_plantilla` |
 | Sistema | `notificaciones`, `ajustes_sistema` |
 
-- **Migraciones con Drizzle:** `pnpm db:migrate` crea la base desde cero y `pnpm db:seed` crea el administrador inicial y la plantilla oficial.
+- **Migraciones con Prisma:** el esquema está en `apps/api/prisma/schema.prisma` (sacado de la base con `prisma db pull`) y la migración base `0_baseline` reproduce el esquema completo, con funciones, triggers y la vista. `pnpm db:migrate` (`prisma migrate deploy`) crea una base desde cero y `pnpm db:seed` crea el administrador inicial y la plantilla oficial. En una base existente la migración base se marca como aplicada con `pnpm db:baseline`.
 - **Integridad en la base:**
   - claves foráneas;
   - restricciones `CHECK` (estados, jornadas, rangos);
@@ -122,6 +140,7 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 - **Autenticación:** cookie de sesión, más verificación del origen de la petición.
 - **Respuestas:** 401 sin sesión, 403 sin permiso, 409 sin rol activo y 422 con errores de validación por campo.
 - **Límites de intentos:** guardados en Redis, con las cabeceras `X-RateLimit-*`.
+- **Documentación:** Swagger UI en `/api/docs` y el documento OpenAPI en `/api/docs-json` (puerto de la API). Muestra las rutas ya portadas a controladores Nest; las demás siguen respondiendo por el puente hasta que se porten.
 
 **130 endpoints** en total.
 
@@ -187,6 +206,8 @@ Rutas públicas fuera de la API: `/logos/institucion`, `/logos/facultad/:id`, `/
 
 ## 8. Colas y trabajos en segundo plano
 
+El worker es `apps/api/src/worker.ts`: un contexto de aplicación Nest (`WorkerModule`, con `QueueModule`) que arranca los trabajos registrados en `server/queue/registry.ts` y se detiene con `SIGINT`, `SIGTERM` o al cumplirse `QUEUE_MAX_TIME`. Se ejecuta desde la compilación de la API (`pnpm worker`).
+
 **Colas (BullMQ sobre Redis):**
 
 | Cola | Para qué |
@@ -228,17 +249,19 @@ Rutas públicas fuera de la API: `/logos/institucion`, `/logos/facultad/:id`, `/
 |---|---|
 | `web` | Next.js en modo `standalone` (imagen del `Dockerfile`), puerto 3000 |
 | `worker` | El mismo código, ejecutando `pnpm worker` |
+
+> La reorganización en `apps/web` y `apps/api` aún no está en el `Dockerfile` ni en `compose.yaml`: se actualizan en la etapa de contenedores separados (PostgreSQL 18 y MinIO).
 | `postgres` | `postgres:17`, con volumen persistente |
 | `redis` | `redis:7-alpine`, con `appendonly` |
 | `gotenberg` | `gotenberg/gotenberg:8` |
 
 - **Imagen:** construcción en varias etapas (dependencias → build → ejecución) sobre `node:24-bookworm-slim`. Corre con un usuario sin privilegios.
-- **Instalación de una base nueva:** `pnpm db:migrate` y luego `pnpm db:seed`.
+- **Instalación de una base nueva:** `pnpm db:migrate` (Prisma) y luego `pnpm db:seed`.
 - **Variables de entorno** (solo los nombres; los valores van en el servidor, nunca en el repositorio):
 
 | Grupo | Variables |
 |---|---|
-| Aplicación | `APP_ENV`, `APP_NAME`, `APP_KEY`, `APP_LOCALE`, `FRONTEND_URL`, `DISPLAY_TIMEZONE`, `TRUSTED_PROXIES`, `PUBLIC_ASSETS_PATH`, `POST_MAX_SIZE` |
+| Aplicación | `APP_ENV`, `APP_NAME`, `APP_KEY`, `APP_LOCALE`, `API_PORT`, `API_INTERNAL_URL`, `FRONTEND_URL`, `DISPLAY_TIMEZONE`, `TRUSTED_PROXIES`, `PUBLIC_ASSETS_PATH`, `POST_MAX_SIZE` |
 | Autenticación | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `SESSION_LIFETIME`, `SESSION_COOKIE_PREFIX`, `STATEFUL_DOMAINS`, `BCRYPT_ROUNDS` |
 | Datos | `DATABASE_URL`, `REDIS_URL`, `REDIS_PREFIX`, `STORAGE_PATH`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` |
 | Colas | `QUEUE_MAX_TIME`, `QUEUE_RETRY_AFTER` |
@@ -250,7 +273,7 @@ Rutas públicas fuera de la API: `/logos/institucion`, `/logos/facultad/:id`, `/
 
 ## 11. Calidad
 
-- **Pruebas unitarias e integración (Vitest):** unas 2 850 pruebas, sobre la lógica del servidor, la API, los componentes y las pantallas.
+- **Pruebas unitarias e integración (Vitest):** unas 2 870 pruebas en los tres paquetes, sobre la lógica del servidor, la API, los componentes y las pantallas. Las rutas portadas a Nest tienen una prueba de equivalencia que compara, para los mismos datos, la respuesta del route handler anterior con la del controlador (estado, cuerpo, cabeceras y escrituras).
 - **Pruebas de extremo a extremo (Playwright):** 87 pruebas que recorren el sistema en un navegador real con los cuatro roles. Cubren el ingreso y el 2FA, el ciclo completo del sílabo con firmas y el PDF, la plantilla, la malla y los correos.
 - **Revisión de tipos (TypeScript estricto) y lint (ESLint)** en cada cambio.
 - **Accesibilidad y web moderna:**

@@ -1,0 +1,262 @@
+import type { LegacyRoute } from "./legacy-router"
+import * as route0 from "../../app/api/[...path]/route"
+import * as route1 from "../../app/api/route"
+import * as route2 from "../../app/api/v1/academic/asignaturas/[asignatura]/ficha/route"
+import * as route3 from "../../app/api/v1/academic/asignaturas/[asignatura]/ficha/vista-previa/route"
+import * as route4 from "../../app/api/v1/active-role/route"
+import * as route5 from "../../app/api/v1/admin/academic/[entity]/[record]/route"
+import * as route6 from "../../app/api/v1/admin/academic/[entity]/[record]/status/route"
+import * as route7 from "../../app/api/v1/admin/academic/[entity]/route"
+import * as route8 from "../../app/api/v1/admin/academic/careers/import-template/route"
+import * as route9 from "../../app/api/v1/admin/academic/careers/import/route"
+import * as route10 from "../../app/api/v1/admin/academic/route"
+import * as route11 from "../../app/api/v1/admin/library-catalog/libraries/route"
+import * as route12 from "../../app/api/v1/admin/processes/[process]/[transition]/route"
+import * as route13 from "../../app/api/v1/admin/processes/[process]/deadline/route"
+import * as route14 from "../../app/api/v1/admin/processes/[process]/impact/route"
+import * as route15 from "../../app/api/v1/admin/processes/[process]/route"
+import * as route16 from "../../app/api/v1/admin/processes/route"
+import * as route17 from "../../app/api/v1/admin/system-settings/[section]/route"
+import * as route18 from "../../app/api/v1/admin/system-settings/[section]/test/route"
+import * as route19 from "../../app/api/v1/admin/system-settings/route"
+import * as route20 from "../../app/api/v1/admin/template/[template]/blocks/design/route"
+import * as route21 from "../../app/api/v1/admin/template/[template]/draft/check/route"
+import * as route22 from "../../app/api/v1/admin/template/[template]/draft/impact/route"
+import * as route23 from "../../app/api/v1/admin/template/[template]/draft/preview/route"
+import * as route24 from "../../app/api/v1/admin/template/[template]/format/route"
+import * as route25 from "../../app/api/v1/admin/template/[template]/json/route"
+import * as route26 from "../../app/api/v1/admin/template/[template]/logo/route"
+import * as route27 from "../../app/api/v1/admin/template/[template]/route"
+import * as route28 from "../../app/api/v1/admin/template/[template]/structure/fields/[field]/route"
+import * as route29 from "../../app/api/v1/admin/template/[template]/structure/route"
+import * as route30 from "../../app/api/v1/admin/template/[template]/structure/sections/[section]/fields/order/route"
+import * as route31 from "../../app/api/v1/admin/template/[template]/structure/sections/[section]/fields/route"
+import * as route32 from "../../app/api/v1/admin/template/[template]/structure/sections/[section]/route"
+import * as route33 from "../../app/api/v1/admin/template/[template]/structure/sections/order/route"
+import * as route34 from "../../app/api/v1/admin/template/[template]/structure/sections/route"
+import * as route35 from "../../app/api/v1/admin/template/[template]/teacher-preview/route"
+import * as route36 from "../../app/api/v1/admin/template/assistant/messages/route"
+import * as route37 from "../../app/api/v1/admin/template/assistant/proposals/[proposal]/apply/route"
+import * as route38 from "../../app/api/v1/admin/template/assistant/proposals/[proposal]/discard/route"
+import * as route39 from "../../app/api/v1/admin/template/assistant/proposals/[proposal]/route"
+import * as route40 from "../../app/api/v1/admin/template/assistant/route"
+import * as route41 from "../../app/api/v1/admin/template/route"
+import * as route42 from "../../app/api/v1/admin/users/[user]/resend-activation/route"
+import * as route43 from "../../app/api/v1/admin/users/[user]/roles/[assignment]/route"
+import * as route44 from "../../app/api/v1/admin/users/[user]/route"
+import * as route45 from "../../app/api/v1/admin/users/import-template/route"
+import * as route46 from "../../app/api/v1/admin/users/import/route"
+import * as route47 from "../../app/api/v1/admin/users/route"
+import * as route48 from "../../app/api/v1/authentication/accessibility/route"
+import * as route49 from "../../app/api/v1/authentication/account-activation/resend/route"
+import * as route50 from "../../app/api/v1/authentication/account-activation/route"
+import * as route51 from "../../app/api/v1/authentication/formation/route"
+import * as route52 from "../../app/api/v1/authentication/login/route"
+import * as route53 from "../../app/api/v1/authentication/logout/route"
+import * as route54 from "../../app/api/v1/authentication/password-recovery/route"
+import * as route55 from "../../app/api/v1/authentication/password-reset/route"
+import * as route56 from "../../app/api/v1/authentication/password/route"
+import * as route57 from "../../app/api/v1/authentication/profile/route"
+import * as route58 from "../../app/api/v1/authentication/sessions/[session]/route"
+import * as route59 from "../../app/api/v1/authentication/sessions/others/route"
+import * as route60 from "../../app/api/v1/authentication/sessions/route"
+import * as route61 from "../../app/api/v1/authentication/two-factor/challenge/route"
+import * as route62 from "../../app/api/v1/authentication/two-factor/confirm/route"
+import * as route63 from "../../app/api/v1/authentication/two-factor/recovery-codes/route"
+import * as route64 from "../../app/api/v1/authentication/two-factor/route"
+import * as route65 from "../../app/api/v1/coordination/academic/[entity]/[record]/route"
+import * as route66 from "../../app/api/v1/coordination/academic/[entity]/route"
+import * as route67 from "../../app/api/v1/coordination/academic/curriculum-import/route"
+import * as route68 from "../../app/api/v1/coordination/academic/curriculum-import/template/route"
+import * as route69 from "../../app/api/v1/coordination/academic/curriculum/[curriculum]/configuration/route"
+import * as route70 from "../../app/api/v1/coordination/academic/curriculum/[curriculum]/requirements/[requirement]/route"
+import * as route71 from "../../app/api/v1/coordination/academic/curriculum/[curriculum]/requirements/route"
+import * as route72 from "../../app/api/v1/coordination/academic/curriculum/[curriculum]/route"
+import * as route73 from "../../app/api/v1/coordination/academic/curriculum/[curriculum]/subject-layout/route"
+import * as route74 from "../../app/api/v1/coordination/academic/curriculum/[curriculum]/subjects/[subject]/route"
+import * as route75 from "../../app/api/v1/coordination/academic/parallels/[parallel]/route"
+import * as route76 from "../../app/api/v1/coordination/academic/parallels/[parallel]/teacher/route"
+import * as route77 from "../../app/api/v1/coordination/academic/parallels/route"
+import * as route78 from "../../app/api/v1/coordination/academic/scheduled-subjects/route"
+import * as route79 from "../../app/api/v1/coordination/academic/teacher-assignments/route"
+import * as route80 from "../../app/api/v1/coordination/academic/teachers/[user]/resend-activation/route"
+import * as route81 from "../../app/api/v1/coordination/academic/teachers/[user]/route"
+import * as route82 from "../../app/api/v1/coordination/academic/teachers/import-template/route"
+import * as route83 from "../../app/api/v1/coordination/academic/teachers/import/route"
+import * as route84 from "../../app/api/v1/coordination/academic/teachers/route"
+import * as route85 from "../../app/api/v1/coordination/convocations/[convocation]/[transition]/route"
+import * as route86 from "../../app/api/v1/coordination/convocations/[convocation]/route"
+import * as route87 from "../../app/api/v1/coordination/convocations/route"
+import * as route88 from "../../app/api/v1/coordination/ficha-imports/apply/route"
+import * as route89 from "../../app/api/v1/coordination/ficha-imports/spreadsheet/route"
+import * as route90 from "../../app/api/v1/coordination/ficha-imports/template/route"
+import * as route91 from "../../app/api/v1/coordination/history/route"
+import * as route92 from "../../app/api/v1/coordination/reviews/[revision]/approve/route"
+import * as route93 from "../../app/api/v1/coordination/reviews/[revision]/compare/[after]/route"
+import * as route94 from "../../app/api/v1/coordination/reviews/[revision]/request-correction/route"
+import * as route95 from "../../app/api/v1/coordination/reviews/[revision]/route"
+import * as route96 from "../../app/api/v1/coordination/reviews/route"
+import * as route97 from "../../app/api/v1/coordination/support-documents/[document]/route"
+import * as route98 from "../../app/api/v1/coordination/support-documents/route"
+import * as route99 from "../../app/api/v1/coordination/syllabi/[syllabus]/reset/route"
+import * as route100 from "../../app/api/v1/dashboard/deadline/route"
+import * as route101 from "../../app/api/v1/dashboard/route"
+import * as route102 from "../../app/api/v1/exports/[artifact]/pdf/route"
+import * as route103 from "../../app/api/v1/help/available/route"
+import * as route104 from "../../app/api/v1/help/route"
+import * as route105 from "../../app/api/v1/library/history/route"
+import * as route106 from "../../app/api/v1/library/reviews/[revision]/comments/route"
+import * as route107 from "../../app/api/v1/library/reviews/[revision]/route"
+import * as route108 from "../../app/api/v1/library/reviews/[revision]/verify/route"
+import * as route109 from "../../app/api/v1/library/reviews/route"
+import * as route110 from "../../app/api/v1/revisions/[revision]/documents/route"
+import * as route111 from "../../app/api/v1/session/route"
+import * as route112 from "../../app/api/v1/support-documents/[document]/view/route"
+import * as route113 from "../../app/api/v1/teacher/history/[career]/route"
+import * as route114 from "../../app/api/v1/teacher/history/route"
+import * as route115 from "../../app/api/v1/teacher/library-catalog/search/route"
+import * as route116 from "../../app/api/v1/teacher/support-documents/route"
+import * as route117 from "../../app/api/v1/teacher/syllabi/[syllabus]/copy-from/[source]/route"
+import * as route118 from "../../app/api/v1/teacher/syllabi/[syllabus]/fields/[field]/route"
+import * as route119 from "../../app/api/v1/teacher/syllabi/[syllabus]/route"
+import * as route120 from "../../app/api/v1/teacher/syllabi/[syllabus]/signing-statement/route"
+import * as route121 from "../../app/api/v1/teacher/syllabi/[syllabus]/start/route"
+import * as route122 from "../../app/api/v1/teacher/syllabi/[syllabus]/submit/route"
+import * as route123 from "../../app/api/v1/teacher/syllabi/[syllabus]/validate/route"
+import * as route124 from "../../app/api/v1/teacher/syllabi/route"
+import * as route125 from "../../app/images/silabo/[file]/route"
+import * as route126 from "../../app/logos/facultad/[faculty]/route"
+import * as route127 from "../../app/logos/institucion/route"
+import * as route128 from "../../app/plantilla.schema.json/route"
+
+export const LEGACY_ROUTES: readonly LegacyRoute[] = [
+  { path: "api/[...path]", handlers: route0 },
+  { path: "api", handlers: route1 },
+  { path: "api/v1/academic/asignaturas/[asignatura]/ficha", handlers: route2 },
+  { path: "api/v1/academic/asignaturas/[asignatura]/ficha/vista-previa", handlers: route3 },
+  { path: "api/v1/active-role", handlers: route4 },
+  { path: "api/v1/admin/academic/[entity]/[record]", handlers: route5 },
+  { path: "api/v1/admin/academic/[entity]/[record]/status", handlers: route6 },
+  { path: "api/v1/admin/academic/[entity]", handlers: route7 },
+  { path: "api/v1/admin/academic/careers/import-template", handlers: route8 },
+  { path: "api/v1/admin/academic/careers/import", handlers: route9 },
+  { path: "api/v1/admin/academic", handlers: route10 },
+  { path: "api/v1/admin/library-catalog/libraries", handlers: route11 },
+  { path: "api/v1/admin/processes/[process]/[transition]", handlers: route12 },
+  { path: "api/v1/admin/processes/[process]/deadline", handlers: route13 },
+  { path: "api/v1/admin/processes/[process]/impact", handlers: route14 },
+  { path: "api/v1/admin/processes/[process]", handlers: route15 },
+  { path: "api/v1/admin/processes", handlers: route16 },
+  { path: "api/v1/admin/system-settings/[section]", handlers: route17 },
+  { path: "api/v1/admin/system-settings/[section]/test", handlers: route18 },
+  { path: "api/v1/admin/system-settings", handlers: route19 },
+  { path: "api/v1/admin/template/[template]/blocks/design", handlers: route20 },
+  { path: "api/v1/admin/template/[template]/draft/check", handlers: route21 },
+  { path: "api/v1/admin/template/[template]/draft/impact", handlers: route22 },
+  { path: "api/v1/admin/template/[template]/draft/preview", handlers: route23 },
+  { path: "api/v1/admin/template/[template]/format", handlers: route24 },
+  { path: "api/v1/admin/template/[template]/json", handlers: route25 },
+  { path: "api/v1/admin/template/[template]/logo", handlers: route26 },
+  { path: "api/v1/admin/template/[template]", handlers: route27 },
+  { path: "api/v1/admin/template/[template]/structure/fields/[field]", handlers: route28 },
+  { path: "api/v1/admin/template/[template]/structure", handlers: route29 },
+  { path: "api/v1/admin/template/[template]/structure/sections/[section]/fields/order", handlers: route30 },
+  { path: "api/v1/admin/template/[template]/structure/sections/[section]/fields", handlers: route31 },
+  { path: "api/v1/admin/template/[template]/structure/sections/[section]", handlers: route32 },
+  { path: "api/v1/admin/template/[template]/structure/sections/order", handlers: route33 },
+  { path: "api/v1/admin/template/[template]/structure/sections", handlers: route34 },
+  { path: "api/v1/admin/template/[template]/teacher-preview", handlers: route35 },
+  { path: "api/v1/admin/template/assistant/messages", handlers: route36 },
+  { path: "api/v1/admin/template/assistant/proposals/[proposal]/apply", handlers: route37 },
+  { path: "api/v1/admin/template/assistant/proposals/[proposal]/discard", handlers: route38 },
+  { path: "api/v1/admin/template/assistant/proposals/[proposal]", handlers: route39 },
+  { path: "api/v1/admin/template/assistant", handlers: route40 },
+  { path: "api/v1/admin/template", handlers: route41 },
+  { path: "api/v1/admin/users/[user]/resend-activation", handlers: route42 },
+  { path: "api/v1/admin/users/[user]/roles/[assignment]", handlers: route43 },
+  { path: "api/v1/admin/users/[user]", handlers: route44 },
+  { path: "api/v1/admin/users/import-template", handlers: route45 },
+  { path: "api/v1/admin/users/import", handlers: route46 },
+  { path: "api/v1/admin/users", handlers: route47 },
+  { path: "api/v1/authentication/accessibility", handlers: route48 },
+  { path: "api/v1/authentication/account-activation/resend", handlers: route49 },
+  { path: "api/v1/authentication/account-activation", handlers: route50 },
+  { path: "api/v1/authentication/formation", handlers: route51 },
+  { path: "api/v1/authentication/login", handlers: route52 },
+  { path: "api/v1/authentication/logout", handlers: route53 },
+  { path: "api/v1/authentication/password-recovery", handlers: route54 },
+  { path: "api/v1/authentication/password-reset", handlers: route55 },
+  { path: "api/v1/authentication/password", handlers: route56 },
+  { path: "api/v1/authentication/profile", handlers: route57 },
+  { path: "api/v1/authentication/sessions/[session]", handlers: route58 },
+  { path: "api/v1/authentication/sessions/others", handlers: route59 },
+  { path: "api/v1/authentication/sessions", handlers: route60 },
+  { path: "api/v1/authentication/two-factor/challenge", handlers: route61 },
+  { path: "api/v1/authentication/two-factor/confirm", handlers: route62 },
+  { path: "api/v1/authentication/two-factor/recovery-codes", handlers: route63 },
+  { path: "api/v1/authentication/two-factor", handlers: route64 },
+  { path: "api/v1/coordination/academic/[entity]/[record]", handlers: route65 },
+  { path: "api/v1/coordination/academic/[entity]", handlers: route66 },
+  { path: "api/v1/coordination/academic/curriculum-import", handlers: route67 },
+  { path: "api/v1/coordination/academic/curriculum-import/template", handlers: route68 },
+  { path: "api/v1/coordination/academic/curriculum/[curriculum]/configuration", handlers: route69 },
+  { path: "api/v1/coordination/academic/curriculum/[curriculum]/requirements/[requirement]", handlers: route70 },
+  { path: "api/v1/coordination/academic/curriculum/[curriculum]/requirements", handlers: route71 },
+  { path: "api/v1/coordination/academic/curriculum/[curriculum]", handlers: route72 },
+  { path: "api/v1/coordination/academic/curriculum/[curriculum]/subject-layout", handlers: route73 },
+  { path: "api/v1/coordination/academic/curriculum/[curriculum]/subjects/[subject]", handlers: route74 },
+  { path: "api/v1/coordination/academic/parallels/[parallel]", handlers: route75 },
+  { path: "api/v1/coordination/academic/parallels/[parallel]/teacher", handlers: route76 },
+  { path: "api/v1/coordination/academic/parallels", handlers: route77 },
+  { path: "api/v1/coordination/academic/scheduled-subjects", handlers: route78 },
+  { path: "api/v1/coordination/academic/teacher-assignments", handlers: route79 },
+  { path: "api/v1/coordination/academic/teachers/[user]/resend-activation", handlers: route80 },
+  { path: "api/v1/coordination/academic/teachers/[user]", handlers: route81 },
+  { path: "api/v1/coordination/academic/teachers/import-template", handlers: route82 },
+  { path: "api/v1/coordination/academic/teachers/import", handlers: route83 },
+  { path: "api/v1/coordination/academic/teachers", handlers: route84 },
+  { path: "api/v1/coordination/convocations/[convocation]/[transition]", handlers: route85 },
+  { path: "api/v1/coordination/convocations/[convocation]", handlers: route86 },
+  { path: "api/v1/coordination/convocations", handlers: route87 },
+  { path: "api/v1/coordination/ficha-imports/apply", handlers: route88 },
+  { path: "api/v1/coordination/ficha-imports/spreadsheet", handlers: route89 },
+  { path: "api/v1/coordination/ficha-imports/template", handlers: route90 },
+  { path: "api/v1/coordination/history", handlers: route91 },
+  { path: "api/v1/coordination/reviews/[revision]/approve", handlers: route92 },
+  { path: "api/v1/coordination/reviews/[revision]/compare/[after]", handlers: route93 },
+  { path: "api/v1/coordination/reviews/[revision]/request-correction", handlers: route94 },
+  { path: "api/v1/coordination/reviews/[revision]", handlers: route95 },
+  { path: "api/v1/coordination/reviews", handlers: route96 },
+  { path: "api/v1/coordination/support-documents/[document]", handlers: route97 },
+  { path: "api/v1/coordination/support-documents", handlers: route98 },
+  { path: "api/v1/coordination/syllabi/[syllabus]/reset", handlers: route99 },
+  { path: "api/v1/dashboard/deadline", handlers: route100 },
+  { path: "api/v1/dashboard", handlers: route101 },
+  { path: "api/v1/exports/[artifact]/pdf", handlers: route102 },
+  { path: "api/v1/help/available", handlers: route103 },
+  { path: "api/v1/help", handlers: route104 },
+  { path: "api/v1/library/history", handlers: route105 },
+  { path: "api/v1/library/reviews/[revision]/comments", handlers: route106 },
+  { path: "api/v1/library/reviews/[revision]", handlers: route107 },
+  { path: "api/v1/library/reviews/[revision]/verify", handlers: route108 },
+  { path: "api/v1/library/reviews", handlers: route109 },
+  { path: "api/v1/revisions/[revision]/documents", handlers: route110 },
+  { path: "api/v1/session", handlers: route111 },
+  { path: "api/v1/support-documents/[document]/view", handlers: route112 },
+  { path: "api/v1/teacher/history/[career]", handlers: route113 },
+  { path: "api/v1/teacher/history", handlers: route114 },
+  { path: "api/v1/teacher/library-catalog/search", handlers: route115 },
+  { path: "api/v1/teacher/support-documents", handlers: route116 },
+  { path: "api/v1/teacher/syllabi/[syllabus]/copy-from/[source]", handlers: route117 },
+  { path: "api/v1/teacher/syllabi/[syllabus]/fields/[field]", handlers: route118 },
+  { path: "api/v1/teacher/syllabi/[syllabus]", handlers: route119 },
+  { path: "api/v1/teacher/syllabi/[syllabus]/signing-statement", handlers: route120 },
+  { path: "api/v1/teacher/syllabi/[syllabus]/start", handlers: route121 },
+  { path: "api/v1/teacher/syllabi/[syllabus]/submit", handlers: route122 },
+  { path: "api/v1/teacher/syllabi/[syllabus]/validate", handlers: route123 },
+  { path: "api/v1/teacher/syllabi", handlers: route124 },
+  { path: "images/silabo/[file]", handlers: route125 },
+  { path: "logos/facultad/[faculty]", handlers: route126 },
+  { path: "logos/institucion", handlers: route127 },
+  { path: "plantilla.schema.json", handlers: route128 },
+]

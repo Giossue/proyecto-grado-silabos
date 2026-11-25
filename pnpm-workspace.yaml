@@ -1,6 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
 allowBuilds:
+  "@prisma/engines": true
+  "@scarf/scarf": false
   esbuild: true
   msgpackr-extract: true
+  prisma: true
 minimumReleaseAgeExclude:
   - better-auth@1.7.28
   - "@better-auth/core@1.7.28"
@@ -10,3 +16,7 @@ minimumReleaseAgeExclude:
   - "@better-auth/mongo-adapter@1.7.28"
   - "@better-auth/prisma-adapter@1.7.28"
   - "@better-auth/telemetry@1.7.28"
+  - "@nestjs/common@12.6.2"
+  - "@nestjs/core@12.6.2"
+  - "@nestjs/platform-express@12.6.2"
+  - "@nestjs/testing@12.6.2"

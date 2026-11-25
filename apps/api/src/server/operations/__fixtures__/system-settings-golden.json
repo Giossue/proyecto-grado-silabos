@@ -1,0 +1,605 @@
+{
+    "urls": [
+        {
+            "url": "https://api.deepseek.com",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://api.deepseek.com/",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://api.deepseek.com/v1",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "http://api.deepseek.com",
+            "https": false,
+            "http,https": true
+        },
+        {
+            "url": "HTTPS://API.EXAMPLE.COM",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://localhost",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://localhost:8443/v1",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://127.0.0.1:9000",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://[::1]:443/x",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://user:clave@host.ec/p",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://ñandú.ec/ruta",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://xn--and-6ma2c.ec",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://a..b",
+            "https": false,
+            "http,https": false
+        },
+        {
+            "url": "https://-a.ec",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://a_b.ec",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://ejemplo.ec/a b",
+            "https": false,
+            "http,https": false
+        },
+        {
+            "url": "https://ejemplo.ec/a%20b?x=1&y[]=2#frag",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://ejemplo.ec?q=1",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://ejemplo.ec#top",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "ftp://ejemplo.ec",
+            "https": false,
+            "http,https": false
+        },
+        {
+            "url": "https:/ejemplo.ec",
+            "https": false,
+            "http,https": false
+        },
+        {
+            "url": "https://",
+            "https": false,
+            "http,https": false
+        },
+        {
+            "url": "ejemplo.ec",
+            "https": false,
+            "http,https": false
+        },
+        {
+            "url": "https://ejemplo.ec:",
+            "https": false,
+            "http,https": false
+        },
+        {
+            "url": "https://ejemplo.ec:80a",
+            "https": false,
+            "http,https": false
+        },
+        {
+            "url": "https://ejemplo.ec/ruta\\n",
+            "https": false,
+            "http,https": false
+        },
+        {
+            "url": "https://ejemplo.ec\n",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://ejemplo.ec/ruta|x",
+            "https": false,
+            "http,https": false
+        },
+        {
+            "url": "https://ejemplo.ec/~usuario",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://ejemplo.ec/it's",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://١.١.١.١",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://☃.net",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://ejemplo.ec./",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://ejemplo",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://300.1.1.1",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://ejemplo.ec/%zz",
+            "https": false,
+            "http,https": false
+        },
+        {
+            "url": "https://[2001:db8::1]",
+            "https": true,
+            "http,https": true
+        },
+        {
+            "url": "https://[2001:db8::g]",
+            "https": false,
+            "http,https": false
+        },
+        {
+            "url": "https://biblioteca.ueb.edu.ec/cgi-bin/koha",
+            "https": true,
+            "http,https": true
+        }
+    ],
+    "validation": [
+        {
+            "section": "notificaciones",
+            "input": [],
+            "errors": {
+                "emails": [
+                    "El campo emails es obligatorio."
+                ],
+                "digest_time": [
+                    "El campo digest time es obligatorio."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "notificaciones",
+            "input": {
+                "emails": true,
+                "digest_time": "07:30"
+            },
+            "errors": {},
+            "settings": {
+                "notifications.emails": true,
+                "notifications.digest_time": "07:30"
+            }
+        },
+        {
+            "section": "notificaciones",
+            "input": {
+                "emails": "1",
+                "digest_time": "7:30"
+            },
+            "errors": {
+                "digest_time": [
+                    "La hora debe tener el formato HH:MM."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "notificaciones",
+            "input": {
+                "emails": "si",
+                "digest_time": "24:00"
+            },
+            "errors": {
+                "emails": [
+                    "El campo emails debe ser verdadero o falso."
+                ],
+                "digest_time": [
+                    "La hora debe tener el formato HH:MM."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "notificaciones",
+            "input": {
+                "emails": 0,
+                "digest_time": 730
+            },
+            "errors": {
+                "digest_time": [
+                    "El campo digest time debe ser una cadena de texto.",
+                    "La hora debe tener el formato HH:MM."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "notificaciones",
+            "input": {
+                "emails": [],
+                "digest_time": [
+                    "07:30"
+                ]
+            },
+            "errors": {
+                "emails": [
+                    "El campo emails es obligatorio."
+                ],
+                "digest_time": [
+                    "El campo digest time debe ser una cadena de texto.",
+                    "La hora debe tener el formato HH:MM."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "ia",
+            "input": [],
+            "errors": {
+                "current_password": [
+                    "Escriba su contraseña actual para guardar."
+                ],
+                "driver": [
+                    "El campo driver es obligatorio."
+                ],
+                "base_url": [
+                    "Escriba la dirección del proveedor de IA."
+                ],
+                "model": [
+                    "Escriba el modelo de IA."
+                ],
+                "connect_timeout": [
+                    "El campo connect timeout es obligatorio."
+                ],
+                "timeout": [
+                    "El campo timeout es obligatorio."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "ia",
+            "input": {
+                "current_password": "mala",
+                "driver": "disabled",
+                "connect_timeout": 2,
+                "timeout": 20
+            },
+            "errors": {
+                "current_password": [
+                    "La contraseña actual no es correcta."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "ia",
+            "input": {
+                "current_password": "Secreta-2026",
+                "driver": "disabled",
+                "connect_timeout": 2,
+                "timeout": 20
+            },
+            "errors": {},
+            "settings": {
+                "ai.driver": "disabled",
+                "ai.base_url": null,
+                "ai.model": null,
+                "ai.connect_timeout": 2,
+                "ai.timeout": 20
+            }
+        },
+        {
+            "section": "ia",
+            "input": {
+                "current_password": "Secreta-2026",
+                "driver": "deepseek",
+                "connect_timeout": 2,
+                "timeout": 20
+            },
+            "errors": {
+                "base_url": [
+                    "Escriba la dirección del proveedor de IA."
+                ],
+                "model": [
+                    "Escriba el modelo de IA."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "ia",
+            "input": {
+                "current_password": "Secreta-2026",
+                "driver": "deepseek",
+                "base_url": "http://api.deepseek.com",
+                "model": "deepseek chat",
+                "api_key": "sk 1",
+                "connect_timeout": 0,
+                "timeout": 301
+            },
+            "errors": {
+                "base_url": [
+                    "El campo base url debe ser una URL válida."
+                ],
+                "model": [
+                    "El formato del campo model no es válido."
+                ],
+                "api_key": [
+                    "La clave no puede tener espacios."
+                ],
+                "connect_timeout": [
+                    "El campo connect timeout debe estar entre 1 y 30."
+                ],
+                "timeout": [
+                    "El campo timeout debe estar entre 5 y 300."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "ia",
+            "input": {
+                "current_password": "Secreta-2026",
+                "driver": "otro",
+                "base_url": "https://api.deepseek.com/",
+                "model": "deepseek-chat",
+                "api_key": "sk-1",
+                "clear_api_key": "x",
+                "connect_timeout": "3",
+                "timeout": "5.5"
+            },
+            "errors": {
+                "driver": [
+                    "El valor seleccionado en driver no es válido."
+                ],
+                "clear_api_key": [
+                    "El campo clear api key debe ser verdadero o falso."
+                ],
+                "timeout": [
+                    "El campo timeout debe ser un número entero."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "ia",
+            "input": {
+                "current_password": "Secreta-2026",
+                "driver": "deepseek",
+                "base_url": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaahttps://x.ec",
+                "model": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",
+                "api_key": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+                "connect_timeout": "tres",
+                "timeout": true
+            },
+            "errors": {
+                "base_url": [
+                    "El campo base url no debe tener más de 255 caracteres.",
+                    "El campo base url debe ser una URL válida."
+                ],
+                "model": [
+                    "El campo model no debe tener más de 64 caracteres."
+                ],
+                "api_key": [
+                    "El campo api key no debe tener más de 500 caracteres."
+                ],
+                "connect_timeout": [
+                    "El campo connect timeout debe ser un número entero."
+                ],
+                "timeout": [
+                    "El campo timeout debe estar entre 5 y 300."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "ia",
+            "input": {
+                "current_password": 123,
+                "driver": [
+                    "deepseek"
+                ],
+                "base_url": 5,
+                "model": 5,
+                "api_key": 5,
+                "connect_timeout": 31,
+                "timeout": 4
+            },
+            "errors": {
+                "current_password": [
+                    "El campo contraseña actual debe ser una cadena de texto.",
+                    "La contraseña actual no es correcta."
+                ],
+                "driver": [
+                    "El valor seleccionado en driver no es válido."
+                ],
+                "base_url": [
+                    "El campo base url debe ser una cadena de texto.",
+                    "El campo base url debe ser una URL válida."
+                ],
+                "model": [
+                    "El campo model debe ser una cadena de texto."
+                ],
+                "api_key": [
+                    "El campo api key debe ser una cadena de texto."
+                ],
+                "connect_timeout": [
+                    "El campo connect timeout debe estar entre 1 y 30."
+                ],
+                "timeout": [
+                    "El campo timeout debe estar entre 5 y 300."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "ia",
+            "input": {
+                "current_password": "Secreta-2026",
+                "driver": "deepseek",
+                "base_url": "https://api.deepseek.com",
+                "model": "deepseek-chat",
+                "api_key": "sk 1",
+                "clear_api_key": true,
+                "connect_timeout": 30,
+                "timeout": 300
+            },
+            "errors": {},
+            "settings": {
+                "ai.driver": "deepseek",
+                "ai.base_url": "https://api.deepseek.com",
+                "ai.model": "deepseek-chat",
+                "ai.connect_timeout": 30,
+                "ai.timeout": 300,
+                "ai.api_key": null
+            }
+        },
+        {
+            "section": "biblioteca",
+            "input": [],
+            "errors": {
+                "current_password": [
+                    "Escriba su contraseña actual para guardar."
+                ],
+                "driver": [
+                    "El campo driver es obligatorio."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "biblioteca",
+            "input": {
+                "current_password": "Secreta-2026",
+                "driver": "koha"
+            },
+            "errors": {
+                "base_url": [
+                    "Escriba la dirección del catálogo Koha."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "biblioteca",
+            "input": {
+                "current_password": "Secreta-2026",
+                "driver": "koha",
+                "base_url": "ftp://biblioteca.ec"
+            },
+            "errors": {
+                "base_url": [
+                    "El campo base url debe ser una URL válida."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "biblioteca",
+            "input": {
+                "current_password": "Secreta-2026",
+                "driver": "koha",
+                "base_url": "http://biblioteca.ueb.edu.ec/"
+            },
+            "errors": {},
+            "settings": {
+                "library.driver": "koha",
+                "library.base_url": "http://biblioteca.ueb.edu.ec"
+            }
+        },
+        {
+            "section": "biblioteca",
+            "input": {
+                "current_password": "Secreta-2026",
+                "driver": "disabled",
+                "base_url": "no es url"
+            },
+            "errors": {
+                "base_url": [
+                    "El campo base url debe ser una URL válida."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "biblioteca",
+            "input": {
+                "current_password": "Secreta-2026",
+                "driver": true
+            },
+            "errors": {
+                "driver": [
+                    "El valor seleccionado en driver no es válido."
+                ]
+            },
+            "settings": null
+        },
+        {
+            "section": "biblioteca",
+            "input": {
+                "current_password": "Secreta-2026",
+                "driver": "KOHA",
+                "base_url": null
+            },
+            "errors": {
+                "driver": [
+                    "El valor seleccionado en driver no es válido."
+                ]
+            },
+            "settings": null
+        }
+    ]
+}
