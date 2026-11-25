@@ -1,7 +1,7 @@
 "use client"
 
 import { CalendarClock, RefreshCcw } from "lucide-react"
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
 import { ApiError } from "@/api/client"
 import { extendProcessDeadline, type PendingChangeCounts, type SyllabusProcess, type SyllabusStateCounts } from "@/api/processes"
 import { DatePicker } from "@/components/DatePicker"
@@ -15,6 +15,8 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/c
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
 import { matchesPhrase } from "@/lib/confirmPhrase"
 import { formatDateDisplay } from "@/lib/dateDisplay"
+import { applyApiErrors, errorMessages, useSchemaForm } from "@/lib/forms"
+import { deadlineExtensionSchema } from "@/schemas/syllabus"
 
 const TEMPLATE_PHRASE = "adaptar sílabos"
 const PENDING_PHRASE = "aplicar cambios"
@@ -29,15 +31,16 @@ type DeadlineExtensionDialogProps = {
 
 export function DeadlineExtensionDialog({ process, display = "button", open, onOpenChange, onSaved }: DeadlineExtensionDialogProps) {
   const [isOpen, setOpen] = useModelOpen(open, onOpenChange)
-  const [processing, setProcessing] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string[]>>({})
-  const [dueAt, setDueAt] = useState("")
+  const form = useSchemaForm(deadlineExtensionSchema, { defaultValues: { due_at: "" } })
+  const processing = form.formState.isSubmitting
+  const errors = form.formState.errors as Record<string, unknown>
+  const dueAt = String(form.watch("due_at") ?? "")
+  const dueErrors = [...(errorMessages(errors.due_at) ?? []), ...(errorMessages(errors.process) ?? [])]
   const [templateImpact, setTemplateImpact] = useState<SyllabusStateCounts | null>(null)
   const [pendingImpact, setPendingImpact] = useState<PendingChangeCounts | null>(null)
   const [typed, setTyped] = useState("")
   useOpened(isOpen, () => {
-    setDueAt("")
-    setErrors({})
+    form.reset({ due_at: "" })
     setTemplateImpact(null)
     setPendingImpact(null)
     setTyped("")
@@ -58,11 +61,8 @@ export function DeadlineExtensionDialog({ process, display = "button", open, onO
   const ordinal = `Prórroga ${Math.min(process.extensions_used + 1, process.extensions_max)} de ${process.extensions_max}`
   const limit = formatDateDisplay(process.extension_limit_on, { dateStyle: "medium" })
 
-  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
+  const submit = async (): Promise<void> => {
     if (!phraseReady) return
-    setProcessing(true)
-    setErrors({})
     try {
       const result = await extendProcessDeadline(process.id, {
         due_at: dueAt,
@@ -80,9 +80,7 @@ export function DeadlineExtensionDialog({ process, display = "button", open, onO
         setTyped("")
         return
       }
-      setErrors(reason instanceof ApiError ? reason.errors : {})
-    } finally {
-      setProcessing(false)
+      if (reason instanceof ApiError) applyApiErrors(form.setError, reason, { fallback: reason.message })
     }
   }
 
@@ -97,7 +95,7 @@ export function DeadlineExtensionDialog({ process, display = "button", open, onO
       trigger={<Button variant="outline">Prorrogar plazo</Button>}
     >
       {({ close }) => (
-        <form onSubmit={(event) => void submit(event)}>
+        <form noValidate onSubmit={form.handleSubmit(submit)}>
           <FieldGroup>
             <p className="text-sm font-medium">{ordinal}</p>
             {finalized ? (
@@ -106,14 +104,14 @@ export function DeadlineExtensionDialog({ process, display = "button", open, onO
                 <AlertDescription>Al prorrogar, la convocatoria se vuelve a abrir con la nueva fecha</AlertDescription>
               </Alert>
             ) : null}
-            <Field data-invalid={Boolean(errors.due_at)}>
+            <Field data-invalid={errors.due_at !== undefined}>
               <FieldLabel htmlFor="extension-due" required>
                 Nueva fecha límite de entrega
               </FieldLabel>
-              <DatePicker id="extension-due" value={dueAt} onValueChange={setDueAt} required maxValue={process.extension_limit_on} ariaInvalid={Boolean(errors.due_at)} />
+              <DatePicker id="extension-due" value={dueAt} onValueChange={(value) => form.setValue("due_at", value)} required maxValue={process.extension_limit_on} ariaInvalid={errors.due_at !== undefined} />
               <FieldDescription>Debe ser posterior a la fecha límite vigente</FieldDescription>
               <FieldDescription>Hasta el último día de clases: {limit}</FieldDescription>
-              <FieldError errors={[...(errors.due_at ?? []), ...(errors.process ?? [])]} />
+              <FieldError errors={dueErrors} />
             </Field>
             {templateImpact ? (
               <>

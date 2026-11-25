@@ -187,8 +187,13 @@ test.describe.serial("administration: faculties and careers", () => {
 })
 
 test.describe("administration: careers import", () => {
+  const suffix = lettersOnly(uniqueSuffix())
+
+  test.afterAll(async () => {
+    await query("update carreras set carrera_activa = false where codigo_carrera = $1", [`IMP-${suffix}`])
+  })
+
   test("admin downloads the careers template and imports one career", async ({ page, issues }, testInfo) => {
-    const suffix = lettersOnly(uniqueSuffix())
     await page.goto("/admin/estructura-academica/carreras")
     await page.getByRole("button", { name: "Importar desde Excel" }).click()
     const dialog = page.getByRole("dialog").filter({ has: page.locator("#import-spreadsheet-file") })

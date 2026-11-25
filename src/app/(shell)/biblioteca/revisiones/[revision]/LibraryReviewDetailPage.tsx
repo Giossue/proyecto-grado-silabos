@@ -2,7 +2,7 @@
 
 import { ArrowLeft, FileSignature, FileText, MessageSquareText, Send, UserCheck } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useState, type FormEvent } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { ApiError } from "@/api/client"
 import { commentLibraryReview, getLibraryReview, verifyLibraryReview, type LibraryReviewDetail } from "@/api/library"
 import { EmptyState } from "@/components/domain/EmptyState"
@@ -21,15 +21,17 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { afterDialogExit } from "@/lib/dialogExit"
+import { applyApiErrors, errorMessages, SERVER_ERROR, serverMessage, useSchemaForm } from "@/lib/forms"
 import { goBack } from "@/lib/goBack"
 import { libraryStatus, libraryStatusLabel, libraryStatusTone } from "@/lib/libraryStates"
 import { openRevisionPdf } from "@/lib/openPdf"
 import { paths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
+import { libraryCommentFormSchema, OTHER_REASON, OTHER_REASON_MIN, type LibraryCommentValues } from "@/schemas/library"
 
 type LibraryAction = "return" | "sign" | "send"
 
-const OTHER_REASON = "otro"
+const EMPTY_COMMENT: LibraryCommentValues = { reasons: [], other: "" }
 
 const cameFrom = (listPath: string): boolean => {
   let back = false
@@ -46,12 +48,13 @@ export default function LibraryReviewDetailPage() {
   const [loadError, setLoadError] = useState("")
   const [returnOpen, setReturnOpen] = useState(false)
   const [signOpen, setSignOpen] = useState(false)
-  const [selectedReasons, setSelectedReasons] = useState<string[]>([])
-  const [reasonErrors, setReasonErrors] = useState<string[]>([])
-  const [otherReason, setOtherReason] = useState("")
-  const [otherErrors, setOtherErrors] = useState<string[]>([])
-  const [returnError, setReturnError] = useState("")
-  const [sending, setSending] = useState(false)
+  const commentForm = useSchemaForm(libraryCommentFormSchema, { defaultValues: EMPTY_COMMENT })
+  const { errors: commentErrors, isSubmitting: sending } = commentForm.formState
+  const selectedReasons = commentForm.watch("reasons") ?? []
+  const otherReason = commentForm.watch("other") ?? ""
+  const reasonErrors = errorMessages(commentErrors.reasons) ?? []
+  const otherErrors = errorMessages(commentErrors.other) ?? []
+  const returnError = serverMessage(commentErrors) ?? ""
   const [sendingOn, setSendingOn] = useState(false)
   const [openingPdf, setOpeningPdf] = useState(false)
   const [takeoverFor, setTakeoverFor] = useState<LibraryAction | null>(null)
@@ -67,7 +70,7 @@ export default function LibraryReviewDetailPage() {
   const otherSelected = selectedReasons.includes(OTHER_REASON)
   const canSign = Boolean(review?.can_verify && review.signing_statement)
   const canSendWithoutSigning = Boolean(review?.can_verify && !review.signing_statement)
-  const canReturn = selectedReasons.length > 0 && (!otherSelected || otherReason.trim().length >= 5)
+  const canReturn = selectedReasons.length > 0 && (!otherSelected || otherReason.trim().length >= OTHER_REASON_MIN)
   const fields = (review?.sections ?? []).flatMap((section) => section.fields.map((field) => ({ ...field, title: field.label.trim() || section.title })))
   const outcomeBadge: { label: string; tone: StatusTone } | null =
     review === null || review.outcome === null ? null : { label: libraryStatusLabel(libraryStatus(review)), tone: libraryStatusTone(libraryStatus(review)) }
@@ -100,13 +103,12 @@ export default function LibraryReviewDetailPage() {
   }
 
   const toggleReason = (code: string, checked: boolean | "indeterminate"): void => {
-    setSelectedReasons((current) => (checked === true ? [...current, code] : current.filter((item) => item !== code)))
+    const current = commentForm.getValues("reasons") ?? []
+    commentForm.setValue("reasons", checked === true ? [...current, code] : current.filter((item) => item !== code))
   }
 
   const openReturn = (): void => {
-    setReasonErrors([])
-    setOtherErrors([])
-    setReturnError("")
+    commentForm.clearErrors()
     setReturnOpen(true)
   }
 
@@ -144,40 +146,21 @@ export default function LibraryReviewDetailPage() {
     if (action !== null) run(action)
   }
 
-  const sendReturn = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
+  const sendReturn = async (values: LibraryCommentValues): Promise<void> => {
     if (!review) return
-    setReasonErrors([])
-    setOtherErrors([])
-    setReturnError("")
-    if (selectedReasons.length === 0) {
-      setReasonErrors(["Elija al menos un motivo"])
-      return
-    }
-    if (otherSelected && otherReason.trim().length < 5) {
-      setOtherErrors(["Escriba el otro motivo (mínimo 5 caracteres)"])
-      return
-    }
-    setSending(true)
+    const reasons = values.reasons ?? []
     try {
       const result = await commentLibraryReview(review.revision_id, {
-        reasons: selectedReasons,
-        ...(otherSelected ? { other: otherReason.trim() } : {}),
+        reasons,
+        ...(reasons.includes(OTHER_REASON) ? { other: (values.other ?? "").trim() } : {}),
       })
       setReturnOpen(false)
       toast.success(result.message)
       await afterDialogExit()
       router.replace(paths.library.reviews)
     } catch (failure) {
-      if (failure instanceof ApiError) {
-        setReasonErrors(failure.errors.reasons ?? failure.errors["reasons.0"] ?? [])
-        setOtherErrors(failure.errors.other ?? [])
-        setReturnError(failure.message)
-      } else {
-        setReturnError("No se pudo devolver el sílabo")
-      }
-    } finally {
-      setSending(false)
+      applyApiErrors(commentForm.setError, failure, { fallback: "No se pudo devolver el sílabo", aliases: { "reasons.0": "reasons" } })
+      if (failure instanceof ApiError) commentForm.setError(SERVER_ERROR, { type: "server", message: failure.message })
     }
   }
 
@@ -269,7 +252,7 @@ export default function LibraryReviewDetailPage() {
               <DialogTitle>Devolver al docente</DialogTitle>
               <DialogDescription>Marque los motivos para avisar al docente y que lo corrija</DialogDescription>
             </DialogHeader>
-            <form id="library-comment-form" className="flex flex-col gap-4" onSubmit={(event) => void sendReturn(event)}>
+            <form id="library-comment-form" className="flex flex-col gap-4" noValidate onSubmit={commentForm.handleSubmit(sendReturn)}>
               <Field data-invalid={reasonErrors.length > 0}>
                 <FieldLabel required>Motivos</FieldLabel>
                 <div className="flex flex-col gap-3" role="group" aria-label="Motivos de la devolución">
@@ -297,7 +280,7 @@ export default function LibraryReviewDetailPage() {
                     rows={3}
                     maxLength={1000}
                     placeholder="Ej. Falta la edición 2020 del libro de Pressman"
-                    onChange={(event) => setOtherReason(event.target.value)}
+                    onChange={(event) => commentForm.setValue("other", event.target.value)}
                   />
                   <FieldError errors={otherErrors} />
                 </Field>

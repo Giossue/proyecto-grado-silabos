@@ -6,7 +6,8 @@ import { strnatcasecmp } from "../http/naturalSort"
 import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
 import { queryParams, requestUrl } from "../http/request"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { listingFiltersSchema } from "@/schemas/syllabus"
+import { validateSchema } from "../http/schemaValidation"
 import { hasRole, ROLE_TEACHER } from "./policy"
 import { convocationName } from "./syllabusSql"
 import { createTeacherSyllabusRepository } from "./teacherSyllabusQueries"
@@ -63,16 +64,8 @@ async function authorizedTeacher(request: Request, deps: TeacherSyllabusDeps): P
   if (session instanceof Response) return session
   if (!hasRole(session, ROLE_TEACHER)) return forbidden()
   const input = phpQuery(new URL(request.url))
-  const errors = await validateInput(
-    input,
-    {
-      q: ["nullable", "string", { max: 120 }],
-      state: ["nullable", { in: ["all", ...SYLLABUS_STATES] }],
-      page: ["nullable", "integer", { min: 1 }],
-    },
-    { q: "búsqueda", state: "estado", page: "página" },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(listingFiltersSchema(SYLLABUS_STATES), input)
+  if (errors !== null) return validationError(errors)
   return { session, input }
 }
 

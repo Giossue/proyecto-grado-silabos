@@ -10,7 +10,8 @@ import { encrypt } from "../http/encrypter"
 import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { forbidden, apiJson, serverError, validationError } from "../http/responses"
 import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
-import { validateInput, type Rule } from "../http/validation"
+import { PASSWORD_SECTIONS, systemSettingsSchema } from "@/schemas/operations"
+import { validateSchema } from "../http/schemaValidation"
 import { catalogSettings } from "../library/catalogHandlers"
 import { createCatalog } from "../library/catalog"
 import { kohaFetch } from "../library/kohaHttp"
@@ -24,43 +25,6 @@ export type SystemSettingsWriteDeps = SystemSettingsDeps & {
   save: (rows: SettingRow[], actorId: string, at: number) => Promise<void>
   fetch: (url: string, init: RequestInit) => Promise<Response>
   libraries: () => Promise<unknown[]>
-}
-
-const PASSWORD_SECTIONS = ["ia", "biblioteca"]
-const DIGEST_TIME = /^([01]\d|2[0-3]):[0-5]\d\n?$/
-const MODEL = /^[A-Za-z0-9._:/-]+\n?$/
-const NO_SPACES = /^[^\t\n\v\f\r ]+\n?$/
-const MESSAGES = {
-  "current_password.required": "Escriba su contraseña actual para guardar.",
-  "digest_time.regex": "La hora debe tener el formato HH:MM.",
-  "base_url.required_if": "Escriba la dirección del catálogo Koha.",
-  "base_url.required_unless": "Escriba la dirección del proveedor de IA.",
-  "model.required_unless": "Escriba el modelo de IA.",
-  "api_key.regex": "La clave no puede tener espacios.",
-}
-const ATTRIBUTES = { current_password: "contraseña actual" }
-const WRONG_PASSWORD = "La contraseña actual no es correcta."
-
-function rulesFor(section: string, passwordMatches: boolean): Record<string, Rule[]> {
-  const password: Rule[] = ["required", "string", { check: () => passwordMatches, message: WRONG_PASSWORD }]
-  if (section === "notificaciones") return { emails: ["required", "boolean"], digest_time: ["required", "string", { regex: DIGEST_TIME }] }
-  if (section === "biblioteca") {
-    return {
-      current_password: password,
-      driver: ["required", { in: ["disabled", "koha"] }],
-      base_url: ["nullable", { required_if: ["driver", "koha"] }, "string", { max: 255 }, { url: ["http", "https"] }],
-    }
-  }
-  return {
-    current_password: password,
-    driver: ["required", { in: ["disabled", "deepseek"] }],
-    base_url: ["nullable", { required_unless: ["driver", "disabled"] }, "string", { max: 255 }, { url: ["https"] }],
-    model: ["nullable", { required_unless: ["driver", "disabled"] }, "string", { max: 64 }, { regex: MODEL }],
-    api_key: ["nullable", "string", { max: 500 }, { regex: NO_SPACES }],
-    clear_api_key: ["sometimes", "boolean"],
-    connect_timeout: ["required", "integer", { between: [1, 30] }],
-    timeout: ["required", "integer", { between: [5, 300] }],
-  }
 }
 
 function phpString(value: PhpValue | undefined): string {
@@ -143,8 +107,8 @@ export async function updateSystemSettings(request: Request, section: string, de
   const input = await requestInput(request)
   const matches = await passwordMatches(section, input, session.user, deps)
   if (matches === null) return finish(fromController(serverError()))
-  const errors = await validateInput(input, rulesFor(section, matches), ATTRIBUTES, { messages: MESSAGES })
-  if (Object.keys(errors).length > 0) return finish(fromController(validationError(errors)))
+  const { errors } = await validateSchema(systemSettingsSchema(section, input, matches), input)
+  if (errors !== null) return finish(fromController(validationError(errors)))
   const key = deps.bridge.config.key
   const rows = sectionValues(section, input)
   await deps.save(

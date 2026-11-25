@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import golden from "../operations/__fixtures__/system-settings-golden.json"
+import golden from "@/server/operations/__fixtures__/system-settings-golden.json"
 import { strIsUrl } from "./strIsUrl"
 
 describe("strIsUrl", () => {

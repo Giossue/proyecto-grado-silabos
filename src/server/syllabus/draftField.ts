@@ -7,7 +7,8 @@ import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { expectsJson } from "../http/request"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { draftFieldSchema } from "@/schemas/syllabus"
+import { validateSchema } from "../http/schemaValidation"
 import { uuid7 } from "../http/uuid7"
 import { phpIntCast, toRuntime } from "../configuration/templateDraft"
 import { profileTemplates } from "../configuration/subjectProfileFields"
@@ -155,6 +156,17 @@ async function save(input: PhpArray, auth: Bound, deps: DraftFieldDeps, tx: Draf
   return { version, savedAt, definition }
 }
 
+function documentErrors(value: PhpValue | undefined, definition: TemplateDefinition): Record<string, string[]> | null {
+  if (value === undefined || value === null) return null
+  try {
+    normalizeFieldDocument(value, definition, "value")
+    return null
+  } catch (error) {
+    if (error instanceof TemplateValidationError) return error.errors
+    throw error
+  }
+}
+
 export async function updateDraftField(request: Request, syllabusId: string, fieldId: string, deps: DraftFieldDeps = defaultDraftFieldDeps()): Promise<Response> {
   const original = request.clone()
   const auth = await bound(original, syllabusId, fieldId, deps)
@@ -164,30 +176,8 @@ export async function updateDraftField(request: Request, syllabusId: string, fie
   if (current === null) return fromController(modelNotFoundResponse(MODELS.template))
   const definition = current.definition
   const input = toRuntime(await requestInput(request)) as PhpArray
-  const errors = await validateInput(
-    input,
-    {
-      version_bloqueo: ["required", "integer", { min: 0 }],
-      value: [
-        "present",
-        "nullable",
-        "array",
-        {
-          aborts: (value: PhpValue, attribute: string) => {
-            try {
-              normalizeFieldDocument(value, definition, attribute)
-              return null
-            } catch (error) {
-              if (error instanceof TemplateValidationError) return error.errors
-              throw error
-            }
-          },
-        },
-      ],
-    },
-    { version_bloqueo: "versión de edición", value: "valor" },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const errors = documentErrors(input.value, definition) ?? (await validateSchema(draftFieldSchema, input)).errors
+  if (errors !== null) return validationError(errors)
   let saved: Awaited<ReturnType<typeof save>>
   try {
     saved = await deps.store.transaction((tx) => save(input, auth, deps, tx, original))

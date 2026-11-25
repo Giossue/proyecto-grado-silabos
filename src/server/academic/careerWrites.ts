@@ -5,12 +5,14 @@ import type { BridgeDeps, AppSession } from "../auth/types"
 import { ROLE_COMBINATION_MESSAGE, roleCombinationConflicts } from "../identity/accountRules"
 import { isJsonRequest, isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { phpIsNumeric, validateInput, type Rule } from "../http/validation"
+import { phpIsNumeric } from "@/schemas/php"
+import { parallelSchema, parallelsSchema, parallelTeacherSchema, subjectSchema, teacherAssignmentSchema } from "@/schemas/academic"
+import { validateSchema } from "../http/schemaValidation"
 import { requestBoolean, type WorkScope } from "../syllabus/inProgressWork"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { createCareerWriteDeps } from "./careerWriteStore"
 import { phpIntCast } from "./governanceWrites"
-import { CONVOCATION_LOCK_REASON, CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES } from "./structure"
+import { CONVOCATION_LOCK_REASON } from "./structure"
 import { unmatchedRoute, routeAllows } from "../http/router"
 
 export const SUBJECT_COLUMNS = [
@@ -91,7 +93,6 @@ const PURGE_STARTED =
 const PURGE_SENT =
   "El sílabo de este paralelo ya está en revisión o aprobado. Cambiar el código o la jornada lo elimina con todo su contenido (revisiones, aprobación, firmas y análisis de IA) y el docente lo empieza de nuevo."
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
-const SUBJECT_LABELS = { code: "código", nombre: "nombre", cycle: "ciclo", position: "posición", organization_unit: "unidad de organización curricular", modality: "modalidad" }
 const INTEGER_COLUMNS = new Set<SubjectColumn>(["ciclo_asignatura", "orden_asignatura_en_ciclo"])
 const DECIMAL_COLUMNS = new Set<SubjectColumn>(["creditos_asignatura", "horas_docencia", "horas_practicas", "horas_autonomas"])
 
@@ -143,32 +144,9 @@ function totalHours(input: PhpArray): number {
   return total
 }
 
-function subjectRules(unique: (value: PhpValue) => Promise<boolean>): Record<string, Rule[]> {
-  const hours: Rule[] = ["required", "numeric", { min: 0 }, { max: 9999.99 }]
-  return {
-    code: ["required", "string", { max: 80 }, { unique }],
-    nombre: ["required", "string", { max: 180 }],
-    cycle: ["required", "integer", { min: 1 }, { max: 30 }],
-    position: ["nullable", "integer", { min: 0 }, { max: 999 }],
-    organization_unit: ["required", "string", { in: Object.keys(CURRICULAR_UNITS) }],
-    modality: ["nullable", "string", { in: STUDY_MODALITIES }],
-    creditos: hours,
-    horas_totales: ["required", "integer", { min: 0 }, { max: 32767 }],
-    horas_ac: hours,
-    horas_pae: hours,
-    horas_aa: hours,
-    generates_syllabus: ["sometimes", "boolean"],
-  }
-}
-
-async function validateSubject(input: PhpArray, deps: CareerWriteDeps, careerId: string, except: string | null): Promise<Record<string, string[]>> {
+async function validateSubject(input: PhpArray, deps: CareerWriteDeps, careerId: string, except: string | null): Promise<Record<string, string[]> | null> {
   input.horas_totales = totalHours(input)
-  return validateInput(
-    input,
-    subjectRules(async (value) => !(await deps.subjectCodeTaken(careerId, String(value), except))),
-    SUBJECT_LABELS,
-    { messages: { "code.unique": "Ya existe una materia con ese código." } },
-  )
+  return (await validateSchema(subjectSchema(async (value) => !(await deps.subjectCodeTaken(careerId, String(value), except))), input)).errors
 }
 
 function subjectModality(input: PhpArray): string | null {
@@ -251,22 +229,18 @@ export async function createCareerRecord(request: Request, entity: string, deps:
   const { context, input } = ready
   const careerId = context.careerId
   if (entity === "asignacion_docente") {
-    const errors = await validateInput(
+    const { errors } = await validateSchema(
+      teacherAssignmentSchema({ userExists: (value) => deps.eligibleUserExists(String(value)), parallelExists: (value) => deps.parallelInCareer(String(value), careerId) }),
       input,
-      {
-        user_id: ["required", "uuid", { exists: (value) => deps.eligibleUserExists(String(value)) }],
-        parallel_id: ["required", "uuid", { exists: (value) => deps.parallelInCareer(String(value), careerId) }],
-      },
-      { user_id: "usuario", parallel_id: "paralelo" },
     )
-    if (Object.keys(errors).length > 0) return validationError(errors)
+    if (errors !== null) return validationError(errors)
     return settle(original, deps, async () => {
       await deps.transaction((tx) => assignTeacher(tx, context, input.parallel_id as string, input.user_id as string, requestBoolean(input.confirm_purge)))
       return apiJson({ message: CREATED })
     })
   }
   const errors = await validateSubject(input, deps, careerId, null)
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  if (errors !== null) return validationError(errors)
   return settle(original, deps, async () => {
     await deps.transaction((tx) => insertCareerSubject(tx, context, input))
     return apiJson({ message: CREATED })
@@ -306,7 +280,7 @@ export async function updateCareerRecord(request: Request, entity: string, recor
   const careerId = context.careerId
   if (!(await deps.subjectInCareer(recordId, careerId))) return forbidden()
   const errors = await validateSubject(input, deps, careerId, recordId)
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  if (errors !== null) return validationError(errors)
   const confirmed = requestBoolean(input.confirm_purge)
   const attributes = subjectAttributes(input)
   return settle(original, deps, async () => {
@@ -344,19 +318,11 @@ export async function createParallels(request: Request, deps: CareerWriteDeps = 
       .filter((code) => code !== "")
     input.codes = Object.fromEntries(codes.map((code, index) => [String(index), code]))
   }
-  const errors = await validateInput(
+  const { errors } = await validateSchema(
+    parallelsSchema({ subjectExists: (value) => deps.activeSubjectInCareer(String(value), careerId), userExists: (value) => deps.eligibleUserExists(String(value)) }),
     input,
-    {
-      subject_id: ["required", "uuid", { exists: (value) => deps.activeSubjectInCareer(String(value), careerId) }],
-      codes: ["required", "array", { min: 1 }, { max: 50 }],
-      "codes.*": ["required", "string", { max: 30 }, "distinct"],
-      shift: ["required", "string", { in: SHIFTS }],
-      user_id: ["required", "uuid", { exists: (value) => deps.eligibleUserExists(String(value)) }],
-    },
-    { subject_id: "materia", codes: "códigos de paralelo", "codes.*": "código de paralelo", shift: "jornada", user_id: "usuario" },
-    { messages: { "user_id.required": "Seleccione el docente del paralelo.", "user_id.exists": "Elija un docente activo con el correo verificado." } },
   )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  if (errors !== null) return validationError(errors)
   const confirmed = requestBoolean(input.confirm_purge)
   const codes = Object.values(input.codes as PhpArray).map((code) => phpTrim(code as string))
   return settle(original, deps, async () => {
@@ -384,12 +350,8 @@ export async function updateParallel(request: Request, parallelId: string, deps:
   if (ready instanceof Response) return ready
   const { context, input } = ready
   if (typeof input.code === "string") input.code = phpTrim(input.code)
-  const errors = await validateInput(
-    input,
-    { code: ["required", "string", { max: 30 }], shift: ["required", "string", { in: SHIFTS }], confirm_purge: ["nullable", "boolean"] },
-    { code: "código de paralelo", shift: "jornada", confirm_purge: "confirmación de borrado" },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(parallelSchema, input)
+  if (errors !== null) return validationError(errors)
   const confirmed = requestBoolean(input.confirm_purge)
   const code = phpTrim(input.code as string)
   return settle(original, deps, async () => {
@@ -421,12 +383,8 @@ export async function replaceParallelTeacher(request: Request, parallelId: strin
   const ready = await prepared(request, deps)
   if (ready instanceof Response) return ready
   const { context, input } = ready
-  const errors = await validateInput(
-    input,
-    { user_id: ["required", "uuid"], confirm_purge: ["nullable", "boolean"] },
-    { user_id: "docente", confirm_purge: "confirmación de borrado" },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(parallelTeacherSchema, input)
+  if (errors !== null) return validationError(errors)
   const confirmed = requestBoolean(input.confirm_purge)
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {

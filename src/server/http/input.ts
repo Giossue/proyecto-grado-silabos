@@ -131,3 +131,12 @@ export async function requestInput(request: Request): Promise<PhpArray> {
 export function phpCount(value: PhpArray): number {
   return Object.keys(value).length
 }
+
+export function inputValue(input: PhpValue | undefined, path: string): PhpValue | undefined {
+  let current: PhpValue | undefined = input
+  for (const segment of path.split(".")) {
+    if (!isPhpArray(current) || !Object.prototype.hasOwnProperty.call(current, segment)) return undefined
+    current = current[segment]
+  }
+  return current
+}

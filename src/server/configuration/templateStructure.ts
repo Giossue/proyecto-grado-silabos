@@ -9,9 +9,11 @@ import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { aborted, apiJson, serverError, validationError } from "../http/responses"
 import { uuid7 } from "../http/uuid7"
-import { validateInput, type Rule } from "../http/validation"
+import { isBlank } from "@/schemas/rules"
+import { fieldOrderSchema, sectionOrderSchema, sectionSchema, templateFieldSchema } from "@/schemas/template"
+import { validateSchema } from "../http/schemaValidation"
 import { phpIdentical, phpShape, phpString, phpTrim, type PhpRecord } from "./phpValues"
-import { contentForField, KEY_PATTERN, phpIntCast, RESPONSIBLES, toRuntime } from "./templateDraft"
+import { contentForField, phpIntCast, toRuntime } from "./templateDraft"
 import { boundTemplate, FORBIDDEN, managesTemplates, type TemplateReadDeps } from "./templateReads"
 import { normalizeFieldDocument, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import type { SyllabusTemplate } from "./templatePresentation"
@@ -53,16 +55,6 @@ export function defaultStructureDeps(): StructureDeps {
 }
 
 const INVALID_ORDER = "El nuevo orden no es válido. Recargue la página e intente otra vez."
-const SECTION_ATTRIBUTES = { title: "título", orientation: "orientación", position: "posición", key: "código de referencia" }
-const FIELD_ATTRIBUTES = {
-  quien_llena: "quién lo llena",
-  content: "contenido",
-  label: "título",
-  key: "clave",
-  type: "tipo retirado",
-  config: "configuración retirada",
-  position: "posición",
-}
 
 class Rejected extends Error {
   constructor(readonly response: Response) {
@@ -138,22 +130,8 @@ async function write(original: Request, deps: StructureDeps, work: (tx: Structur
   }
 }
 
-function sectionRules(template: SyllabusTemplate | null): Record<string, Rule[]> {
-  const rules: Record<string, Rule[]> = {
-    title: ["required", "string", { max: 180 }],
-    orientation: ["sometimes", { in: ["portrait", "landscape"] }],
-    position: ["sometimes", "integer", { min: 1 }],
-  }
-  if (template !== null) {
-    rules.key = [
-      "required",
-      "string",
-      { regex: KEY_PATTERN },
-      { max: 100 },
-      { fails: (value) => (template.sections.some((section) => section.key === value) ? ["La clave ya está siendo utilizada por otra sección."] : []) },
-    ]
-  }
-  return rules
+function sectionKeys(template: SyllabusTemplate | null): string[] | null {
+  return template === null ? null : template.sections.map((section) => section.key)
 }
 
 function requestedPosition(input: PhpArray, count: number): number {
@@ -166,8 +144,8 @@ export async function storeSection(request: Request, templateId: string, deps: S
   if (auth instanceof Response) return auth
   const input = await jsonInput(request)
   if (input instanceof Response) return input
-  const errors = await validateInput(input, sectionRules(auth.template), SECTION_ATTRIBUTES)
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(sectionSchema(sectionKeys(auth.template)), input)
+  if (errors !== null) return validationError(errors)
   let sectionId = ""
   return write(auth.original, deps, async (tx) => {
     const template = await locked(tx, auth.template.id)
@@ -199,8 +177,8 @@ export async function updateSection(request: Request, templateId: string, sectio
   if (auth instanceof Response) return auth
   const input = await jsonInput(request)
   if (input instanceof Response) return input
-  const errors = await validateInput(input, sectionRules(null), SECTION_ATTRIBUTES)
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(sectionSchema(null), input)
+  if (errors !== null) return validationError(errors)
   const section = auth.template.sections.find((candidate) => candidate.id === sectionId)
   if (!section) return fromController(modelNotFound(MODELS.template, sectionId))
   return write(auth.original, deps, async (tx) => {
@@ -221,23 +199,8 @@ export async function reorderSections(request: Request, templateId: string, deps
   if (auth instanceof Response) return auth
   const input = await jsonInput(request)
   if (input instanceof Response) return input
-  const errors = await validateInput(
-    input,
-    {
-      section_ids: ["required", "array", { min: 1 }],
-      "section_ids.*": [
-        "required",
-        "uuid",
-        "distinct",
-        {
-          fails: (value) =>
-            typeof value !== "string" || !auth.template.sections.some((section) => section.id === value) ? ["La sección seleccionada no pertenece a la plantilla."] : [],
-        },
-      ],
-    },
-    { section_ids: "secciones", "section_ids.*": "sección" },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(sectionOrderSchema(auth.template.sections.map((section) => section.id)), input)
+  if (errors !== null) return validationError(errors)
   const ids = Object.values(input.section_ids as PhpArray).filter((id): id is string => typeof id === "string")
   return write(auth.original, deps, async (tx) => {
     const template = await locked(tx, auth.template.id)
@@ -265,17 +228,14 @@ export async function destroySection(request: Request, templateId: string, secti
   })
 }
 
-function contentRule(definition: TemplateDefinition): Rule {
-  return {
-    aborts: (value, attribute) => {
-      try {
-        normalizeFieldDocument(value, definition, attribute)
-        return null
-      } catch (error) {
-        if (error instanceof TemplateValidationError) return error.errors
-        throw error
-      }
-    },
+function contentErrors(content: PhpValue | undefined, definition: TemplateDefinition, checked: boolean): Record<string, string[]> | null {
+  if (!checked) return null
+  try {
+    normalizeFieldDocument(content, definition, "content")
+    return null
+  } catch (error) {
+    if (error instanceof TemplateValidationError) return error.errors
+    throw error
   }
 }
 
@@ -288,20 +248,10 @@ export async function storeField(request: Request, templateId: string, sectionId
   if (auth instanceof Response) return auth
   const input = await jsonInput(request)
   if (input instanceof Response) return input
-  const errors = await validateInput(
-    input,
-    {
-      label: ["nullable", "string", { max: 180 }],
-      quien_llena: ["required", { in: RESPONSIBLES }],
-      content: ["required", "array", contentRule(auth.definition)],
-      type: ["prohibited"],
-      config: ["prohibited"],
-      position: ["sometimes", "integer", { min: 1 }],
-      key: ["required", "string", { regex: KEY_PATTERN }, { max: 100 }, { unique: async (value) => !(await deps.structure.liveKeyTaken(auth.template.id, phpString(value))) }],
-    },
-    FIELD_ATTRIBUTES,
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const errors =
+    contentErrors(input.content, auth.definition, !isBlank(input.content)) ??
+    (await validateSchema(templateFieldSchema({ creating: true, keyAvailable: async (value) => !(await deps.structure.liveKeyTaken(auth.template.id, phpString(value as PhpValue))) }), input)).errors
+  if (errors !== null) return validationError(errors)
   if (!auth.template.sections.some((section) => section.id === sectionId)) return fromController(modelNotFound(MODELS.template, sectionId))
   return write(auth.original, deps, async (tx) => {
     const template = await locked(tx, auth.template.id)
@@ -342,18 +292,8 @@ export async function updateField(request: Request, templateId: string, fieldId:
   const field = auth.field as FieldRecord
   const input = await jsonInput(request)
   if (input instanceof Response) return input
-  const errors = await validateInput(
-    input,
-    {
-      label: ["nullable", "string", { max: 180 }],
-      quien_llena: ["sometimes", { in: RESPONSIBLES }],
-      content: ["sometimes", "array", contentRule(auth.definition)],
-      type: ["prohibited"],
-      config: ["prohibited"],
-    },
-    FIELD_ATTRIBUTES,
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const errors = contentErrors(input.content, auth.definition, input.content !== undefined) ?? (await validateSchema(templateFieldSchema({ creating: false }), input)).errors
+  if (errors !== null) return validationError(errors)
   if (field.templateId !== auth.template.id) return fromController(aborted(404))
   return write(auth.original, deps, async (tx) => {
     const template = await locked(tx, auth.template.id)
@@ -382,12 +322,8 @@ export async function reorderFields(request: Request, templateId: string, sectio
   if (auth instanceof Response) return auth
   const input = await jsonInput(request)
   if (input instanceof Response) return input
-  const errors = await validateInput(
-    input,
-    { field_ids: ["required", "array", { min: 1 }], "field_ids.*": ["required", "uuid", "distinct"] },
-    { field_ids: "campos", "field_ids.*": "campo" },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(fieldOrderSchema, input)
+  if (errors !== null) return validationError(errors)
   if (!auth.template.sections.some((section) => section.id === sectionId)) return fromController(modelNotFound(MODELS.template, sectionId))
   const ids = Object.values(input.field_ids as PhpArray).filter((id): id is string => typeof id === "string")
   const blockIds = await deps.structure.liveFieldBlocks(auth.template.id, ids)

@@ -5,11 +5,11 @@ import { isPhpArray, phpQuery, type PhpArray, type PhpValue } from "../http/inpu
 import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
 import { queryParams, requestUrl } from "../http/request"
 import { jsonError, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { validateSchema } from "../http/schemaValidation"
+import { libraryReviewFiltersSchema, REVIEW_OUTCOMES, REVIEW_STATES } from "@/schemas/library"
 import { createLibraryReviewRepository } from "./reviewQueries"
 
-export const REVIEW_STATES = ["pendiente", "atendido"]
-export const REVIEW_OUTCOMES = ["firmado", "devuelto", "reemplazado"]
+export { REVIEW_OUTCOMES, REVIEW_STATES }
 
 export type ReviewPeriod = "actual" | "terminado"
 
@@ -66,7 +66,7 @@ export function defaultLibraryReviewDeps(): LibraryReviewDeps {
 }
 
 function exists(deps: LibraryReviewDeps, table: "facultades" | "periodos_academicos") {
-  return async (value: PhpValue) => {
+  return async (value: unknown) => {
     const values = isPhpArray(value) ? Object.values(value) : [value]
     if (values.some((item) => typeof item !== "string" || !UUID.test(item))) throw new QueryFailed()
     const distinct = [...new Set(values as string[])]
@@ -81,24 +81,14 @@ export async function authorizeListing(request: Request, deps: LibraryReviewDeps
   if (session instanceof Response) return session
   if (session.activeRole?.role !== "bibliotecario") return apiJson({ message: "No tiene permiso para hacer esto." }, 403)
   const input = phpQuery(new URL(request.url))
-  let errors: Record<string, string[]>
+  let errors: Record<string, string[]> | null
   try {
-    errors = await validateInput(
-      input,
-      {
-        state: ["nullable", "string", { in: [...REVIEW_STATES, ...REVIEW_OUTCOMES] }],
-        q: ["nullable", "string", { max: 120 }],
-        faculty: ["nullable", "uuid", { exists: exists(deps, "facultades") }],
-        period: ["nullable", "uuid", { exists: exists(deps, "periodos_academicos") }],
-        mine: ["nullable", "boolean"],
-      },
-      { faculty: "facultad", period: "período", mine: "solo los míos", state: "estado", q: "búsqueda" },
-    )
+    errors = (await validateSchema(libraryReviewFiltersSchema((table) => exists(deps, table)), input)).errors
   } catch (error) {
     if (error instanceof QueryFailed) return jsonError(500, "Server Error")
     throw error
   }
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  if (errors !== null) return validationError(errors)
   return { session, input }
 }
 

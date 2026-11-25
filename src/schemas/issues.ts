@@ -5,7 +5,8 @@ export type FieldErrors = Record<string, string[]>
 export function fieldErrors(issues: readonly z.core.$ZodIssue[], order: readonly string[] = []): FieldErrors {
   const errors: FieldErrors = {}
   const rank = (issue: z.core.$ZodIssue) => {
-    const index = order.indexOf(String(issue.path[0]))
+    const explicit = order.indexOf(issue.path.map(String).join("."))
+    const index = explicit !== -1 || issue.path.length !== 1 ? explicit : order.indexOf(String(issue.path[0]))
     return index === -1 ? order.length : index
   }
   const sorted = order.length === 0 ? issues : [...issues].sort((left, right) => rank(left) - rank(right))
@@ -18,6 +19,8 @@ export function fieldErrors(issues: readonly z.core.$ZodIssue[], order: readonly
 }
 
 export function shapeOrder(schema: z.ZodType): string[] {
+  const declared = schema.meta()?.errorOrder
+  if (Array.isArray(declared)) return declared.map(String)
   const shape = (schema as { shape?: Record<string, unknown> }).shape
   return typeof shape === "object" && shape !== null ? Object.keys(shape) : []
 }

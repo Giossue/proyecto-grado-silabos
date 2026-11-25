@@ -1,5 +1,5 @@
 import { isList, isPhpArray, isRecord, phpTrim, mbStrlen, type PhpRecord } from "./phpValues"
-import { phpIsNumeric } from "../http/validation"
+import { phpIsNumeric } from "@/schemas/php"
 import { TemplateValidationError } from "./templateRuntime"
 
 const PAPERS = ["letter", "a4", "legal"]

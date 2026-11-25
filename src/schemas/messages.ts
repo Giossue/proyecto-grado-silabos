@@ -1,4 +1,4 @@
-type SizeType = "string" | "numeric" | "array"
+export type SizeType = "string" | "numeric" | "array"
 
 const SIZES = {
   min: {
@@ -57,6 +57,7 @@ export const messages = {
   unique: (attribute: string) => `El valor del campo ${attribute} ya está en uso.`,
   regex: (attribute: string) => `El formato del campo ${attribute} no es válido.`,
   url: (attribute: string) => `El campo ${attribute} debe ser una URL válida.`,
+  date: (attribute: string) => `El campo ${attribute} debe ser una fecha válida.`,
   email: (attribute: string) => `El campo ${attribute} debe ser un correo electrónico válido.`,
   requiredIf: (attribute: string, other: string, value: string) => `El campo ${attribute} es obligatorio cuando ${other} sea ${value}.`,
   requiredUnless: (attribute: string, other: string, values: string) => `El campo ${attribute} es obligatorio a menos que ${other} esté en ${values}.`,

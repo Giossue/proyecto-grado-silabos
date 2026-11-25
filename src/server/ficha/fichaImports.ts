@@ -16,7 +16,7 @@ import type { UploadedFile } from "../files/uploads"
 import { phpJsonEncode } from "../http/phpJson"
 import { jsonError, apiJson, validationError } from "../http/responses"
 import { sharedRateLimiter } from "../http/throttle"
-import type { Rule } from "../http/validation"
+import { fichaApplySchema } from "@/schemas/imports"
 import type { PhpArray, PhpValue } from "../http/input"
 import { requestBoolean } from "../syllabus/inProgressWork"
 import { Rejected, settle } from "../syllabus/reviewDecisions"
@@ -58,7 +58,6 @@ export function defaultFichaImportDeps(): FichaImportDeps {
 
 const CAREER_MODEL = "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
 const CONVOCATION_LOCK = "Convocatoria activa"
-const HASH = /^[a-f0-9]{64}$/
 const NO_BLOCKS = { document: {}, variables: {}, blocks: {} } as unknown as TemplateDefinition
 
 const FICHA_FILE: ImportFileRules = {
@@ -191,7 +190,7 @@ export async function previewFichaImport(request: Request, deps: FichaImportDeps
   const ready = await importSession(request, deps, 20)
   if (ready instanceof Response) return ready
   const { session, finish } = ready
-  const read = await readUpload(request, FICHA_FILE, {}, {})
+  const read = await readUpload(request, FICHA_FILE)
   if ("errors" in read) return finish(validationError(read.errors))
   try {
     const preview = await previewWorkbook(read.upload.file, session, deps)
@@ -203,42 +202,6 @@ export async function previewFichaImport(request: Request, deps: FichaImportDeps
   }
 }
 
-function hashRules(label: string): Rule[] {
-  return [
-    "required",
-    "string",
-    {
-      fails: (value: PhpValue) => {
-        const size = Array.isArray(value) || (typeof value === "object" && value !== null) ? Object.keys(value).length : [...(value === true ? "1" : value === false || value === null ? "" : String(value))].length
-        return size === 64 ? [] : [`El campo ${label} debe tener 64 caracteres.`]
-      },
-    },
-    { regex: HASH },
-  ]
-}
-
-const APPLY_RULES: Record<string, Rule[]> = {
-  fingerprint: hashRules("estructura de la plantilla"),
-  file_hash: hashRules("archivo revisado"),
-  confirm_purge: ["sometimes", "boolean"],
-  subjects: ["required", "array", { min: 1 }, { max: 100 }],
-  "subjects.*": ["uuid", "distinct"],
-  fields: ["sometimes", "array"],
-  "fields.*": ["array"],
-  "fields.*.*": ["string", { max: 100 }],
-}
-
-const APPLY_LABELS: Record<string, string> = {
-  file: "archivo Excel",
-  fingerprint: "estructura de la plantilla",
-  file_hash: "archivo revisado",
-  confirm_purge: "confirmación de borrado",
-  subjects: "materias",
-  "subjects.*": "materia",
-  fields: "campos",
-  "fields.*": "campos de la materia",
-  "fields.*.*": "campo",
-}
 
 function stringsOf(value: unknown): string[] {
   if (Array.isArray(value)) return value.map((item) => String(item))
@@ -324,7 +287,7 @@ export async function applyFichaImport(request: Request, deps: FichaImportDeps =
   const ready = await importSession(request, deps, 20)
   if (ready instanceof Response) return ready
   const { session, original, finish } = ready
-  const read = await readUpload(request, FICHA_FILE, APPLY_RULES, APPLY_LABELS)
+  const read = await readUpload(request, FICHA_FILE, fichaApplySchema)
   if ("errors" in read) return finish(validationError(read.errors))
   const { input, file } = read.upload
   const subjectIds = stringsOf(input.subjects)

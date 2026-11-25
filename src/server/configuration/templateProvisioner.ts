@@ -5,7 +5,8 @@ import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { requestInput } from "../http/input"
 import { apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { officialFormatSchema } from "@/schemas/template"
+import { validateSchema } from "../http/schemaValidation"
 import { uuid7 } from "../http/uuid7"
 import { requestBoolean } from "../syllabus/inProgressWork"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
@@ -102,8 +103,8 @@ export async function createTemplate(request: Request, deps: ProvisionDeps): Pro
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!managesTemplates(session)) return apiJson({ message: FORBIDDEN }, 403)
-  const errors = await validateInput(input, { official: ["sometimes", "boolean"] }, { official: "formato oficial" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(officialFormatSchema, input)
+  if (errors !== null) return validationError(errors)
   const isOfficial = requestBoolean(input.official)
   const locked = await processLock(deps)
   if (locked !== null) return locked
@@ -187,3 +188,5 @@ export async function importTemplateJson(request: Request, templateId: string, d
     return apiJson({ message: "Plantilla importada desde el JSON." })
   })
 }
+
+export { buildStructure }

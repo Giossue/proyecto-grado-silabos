@@ -6,7 +6,9 @@ import type { BridgeDeps, AppSession, SessionRequirements } from "../auth/types"
 import { phpQuery, type PhpValue } from "../http/input"
 import { apiJson, validationError } from "../http/responses"
 import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
-import { phpFilterInt, validateInput } from "../http/validation"
+import { phpFilterInt } from "@/schemas/php"
+import { catalogSearchSchema } from "@/schemas/library"
+import { validateSchema } from "../http/schemaValidation"
 import { CATALOG_FIELDS, CatalogUnavailable, createCatalog, pageMeta, type BibliographicCatalog, type CatalogSettings, type KohaFetch } from "./catalog"
 import { kohaFetch } from "./kohaHttp"
 
@@ -104,16 +106,8 @@ export async function searchCatalog(request: Request, deps: CatalogDeps = defaul
   if (authorized instanceof Response) return authorized
   const { session, finish } = authorized
   const input = phpQuery(new URL(request.url))
-  const errors = await validateInput(
-    input,
-    {
-      field: ["required", "string", { in: CATALOG_FIELDS }],
-      q: ["required", "string", { min: 2 }, { max: TERM_CHARACTERS }],
-      page: ["nullable", "integer", { min: 1 }, { max: 100 }],
-    },
-    { field: "campo de búsqueda", q: "texto a buscar", page: "página" },
-  )
-  if (Object.keys(errors).length > 0) return finish(validationError(errors))
+  const { errors } = await validateSchema(catalogSearchSchema(CATALOG_FIELDS, TERM_CHARACTERS), input)
+  if (errors !== null) return finish(validationError(errors))
   const careerId = session.activeRole?.careerId ?? null
   const libraries = careerId === null ? [] : await deps.facultyLibraries(careerId)
   try {

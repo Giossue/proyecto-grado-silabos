@@ -3,7 +3,8 @@ import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { requestInput } from "../http/input"
 import { apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { screenHelpSchema } from "@/schemas/operations"
+import { validateSchema } from "../http/schemaValidation"
 import catalog from "./screenHelpCatalog.json"
 
 type HelpText = { title: string; content: string }
@@ -12,7 +13,6 @@ type ScreenHelp = { screen: string } & HelpText
 export type ScreenHelpDeps = { bridge: BridgeDeps }
 
 const HELP: Record<string, HelpText> = catalog
-const SCREEN = /^\/[a-z0-9/:_-]*$/
 const ROLE_PREFIXES: Record<string, string> = {
   administrador: "/admin",
   coordinador: "/coordinacion",
@@ -39,8 +39,8 @@ export async function showScreenHelp(request: Request, deps: ScreenHelpDeps = de
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   const input = await requestInput(request)
-  const errors = await validateInput(input, { screen: ["required", "string", { max: 160 }, { regex: SCREEN }] }, { screen: "pantalla" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(screenHelpSchema, input)
+  if (errors !== null) return validationError(errors)
   return apiJson({ help: helpForScreen(String(input.screen)) })
 }
 

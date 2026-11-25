@@ -4,7 +4,8 @@ import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput } from "../http/input"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { convocationSchema } from "@/schemas/syllabus"
+import { validateSchema } from "../http/schemaValidation"
 import { notificationDate, storeInternalNotifications, type NotificationScope } from "../notifications/store"
 import type { ConvocationRecord } from "./convocations"
 import type { GenerateOptions } from "./inProgressWork"
@@ -87,8 +88,8 @@ export async function createConvocation(request: Request, deps: ConvocationWrite
   if (session instanceof Response) return session
   if (!isCoordinatorOf(session, null)) return forbidden()
   const input = await requestInput(request)
-  const errors = await validateInput(input, { process_id: ["required", "uuid", { exists: (value) => deps.openProcessExists(String(value)) }] }, { process_id: "proceso" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(convocationSchema((value) => deps.openProcessExists(String(value))), input)
+  if (errors !== null) return validationError(errors)
   const processId = input.process_id as string
   const careerId = session.activeRole!.careerId as string
   return settle(original, deps, async () => {

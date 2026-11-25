@@ -1,12 +1,13 @@
 import "server-only"
-import { carbonInstant, institutionDateOfValue, passesDateRule } from "../http/phpDates"
+import { carbonInstant, institutionDateOfValue } from "../http/phpDates"
 import { HttpFailure, Missing } from "../http/failures"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { mergeErrors, type Rule, validateInput } from "../http/validation"
+import { processCreationSchema, redoConfirmationSchema } from "@/schemas/syllabus"
+import { mergeErrors, validateSchema } from "../http/schemaValidation"
 import { list, phpString } from "../configuration/phpValues"
 import { normalizeFieldDocument, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
@@ -189,8 +190,8 @@ export async function pauseProcess(request: Request, id: string, deps: ProcessDe
   if (bound instanceof Response) return bound
   const { session, process } = bound
   if (!hasRole(session, ROLE_ADMINISTRATOR) || process.state !== PROCESS_OPEN) return forbidden()
-  const errors = await validateInput(await requestInput(request), { confirmar_rehacer: ["sometimes", "boolean"] }, { confirmar_rehacer: "confirmación para rehacer los sílabos" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(redoConfirmationSchema, await requestInput(request))
+  if (errors !== null) return validationError(errors)
   try {
     await deps.processes.transaction(async (tx) => {
       const state = await tx.lockProcess(process.id)
@@ -207,7 +208,6 @@ export async function pauseProcess(request: Request, id: string, deps: ProcessDe
 }
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
-const CREATE_ATTRIBUTES = { period_id: "periodo académico", starts_at: "fecha de inicio", due_at: "fecha límite" }
 const DUE_MESSAGE = "La fecha de entrega debe ser posterior al inicio y a hoy."
 
 function institutionTimezone(): string {
@@ -253,8 +253,6 @@ function eloquentMoment(value: PhpValue | undefined): string {
   return value as string
 }
 
-const DATE_RULE: Rule = { check: (value) => passesDateRule(value), message: "El campo :attribute debe ser una fecha válida." }
-
 class CreateRejected extends Error {
   constructor(readonly errors: Record<string, string[]>) {
     super("rejected")
@@ -262,15 +260,7 @@ class CreateRejected extends Error {
 }
 
 async function createValidation(input: PhpArray, deps: ProcessDeps): Promise<Record<string, string[]>> {
-  const errors = await validateInput(
-    input,
-    {
-      period_id: ["required", "uuid", { exists: async (value) => typeof value === "string" && (await deps.processes.periodEndsOn(value)) !== null }],
-      starts_at: ["required", DATE_RULE],
-      due_at: ["required", DATE_RULE],
-    },
-    CREATE_ATTRIBUTES,
-  )
+  const errors = (await validateSchema(processCreationSchema(async (value) => typeof value === "string" && (await deps.processes.periodEndsOn(value)) !== null), input)).errors ?? {}
   const today = deps.today()
   const startsOn = dayOf(input.starts_at)
   const dueOn = dayOf(input.due_at)

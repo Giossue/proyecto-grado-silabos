@@ -1,5 +1,6 @@
 import { phpJsonEncode } from "../http/phpJson"
-import { validateInput, type Rule } from "../http/validation"
+import { FIELD_LIMIT_INVALID, KEY_PATTERN, RESPONSIBLES, templateDraftSchema } from "@/schemas/template"
+import { validateSchema } from "../http/schemaValidation"
 import { isList, isPhpArray, isRecord, list, phpCount, phpIntCast, phpString, phpTrim, record, type PhpRecord } from "./phpValues"
 import {
   CAREER,
@@ -19,48 +20,12 @@ import { documentFromHtml } from "./documentHtml"
 import { DEFINITION_KEYS, defineTemplate, listLimitsOf, withBlocks, withListLimits } from "./templateDefinition"
 
 export const FORMAT_VERSION = 2
-export const RESPONSIBLES = [CAREER, INSTITUTIONAL]
-export const KEY_PATTERN = /^[a-z][a-z0-9_]*$/
-export const FIELD_LIMIT_INVALID = "El límite de caracteres debe ser un número entero entre 1 y 50 000."
+export { FIELD_LIMIT_INVALID, KEY_PATTERN, RESPONSIBLES }
 const FIELD_LIMIT_ONLY_CAREER = "Solo un campo editable (Carrera) puede tener límite de caracteres."
 const ROOT_KEYS = DEFINITION_KEYS
 const SOURCE_KINDS = ["una", "varias"]
 const INSTITUTIONAL_RESPONSES = "Un campo Institucional no lleva tipos de respuesta. Cambie quién lo llena o quite la respuesta."
 
-const ATTRIBUTES: Record<string, string> = {
-  version: "versión",
-  title: "título del documento",
-  layout: "diseño",
-  "layout.margin_cm": "margen",
-  "layout.title_font_size": "tamaño del título",
-  "layout.section_font_size": "tamaño de las secciones",
-  "layout.body_font_size": "tamaño del contenido",
-  lists: "listas",
-  "lists.*.block": "bloque de la lista",
-  "lists.*.path": "lista",
-  "lists.*.min": "mínimo",
-  "lists.*.max": "máximo",
-  "lists.*.initial": "al empezar",
-  block_changes: "tablas cambiadas",
-  document: "documento",
-  variables: "datos del sistema",
-  blocks: "bloques",
-  response_policy: "política de respuestas",
-  required_sections: "secciones obligatorias",
-  library_sections: "secciones de biblioteca",
-  presets: "plantillas listas",
-  sections: "secciones",
-  "sections.*.key": "clave de la sección",
-  "sections.*.title": "título de la sección",
-  "sections.*.orientation": "orientación",
-  "sections.*.fields": "campos",
-  "sections.*.fields.*.key": "clave del campo",
-  "sections.*.fields.*.label": "nombre del campo",
-  "sections.*.fields.*.quien_llena": "quién lo llena",
-  "sections.*.fields.*.content": "contenido",
-  "sections.*.fields.*.show_if": "mostrar solo si",
-  "sections.*.fields.*.max_length": "límite de caracteres",
-}
 
 export type DraftProblem = { path: string; message: string; blocking: boolean }
 
@@ -361,42 +326,14 @@ export class DraftRequest {
     }
   }
 
-  rules(): Record<string, Rule[]> {
+  schema() {
     const choices = record(this.current.document.choices)
-    const allowed = (key: string) => list(choices[key]).map((value) => phpString(value))
-    return {
-      version: ["required", "integer", { in: ["1", String(FORMAT_VERSION)] }],
-      title: ["sometimes", "nullable", "string", { max: 180 }],
-      layout: ["sometimes", "array"],
-      "layout.margin_cm": ["sometimes", "numeric", { in: allowed("margin_cm") }],
-      "layout.title_font_size": ["sometimes", "integer", { in: allowed("title") }],
-      "layout.section_font_size": ["sometimes", "integer", { in: allowed("section") }],
-      "layout.body_font_size": ["sometimes", "integer", { in: allowed("body") }],
-      lists: ["sometimes", "array", { max: 20 }],
-      "lists.*.block": ["required", "string", { max: 40 }],
-      "lists.*.path": ["required", "string", { max: 200 }],
-      "lists.*.min": ["required", "integer", { min: 0 }, { max: 100 }],
-      "lists.*.max": ["required", "integer", { min: 1 }, { max: 100 }],
-      "lists.*.initial": ["required", "integer", { min: 0 }, { max: 100 }],
-      block_changes: ["sometimes", "array", { max: 20 }],
-      ...Object.fromEntries(ROOT_KEYS.map((key): [string, Rule[]] => [key, ["sometimes", "array"]])),
-      response_policy: ["sometimes", { in: ["protected"] }],
-      sections: ["present", "array", { max: 60 }],
-      "sections.*.key": ["required", "string", { regex: KEY_PATTERN }, { max: 100 }, "distinct"],
-      "sections.*.title": ["required", "string", { max: 180 }],
-      "sections.*.orientation": ["sometimes", { in: ["portrait", "landscape"] }],
-      "sections.*.fields": ["sometimes", "array", { max: 60 }],
-      "sections.*.fields.*.key": ["required", "string", { regex: KEY_PATTERN }, { max: 100 }, { fails: (value) => this.uniqueFieldKey(value) }],
-      "sections.*.fields.*.label": ["nullable", "string", { max: 180 }],
-      "sections.*.fields.*.quien_llena": ["required", { in: RESPONSIBLES }],
-      "sections.*.fields.*.show_if": ["sometimes", "nullable", "array"],
-      "sections.*.fields.*.max_length": [
-        "sometimes",
-        "nullable",
-        { fails: (value) => (typeof value !== "number" || !Number.isInteger(value) || value < FIELD_LIMIT_MIN || value > FIELD_LIMIT_MAX ? [FIELD_LIMIT_INVALID] : []) },
-      ],
-      "sections.*.fields.*.content": ["required", { fails: (value, attribute) => this.content(value, attribute) }],
-    }
+    return templateDraftSchema({
+      formatVersion: FORMAT_VERSION,
+      choices: (key) => list(choices[key]).map((value) => phpString(value)),
+      repeatedFieldKey: (value) => this.uniqueFieldKey(value),
+      contentFailures: (value, attribute) => this.content(value, attribute),
+    })
   }
 
   private conditionFields(definition: TemplateDefinition): ConditionField[] {
@@ -420,7 +357,7 @@ export class DraftRequest {
   }
 
   async errors(): Promise<Record<string, string[]>> {
-    const errors = await validateInput(this.input as never, this.rules(), ATTRIBUTES)
+    const errors = (await validateSchema(this.schema(), this.input)).errors ?? {}
     const add = (key: string, message: string) => {
       const messages = errors[key] ?? []
       if (!messages.includes(message)) errors[key] = [...messages, message]

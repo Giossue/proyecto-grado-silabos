@@ -6,7 +6,9 @@ import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray } from "../http/input"
 import { expectsJson } from "../http/request"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput, type Rule } from "../http/validation"
+import type { z } from "zod"
+import { lockVersionSchema, submissionSchema } from "@/schemas/syllabus"
+import { validateSchema } from "../http/schemaValidation"
 import { uuid7 } from "../http/uuid7"
 import { isPhpArray, list, phpIntCast, record, type PhpRecord } from "../configuration/phpValues"
 import { scheduleWorkflowNotification, type NotificationScope } from "../notifications/store"
@@ -93,7 +95,6 @@ const TEACHER = "docente"
 const SUBMIT_STATES = ["borrador", "correccion_solicitada", "en_revision"]
 const EDITABLE = ["borrador", "correccion_solicitada"]
 const CONFLICT = "El borrador cambió en otra sesión. Recarga antes de continuar."
-const ATTRIBUTES = { version_bloqueo: "versión de edición", idempotency_key: "identificador de la solicitud", signature: "firma electrónica" }
 
 class Rejected extends Error {
   constructor(readonly response: Response) {
@@ -199,9 +200,9 @@ async function sent(request: Request, session: AppSession, syllabusId: string, n
   return apiJson({ message: `Revisión ${number} enviada.`, syllabus: await deps.payload(request, session, syllabusId) })
 }
 
-async function versionInput(request: Request, rules: Record<string, Rule[]>): Promise<{ input: PhpArray; errors: Record<string, string[]> }> {
+async function versionInput(request: Request, schema: z.ZodType): Promise<{ input: PhpArray; errors: Record<string, string[]> | null }> {
   const input: PhpArray = await requestInput(request)
-  return { input, errors: await validateInput(input, rules, ATTRIBUTES) }
+  return { input, errors: (await validateSchema(schema, input)).errors }
 }
 
 export async function submissionStatement(request: Request, syllabusId: string, deps: SubmissionDeps = defaultSubmissionDeps()): Promise<Response> {
@@ -209,8 +210,8 @@ export async function submissionStatement(request: Request, syllabusId: string, 
   const auth = await bound(original, syllabusId, deps)
   if (auth instanceof Response) return auth
   if (!maySubmit(auth.session, auth.syllabus)) return forbidden()
-  const { input, errors } = await versionInput(request, { version_bloqueo: ["required", "integer", { min: 0 }] })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { input, errors } = await versionInput(request, lockVersionSchema)
+  if (errors !== null) return validationError(errors)
   return settled(original, deps, async () => {
     await assertSubmittable(original, auth.syllabus, phpIntCast(input.version_bloqueo), deps)
     const snapshot = await deps.store.snapshot(auth.syllabus.id)
@@ -227,12 +228,8 @@ export async function submitSyllabus(request: Request, syllabusId: string, deps:
   if (auth instanceof Response) return auth
   const { session, syllabus } = auth
   if (!maySubmit(session, syllabus)) return forbidden()
-  const { input, errors } = await versionInput(request, {
-    version_bloqueo: ["required", "integer", { min: 0 }],
-    idempotency_key: ["required", "uuid"],
-    signature: ["nullable", "array"],
-  })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { input, errors } = await versionInput(request, submissionSchema)
+  if (errors !== null) return validationError(errors)
   const expected = phpIntCast(input.version_bloqueo)
   const key = input.idempotency_key as string
   return settled(original, deps, async () => {

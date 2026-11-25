@@ -45,8 +45,8 @@ export function useSchemaForm<S extends z.ZodType<FieldValues, FieldValues>>(
   return useForm<z.input<S>, unknown, z.output<S>>({ criteriaMode: "all", reValidateMode: "onSubmit", ...options, resolver: schemaResolver(schema) })
 }
 
-export function errorMessages(error: FieldError | undefined): string[] | undefined {
-  if (error === undefined) return undefined
+export function errorMessages(error: unknown): string[] | undefined {
+  if (!isFieldError(error)) return undefined
   const typed = error.types ? Object.values(error.types).flatMap((value) => (Array.isArray(value) ? value.map(String) : typeof value === "string" ? [value] : [])) : []
   const list = typed.length > 0 ? typed : error.message ? [error.message] : []
   return list.length > 0 ? [...new Set(list)] : undefined

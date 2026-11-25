@@ -6,7 +6,8 @@ import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray } from "../http/input"
 import { expectsJson } from "../http/request"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { lockVersionSchema } from "@/schemas/syllabus"
+import { validateSchema } from "../http/schemaValidation"
 import { createLogoStore, type LogoStore } from "../configuration/institutionalLogos"
 import { phpShape, type PhpRecord } from "../configuration/phpValues"
 import { profileTemplates } from "../configuration/subjectProfileFields"
@@ -166,8 +167,8 @@ export async function copySyllabusContent(request: Request, syllabusId: string, 
   const allowed = syllabus.state === "sin_iniciar" ? mayStart(session, syllabus, today) : mayEdit(session, syllabus, today)
   if (!allowed || !mayView(session, source)) return forbidden()
   const input = toRuntime(await requestInput(request)) as PhpArray
-  const errors = await validateInput(input, { version_bloqueo: ["required", "integer", { min: 0 }] }, { version_bloqueo: "versión de edición" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(lockVersionSchema, input)
+  if (errors !== null) return validationError(errors)
   const lockVersion = phpIntCast(input.version_bloqueo)
   return run(original, async () => {
       const payload = await deps.transaction(async (tx) => {

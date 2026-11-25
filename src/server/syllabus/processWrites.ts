@@ -1,11 +1,11 @@
 import "server-only"
-import { passesDateRule } from "../http/phpDates"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput, type PhpValue } from "../http/input"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { deadlineExtensionSchema, processDeletionSchema, redoConfirmationSchema } from "@/schemas/syllabus"
+import { validateSchema } from "../http/schemaValidation"
 import { notificationDate, storeInternalNotifications, type NotificationScope } from "../notifications/store"
 import { notifyConvocationResumed, timestampMs } from "./convocationWrites"
 import { hasRole, ROLE_ADMINISTRATOR } from "./policy"
@@ -72,7 +72,6 @@ export function defaultProcessWriteDeps(): ProcessWriteDeps {
 }
 
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
-const ASK_MESSAGE = "Escriba el mensaje para docentes, coordinación y biblioteca."
 const WRONG_STATE = "El proceso no está en un estado que admita esta acción."
 const PAUSE_TEMPLATE_CHANGED =
   "La plantilla cambió durante la pausa. Confirme para adaptar los sílabos del período: se conserva lo escrito y los enviados o aprobados vuelven a borrador."
@@ -111,13 +110,8 @@ export async function deleteProcess(request: Request, id: string, deps: ProcessW
   const { session, process } = bound
   if (!hasRole(session, ROLE_ADMINISTRATOR) || !["abierto", "pausado"].includes(process.state)) return forbidden()
   const input = await requestInput(request)
-  const errors = await validateInput(
-    input,
-    { mensaje: ["required", "string", { max: 1000 }] },
-    { mensaje: "mensaje para docentes, coordinación y biblioteca" },
-    { messages: { "mensaje.required": ASK_MESSAGE, "mensaje.string": ASK_MESSAGE, "mensaje.max": "El mensaje no puede pasar de 1000 caracteres." } },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(processDeletionSchema, input)
+  if (errors !== null) return validationError(errors)
   const notice = (input.mensaje as string).replace(PHP_TRIM, "")
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
@@ -175,8 +169,8 @@ export async function resumeProcess(request: Request, id: string, deps: ProcessW
   const { session, process } = bound
   if (!hasRole(session, ROLE_ADMINISTRATOR) || process.state !== "pausado") return forbidden()
   const input = await requestInput(request)
-  const errors = await validateInput(input, { confirmar_rehacer: ["sometimes", "boolean"] }, { confirmar_rehacer: "confirmación para rehacer los sílabos" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(redoConfirmationSchema, input)
+  if (errors !== null) return validationError(errors)
   return settle(original, deps, async () => {
     const confirmation = await deps.transaction(async (tx) => {
       const locked = await tx.lockProcess(process.id)
@@ -219,13 +213,8 @@ export async function extendProcessDeadline(request: Request, id: string, deps: 
   if (!hasRole(session, ROLE_ADMINISTRATOR)) return forbidden()
   const input = await requestInput(request)
   input.due_at = processDay(input.due_at, false) as PhpValue
-  const errors = await validateInput(
-    input,
-    { stage: ["prohibited"], due_at: ["required", { check: (value) => passesDateRule(value), message: "El campo :attribute debe ser una fecha válida." }], confirmar_rehacer: ["sometimes", "boolean"], confirmar_cambios: ["sometimes", "boolean"] },
-    { stage: "etapa", due_at: "fecha límite", confirmar_rehacer: "confirmación para rehacer los sílabos", confirmar_cambios: "confirmación para aplicar los cambios pendientes" },
-    { messages: { "stage.prohibited": "La prórroga solo modifica la fecha límite de entrega." } },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(deadlineExtensionSchema, input)
+  if (errors !== null) return validationError(errors)
   const requested = processInstant(input.due_at)
   const requestedOn = institutionDayOf(requested)
   return settle(original, deps, async () => {

@@ -5,7 +5,10 @@ import { clientExtension, isMultipart, multipartInput, postMaxSize, postTooLarge
 import { isJsonRequest, requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { validationError } from "../http/responses"
 import { throttle, type RateLimiter, type Throttle } from "../http/throttle"
-import { mergeErrors, validateInput, type Rule } from "../http/validation"
+import type { z } from "zod"
+import { fieldFailures, is } from "@/schemas/fields"
+import { spreadsheetOptionsSchema } from "@/schemas/imports"
+import { mergeErrors, validateSchema } from "../http/schemaValidation"
 import { requestBoolean } from "../syllabus/inProgressWork"
 import { readImportRows, SpreadsheetRejected, type ImportColumns, type ImportRow } from "./spreadsheetReader"
 
@@ -63,14 +66,10 @@ function fileErrors(value: PhpValue | UploadedFile | undefined, rules: ImportFil
     max: rules.messages.max ?? `El campo ${label} no debe pesar más de ${rules.maxKilobytes} kilobytes.`,
   }
   if (!isUploadedFile(value)) {
-    return validateInput({ file: (value ?? null) as PhpValue }, {
-      file: [
-        "required",
-        { check: () => false, message: messages.file },
-        { check: () => false, message: messages.mimes },
-        { max: rules.maxKilobytes },
-      ],
-    }, { file: label }, { messages: Object.fromEntries(Object.entries({ "file.required": rules.messages.required, "file.max": rules.messages.max }).filter(([, text]) => text !== undefined)) as Record<string, string> }).then((errors) => errors.file ?? [])
+    return fieldFailures(value ?? null, label, [is.satisfying(() => false, messages.file), is.satisfying(() => false, messages.mimes), is.max(rules.maxKilobytes, rules.messages.max)], {
+      required: true,
+      requiredMessage: messages.required,
+    })
   }
   const errors: string[] = []
   const extension = clientExtension(value.originalName).trim().toLowerCase()
@@ -82,8 +81,7 @@ function fileErrors(value: PhpValue | UploadedFile | undefined, rules: ImportFil
 export async function readUpload(
   request: Request,
   rules: ImportFileRules,
-  extra: Record<string, Rule[]> = {},
-  labels: Record<string, string> = {},
+  extra: z.ZodType | null = null,
 ): Promise<{ upload: ImportUpload } | { errors: Record<string, string[]> }> {
   let input: PhpArray
   let value: PhpValue | UploadedFile | undefined
@@ -98,14 +96,14 @@ export async function readUpload(
   const errors: Record<string, string[]> = {}
   const problems = await fileErrors(value, rules)
   if (problems.length > 0) mergeErrors(errors, "file", problems)
-  const others = await validateInput(input, extra, labels)
-  for (const [attribute, messages] of Object.entries(others)) mergeErrors(errors, attribute, messages)
+  const others = extra === null ? null : (await validateSchema(extra, input)).errors
+  for (const [attribute, messages] of Object.entries(others ?? {})) mergeErrors(errors, attribute, messages)
   if (Object.keys(errors).length > 0) return { errors }
   return { upload: { file: value as UploadedFile, confirm: requestBoolean(input.confirm), input } }
 }
 
 export async function spreadsheetUpload(request: Request): Promise<ImportUpload | Response> {
-  const read = await readUpload(request, SPREADSHEET_FILE, { confirm: ["sometimes", "boolean"] }, { confirm: "confirmación" })
+  const read = await readUpload(request, SPREADSHEET_FILE, spreadsheetOptionsSchema)
   return "errors" in read ? validationError(read.errors) : read.upload
 }
 

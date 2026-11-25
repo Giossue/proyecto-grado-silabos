@@ -1,7 +1,7 @@
 import { unitFromText } from "../academic/structureImports"
 import { isPhpArray, isScalar, list, phpString, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
 import { isDocument } from "../configuration/templateRuntime"
-import { phpIsNumeric } from "../http/validation"
+import { phpIsNumeric } from "@/schemas/php"
 
 const EMPTY_DOCUMENT: PhpRecord = { type: "doc", content: [{ type: "paragraph" }] }
 const CARD_WIDTHS = [23.0, 10.5, 6.0, 4.5, 8.0, 4.0, 17.5, 13.5, 13.0]

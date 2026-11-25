@@ -4,7 +4,9 @@ import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { requestInput, type PhpArray } from "../http/input"
 import { apiJson, validationError } from "../http/responses"
-import { validateInput, type Rule } from "../http/validation"
+import type { z } from "zod"
+import { curriculumConfigurationSchema, requirementSchema, subjectLayoutSchema } from "@/schemas/academic"
+import { validateSchema } from "../http/schemaValidation"
 import { requestBoolean } from "../syllabus/inProgressWork"
 import { Missing, settle } from "../syllabus/reviewDecisions"
 import { careerSession, invalid, type CareerContext } from "./careerWrites"
@@ -52,8 +54,7 @@ async function curriculumChange(
   request: Request,
   ids: string[],
   deps: CurriculumDeps,
-  rules: (input: PhpArray) => Record<string, Rule[]>,
-  labels: Record<string, string>,
+  schema: ((input: PhpArray) => z.ZodType) | null,
   mutate: Mutation,
 ): Promise<Response> {
   const original = request.clone()
@@ -61,8 +62,8 @@ async function curriculumChange(
   const context = await careerSession(request.clone(), deps.bridge, deps.careerActive)
   if (context instanceof Response) return context
   const input = await requestInput(request)
-  const errors = await validateInput(input, rules(input), labels)
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const errors = schema === null ? null : (await validateSchema(schema(input), input)).errors
+  if (errors !== null) return validationError(errors)
   return settle(original, deps, async () => {
     const message = await deps.transaction((tx) => curriculumMutation(tx, context, ids[0], input, mutate))
     return apiJson({ message })
@@ -78,8 +79,7 @@ export function updateCurriculumConfiguration(request: Request, curriculumId: st
     request,
     [curriculumId],
     deps,
-    () => ({ cycle_count: ["required", "integer", { min: 1 }, { max: 30 }] }),
-    { cycle_count: "cantidad de ciclos" },
+    () => curriculumConfigurationSchema,
     async (tx, career, context, input) => {
       const cycleCount = phpIntCast(input.cycle_count)
       const lastUsed = (await tx.maxCycle(career.id)) ?? 0
@@ -140,22 +140,13 @@ export function createSubjectRequirement(request: Request, curriculumId: string,
     request,
     [curriculumId],
     deps,
-    (input) => ({
-      subject_id: ["required", "uuid"],
-      requirement_id: [
-        "required",
-        "uuid",
-        { fails: (value) => ("subject_id" in input && value === input.subject_id ? ["Los campos materia requisito y materia deben ser diferentes."] : []) },
-      ],
-      type: ["required", "string", { max: 30 }, { in: ["prerrequisito", "correquisito"] }],
-    }),
-    { subject_id: "materia", requirement_id: "materia requisito", type: "tipo" },
+    (input) => requirementSchema({ subjectId: input.subject_id, hasSubject: "subject_id" in input }),
     addRequirement,
   )
 }
 
 export function deleteSubjectRequirement(request: Request, curriculumId: string, requirementId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
-  return curriculumChange(request, [curriculumId, requirementId], deps, () => ({}), {}, async (tx, career, context, input) => {
+  return curriculumChange(request, [curriculumId, requirementId], deps, null, async (tx, career, context, input) => {
     const requirement = await tx.lockRequirement(requirementId, career.id)
     if (requirement === null) throw new Missing(MODELS.requirement, requirementId)
     await tx.deleteRequirement(requirement.id)
@@ -165,7 +156,7 @@ export function deleteSubjectRequirement(request: Request, curriculumId: string,
 }
 
 export function deleteCurriculumSubject(request: Request, curriculumId: string, subjectId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
-  return curriculumChange(request, [curriculumId, subjectId], deps, () => ({}), {}, async (tx, career, context, input) => {
+  return curriculumChange(request, [curriculumId, subjectId], deps, null, async (tx, career, context, input) => {
     const subject = await tx.lockSubject(subjectId, career.id)
     if (subject === null) throw new Missing(MODELS.subject, subjectId)
     const { parallels, syllabi } = await tx.subjectUsage(subject.id)
@@ -189,12 +180,7 @@ export function updateSubjectLayout(request: Request, curriculumId: string, deps
     request,
     [curriculumId],
     deps,
-    () => ({
-      subject_id: ["required", "uuid"],
-      cycle: ["required", "integer", { min: 1 }, { max: 30 }],
-      position: ["required", "integer", { min: 0 }, { max: 999 }],
-    }),
-    { subject_id: "materia", cycle: "ciclo", position: "posición" },
+    () => subjectLayoutSchema,
     async (tx, career, context, input) => {
       const cycle = phpIntCast(input.cycle)
       if (cycle > career.cycleCount) throw invalid("cycle", "El ciclo excede la configuración de la malla.")

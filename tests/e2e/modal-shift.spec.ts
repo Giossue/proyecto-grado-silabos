@@ -8,6 +8,7 @@ type ModalCase = {
   open: (page: Page) => Promise<Locator>
   close: (page: Page, modal: Locator) => Promise<void>
   widths?: number[]
+  ready?: (page: Page) => Promise<void>
 }
 
 const isNarrow = (page: Page): boolean => (page.viewportSize()?.width ?? 1440) < 640
@@ -118,6 +119,9 @@ const cases: ModalCase[] = [
     name: "mobile filter sheet",
     path: "/admin/usuarios",
     widths: [600],
+    ready: async (page) => {
+      await expect(page.locator("main table").first()).toBeVisible()
+    },
     open: async (page) => {
       await page.getByRole("button", { name: "Filtros", exact: true }).click()
       return page.getByRole("group", { name: "Filtros de la tabla" })
@@ -140,6 +144,7 @@ for (const width of [1440, 600]) {
         await page.goto(modalCase.path)
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
         await page.waitForLoadState("networkidle")
+        await modalCase.ready?.(page)
         const before = await anchorX(page)
         const modal = await modalCase.open(page)
         await expect(modal).toBeVisible()

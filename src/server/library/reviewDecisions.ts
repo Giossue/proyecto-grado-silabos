@@ -4,8 +4,10 @@ import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray } from "../http/input"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
-import { isPhpArray, list } from "../configuration/phpValues"
+import { validateSchema } from "../http/schemaValidation"
+import { LIBRARY_COMMENT_REASONS, libraryCommentSchema, OTHER_REASON } from "@/schemas/library"
+import { signatureSchema } from "@/schemas/signature"
+import { list } from "../configuration/phpValues"
 import { scheduleWorkflowNotification, type NotificationScope } from "../notifications/store"
 import { SignatureRejected, signatureSettings, type SignatureSettings } from "../signatures/cmsVerifier"
 import { decisionSignatureFrom } from "../signatures/decisionSignature"
@@ -49,15 +51,8 @@ export function defaultLibraryDecisionDeps(): LibraryDecisionDeps {
 }
 
 const LIBRARY = "biblioteca"
-const OTHER = "otro"
-export const LIBRARY_COMMENT_REASONS: Record<string, string> = {
-  libro_no_disponible: "El libro no está disponible en biblioteca",
-  codigo_incorrecto: "El código del libro es incorrecto",
-  isbn_incorrecto: "El ISBN es incorrecto",
-  edicion_desactualizada: "La edición está desactualizada",
-  datos_incompletos: "Los datos de la obra están incompletos",
-  [OTHER]: "Otro motivo",
-}
+const OTHER = OTHER_REASON
+export { LIBRARY_COMMENT_REASONS }
 
 type Bound = { session: AppSession; revision: ReviewRevision; syllabus: DetailSyllabus }
 
@@ -114,8 +109,8 @@ export async function verifyLibraryReview(request: Request, revisionId: string, 
   const { session, revision, syllabus } = bound
   if (!hasRole(session, ROLE_LIBRARIAN)) return forbidden()
   const input: PhpArray = await requestInput(request)
-  const errors = await validateInput(input, { signature: ["nullable", "array"] }, { signature: "firma electrónica" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(signatureSchema, input)
+  if (errors !== null) return validationError(errors)
   return signedSettle(original, deps, async () => {
     const signature = decisionSignatureFrom(input.signature)
     if (!mayReview(session, syllabus) || decisionBlock(syllabus) !== null) return aborted(403)
@@ -156,27 +151,8 @@ export async function commentLibraryReview(request: Request, revisionId: string,
   const block = decisionBlock(syllabus)
   if (block !== null) return blockedDecision(block)
   const input: PhpArray = await requestInput(request)
-  const reasons = input.reasons
-  const otherRequired = (isPhpArray(reasons) ? list(reasons) : reasons === undefined || reasons === null ? [] : [reasons]).includes(OTHER)
-  const errors = await validateInput(
-    input,
-    {
-      reasons: ["required", "array", { min: 1 }],
-      "reasons.*": ["string", "distinct", { in: Object.keys(LIBRARY_COMMENT_REASONS) }],
-      other: [...(otherRequired ? (["required"] as const) : []), "nullable", "string", { min: 5 }, { max: 1000 }],
-    },
-    { reasons: "motivos", "reasons.*": "motivo", other: "otro motivo" },
-    {
-      messages: {
-        "reasons.required": "Elija al menos un motivo.",
-        "reasons.min": "Elija al menos un motivo.",
-        "reasons.*.in": "El motivo elegido no es válido.",
-        "other.required": "Escriba el otro motivo.",
-        "other.min": "Escriba el otro motivo con al menos 5 caracteres.",
-      },
-    },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(libraryCommentSchema, input)
+  if (errors !== null) return validationError(errors)
   const justification = commentText(list(input.reasons) as string[], typeof input.other === "string" ? input.other : null)
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {

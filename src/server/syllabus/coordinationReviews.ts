@@ -2,11 +2,12 @@ import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { phpQuery, type PhpArray, type PhpValue } from "../http/input"
+import { phpQuery, type PhpArray } from "../http/input"
 import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
 import { queryParams, requestUrl } from "../http/request"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { reviewHistorySchema, reviewSearchSchema } from "@/schemas/syllabus"
+import { validateSchema } from "../http/schemaValidation"
 import { hasRole, mayView, ROLE_COORDINATOR, type SyllabusFacts } from "./policy"
 import { revisionDiff } from "./revisionDiff"
 import { createCoordinationReviewRepository } from "./coordinationReviewQueries"
@@ -85,8 +86,8 @@ export async function coordinationReviews(request: Request, deps: CoordinationRe
   const session = await coordinator(request, deps)
   if (session instanceof Response) return session
   const input = phpQuery(new URL(request.url))
-  const errors = await validateInput(input, { search: ["nullable", "string", { max: 120 }] }, { search: "búsqueda" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(reviewSearchSchema, input)
+  if (errors !== null) return validationError(errors)
   const search = (typeof input.search === "string" ? input.search : "").replace(PHP_TRIM, "")
   const page = currentPage(request)
   const { total, items } = await deps.reviews.reviewPage({ careerId: session.activeRole?.careerId ?? null, search }, page, PER_PAGE)
@@ -110,15 +111,8 @@ export async function coordinationHistory(request: Request, deps: CoordinationRe
   const session = await coordinator(request, deps)
   if (session instanceof Response) return session
   const input: PhpArray = phpQuery(new URL(request.url))
-  const errors = await validateInput(
-    input,
-    {
-      q: ["nullable", "string", { max: 120 }],
-      period: ["nullable", "uuid", { exists: (value: PhpValue) => deps.reviews.periodExists(String(value)) }],
-    },
-    { q: "búsqueda", period: "período" },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(reviewHistorySchema((value) => deps.reviews.periodExists(String(value))), input)
+  if (errors !== null) return validationError(errors)
   const careerId = session.activeRole?.careerId ?? null
   if (typeof careerId !== "string") return aborted(403)
   const search = typeof input.q === "string" ? input.q.replace(PHP_TRIM, "") : ""

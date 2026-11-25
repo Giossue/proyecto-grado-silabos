@@ -4,7 +4,8 @@ import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { AppSession } from "../auth/types"
 import { requestInput, type PhpArray } from "../http/input"
 import { jsonError, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { subjectProfileValuesSchema } from "@/schemas/imports"
+import { validateSchema } from "../http/schemaValidation"
 import { requestBoolean } from "../syllabus/inProgressWork"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { isPhpArray, phpEquals, type PhpRecord } from "./phpValues"
@@ -87,12 +88,8 @@ export async function updateSubjectProfile(request: Request, subjectId: string, 
   if (session instanceof Response) return session
   if (careerId === null) return modelNotFound(MODELS.subject, subjectId)
   const input = await requestInput(request)
-  const errors = await validateInput(
-    input,
-    { values: ["present", "array"], "values.*": ["nullable", "array"] },
-    { values: "datos del proyecto de carrera", "values.*": "dato del proyecto de carrera" },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(subjectProfileValuesSchema, input)
+  if (errors !== null) return validationError(errors)
   const context = await writableProfileContext(deps.store)
   const allowed = new Set(profileFields(context).map((field) => field.id))
   const values = input.values as PhpArray

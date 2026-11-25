@@ -3,7 +3,8 @@ import { aborted } from "../http/responses"
 import { fromController } from "../auth/controllerResponse"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
-import { phpIsNumeric } from "../http/validation"
+import { phpIsNumeric } from "@/schemas/php"
+import { CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES } from "@/schemas/academic"
 import { phpFloat } from "../http/phpJson"
 import { apiJson } from "../http/responses"
 import { createAcademicStructureRepository } from "./structureQueries"
@@ -13,13 +14,7 @@ export const FORBIDDEN = "No tiene permiso para hacer esto."
 export const CONVOCATION_LOCK_REASON = "Convocatoria activa"
 const UUID = /^[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}$/
 
-export const STUDY_MODALITIES = ["Presencial", "Semipresencial", "En línea", "A distancia", "Híbrida"]
-export const CURRICULAR_UNITS: Record<string, string> = {
-  basica: "Unidad básica",
-  profesional: "Unidad profesional",
-  integracion_curricular: "Unidad de integración curricular",
-}
-export const SHIFTS = ["matutina", "vespertina", "nocturna"]
+export { CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES }
 
 const FIXED_FIELDS = [
   { key: "acd", label: "ACD", type: "entero", system_key: "horas_ac", position: 1, totalizable: true },

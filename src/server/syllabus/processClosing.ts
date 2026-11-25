@@ -5,7 +5,8 @@ import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput } from "../http/input"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { redoConfirmationSchema } from "@/schemas/syllabus"
+import { validateSchema } from "../http/schemaValidation"
 import { isRecord, type PhpRecord } from "../configuration/phpValues"
 import { hasRole, PROCESS_OPEN, PROCESS_PAUSED, ROLE_ADMINISTRATOR } from "./policy"
 import type { ProcessRepository, ProcessRow } from "./processes"
@@ -68,8 +69,8 @@ export async function closeProcess(request: Request, id: string, deps: ClosingDe
   if (bound instanceof Response) return bound
   const { session, process } = bound
   if (!hasRole(session, ROLE_ADMINISTRATOR) || !CLOSABLE.includes(process.state)) return forbidden()
-  const errors = await validateInput(await requestInput(request), { confirmar_rehacer: ["sometimes", "boolean"] }, { confirmar_rehacer: "confirmación para rehacer los sílabos" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(redoConfirmationSchema, await requestInput(request))
+  if (errors !== null) return validationError(errors)
   try {
     await deps.transaction(async (tx) => {
       const state = await tx.lockProcess(process.id)

@@ -2,8 +2,9 @@ import { execFileSync } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
 import { accounts } from "./support/accounts"
+import { userName } from "./support/db"
 import { expect, test, watchPage } from "./support/fixtures"
-import { fillBibliography, fillIdentification, fillOutcomes, fillPlanning, fillRichText, openCoordinationReview, openSection, approvedRevisionOf, openTrackedReview, stampCount, openTeacherSyllabus, restartFromReview, settleAutosave, teacherListItem, signWith, submitSyllabus, trackAutosave } from "./support/syllabus"
+import { addTeacherParallel, regenerateCareerSyllabi, fillBibliography, fillIdentification, fillOutcomes, fillPlanning, fillRichText, openCoordinationReview, openSection, approvedRevisionOf, openTrackedReview, stampCount, openTeacherSyllabus, restartFromReview, settleAutosave, teacherListItem, signWith, submitSyllabus, trackAutosave } from "./support/syllabus"
 
 const subject = "Cálculo III"
 
@@ -235,7 +236,14 @@ test.describe.serial("syllabus lifecycle", () => {
       .filter({ hasNot: page.getByText("Paralelo: A", { exact: true }) })
       .filter({ hasText: /Sin iniciar|Borrador/ })
       .first()
-    await expect(target, "the coordination spec creates a Cálculo III parallel for this teacher").toBeVisible()
+    await expect(teacherListItem(page, subject)).toBeVisible()
+    if (!(await target.isVisible())) {
+      const coordinator = await actor("coordinator")
+      await addTeacherParallel(coordinator, subject, await userName(accounts.teacher.email))
+      await regenerateCareerSyllabi(coordinator)
+      await page.reload()
+    }
+    await expect(target).toBeVisible()
     await target.getByRole("heading", { name: subject, exact: true }).click()
     await page.getByRole("button", { name: "Copiar desde paralelo A" }).click()
     const dialog = page.getByRole("dialog", { name: "¿Copiar desde el paralelo A?" })

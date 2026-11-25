@@ -1,4 +1,3 @@
-import { useCallback, useMemo, useRef, useState } from "react"
 import { ApiError, api } from "@/api/client"
 import { requestPurgeConfirmation } from "@/composables/usePurgeConfirmation"
 
@@ -98,94 +97,7 @@ export const visitApi = async (url: string, options: ApiVisitOptions = {}): Prom
   }
 }
 
-type FormDataShape = Record<string, unknown>
 type FormOptions = Omit<ApiVisitOptions, "method" | "data">
-
-export type ApiForm<T extends FormDataShape> = T & {
-  processing: boolean
-  errors: ApiErrors
-  data: () => T
-  setData: <K extends keyof T>(key: K, value: T[K]) => void
-  clearErrors: (...keys: string[]) => void
-  reset: (...keys: (keyof T)[]) => void
-  transform: (callback: (data: T) => Record<string, unknown>) => void
-  post: (url: string, options?: FormOptions) => void
-  patch: (url: string, options?: FormOptions) => void
-  delete: (url: string, options?: FormOptions) => void
-}
-
-export const useApiForm = <T extends FormDataShape>(initial: T): ApiForm<T> => {
-  const [defaults] = useState(() => structuredClone(initial))
-  const [values, setValues] = useState<T>(() => structuredClone(initial))
-  const [processing, setProcessing] = useState(false)
-  const [errors, setErrors] = useState<ApiErrors>({})
-  const transformer = useRef<((data: T) => Record<string, unknown>) | null>(null)
-  const latest = useRef(values)
-
-  const setData = useCallback(<K extends keyof T>(key: K, value: T[K]): void => {
-    latest.current = { ...latest.current, [key]: value }
-    setValues(latest.current)
-  }, [])
-
-  const clearErrors = useCallback((...keys: string[]): void => {
-    if (keys.length === 0) {
-      setErrors({})
-      return
-    }
-    setErrors((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !keys.includes(key))))
-  }, [])
-
-  const reset = useCallback(
-    (...keys: (keyof T)[]): void => {
-      const targets = keys.length > 0 ? keys : (Object.keys(defaults) as (keyof T)[])
-      const next = { ...latest.current }
-      for (const key of targets) next[key] = structuredClone(defaults[key])
-      latest.current = next
-      setValues(next)
-      setErrors({})
-    },
-    [defaults],
-  )
-
-  const submit = useCallback((method: string, url: string, options: FormOptions = {}): void => {
-    setProcessing(true)
-    setErrors({})
-    const payload = transformer.current ? transformer.current(latest.current) : latest.current
-    void visitApi(url, {
-      ...options,
-      method,
-      data: payload,
-      onError: (failed) => {
-        setErrors(failed)
-        options.onError?.(failed)
-      },
-      onFinish: () => {
-        setProcessing(false)
-        options.onFinish?.()
-      },
-    })
-  }, [])
-
-  return useMemo(
-    () =>
-      ({
-        ...values,
-        processing,
-        errors,
-        data: () => latest.current,
-        setData,
-        clearErrors,
-        reset,
-        transform: (callback: (data: T) => Record<string, unknown>) => {
-          transformer.current = callback
-        },
-        post: (url: string, options?: FormOptions) => submit("POST", url, options),
-        patch: (url: string, options?: FormOptions) => submit("PATCH", url, options),
-        delete: (url: string, options?: FormOptions) => submit("DELETE", url, options),
-      }) as ApiForm<T>,
-    [values, processing, errors, setData, clearErrors, reset, submit],
-  )
-}
 
 export const apiRouter = {
   post: (url: string, data: Record<string, unknown>, options?: FormOptions) => void visitApi(url, { ...options, method: "POST", data }),

@@ -3,7 +3,7 @@
 import { ArrowLeft, CheckCheck, FileSignature, FileText, GitCompareArrows, Highlighter, History, MoreHorizontal, RotateCcw, Undo2 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ApiError } from "@/api/client"
 import { approveReview, compareReviews, getReview, requestCorrection, reviewStageLabel, type ReviewDetail } from "@/api/reviews"
 import { IconTooltip } from "@/components/domain/IconTooltip"
@@ -30,6 +30,8 @@ import { goBack } from "@/lib/goBack"
 import { openRevisionPdf } from "@/lib/openPdf"
 import { reviewAreaPaths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
+import { errorMessages, useSchemaForm } from "@/lib/forms"
+import { changeRequestSchema } from "@/schemas/syllabus"
 import { useDeadline } from "@/state/deadline"
 
 const NO_CHANGES: ReadonlySet<string> = new Set()
@@ -61,9 +63,10 @@ export default function CoordinationReviewDetailPage() {
   const [correctionOpen, setCorrectionOpen] = useState(false)
   const [signOpen, setSignOpen] = useState(false)
   const [restartOpen, setRestartOpen] = useState(false)
-  const [correcting, setCorrecting] = useState(false)
-  const [correctionJustification, setCorrectionJustification] = useState("")
-  const [correctionErrors, setCorrectionErrors] = useState<string[]>([])
+  const correctionForm = useSchemaForm(changeRequestSchema, { defaultValues: { justification: "" } })
+  const correcting = correctionForm.formState.isSubmitting
+  const correctionJustification = String(correctionForm.watch("justification") ?? "")
+  const correctionErrors = errorMessages(correctionForm.formState.errors.justification) ?? []
   const [comparing, setComparing] = useState(false)
   const [highlight, setHighlight] = useState(true)
   const [currentSection, setCurrentSection] = useState<HTMLElement | null>(null)
@@ -153,15 +156,12 @@ export default function CoordinationReviewDetailPage() {
   }
 
   const openCorrection = (): void => {
-    setCorrectionErrors([])
+    correctionForm.clearErrors()
     setCorrectionOpen(true)
   }
 
-  const submitCorrection = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
+  const submitCorrection = async (): Promise<void> => {
     if (!data) return
-    setCorrecting(true)
-    setCorrectionErrors([])
     try {
       const result = await requestCorrection(data.revision.id, { justification: correctionJustification })
       setCorrectionOpen(false)
@@ -170,9 +170,8 @@ export default function CoordinationReviewDetailPage() {
       router.replace(area.reviews)
     } catch (failure) {
       const fieldErrors = failure instanceof ApiError ? [...(failure.errors.justification ?? []), ...(failure.errors.revision ?? [])] : []
-      setCorrectionErrors(fieldErrors.length ? fieldErrors : [failure instanceof ApiError ? failure.message : "No se pudo solicitar la corrección"])
-    } finally {
-      setCorrecting(false)
+      const shown = fieldErrors.length ? fieldErrors : [failure instanceof ApiError ? failure.message : "No se pudo solicitar la corrección"]
+      correctionForm.setError("justification", { type: "server", message: shown[0], types: Object.fromEntries(shown.map((text, index) => [`server${index}`, text])) })
     }
   }
 
@@ -369,7 +368,7 @@ export default function CoordinationReviewDetailPage() {
                 <DialogTitle>Solicitar corrección</DialogTitle>
                 <DialogDescription>El sílabo vuelve al docente con su comentario</DialogDescription>
               </DialogHeader>
-              <form id="correction-form" className="flex flex-col gap-4" onSubmit={(event) => void submitCorrection(event)}>
+              <form id="correction-form" className="flex flex-col gap-4" noValidate onSubmit={correctionForm.handleSubmit(submitCorrection)}>
                 <Field data-invalid={correctionErrors.length > 0}>
                   <FieldLabel htmlFor="correction-justification" required>
                     Comentario para el docente
@@ -380,7 +379,7 @@ export default function CoordinationReviewDetailPage() {
                     rows={4}
                     aria-required="true"
                     placeholder="Ej. Revise los resultados de aprendizaje de la unidad 2"
-                    onChange={(event) => setCorrectionJustification(event.target.value)}
+                    onChange={(event) => correctionForm.setValue("justification", event.target.value)}
                   />
                   <FieldError errors={correctionErrors} />
                 </Field>

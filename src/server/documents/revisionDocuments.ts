@@ -7,7 +7,8 @@ import { diskExists, diskPath } from "../http/storage"
 import { requestInput, type PhpArray } from "../http/input"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
 import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
-import { validateInput } from "../http/validation"
+import { idempotencySchema } from "@/schemas/syllabus"
+import { validateSchema } from "../http/schemaValidation"
 import { settle } from "../syllabus/reviewDecisions"
 import { ExportForbidden, ExportRejected, existingExport, requestExport, type ExportArtifactRow, type ExportRequestTx } from "./syllabusExport"
 import { mayView } from "../syllabus/policy"
@@ -189,8 +190,8 @@ export async function requestRevisionDocuments(request: Request, revisionId: str
   const { revision, syllabus } = found
   if (!mayView(session, syllabus)) return finish(forbidden())
   const input: PhpArray = await requestInput(request)
-  const errors = await validateInput(input, { idempotency_key: ["required", "uuid"] }, { idempotency_key: "identificador de la solicitud" })
-  if (Object.keys(errors).length > 0) return finish(validationError(errors))
+  const { errors } = await validateSchema(idempotencySchema, input)
+  if (errors !== null) return finish(validationError(errors))
   const key = input.idempotency_key as string
   const actor = { id: session.user.id }
   return finish(

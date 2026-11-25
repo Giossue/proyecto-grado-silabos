@@ -6,7 +6,8 @@ import { canonicalHash } from "../documents/canonicalJson"
 import { ExportForbidden, ExportRejected, existingExport, requestExport, type ExportRequestTx } from "../documents/syllabusExport"
 import { requestInput, type PhpArray } from "../http/input"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { validateSchema } from "../http/schemaValidation"
+import { signatureSchema } from "@/schemas/signature"
 import { SignatureRejected, signatureSettings, type SignatureSettings } from "../signatures/cmsVerifier"
 import { decisionSignatureFrom } from "../signatures/decisionSignature"
 import { signDecision, type SignatureTx, type Verifier } from "../signatures/signDecision"
@@ -103,8 +104,8 @@ export async function approveReview(request: Request, revisionId: string, deps: 
   const block = decisionBlock(syllabus)
   if (block !== null) return blockedDecision(block)
   const input: PhpArray = await requestInput(request)
-  const errors = await validateInput(input, { signature: ["nullable", "array"] }, { signature: "firma electrónica" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(signatureSchema, input)
+  if (errors !== null) return validationError(errors)
   return settleExport(original, deps, async () => {
     const signature = decisionSignatureFrom(input.signature)
     const settings = deps.settings()

@@ -1,12 +1,13 @@
 import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import { requestInput, type PhpArray } from "../http/input"
+import { inputValue, requestInput, type PhpArray } from "../http/input"
 import { apiJson, validationError } from "../http/responses"
-import { dataGet, validateAttributes, type Rule } from "../http/validation"
+import { excludedColumnPath, tableDesignSchema } from "@/schemas/template"
+import { validateSchema } from "../http/schemaValidation"
 import { defineBlock } from "./blockDefinition"
 import { defaultFacultyUrl, institutionUrl } from "./institutionalLogos"
-import { isPhpArray, list, phpIntCast, phpShape, phpToBool, record, type PhpRecord } from "./phpValues"
-import { blockDesigns, buildTable, COLUMN_TYPES, designWithKeys, lockedTable, readTable } from "./repeatableTable"
+import { list, phpIntCast, phpShape, phpToBool, record, type PhpRecord } from "./phpValues"
+import { blockDesigns, buildTable, designWithKeys, lockedTable, readTable } from "./repeatableTable"
 import { createTemplateLockStore } from "./templateLockQueries"
 import { documentAppearance, presentDefinition, presentSections, variableCatalog, type SyllabusTemplate } from "./templatePresentation"
 import { boundTemplate, FORBIDDEN, managesTemplates, type TemplateReadDeps } from "./templateReads"
@@ -31,52 +32,9 @@ const PROCESS_LOCK = "Proceso activo"
 const INSTITUTIONAL_NAME = "Plantilla institucional de sílabo"
 const INSTITUTION_SIZE = { width: 1012, height: 190 }
 const FACULTY_SIZE = { width: 600, height: 180 }
-const KEY_RULE: Rule = { regex: /^[a-z][a-z0-9_]{0,40}\n?$/ }
-const TEXT = { excludeUnless: "columns.*.type", equals: "text" }
-const CHOICE = { excludeUnless: "columns.*.type", equals: "choice" }
-const NUMBER = { excludeUnless: "columns.*.type", equals: "number" }
 const DESIGN_KEYS = ["kind", "label", "list", "item", "min", "max", "initial", "band", "columns", "extras"]
 const COLUMN_KEYS = ["key", "title", "type", "max_length", "multiline", "options", "maximum", "decimals", "width", "required"]
 const OPTION_KEYS = ["label", "value"]
-
-const DESIGN_MESSAGES: Record<string, string> = {
-  "columns.required": "Agregue al menos una columna.",
-  "columns.min": "Agregue al menos una columna.",
-  "columns.max": "La tabla admite hasta 24 columnas.",
-  "columns.*.title.required": "Escriba el nombre de la columna.",
-  "columns.*.options.required": "Agregue al menos una opción.",
-  "columns.*.options.min": "Agregue al menos una opción.",
-  "columns.*.options.*.label.required": "Escriba el texto de la opción.",
-  "max.gte": "El máximo de filas no puede ser menor que el mínimo.",
-  "initial.gte": "«Al empezar» debe estar entre el mínimo y el máximo.",
-  "initial.lte": "«Al empezar» debe estar entre el mínimo y el máximo.",
-}
-
-const DESIGN_ATTRIBUTES: Record<string, string> = {
-  kind: "nombre interno de la tabla",
-  new: "tabla nueva",
-  columns: "columnas",
-  "columns.*.options": "opciones",
-  "columns.*.options.*.label": "texto de la opción",
-  extras: "datos guardados de la tabla",
-  label: "título de la tabla",
-  list: "nombre interno de las filas",
-  item: "nombre de cada fila",
-  min: "mínimo de filas",
-  max: "máximo de filas",
-  initial: "filas al empezar",
-  band: "color de filas alternas",
-  "columns.*.key": "nombre interno de la columna",
-  "columns.*.title": "nombre de la columna",
-  "columns.*.type": "tipo de celda",
-  "columns.*.max_length": "máximo de caracteres",
-  "columns.*.multiline": "varias líneas",
-  "columns.*.options.*.value": "clave de la opción",
-  "columns.*.maximum": "número máximo",
-  "columns.*.decimals": "decimales",
-  "columns.*.width": "ancho",
-  "columns.*.required": "obligatoria",
-}
 
 function lockDetail(lock: TemplateLock | null): PhpRecord | null {
   return lock === null ? null : { scope: "process", period: lock.period, institutional_pause: false, delivery_on: lock.deliveryOn }
@@ -165,79 +123,34 @@ export async function templateShow(request: Request, templateId: string, deps: T
   return apiJson(phpShape(await builderProps(request, template, template.definition, deps)))
 }
 
-function normalizedLabel(label: unknown): string {
-  return typeof label === "string" ? label.replace(/\s+/gu, " ").replace(/^[ \t\n\r\0\v]+|[ \t\n\r\0\v]+$/g, "").toLowerCase() : ""
+function present(input: PhpArray, path: string): boolean {
+  return !excludedColumnPath(input, path) && inputValue(input, path) !== undefined
 }
 
-function distinctInColumn(input: PhpArray): Rule {
-  return {
-    fails: (value, attribute) => {
-      const match = /^columns\.(\d+)\.options\.(\d+)\.label$/.exec(attribute)
-      if (match === null || typeof value !== "string") return []
-      const options = dataGet(input, `columns.${match[1]}.options`)
-      const entries = isPhpArray(options) ? Object.entries(options) : options === undefined || options === null ? [] : [["0", options] as const]
-      const repeated = entries.some(([position, option]) => phpIntCast(position) < Number(match[2]) && isPhpArray(option) && normalizedLabel(record(option).label) === normalizedLabel(value))
-      return repeated ? ["La opción está repetida."] : []
-    },
-  }
-}
-
-function designRules(input: PhpArray): Record<string, Rule[]> {
-  return {
-    kind: ["required", "string", KEY_RULE],
-    new: ["sometimes", "boolean"],
-    label: ["required", "string", { max: 120 }],
-    list: ["nullable", "string", KEY_RULE],
-    item: ["required", "string", { max: 60 }],
-    min: ["required", "integer", { min: 0 }, { max: 100 }],
-    max: ["required", "integer", { min: 1 }, { max: 100 }, { compare: "gte", than: "min" }],
-    initial: ["required", "integer", { compare: "gte", than: "min" }, { compare: "lte", than: "max" }],
-    band: ["nullable", "string", { regex: /^#[0-9a-fA-F]{6}\n?$/ }],
-    columns: ["required", "array", { min: 1 }, { max: 24 }],
-    "columns.*.key": ["nullable", "string", KEY_RULE, "distinct"],
-    "columns.*.title": ["required", "string", { max: 300 }],
-    "columns.*.type": ["required", { in: COLUMN_TYPES }],
-    "columns.*.max_length": [TEXT, "required", "integer", { min: 1 }, { max: 20000 }],
-    "columns.*.multiline": [TEXT, "sometimes", "boolean"],
-    "columns.*.options": [CHOICE, "required", "array", { min: 1 }, { max: 30 }],
-    "columns.*.options.*.label": [CHOICE, "required", "string", { max: 300 }, distinctInColumn(input)],
-    "columns.*.options.*.value": [CHOICE, "nullable", "string", KEY_RULE],
-    "columns.*.maximum": [NUMBER, "required", "numeric", { compare: "gt", than: 0 }, { compare: "lt", than: 1000000000 }],
-    "columns.*.decimals": [NUMBER, "required", "integer", { min: 0 }, { max: 6 }],
-    "columns.*.width": ["nullable", "integer", { min: 20 }, { max: 1200 }],
-    "columns.*.required": ["sometimes", "boolean"],
-    extras: ["sometimes", "array"],
-  }
-}
-
-function present(input: PhpArray, path: string, excluded: Set<string>): boolean {
-  return !excluded.has(path) && dataGet(input, path) !== undefined
-}
-
-function validatedDesign(input: PhpArray, excluded: Set<string>): PhpRecord {
+function validatedDesign(input: PhpArray): PhpRecord {
   const design: PhpRecord = {}
   for (const key of DESIGN_KEYS) {
-    if (!present(input, key, excluded)) continue
+    if (!present(input, key)) continue
     if (key !== "columns") {
-      design[key] = toRuntime(dataGet(input, key))
+      design[key] = toRuntime(inputValue(input, key))
       continue
     }
-    const columns = record(dataGet(input, "columns"))
+    const columns = record(inputValue(input, "columns"))
     design.columns = Object.keys(columns).map((index) => {
       const column: PhpRecord = {}
       for (const field of COLUMN_KEYS) {
         const path = `columns.${index}.${field}`
-        if (!present(input, path, excluded)) continue
+        if (!present(input, path)) continue
         if (field !== "options") {
-          column[field] = toRuntime(dataGet(input, path))
+          column[field] = toRuntime(inputValue(input, path))
           continue
         }
-        const options = record(dataGet(input, path))
+        const options = record(inputValue(input, path))
         column.options = Object.keys(options).map((position) => {
           const option: PhpRecord = {}
           for (const name of OPTION_KEYS) {
             const optionPath = `${path}.${position}.${name}`
-            if (present(input, optionPath, excluded)) option[name] = toRuntime(dataGet(input, optionPath))
+            if (present(input, optionPath)) option[name] = toRuntime(inputValue(input, optionPath))
           }
           return option
         })
@@ -255,13 +168,13 @@ export async function designTemplateTable(request: Request, templateId: string, 
   if (bound instanceof Response) return bound
   const definition = bound.template.definition
   if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
-  const { errors, excluded } = await validateAttributes(input, designRules(input), DESIGN_ATTRIBUTES, { messages: DESIGN_MESSAGES })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(tableDesignSchema(input), input)
+  if (errors !== null) return validationError(errors)
   try {
-    const design = designWithKeys(validatedDesign(input, excluded))
+    const design = designWithKeys(validatedDesign(input)) 
     const kind = String(design.kind)
     const stored = Object.prototype.hasOwnProperty.call(definition.blocks, kind) ? record(definition.blocks[kind]) : null
-    if (phpToBool(dataGet(input, "new") ?? false) && stored !== null) return validationError({ kind: ["Ya existe una tabla con ese nombre interno."] })
+    if (phpToBool(inputValue(input, "new") ?? false) && stored !== null) return validationError({ kind: ["Ya existe una tabla con ese nombre interno."] })
     const variables = Object.keys(definition.variables)
     const locked = lockedTable(kind, stored, variables)
     if (locked !== null) return validationError({ kind: [locked] })

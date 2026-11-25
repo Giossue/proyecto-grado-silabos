@@ -7,7 +7,8 @@ import { phpQuery } from "../http/input"
 import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
 import { queryParams, requestUrl } from "../http/request"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { listingFiltersSchema } from "@/schemas/syllabus"
+import { validateSchema } from "../http/schemaValidation"
 import { CONVOCATION_OPEN, hasRole, ROLE_COORDINATOR } from "./policy"
 import { convocationName } from "./syllabusSql"
 import { phpFalsy } from "./teacherSyllabi"
@@ -73,12 +74,8 @@ export async function convocations(request: Request, deps: ConvocationDeps = def
   if (session instanceof Response) return session
   if (!hasRole(session, ROLE_COORDINATOR)) return forbidden()
   const input = phpQuery(new URL(request.url))
-  const errors = await validateInput(
-    input,
-    { q: ["nullable", "string", { max: 120 }], state: ["nullable", { in: ["all", ...CONVOCATION_STATES] }], page: ["nullable", "integer", { min: 1 }] },
-    { q: "búsqueda", state: "estado", page: "página" },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(listingFiltersSchema(CONVOCATION_STATES), input)
+  if (errors !== null) return validationError(errors)
   const search = typeof input.q === "string" ? input.q.replace(PHP_TRIM, "") : null
   const state = typeof input.state === "string" && CONVOCATION_STATES.includes(input.state) ? input.state : null
   const query = queryParams(new URL(request.url))

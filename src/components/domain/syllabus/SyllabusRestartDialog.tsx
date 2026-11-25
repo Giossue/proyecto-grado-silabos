@@ -1,7 +1,7 @@
 "use client"
 
 import { RotateCcw } from "lucide-react"
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
 import { ApiError } from "@/api/client"
 import { resetSyllabus, type ReviewDetail } from "@/api/reviews"
 import { ConfirmPhrase } from "@/components/domain/ConfirmPhrase"
@@ -11,6 +11,8 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
+import { applyApiErrors, errorMessages, useSchemaForm } from "@/lib/forms"
+import { REASON_MIN, restartSchema } from "@/schemas/syllabus"
 
 type SyllabusRestartDialogProps = {
   syllabusId: string
@@ -23,35 +25,30 @@ type SyllabusRestartDialogProps = {
 
 export function SyllabusRestartDialog({ syllabusId, subject, impact, open, onOpenChange, onSaved }: SyllabusRestartDialogProps) {
   const [isOpen, setOpen] = useModelOpen(open, onOpenChange)
-  const [reason, setReason] = useState("")
+  const form = useSchemaForm(restartSchema, { defaultValues: { reason: "" } })
+  const reason = String(form.watch("reason") ?? "")
+  const errors = form.formState.errors as Record<string, unknown>
+  const processing = form.formState.isSubmitting
   const [typedName, setTypedName] = useState("")
-  const [errors, setErrors] = useState<Record<string, string[]>>({})
-  const [processing, setProcessing] = useState(false)
   useOpened(isOpen, () => {
-    setReason("")
+    form.reset({ reason: "" })
     setTypedName("")
-    setErrors({})
   })
 
   const needsName = impact.erases_history === true
-  const ready = reason.trim().length >= 5 && (!needsName || typedName.trim() === subject.trim())
+  const ready = reason.trim().length >= REASON_MIN && (!needsName || typedName.trim() === subject.trim())
   const losses = ["Lo escrito por el docente"]
   if ((impact.signatures ?? 0) > 0) losses.push(`${impact.signatures} firma(s)`)
   if (impact.erases_history) losses.push(`${impact.revisions ?? 0} revisión(es), la aprobación y el PDF`)
 
-  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
+  const submit = async (): Promise<void> => {
     if (!ready) return
-    setProcessing(true)
-    setErrors({})
     try {
       const result = await resetSyllabus(syllabusId, reason.trim())
       setOpen(false)
       onSaved?.(result.message)
     } catch (failure) {
-      if (failure instanceof ApiError) setErrors(failure.errors)
-    } finally {
-      setProcessing(false)
+      if (failure instanceof ApiError) applyApiErrors(form.setError, failure, { fallback: failure.message })
     }
   }
 
@@ -68,16 +65,16 @@ export function SyllabusRestartDialog({ syllabusId, subject, impact, open, onOpe
           ))}
           {!impact.erases_history ? <li className="list-none text-muted-foreground">Las revisiones enviadas se conservan como historial</li> : null}
         </ul>
-        <form className="flex flex-col gap-4" onSubmit={(event) => void submit(event)}>
-          <Field data-invalid={Boolean(errors.reason)}>
+        <form className="flex flex-col gap-4" noValidate onSubmit={form.handleSubmit(submit)}>
+          <Field data-invalid={errors.reason !== undefined}>
             <FieldLabel htmlFor="restart-reason" required>
               Motivo (lo verá el docente)
             </FieldLabel>
-            <Textarea id="restart-reason" value={reason} rows={3} maxLength={500} aria-required="true" onChange={(event) => setReason(event.target.value)} />
-            <FieldError errors={errors.reason} />
+            <Textarea id="restart-reason" value={reason} rows={3} maxLength={500} aria-required="true" onChange={(event) => form.setValue("reason", event.target.value)} />
+            <FieldError errors={errorMessages(errors.reason)} />
           </Field>
           {needsName ? <ConfirmPhrase id="restart-name" phrase={subject} value={typedName} onValueChange={setTypedName} /> : null}
-          <FieldError errors={errors.syllabus} />
+          <FieldError errors={errorMessages(errors.syllabus)} />
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline">

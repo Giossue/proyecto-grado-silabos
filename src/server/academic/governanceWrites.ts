@@ -12,22 +12,17 @@ import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/
 import { storageWriter, type StorageWriter } from "../http/storageWriter"
 import { uuid7 } from "../http/uuid7"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { mergeErrors, validateInput, type Rule } from "../http/validation"
+import { CAMPUSES, careerSchema, facultySchema, periodSchema, statusSchema } from "@/schemas/academic"
+import { mergeErrors, validateSchema } from "../http/schemaValidation"
 import { GenerationRejected, requestBoolean } from "../syllabus/inProgressWork"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
-import { passesDateRule, plainDateOf } from "../http/phpDates"
+import { plainDateOf } from "../http/phpDates"
 import { createGovernanceWriteDeps } from "./governanceWriteStore"
-import { CONVOCATION_LOCK_REASON, STUDY_MODALITIES } from "./structure"
+import { CONVOCATION_LOCK_REASON } from "./structure"
 import type { StoredObjectInput } from "./supportDocumentWrites"
 import { unmatchedRoute } from "../http/router"
 
-export const CAMPUSES = [
-  "Campus Matriz Dr. Gabriel Galarza López",
-  "Campus Laguacoto",
-  "Campus CENI (Centro de Eventos Nacionales e Internacionales)",
-  "Extensión San Miguel",
-  "Sede Chimbo",
-]
+export { CAMPUSES }
 
 export type FacultyRow = { id: string; name: string; campus: string; libraries: string | null }
 export type CareerRow = { id: string; facultyId: string; code: string; name: string; modality: string | null }
@@ -123,12 +118,6 @@ function decodeLibraries(input: PhpArray): void {
   } catch {}
 }
 
-const LIBRARY = /^[A-Za-z0-9_-]{1,20}$/
-const LIBRARY_RULES: Record<string, Rule[]> = {
-  catalog_libraries: ["sometimes", "array", { max: 20 }],
-  "catalog_libraries.*": ["string", "distinct", { regex: LIBRARY }],
-}
-
 function logoOf(body: GovernanceBody): PhpValue | UploadedFile | undefined {
   return body.files.logo !== undefined ? body.files.logo : body.input.logo
 }
@@ -140,13 +129,6 @@ export function defaultGovernanceWriteDeps(): GovernanceWriteDeps {
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/
 const END_BEFORE_START = "La fecha de fin debe ser igual o posterior a la fecha de inicio."
-
-function validDay(value: string): boolean {
-  const match = DATE_ONLY.exec(value)
-  if (!match) return false
-  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
-  return date.getUTCFullYear() === Number(match[1]) && date.getUTCMonth() === Number(match[2]) - 1 && date.getUTCDate() === Number(match[3])
-}
 
 function dayNumber(day: string): number {
   return Date.parse(`${day}T00:00:00Z`) / 86_400_000
@@ -165,14 +147,6 @@ export function periodLabel(startsOn: string, endsOn: string): string {
   const [endYear, endMonth] = endsOn.split("-").map(Number)
   const year = startYear === endYear ? String(startYear) : `${startYear}-${endYear}`
   return `${MONTHS[startMonth - 1]}-${MONTHS[endMonth - 1]} ${year}`
-}
-
-function dateRule(): Rule {
-  return { fails: (value) => (passesDateRule(value) ? [] : ["El campo :attribute debe ser una fecha válida."]) }
-}
-
-function labelled(errors: Record<string, string[]>, labels: Record<string, string>): Record<string, string[]> {
-  return Object.fromEntries(Object.entries(errors).map(([key, messages]) => [key, messages.map((message) => message.replace(":attribute", labels[key] ?? key))]))
 }
 
 export function phpIntCast(value: PhpValue | undefined): number {
@@ -195,28 +169,10 @@ function periodAfter(errors: Record<string, string[]>, input: PhpArray, creating
   if (phpIntCast(input.teaching_weeks ?? 0) > weeks) mergeErrors(errors, "teaching_weeks", [`Las semanas de clase no pueden superar las ${weeks} semanas entre las fechas.`])
 }
 
-const PERIOD_LABELS = { starts_on: "fecha de inicio", ends_on: "fecha de fin", teaching_weeks: "teaching weeks", confirm_purge: "confirmación de borrado" }
-const CAREER_LABELS = { faculty_id: "facultad", modality: "modalidad", code: "código", nombre: "nombre", cycle_count: "cantidad de ciclos", confirm_purge: "confirmación de borrado" }
-const FACULTY_LABELS = { nombre: "nombre", campus: "campus", catalog_libraries: "catalog libraries", confirm_purge: "confirmación de borrado" }
 
 async function validatePeriod(input: PhpArray, creating: boolean): Promise<Record<string, string[]>> {
   for (const key of ["starts_on", "ends_on"]) if (typeof input[key] === "string" || typeof input[key] === "number") input[key] = plainDateOf(input[key]) as PhpValue
-  const rules: Record<string, Rule[]> = {
-    starts_on: ["required", dateRule()],
-    ends_on: ["required", dateRule()],
-    teaching_weeks: ["nullable", "integer", { min: 1 }, { max: 52 }],
-  }
-  if (!creating) {
-    rules.ends_on.push({
-      fails: (value) => {
-        const start = input.starts_on
-        if (typeof value !== "string" || typeof start !== "string" || !validDay(start) || !validDay(value)) return []
-        return value >= start ? [] : ["El campo :attribute debe ser una fecha posterior o igual a fecha de inicio."]
-      },
-    })
-    rules.confirm_purge = ["nullable", "boolean"]
-  }
-  const errors = labelled(await validateInput(input, rules, PERIOD_LABELS), PERIOD_LABELS)
+  const errors = (await validateSchema(periodSchema({ startsOn: input.starts_on, creating }), input)).errors ?? {}
   periodAfter(errors, input, creating)
   return errors
 }
@@ -257,25 +213,17 @@ export async function createGovernanceRecord(request: Request, entity: string, d
   try {
     if (entity === "facultad") {
       decodeLibraries(input)
-      errors = labelled(await validateInput(input, { nombre: ["required", "string", { max: 180 }], campus: ["required", { in: CAMPUSES }], ...LIBRARY_RULES }, FACULTY_LABELS), FACULTY_LABELS)
+      errors = (await validateSchema(facultySchema({ updating: false }), input)).errors ?? {}
       const logo = logoErrors(logoOf(body), "logotipo", true)
       if (logo.length > 0) errors.logo = logo
     } else if (entity === "carrera") {
-      errors = labelled(
-        await validateInput(
-          input,
-          {
-            faculty_id: ["required", "uuid", { exists: (value) => deps.activeFacultyExists(String(value)) }],
-            modality: ["required", "string", { in: STUDY_MODALITIES }],
-            code: ["required", "string", { max: 80 }, { unique: async (value) => !(await deps.careerCodeTaken(String(value), null)) }],
-            nombre: ["required", "string", { max: 180 }],
-            cycle_count: ["required", "integer", { min: 1 }, { max: 30 }],
-          },
-          CAREER_LABELS,
-          { messages: { "code.unique": "Ya existe una carrera con ese código." } },
-        ),
-        CAREER_LABELS,
-      )
+      errors =
+        (
+          await validateSchema(
+            careerSchema({ facultyExists: (value) => deps.activeFacultyExists(String(value)), codeAvailable: async (value) => !(await deps.careerCodeTaken(String(value), null)), updating: false }),
+            input,
+          )
+        ).errors ?? {}
     } else errors = await validatePeriod(input, true)
   } catch (error) {
     if (error instanceof HttpFailure) return error.response
@@ -344,10 +292,7 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
   try {
     if (entity === "facultad") {
       decodeLibraries(input)
-      errors = labelled(
-        await validateInput(input, { nombre: ["required", "string", { max: 180 }], campus: ["required", { in: CAMPUSES }], ...LIBRARY_RULES, confirm_purge: ["nullable", "boolean"] }, FACULTY_LABELS),
-        FACULTY_LABELS,
-      )
+      errors = (await validateSchema(facultySchema({ updating: true }), input)).errors ?? {}
       const value = logoOf(body)
       const logoProblems = logoErrors(value, "logotipo", false)
       if (logoProblems.length > 0) {
@@ -355,21 +300,13 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
         errors = { ...rest, logo: logoProblems, ...(purgeErrors ? { confirm_purge: purgeErrors } : {}) }
       } else if (isUploadedFile(value)) logo = value
     } else if (entity === "carrera") {
-      errors = labelled(
-        await validateInput(
-          input,
-          {
-            faculty_id: ["required", "uuid", { exists: (value) => deps.facultyExists(String(value)) }],
-            modality: ["required", "string", { in: STUDY_MODALITIES }],
-            code: ["required", "string", { max: 80 }, { unique: async (value) => !(await deps.careerCodeTaken(String(value), recordId)) }],
-            nombre: ["required", "string", { max: 180 }],
-            confirm_purge: ["nullable", "boolean"],
-          },
-          CAREER_LABELS,
-          { messages: { "code.unique": "Ya existe una carrera con ese código." } },
-        ),
-        CAREER_LABELS,
-      )
+      errors =
+        (
+          await validateSchema(
+            careerSchema({ facultyExists: (value) => deps.facultyExists(String(value)), codeAvailable: async (value) => !(await deps.careerCodeTaken(String(value), recordId)), updating: true }),
+            input,
+          )
+        ).errors ?? {}
     } else errors = await validatePeriod(input, false)
   } catch (error) {
     if (error instanceof HttpFailure) return error.response
@@ -464,8 +401,8 @@ export async function setGovernanceStatus(request: Request, entity: string, reco
   const session = await careerSession(request.clone(), deps)
   if (session instanceof Response) return session
   const input = await requestInput(request)
-  const errors = await validateInput(input, { active: ["required", "boolean"] }, { active: "activo" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(statusSchema, input)
+  if (errors !== null) return validationError(errors)
   const active = requestBoolean(input.active)
   return run(original, deps, async () => {
     await deps.transaction(async (tx) =>

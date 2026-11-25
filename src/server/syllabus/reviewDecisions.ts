@@ -7,7 +7,8 @@ import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray } from "../http/input"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { changeRequestSchema, restartSchema } from "@/schemas/syllabus"
+import { validateSchema } from "../http/schemaValidation"
 import { scheduleWorkflowNotification, type NotificationScope } from "../notifications/store"
 import { decisionBlock, hasRole, mayReview, ROLE_COORDINATOR } from "./policy"
 import type { ReviewDetailStore, ReviewRevision } from "./reviewDetails"
@@ -107,8 +108,8 @@ export async function requestCorrection(request: Request, revisionId: string, de
   const block = decisionBlock(syllabus)
   if (block !== null) return blockedDecision(block)
   const input: PhpArray = await requestInput(request)
-  const errors = await validateInput(input, { justification: ["required", "string", { min: 10 }, { max: 10000 }] }, { justification: "justificación" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(changeRequestSchema, input)
+  if (errors !== null) return validationError(errors)
   const justification = input.justification as string
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
@@ -166,8 +167,8 @@ export async function resetSyllabus(request: Request, syllabusId: string, deps: 
   const block = decisionBlock(syllabus)
   if (block !== null) return blockedDecision(block)
   const input: PhpArray = await requestInput(request)
-  const errors = await validateInput(input, { reason: ["required", "string", { min: 5 }, { max: 500 }] }, { reason: "motivo" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(restartSchema, input)
+  if (errors !== null) return validationError(errors)
   const reason = (input.reason as string).replace(PHP_TRIM, "")
   const reject = (message: string): never => {
     throw new Rejected(validationError({ syllabus: [message] }))

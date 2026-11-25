@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test"
 import { routeTable } from "../../src/lib/routeTable"
-import { storageStateOf, type AccountKey } from "./support/accounts"
+import { accounts, storageStateOf, type AccountKey } from "./support/accounts"
+import { latestSyllabusOf } from "./support/db"
 import { expect, test, watchPage } from "./support/fixtures"
 
 type Visit = { path: string; landsOn?: RegExp }
@@ -77,7 +78,11 @@ test.describe("screens reached from data", () => {
     test("syllabus detail, career history and documents load", async ({ page }) => {
       const issues = watchPage(page)
       await page.goto("/docente/mis-silabos")
-      await page.getByRole("list", { name: "Mis sílabos" }).getByRole("heading").first().click()
+      const listed = page.getByRole("list", { name: "Mis sílabos" }).getByRole("heading").first()
+      const noConvocation = page.getByText("Todavía no hay una convocatoria abierta")
+      await expect(listed.or(noConvocation)).toBeVisible()
+      if (await listed.isVisible()) await listed.click()
+      else await page.goto(`/docente/mis-silabos/${await latestSyllabusOf(accounts.teacher.email)}`)
       await expect(page).toHaveURL(/\/docente\/mis-silabos\/[0-9a-f-]{36}$/)
       await expect(page.getByRole("tablist", { name: "Secciones del sílabo" }).or(page.getByRole("region", { name: "Vista previa del sílabo" }))).toBeVisible()
       const career = (await sessionRoles(page)).find((role) => role.code === "docente")?.career_id

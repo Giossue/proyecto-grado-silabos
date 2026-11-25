@@ -21,3 +21,18 @@ export function phpString(value: unknown): string {
   if (value === false || value === null || value === undefined) return ""
   return String(value)
 }
+
+const isList = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+
+const phpTruthy = (value: unknown): boolean => value !== null && value !== undefined && value !== false && value !== 0 && value !== "" && value !== "0"
+
+export function phpLooseEquals(left: unknown, right: unknown): boolean {
+  if (isList(left) || isList(right)) {
+    if (!isList(left) || !isList(right)) return false
+    const keys = Object.keys(left)
+    return keys.length === Object.keys(right).length && keys.every((key) => key in right && phpLooseEquals(left[key], right[key]))
+  }
+  if (left === null || left === undefined || typeof left === "boolean" || right === null || right === undefined || typeof right === "boolean") return phpTruthy(left) === phpTruthy(right)
+  if (phpIsNumeric(left) && phpIsNumeric(right)) return Number(String(left).trim()) === Number(String(right).trim())
+  return String(left) === String(right)
+}

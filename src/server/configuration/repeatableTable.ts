@@ -3,7 +3,7 @@ import { isList, isPhpArray, isRecord, list, phpCount, phpIdentical, phpIntCast,
 import { schemaDigits, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import { definitionError } from "./templateStyle"
 
-export const COLUMN_TYPES = ["text", "choice", "number"]
+export { COLUMN_TYPES } from "@/schemas/template"
 const HEADER_STYLE = "background:#C3D4EA;font-weight:bold"
 const JSON_POINTER = "Para cambiarla use Opciones avanzadas → Editar JSON."
 const KEY = /^[a-z][a-z0-9_]{0,40}$/

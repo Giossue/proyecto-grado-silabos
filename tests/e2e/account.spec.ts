@@ -1,4 +1,5 @@
-import { storageStateOf } from "./support/accounts"
+import { accounts, storageStateOf } from "./support/accounts"
+import { addUnreadNotices } from "./support/db"
 import { expect, test } from "./support/fixtures"
 import type { Locator, Page } from "@playwright/test"
 import { toast } from "./support/ui"
@@ -13,6 +14,7 @@ test.use({ storageState: storageStateOf("teacher") })
 
 test.describe.serial("account", () => {
   test("notifications: list, filter, mark read, open and mark all read", async ({ page, issues }) => {
+    await addUnreadNotices(accounts.teacher.email, 2)
     await page.goto("/docente/notificaciones")
     await expect(page.getByRole("heading", { level: 1, name: "Notificaciones" })).toBeVisible()
     const articles = page.getByRole("main").getByRole("article")
@@ -23,11 +25,10 @@ test.describe.serial("account", () => {
     await expect(articles.first()).toBeVisible()
     const texts = await articles.allInnerTexts()
     const index = texts.findIndex((text) => text.includes("Nueva"))
-    if (index >= 0) {
-      await articles.nth(index).getByRole("button", { name: "Marcar leída" }).click()
-      await expect(articles.nth(index)).not.toContainText("Nueva")
-      await expect(articles.nth(index).getByRole("button", { name: "Marcar leída" })).toHaveCount(0)
-    }
+    expect(index).toBeGreaterThanOrEqual(0)
+    await articles.nth(index).getByRole("button", { name: "Marcar leída" }).click()
+    await expect(articles.nth(index)).not.toContainText("Nueva")
+    await expect(articles.nth(index).getByRole("button", { name: "Marcar leída" })).toHaveCount(0)
     const unreadListed = page.waitForResponse((response) => response.url().includes("status=unread"))
     await filters.getByRole("button", { name: "No leídas" }).click()
     await unreadListed
@@ -46,15 +47,14 @@ test.describe.serial("account", () => {
     await sheet.getByRole("button", { name: "Cerrar notificaciones" }).click()
     await expect(sheet).toBeHidden()
     const markAll = page.getByRole("button", { name: "Marcar todas como leídas" })
-    if (await markAll.isEnabled()) {
-      const marked = page.waitForResponse((response) => /notifications\/read-all$/.test(response.url()))
-      await markAll.click()
-      expect((await marked).ok()).toBe(true)
-      await page.reload()
-      await filters.getByRole("button", { name: "Todas" }).click()
-      await expect(page.getByRole("main").getByRole("article").first()).toBeVisible()
-      await expect(page.getByRole("main").getByRole("article").filter({ hasText: "Nueva" })).toHaveCount(0)
-    }
+    await expect(markAll).toBeEnabled()
+    const marked = page.waitForResponse((response) => /notifications\/read-all$/.test(response.url()))
+    await markAll.click()
+    expect((await marked).ok()).toBe(true)
+    await page.reload()
+    await filters.getByRole("button", { name: "Todas" }).click()
+    await expect(page.getByRole("main").getByRole("article").first()).toBeVisible()
+    await expect(page.getByRole("main").getByRole("article").filter({ hasText: "Nueva" })).toHaveCount(0)
     issues.expectClean()
   })
 
