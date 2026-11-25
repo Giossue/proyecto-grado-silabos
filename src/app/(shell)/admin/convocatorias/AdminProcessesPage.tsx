@@ -62,8 +62,8 @@ export default function AdminProcessesPage() {
   const rows = useMemo<ConvocationRow[]>(() => {
     const byPeriod = new Map((processData?.processes ?? []).map((process) => [process.period_id, process]))
 
-    return [...(governance?.catalogs.periods ?? [])]
-      .sort((a, b) => b.starts_on.localeCompare(a.starts_on))
+    return (governance?.catalogs.periods ?? [])
+      .toSorted((a, b) => b.starts_on.localeCompare(a.starts_on))
       .map((period) => ({ ...period, process: byPeriod.get(period.id) ?? null }))
   }, [governance, processData])
   const filter = useClientFilter(rows, searchable, FILTERS)

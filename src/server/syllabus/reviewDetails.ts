@@ -75,7 +75,7 @@ function stageForRole(session: AppSession): string | null {
 }
 
 function byNumber(history: HistoryEntry[]): HistoryEntry[] {
-  return [...history].sort((left, right) => left.number - right.number)
+  return history.toSorted((left, right) => left.number - right.number)
 }
 
 function compareStrings(left: string, right: string): number {

@@ -40,7 +40,7 @@ export function canonicalJson(value: unknown): string {
     const entries = Object.entries(value as Record<string, unknown>)
     const keys = entries.map(([key]) => key)
     if (isList(keys)) return `[${entries.map(([, item]) => canonicalJson(item)).join(",")}]`
-    const sorted = [...entries].sort(([left], [right]) => compareBytes(left, right))
+    const sorted = entries.toSorted(([left], [right]) => compareBytes(left, right))
     return `{${sorted.map(([key, item]) => `${phpString(key)}:${canonicalJson(item)}`).join(",")}}`
   }
   throw new Error(`Type is not supported: ${typeof value}`)

@@ -25,7 +25,7 @@ const PENDING = ["pendiente", "en_ejecucion", "procesando"]
 const POLL_MS = 4000
 
 const latestOf = (data: DocumentsPayload | null | undefined) =>
-  [...(data?.artifacts ?? [])].sort((left, right) => new Date(right.requested_at).getTime() - new Date(left.requested_at).getTime())[0] ?? null
+  (data?.artifacts ?? []).toSorted((left, right) => new Date(right.requested_at).getTime() - new Date(left.requested_at).getTime())[0] ?? null
 
 export default function DocumentsPage() {
   const router = useRouter()

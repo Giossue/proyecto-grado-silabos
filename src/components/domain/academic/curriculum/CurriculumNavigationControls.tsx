@@ -16,7 +16,7 @@ type CurriculumNavigationControlsProps = {
 
 export function CurriculumNavigationControls({ choice, zoom, onChoiceChange, children }: CurriculumNavigationControlsProps) {
   const larger = ZOOM_LEVELS.find((level) => level > zoom + 0.001) ?? null
-  const smaller = [...ZOOM_LEVELS].reverse().find((level) => level < zoom - 0.001) ?? null
+  const smaller = ZOOM_LEVELS.findLast((level) => level < zoom - 0.001) ?? null
 
   return (
     <div className="absolute top-3 left-3 z-10 flex flex-wrap items-center gap-2">

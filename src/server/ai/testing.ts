@@ -39,7 +39,7 @@ export function officialTemplate(): SyllabusTemplate {
       }
     }),
   }))
-  return { id: TEMPLATE_ID, modifiedAt: null, definition: JSON.parse(JSON.stringify(definition)), sections }
+  return { id: TEMPLATE_ID, modifiedAt: null, definition: structuredClone(definition), sections }
 }
 
 export function testConfig(overrides: Partial<AiConfig> = {}): AiConfig {
@@ -64,7 +64,7 @@ function stamp(world: AssistantWorld): string {
 }
 
 function copy<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T
+  return structuredClone(value)
 }
 
 function stored(value: PhpRecord): PhpRecord {

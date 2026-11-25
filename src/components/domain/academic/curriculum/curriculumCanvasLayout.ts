@@ -205,8 +205,8 @@ const edgeGeometry = (
         byCycle.set(cycle, [...(byCycle.get(cycle) ?? []), subject]);
     });
     byCycle.forEach((list) => {
-        [...list]
-            .sort((left, right) => left.position - right.position)
+        list
+            .toSorted((left, right) => left.position - right.position)
             .forEach((subject, index) => columnIndex.set(subject.id, index));
     });
     const columnOf = (subjectId: string): number => columnIndex.get(subjectId) ?? 0;
@@ -300,7 +300,7 @@ const edgeGeometry = (
             return total;
         };
         const indexes = xs.map((_, index) => index);
-        let best = [...indexes].sort((left, right) => xs[left]!.tx - xs[right]!.tx || xs[left]!.sx - xs[right]!.sx);
+        let best = indexes.toSorted((left, right) => xs[left]!.tx - xs[right]!.tx || xs[left]!.sx - xs[right]!.sx);
         if (indexes.length <= 8) {
             let bestScore = crossings(best);
             const permute = (prefix: number[], rest: number[]): void => {

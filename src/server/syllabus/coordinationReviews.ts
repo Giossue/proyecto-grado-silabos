@@ -162,7 +162,7 @@ export async function compareRevisions(request: Request, beforeId: string, after
   if (first.syllabusId !== second.syllabusId) return validationError({ revisions: ["Solo pueden compararse revisiones del mismo expediente."] })
   if (first.number > second.number) [first, second] = [second, first]
   const syllabus = await deps.reviews.syllabusSummary(first.syllabusId)
-  const latest = [...syllabus.revisions].sort((left, right) => right.number - left.number)[0]
+  const latest = syllabus.revisions.toSorted((left, right) => right.number - left.number)[0]
   return apiJson({
     syllabus: {
       id: syllabus.id,

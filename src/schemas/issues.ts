@@ -9,7 +9,7 @@ export function fieldErrors(issues: readonly z.core.$ZodIssue[], order: readonly
     const index = explicit !== -1 || issue.path.length !== 1 ? explicit : order.indexOf(String(issue.path[0]))
     return index === -1 ? order.length : index
   }
-  const sorted = order.length === 0 ? issues : [...issues].sort((left, right) => rank(left) - rank(right))
+  const sorted = order.length === 0 ? issues : issues.toSorted((left, right) => rank(left) - rank(right))
   for (const issue of sorted) {
     const field = issue.path.map(String).join(".")
     const list = errors[field] ?? []

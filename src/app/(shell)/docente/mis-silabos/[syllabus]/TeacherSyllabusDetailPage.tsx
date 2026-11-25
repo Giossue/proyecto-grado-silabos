@@ -160,7 +160,7 @@ export default function TeacherSyllabusDetailPage() {
   const showEditor = canEdit || pausedEdit
   const canStart = canStartOf(syllabus, localBlockReason)
   const allFields = fieldsOf(syllabus)
-  const reviewComments = [...(syllabus?.review_comments ?? [])].sort(
+  const reviewComments = (syllabus?.review_comments ?? []).toSorted(
     (left, right) => new Date(right.commented_at).getTime() - new Date(left.commented_at).getTime(),
   )
   const latestStage = reviewComments[0]?.stage

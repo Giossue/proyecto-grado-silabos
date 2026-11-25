@@ -44,7 +44,7 @@ const valuesFrom = (fields: SubjectProfileField[], stored: Record<string, Docume
 
 const loadProfile = async (subjectId: string): Promise<Loaded> => {
   const [scheduled, profile] = await Promise.all([getScheduledSubjects(), getSubjectProfile(subjectId)])
-  const fields = [...profile.fields].sort((first, second) => (first.position ?? 0) - (second.position ?? 0))
+  const fields = profile.fields.toSorted((first, second) => (first.position ?? 0) - (second.position ?? 0))
 
   return {
     career: scheduled.career,

@@ -71,7 +71,7 @@ function inline(nodes: unknown): string {
       inner = `<span data-variable="${escape(phpString(given(node.attrs, "id")), true)}"${listStyle !== null ? ` data-list="${phpString(listStyle)}"` : ""}></span>`
     } else if (node.type === "response") inner = `<span data-response="${escape(jsonText(given(node, "attrs") ?? [], false), true)}"></span>`
     else if (node.type === "slot") inner = `<span data-slot='${escape(jsonText(given(node, "attrs") ?? [], false), false)}'></span>`
-    for (const mark of [...list(given(node, "marks") ?? [])].reverse()) {
+    for (const mark of list(given(node, "marks") ?? []).toReversed()) {
       const type = given(mark, "type")
       if (type === "bold") inner = `<strong>${inner}</strong>`
       else if (type === "italic") inner = `<em>${inner}</em>`

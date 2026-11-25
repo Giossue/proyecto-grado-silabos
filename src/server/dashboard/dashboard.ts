@@ -81,7 +81,7 @@ async function careerDeadline(careerId: string | null, deps: DashboardDeps, toda
 async function teacherDeadline(session: AppSession, deps: DashboardDeps, today: string): Promise<Deadline | null> {
   const careerId = session.activeRole?.careerId ?? null
   const syllabi = await deps.dashboard.teacherOpenSyllabi(session.user.id, careerId)
-  const [nearest] = [...syllabi].sort((left, right) => left.dueAt - right.dueAt)
+  const [nearest] = syllabi.toSorted((left, right) => left.dueAt - right.dueAt)
   if (nearest) return deadlinePayload(nearest.process, nearest.convocation, today)
 
   const inProgress = await deps.dashboard.inProgressProcess()

@@ -102,7 +102,7 @@ function placed<T extends { id: string; position: number }>(items: T[], ids: str
 }
 
 function sameIds(current: string[], requested: string[]): boolean {
-  const order = (ids: string[]) => [...ids].sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)))
+  const order = (ids: string[]) => ids.toSorted((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)))
   return current.length === requested.length && order(current).every((id, index) => id === order(requested)[index])
 }
 

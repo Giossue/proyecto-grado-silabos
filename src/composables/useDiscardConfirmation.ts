@@ -15,9 +15,9 @@ export const useDiscardConfirmation = () => {
   const ask = useCallback((): Promise<boolean> => {
     if (pending.current) return pending.current
     setOpen(true)
-    pending.current = new Promise<boolean>((complete) => {
-      resolver.current = complete
-    })
+    const { promise, resolve } = Promise.withResolvers<boolean>()
+    resolver.current = resolve
+    pending.current = promise
 
     return pending.current
   }, [])
