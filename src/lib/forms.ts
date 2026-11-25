@@ -28,21 +28,23 @@ function stripPeriods<T extends FieldValues>(errors: FieldErrors<T>): FieldError
 
 type SchemaSource<S extends z.ZodType<FieldValues, FieldValues>> = S | ((values: z.input<S>) => S)
 
-export function schemaResolver<S extends z.ZodType<FieldValues, FieldValues>>(source: SchemaSource<S>): Resolver<z.input<S>, unknown, z.output<S>> {
+type SchemaFormOptions = { keepPeriods?: boolean }
+
+export function schemaResolver<S extends z.ZodType<FieldValues, FieldValues>>(source: SchemaSource<S>, { keepPeriods = false }: SchemaFormOptions = {}): Resolver<z.input<S>, unknown, z.output<S>> {
   return async (values, context, options) => {
     const schema = typeof source === "function" ? source(values) : source
     const resolve = zodResolver(schema) as Resolver<z.input<S>, unknown, z.output<S>>
     const result = await resolve(values, context, options)
     if (Object.keys(result.errors).length === 0) return result
-    return { values: {}, errors: stripPeriods(result.errors as FieldErrors<z.input<S>>) }
+    return { values: {}, errors: keepPeriods ? result.errors : stripPeriods(result.errors as FieldErrors<z.input<S>>) }
   }
 }
 
 export function useSchemaForm<S extends z.ZodType<FieldValues, FieldValues>>(
   schema: SchemaSource<S>,
-  options: Omit<UseFormProps<z.input<S>, unknown, z.output<S>>, "resolver"> = {},
+  { keepPeriods, ...options }: Omit<UseFormProps<z.input<S>, unknown, z.output<S>>, "resolver"> & SchemaFormOptions = {},
 ): UseFormReturn<z.input<S>, unknown, z.output<S>> {
-  return useForm<z.input<S>, unknown, z.output<S>>({ criteriaMode: "all", reValidateMode: "onSubmit", ...options, resolver: schemaResolver(schema) })
+  return useForm<z.input<S>, unknown, z.output<S>>({ criteriaMode: "all", reValidateMode: "onSubmit", ...options, resolver: schemaResolver(schema, { keepPeriods }) })
 }
 
 export function errorMessages(error: unknown): string[] | undefined {

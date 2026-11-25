@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { RESPONSE_TEXT_LENGTH, responseHasOptions, responseSettingNames, type ResponseDisplay, type ResponseSettings } from "@/lib/responseKinds"
 import {
   addFailures,
   checkItems,
@@ -309,3 +310,120 @@ export const conditionChoiceSchema = z
   .superRefine((choice, context) => {
     if (choice.source && choice.options.length === 0) context.addIssue({ code: "custom", path: ["options"], message: CONDITION_OPTIONS_REQUIRED })
   })
+
+export const RESPONSE_OPTIONS_REQUIRED = "Escriba al menos una opción."
+const RESPONSE_CONDITION_REQUIRED = "Elija al menos una opción para «Mostrar solo si»"
+
+const responseOptionSchema = z.object({ const: z.string(), title: z.string() })
+const wholeOrNull = (text: string): number | null => (/^\d+$/.test(text.trim()) ? Number(text.trim()) : null)
+const inRange = (text: string, max: number): boolean => text.trim() === "" || ((wholeOrNull(text) ?? 0) >= 1 && (wholeOrNull(text) ?? 0) <= max)
+const optionCount = (count: number): string => (count === 1 ? "1 opción" : `${count} opciones`)
+
+type ResponseToolContext = { fixed: boolean; requireOptions: boolean; conditional: boolean; current: Pick<ResponseSettings, "minChoices" | "maxChoices"> | null }
+type ResponseToolValues = { kind: string; options: unknown[]; maxLength: string; minChoices: string; maxChoices: string }
+
+function responseSettingsError({ kind, options, maxLength, minChoices, maxChoices }: ResponseToolValues, { fixed, current }: ResponseToolContext): string {
+  const count = options.length
+  if (fixed) {
+    const min = current?.minChoices
+    const max = current?.maxChoices
+    if (min && min > count) return `Esta respuesta pide elegir al menos ${min}: deje al menos ${optionCount(min)}.`
+    if (max && max > count) return `Esta respuesta permite elegir hasta ${max}: deje al menos ${optionCount(max)}.`
+    return ""
+  }
+  const names = responseSettingNames(kind)
+  if (names.includes("maxLength") && !inRange(maxLength, RESPONSE_TEXT_LENGTH)) return `El límite de caracteres va de 1 a ${RESPONSE_TEXT_LENGTH}.`
+  if (names.includes("minChoices") && (minChoices.trim() || maxChoices.trim())) {
+    if (count === 0) return "Escriba las opciones antes de fijar cuántas elegir."
+    if (!inRange(minChoices, count) || !inRange(maxChoices, count)) return `Cuántas elegir va de 1 a ${count}, el número de opciones.`
+    const min = wholeOrNull(minChoices)
+    const max = wholeOrNull(maxChoices)
+    if (min !== null && max !== null && min > max) return "El mínimo para elegir no puede superar el máximo."
+  }
+  return ""
+}
+
+export function responseToolSchema(context: ResponseToolContext) {
+  return z
+    .object({
+      kind: z.string(),
+      options: z.array(responseOptionSchema),
+      required: z.boolean(),
+      help: z.string(),
+      maxLength: z.string(),
+      minChoices: z.string(),
+      maxChoices: z.string(),
+      display: z.enum(["lista", "desplegable"]),
+      condition: z.object({ source: z.string(), options: z.array(z.string()) }),
+    })
+    .superRefine((values, issues) => {
+      if ((context.requireOptions || context.fixed) && responseHasOptions(values.kind) && values.options.length === 0) issues.addIssue({ code: "custom", path: ["options"], message: RESPONSE_OPTIONS_REQUIRED })
+      const settings = responseSettingsError(values, context)
+      if (settings) issues.addIssue({ code: "custom", path: ["settings"], message: settings })
+      if (context.conditional && values.condition.source && values.condition.options.length === 0) issues.addIssue({ code: "custom", path: ["condition"], message: RESPONSE_CONDITION_REQUIRED })
+    })
+    .transform((values) => ({
+      ...values,
+      settings: {
+        required: values.required,
+        help: values.help,
+        maxLength: wholeOrNull(values.maxLength) ?? undefined,
+        minChoices: wholeOrNull(values.minChoices) ?? undefined,
+        maxChoices: wholeOrNull(values.maxChoices) ?? undefined,
+        display: values.display as ResponseDisplay,
+      } satisfies ResponseSettings,
+    }))
+}
+
+export type ResponseToolValuesInput = z.input<ReturnType<typeof responseToolSchema>>
+
+const designerColumnSchema = z.object({
+  key: z.string().optional(),
+  title: z.string(),
+  type: z.enum(["text", "choice", "number"]),
+  max_length: z.string(),
+  multiline: z.boolean().optional(),
+  options: z.array(z.object({ value: z.string().optional(), label: z.string() })).optional(),
+  maximum: z.string(),
+  decimals: z.string(),
+  width: z.string(),
+  required: z.boolean(),
+})
+
+const wholeOrText = (value: string): number | string => (/^\d+$/.test(value.trim()) ? Number(value.trim()) : value.trim())
+const decimalOrText = (value: string): number | string => (/^\d+([.,]\d+)?$/.test(value.trim()) ? Number(value.trim().replace(",", ".")) : value.trim())
+
+function designerColumn(column: z.output<typeof designerColumnSchema>) {
+  const base = { ...(column.key ? { key: column.key } : {}), title: column.title.trim(), type: column.type, width: column.width.trim() === "" ? null : wholeOrText(column.width), required: column.required }
+  if (column.type === "choice") return { ...base, options: (column.options ?? []).map((option) => ({ ...(option.value ? { value: option.value } : {}), label: option.label })) }
+  if (column.type === "number") return { ...base, maximum: decimalOrText(column.maximum), decimals: wholeOrText(column.decimals) }
+  return { ...base, max_length: wholeOrText(column.max_length), multiline: column.multiline ?? false }
+}
+
+export const tableDesignerSchema = z
+  .object({
+    kind: z.string(),
+    label: z.string(),
+    list: z.string(),
+    item: z.string(),
+    min: z.string(),
+    max: z.string(),
+    initial: z.string(),
+    band: z.string().nullable(),
+    columns: z.array(designerColumnSchema),
+    extras: z.record(z.string(), z.unknown()).optional(),
+  })
+  .transform((draft) => ({
+    kind: draft.kind,
+    label: draft.label.trim(),
+    list: draft.list,
+    item: draft.item.trim(),
+    min: wholeOrText(draft.min),
+    max: wholeOrText(draft.max),
+    initial: wholeOrText(draft.initial),
+    band: draft.band,
+    columns: draft.columns.map(designerColumn),
+    ...(draft.extras ? { extras: draft.extras } : {}),
+  }))
+
+export type TableDesignerValues = z.input<typeof tableDesignerSchema>
