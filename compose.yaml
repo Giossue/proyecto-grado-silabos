@@ -1,18 +1,43 @@
 name: silabos-ueb
 
-x-app-environment: &app-environment
+x-api-image: &api-image
+  build:
+    context: .
+    dockerfile: apps/api/Dockerfile
+  image: silabos-ueb-api:latest
+
+x-api-environment: &api-environment
   APP_ENV: ${APP_ENV:-production}
-  APP_KEY: ${APP_KEY:?APP_KEY is required}
-  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
   APP_NAME: ${APP_NAME:-Sílabos UEB}
+  APP_KEY: ${APP_KEY:?APP_KEY is required}
+  APP_LOCALE: ${APP_LOCALE:-es}
+  API_PORT: "8000"
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+  DISPLAY_TIMEZONE: ${DISPLAY_TIMEZONE:-America/Guayaquil}
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+  POST_MAX_SIZE: ${POST_MAX_SIZE:-32M}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+  BETTER_AUTH_URL: ${BETTER_AUTH_URL:-}
+  SESSION_LIFETIME: ${SESSION_LIFETIME:-240}
+  SESSION_COOKIE_PREFIX: ${SESSION_COOKIE_PREFIX:-silabos-ueb}
+  STATEFUL_DOMAINS: ${STATEFUL_DOMAINS:-localhost:3000}
+  BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
   DATABASE_URL: postgres://${POSTGRES_USER:-silabos}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-silabos_ueb}
   REDIS_URL: redis://redis:6379/0
+  REDIS_PREFIX: ${REDIS_PREFIX:-silabos-ueb:}
   GOTENBERG_URL: http://gotenberg:3000
+  STORAGE_DRIVER: s3
   STORAGE_PATH: /data/storage
-  SESSION_LIFETIME: ${SESSION_LIFETIME:-240}
-  STATEFUL_DOMAINS: ${STATEFUL_DOMAINS:-localhost:3000}
-  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+  PUBLIC_ASSETS_PATH: /app/assets
+  S3_ENDPOINT: http://minio:9000
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_BUCKET: ${S3_BUCKET:-silabos}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
+  S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+  QUEUE_RETRY_AFTER: ${QUEUE_RETRY_AFTER:-90}
   MAIL_MAILER: ${MAIL_MAILER:-log}
+  MAIL_SCHEME: ${MAIL_SCHEME:-}
   MAIL_HOST: ${MAIL_HOST:-}
   MAIL_PORT: ${MAIL_PORT:-587}
   MAIL_USERNAME: ${MAIL_USERNAME:-}
@@ -22,59 +47,34 @@ x-app-environment: &app-environment
   AI_DRIVER: ${AI_DRIVER:-}
   AI_BASE_URL: ${AI_BASE_URL:-}
   AI_MODEL: ${AI_MODEL:-}
+  AI_TEMPLATE_MODEL: ${AI_TEMPLATE_MODEL:-}
   AI_API_KEY: ${AI_API_KEY:-}
+  AI_CONNECT_TIMEOUT: ${AI_CONNECT_TIMEOUT:-10}
+  AI_TIMEOUT: ${AI_TIMEOUT:-120}
   CATALOG_DRIVER: ${CATALOG_DRIVER:-}
   KOHA_BASE_URL: ${KOHA_BASE_URL:-}
+  SIGNATURE_TRUSTED_CA_BUNDLE: ${SIGNATURE_TRUSTED_CA_BUNDLE:-}
+  SIGNATURE_REQUIRE_HOLDER_MATCH: ${SIGNATURE_REQUIRE_HOLDER_MATCH:-true}
+  KEYCLOAK_ENABLED: ${KEYCLOAK_ENABLED:-}
+  KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
+  KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-}
+  KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
+  KEYCLOAK_REDIRECT_URI: ${KEYCLOAK_REDIRECT_URI:-}
+  KEYCLOAK_POST_LOGOUT_REDIRECT_URI: ${KEYCLOAK_POST_LOGOUT_REDIRECT_URI:-}
 
 services:
-  web:
-    build:
-      context: .
-      target: web
-    environment: *app-environment
-    ports:
-      - "${WEB_PORT:-3000}:3000"
-    volumes:
-      - storage:/data/storage
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      gotenberg:
-        condition: service_started
-    restart: unless-stopped
-
-  worker:
-    build:
-      context: .
-      target: worker
-    environment:
-      <<: *app-environment
-      QUEUE_MAX_TIME: "0"
-    volumes:
-      - storage:/data/storage
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      gotenberg:
-        condition: service_started
-    restart: unless-stopped
-
   postgres:
-    image: postgres:17
+    image: postgres:18
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-silabos_ueb}
       POSTGRES_USER: ${POSTGRES_USER:-silabos}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
-      - postgres:/var/lib/postgresql/data
-      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+      - postgres:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
+      timeout: 5s
       retries: 20
     restart: unless-stopped
 
@@ -86,14 +86,130 @@ services:
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
+      timeout: 5s
       retries: 20
     restart: unless-stopped
 
+  minio:
+    image: ${MINIO_IMAGE:-pgsty/minio:RELEASE.2026-08-04T00-00-00Z}
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
+    volumes:
+      - minio:/data
+    ports:
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  minio-init:
+    image: ${MINIO_MC_IMAGE:-pgsty/mc:RELEASE.2026-11-12T00-00-00Z}
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
+      S3_BUCKET: ${S3_BUCKET:-silabos}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - mc alias set local http://minio:9000 "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY" && mc mb --ignore-existing "local/$$S3_BUCKET" && mc anonymous set none "local/$$S3_BUCKET"
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+
   gotenberg:
     image: gotenberg/gotenberg:8
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    <<: *api-image
+    command: ["node_modules/.bin/prisma", "migrate", "deploy"]
+    environment: *api-environment
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *api-image
+    environment: *api-environment
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - storage:/data/storage
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8000/api/v1/session').then(r=>process.exit(r.status<500?0:1),()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 10
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      gotenberg:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    <<: *api-image
+    command: ["node", "dist/apps/api/src/worker.js"]
+    environment:
+      <<: *api-environment
+      QUEUE_MAX_TIME: "0"
+    volumes:
+      - storage:/data/storage
+    healthcheck:
+      disable: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      gotenberg:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        API_INTERNAL_URL: http://api:8000
+    image: silabos-ueb-web:latest
+    environment:
+      API_INTERNAL_URL: http://api:8000
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/ingresar').then(r=>process.exit(r.status<500?0:1),()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 10
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
-  storage:
   postgres:
   redis:
+  minio:
+  storage:

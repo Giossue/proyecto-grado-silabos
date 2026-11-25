@@ -1,4 +1,3 @@
-import { stat } from "node:fs/promises"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { INSTITUTION_LOGO, logoErrors } from "../files/logos"
@@ -6,7 +5,7 @@ import { fitPng, PngError } from "../files/png"
 import { requestBody, postMaxSize, postTooLarge, type MultipartInput } from "../files/uploads"
 import { requestRoot } from "../http/request"
 import { apiJson, validationError } from "../http/responses"
-import { storageWriter, type StorageWriter } from "../http/storageWriter"
+import { storageWriter, storedStat, type StorageWriter } from "../http/storageWriter"
 import { boundTemplate, FORBIDDEN, managesTemplates } from "./templateReads"
 import { createTemplateStore, type TemplateStore } from "./templateStore"
 
@@ -40,6 +39,8 @@ export async function uploadTemplateLogoOf(request: Request, body: MultipartInpu
     throw error
   }
   await deps.storage.put("private", INSTITUTION_LOGO_PATH, fitted)
-  const version = Math.floor((await stat(/*turbopackIgnore: true*/ deps.storage.path("private", INSTITUTION_LOGO_PATH))).mtimeMs / 1000)
+  const written = await storedStat(deps.storage, "private", INSTITUTION_LOGO_PATH)
+  if (written === null) throw Object.assign(new Error(`ENOENT: no such file '${INSTITUTION_LOGO_PATH}'`), { code: "ENOENT" })
+  const version = Math.floor(written.modifiedAt.getTime() / 1000)
   return apiJson({ message: "Logo actualizado.", logo: `${requestRoot(request)}/logos/institucion?v=${version}` })
 }

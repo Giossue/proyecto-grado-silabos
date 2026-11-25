@@ -1,11 +1,11 @@
-import { readFile, stat } from "node:fs/promises"
 import { isUuid } from "../academic/structure"
-import { createLogoStore, facultyPath, institutionPath, type LogoStore } from "../configuration/institutionalLogos"
+import { createLogoStore, facultyFile, institutionFile, type LogoStore } from "../configuration/institutionalLogos"
+import type { FileSource } from "../storage/fileSource"
 import type { LogoSource } from "./syllabusRenderer"
 
-async function isFile(absolute: string): Promise<boolean> {
+async function isFile(file: FileSource): Promise<boolean> {
   try {
-    return (await stat(/*turbopackIgnore: true*/ absolute)).isFile()
+    return (await file.stat())?.isFile === true
   } catch {
     return false
   }
@@ -13,9 +13,9 @@ async function isFile(absolute: string): Promise<boolean> {
 
 export function storedLogoSource(store: LogoStore = createLogoStore()): LogoSource {
   return async (source, facultyId) => {
-    const absolute =
-      source === "institution" ? await institutionPath() : await facultyPath(facultyId !== null && isUuid(facultyId) ? await store.faculty(facultyId) : null)
-    if (!(await isFile(absolute))) return null
-    return { bytes: await readFile(/*turbopackIgnore: true*/ absolute), key: absolute }
+    const file =
+      source === "institution" ? await institutionFile() : await facultyFile(facultyId !== null && isUuid(facultyId) ? await store.faculty(facultyId) : null)
+    if (!(await isFile(file))) return null
+    return { bytes: await file.read(), key: file.key }
   }
 }

@@ -1,5 +1,7 @@
-import { readFile, stat } from "node:fs/promises"
+import { stat } from "node:fs/promises"
 import path from "node:path"
+import { workspaceRoot } from "../../config/workspace"
+import { fileSource, type FileSource } from "../storage/fileSource"
 
 const DISK_FOLDERS: Record<string, string> = { private: "private", local: "private", public: "public" }
 
@@ -11,7 +13,7 @@ export function storagePath(): string {
 }
 
 export function publicPath(relative: string): string {
-  const root = path.resolve(/*turbopackIgnore: true*/ process.env.PUBLIC_ASSETS_PATH ?? path.join(/*turbopackIgnore: true*/ process.cwd(), "assets"))
+  const root = path.resolve(/*turbopackIgnore: true*/ process.env.PUBLIC_ASSETS_PATH || path.join(/*turbopackIgnore: true*/ workspaceRoot(), "assets"))
   return path.join(/*turbopackIgnore: true*/ root, relative)
 }
 
@@ -45,18 +47,20 @@ export async function diskExists(disk: string, relative: string): Promise<boolea
   }
 }
 
-export async function fileModifiedAt(absolute: string): Promise<string> {
+export async function fileModifiedAt(file: string | FileSource): Promise<string> {
   try {
-    return String(Math.floor((await stat(/*turbopackIgnore: true*/ absolute)).mtimeMs / 1000))
+    const found = await fileSource(file).stat()
+    return found === null ? "0" : String(Math.floor(found.modifiedAt.getTime() / 1000))
   } catch {
     return "0"
   }
 }
 
-export async function fileBase64(absolute: string): Promise<string> {
+export async function fileBase64(file: string | FileSource): Promise<string> {
   try {
-    if (!(await stat(/*turbopackIgnore: true*/ absolute)).isFile()) return ""
-    return (await readFile(/*turbopackIgnore: true*/ absolute)).toString("base64")
+    const source = fileSource(file)
+    if (!(await source.stat())?.isFile) return ""
+    return (await source.read()).toString("base64")
   } catch {
     return ""
   }

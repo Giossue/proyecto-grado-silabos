@@ -1,5 +1,10 @@
 import { chmod, mkdir, readFile, readdir, rm, rmdir, stat, unlink, writeFile } from "node:fs/promises"
 import path from "node:path"
+import type { Readable } from "node:stream"
+import { localStat, localStream, type StorageStat } from "../storage/fileSource"
+import { s3Bucket, s3Client, type ByteRange } from "../storage/objectBucket"
+import { createS3StorageWriter } from "../storage/s3Storage"
+import { storageSettings, storageSignature } from "../storage/storageConfig"
 import { normalizeStoragePath, storagePath, UnknownDisk } from "./storage"
 
 type DiskConfig = { folder: string; fileMode: number | null; directoryMode: number }
@@ -21,6 +26,13 @@ export interface StorageWriter {
   deleteDirectory(disk: string, relative: string): Promise<void>
 }
 
+export type { StorageStat }
+
+export interface FileStorage extends StorageWriter {
+  stat(disk: string, relative: string): Promise<StorageStat | null>
+  stream(disk: string, relative: string, range?: ByteRange): Promise<Readable>
+}
+
 function diskConfig(disk: string): DiskConfig {
   const config = DISKS[disk]
   if (config === undefined) throw new UnknownDisk(disk)
@@ -40,7 +52,7 @@ export function phpDirname(relative: string): string {
   return index === 0 ? "/" : relative.slice(0, index)
 }
 
-export function createStorageWriter(root: string = storagePath()): StorageWriter {
+export function createStorageWriter(root: string = storagePath()): FileStorage {
   const resolve = (disk: string, relative: string) => path.join(/*turbopackIgnore: true*/ root, diskConfig(disk).folder, normalizeStoragePath(relative))
   return {
     root,
@@ -65,6 +77,12 @@ export function createStorageWriter(root: string = storagePath()): StorageWriter
     async size(disk, relative) {
       return (await stat(/*turbopackIgnore: true*/ resolve(disk, relative))).size
     },
+    async stat(disk, relative) {
+      return localStat(resolve(disk, relative))
+    },
+    async stream(disk, relative, range) {
+      return localStream(resolve(disk, relative), range)
+    },
     async delete(disk, relative) {
       try {
         await unlink(/*turbopackIgnore: true*/ resolve(disk, relative))
@@ -85,9 +103,22 @@ export function createStorageWriter(root: string = storagePath()): StorageWriter
   }
 }
 
-let shared: StorageWriter | null = null
+function hasFileAccess(storage: StorageWriter): storage is FileStorage {
+  return typeof (storage as Partial<FileStorage>).stat === "function" && typeof (storage as Partial<FileStorage>).stream === "function"
+}
 
-export function storageWriter(): StorageWriter {
-  if (shared === null || shared.root !== storagePath()) shared = createStorageWriter()
-  return shared
+export function storedStat(storage: StorageWriter, disk: string, relative: string): Promise<StorageStat | null> {
+  return hasFileAccess(storage) ? storage.stat(disk, relative) : localStat(storage.path(disk, relative))
+}
+
+let shared: { signature: string; storage: FileStorage } | null = null
+
+export function storageWriter(): FileStorage {
+  const settings = storageSettings()
+  const signature = storageSignature(settings, storagePath())
+  if (shared === null || shared.signature !== signature) {
+    const storage = settings.driver === "s3" ? createS3StorageWriter(s3Bucket(s3Client(settings.s3), settings.s3.bucket)) : createStorageWriter()
+    shared = { signature, storage }
+  }
+  return shared.storage
 }

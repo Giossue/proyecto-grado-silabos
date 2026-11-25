@@ -1,6 +1,5 @@
-import { unlink } from "node:fs/promises"
 import { sql } from "drizzle-orm"
-import { diskPath } from "../http/storage"
+import { storageWriter } from "../http/storageWriter"
 import { uuidList } from "../http/sql"
 import type { AfterCommit } from "../queue/dispatch"
 import type { WorkSyllabus } from "./inProgressWork"
@@ -55,7 +54,7 @@ async function undoDecisions(executor: Executor, afterCommit: AfterCommit, sylla
   afterCommit(async () => {
     for (const object of objects) {
       try {
-        await unlink(/*turbopackIgnore: true*/ diskPath(object.disk, object.path))
+        await storageWriter().delete(object.disk, object.path)
       } catch {}
     }
   })

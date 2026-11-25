@@ -7,6 +7,7 @@
     "build": "prisma generate && nest build",
     "start": "node dist/apps/api/src/main.js",
     "worker": "node dist/apps/api/src/worker.js",
+    "storage:migrate": "tsx scripts/storage-migrate.ts",
     "queue:smoke": "tsx --env-file-if-exists=../../.env.local src/server/queue/smoke.ts",
     "lint": "eslint",
     "test": "vitest run",

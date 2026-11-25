@@ -1,9 +1,8 @@
 import { MODELS } from "../http/models"
 import { failServerError, Missing } from "../http/failures"
 import { randomUUID } from "node:crypto"
-import { unlink } from "node:fs/promises"
 import { sql, type SQL } from "drizzle-orm"
-import { diskPath } from "../http/storage"
+import { storageWriter } from "../http/storageWriter"
 import { uuidList } from "../http/sql"
 import { uuid7 } from "../http/uuid7"
 import type { AfterCommit } from "../queue/dispatch"
@@ -694,7 +693,7 @@ export class InProgressWork {
     this.afterCommit(async () => {
       for (const object of objects) {
         try {
-          await unlink(/*turbopackIgnore: true*/ diskPath(object.disk, object.path))
+          await storageWriter().delete(object.disk, object.path)
         } catch {}
       }
     })

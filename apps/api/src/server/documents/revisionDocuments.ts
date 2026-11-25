@@ -1,8 +1,8 @@
-import { readFile } from "node:fs/promises"
+import { Readable } from "node:stream"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { diskExists, diskPath } from "../http/storage"
+import { storageWriter, type FileStorage, type StorageStat } from "../http/storageWriter"
 import { requestInput, type PhpArray } from "../http/input"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
 import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
@@ -86,10 +86,11 @@ export async function revisionDocumentsFor(session: AppSession, { revision, syll
   })
 }
 
-async function storedFile(object: StoredObject | null): Promise<string | null> {
+async function storedFile(storage: FileStorage, object: StoredObject | null): Promise<StorageStat | null> {
   if (object === null || object.disk !== "private") return null
   try {
-    return (await diskExists("private", object.path)) ? diskPath("private", object.path) : null
+    const found = await storage.stat("private", object.path)
+    return found?.isFile ? found : null
   } catch {
     return null
   }
@@ -112,16 +113,17 @@ export async function downloadExport(request: Request, artifactId: string, deps:
 
 export async function downloadExportFor(session: AppSession, { revision, syllabus, artifact: found }: ArtifactBound): Promise<Response> {
   if (!mayView(session, syllabus) || found.state !== COMPLETED) return forbidden()
-  const file = await storedFile(found.object)
+  const storage = storageWriter()
+  const file = await storedFile(storage, found.object)
   if (file === null || found.object === null) return aborted(404)
-  const bytes = await readFile(/*turbopackIgnore: true*/ file)
+  const body = Readable.toWeb(await storage.stream("private", found.object.path)) as ReadableStream<Uint8Array>
   const code = strSlug(syllabus.code) || "asignatura"
-  return new Response(new Uint8Array(bytes), {
+  return new Response(body, {
     status: 200,
     headers: {
       ...DOWNLOAD_HEADERS,
       "Content-Type": "application/pdf",
-      "Content-Length": String(bytes.length),
+      "Content-Length": String(file.size),
       "Content-Disposition": `attachment; filename=silabo-${code}-revision-${revision.number}.pdf`,
       "X-Content-Type-Options": "nosniff",
     },

@@ -1,5 +1,5 @@
-import { readFile, stat } from "node:fs/promises"
 import { phpIntCast } from "../configuration/phpValues"
+import { fileSource, type FileSource } from "../storage/fileSource"
 import { detectMimeType } from "./mimeType"
 
 const JPEG = Buffer.from("ffd8ff", "hex")
@@ -28,9 +28,12 @@ function byteRange(request: Request, size: number, lastModified: string): { star
   return start < 0 || start > end ? "unsatisfiable" : { start, end }
 }
 
-export async function binaryFileResponse(request: Request, file: string, headers: Record<string, string>): Promise<Response> {
-  const bytes = await readFile(/*turbopackIgnore: true*/ file)
-  const lastModified = (await stat(/*turbopackIgnore: true*/ file)).mtime.toUTCString()
+export async function binaryFileResponse(request: Request, file: string | FileSource, headers: Record<string, string>): Promise<Response> {
+  const source = fileSource(file)
+  const bytes = await source.read()
+  const found = await source.stat()
+  if (found === null) throw Object.assign(new Error(`ENOENT: no such file '${source.key}'`), { code: "ENOENT" })
+  const lastModified = found.modifiedAt.toUTCString()
   const base: Record<string, string> = {
     ...headers,
     "Content-Type": headers["Content-Type"] ?? guessedMimeType(bytes),

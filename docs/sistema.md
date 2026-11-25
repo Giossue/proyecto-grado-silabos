@@ -36,7 +36,8 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 | Datos en el cliente | TanStack Query (caché, reintentos, invalidación) | 5.108 |
 | Editor de plantilla y sílabo | Tiptap (ProseMirror) | 3.32 |
 | Malla visual | React Flow (@xyflow/react) | 13 |
-| Base de datos | PostgreSQL | 17 |
+| Base de datos | PostgreSQL | 18 |
+| Archivos | Disco local o almacenamiento S3 (MinIO), según `STORAGE_DRIVER`; cliente `@aws-sdk/client-s3` | 3 |
 | ORM y migraciones | Prisma ORM y Prisma Migrate (Drizzle ORM convive en los módulos aún no portados) | 7.10 / 0.45 |
 | Colas, límites y bloqueos | Redis + BullMQ (ioredis) | 7 / 6.7 |
 | Autenticación | Better Auth (usuario y contraseña, 2FA TOTP) | 1.7 |
@@ -243,27 +244,61 @@ El worker es `apps/api/src/worker.ts`: un contexto de aplicación Nest (`WorkerM
 
 ## 10. Despliegue
 
-**Docker Compose** (`compose.yaml`):
+**Docker Compose** (`compose.yaml`): un contenedor por servicio, con volúmenes con nombre para lo que debe persistir.
 
-| Servicio | Imagen |
-|---|---|
-| `web` | Next.js en modo `standalone` (imagen del `Dockerfile`), puerto 3000 |
-| `worker` | El mismo código, ejecutando `pnpm worker` |
+| Servicio | Imagen | Función |
+|---|---|---|
+| `postgres` | `postgres:18` | Base de datos; volumen `postgres` en `/var/lib/postgresql` |
+| `redis` | `redis:7-alpine` | Colas, límites y bloqueos (`appendonly`); volumen `redis` |
+| `minio` | `MINIO_IMAGE` (por defecto `pgsty/minio`) | Almacenamiento S3 de archivos; volumen `minio`; consola en `127.0.0.1:9001` |
+| `minio-init` | `MINIO_MC_IMAGE` (por defecto `pgsty/mc`) | Crea el bucket `S3_BUCKET` (privado) con `mc` y termina |
+| `gotenberg` | `gotenberg/gotenberg:8` | Conversión a PDF |
+| `migrate` | `apps/api/Dockerfile` | Ejecuta `prisma migrate deploy` una vez y termina |
+| `api` | `apps/api/Dockerfile` | API NestJS en el puerto 8000 |
+| `worker` | `apps/api/Dockerfile` | La misma imagen de la API, con `node dist/apps/api/src/worker.js` |
+| `web` | `apps/web/Dockerfile` | Next.js en modo `standalone`, puerto 3000; reenvía `/api`, `/logos` e `/images/silabo` a `http://api:8000` |
 
-> La reorganización en `apps/web` y `apps/api` aún no está en el `Dockerfile` ni en `compose.yaml`: se actualizan en la etapa de contenedores separados (PostgreSQL 18 y MinIO).
-| `postgres` | `postgres:17`, con volumen persistente |
-| `redis` | `redis:7-alpine`, con `appendonly` |
-| `gotenberg` | `gotenberg/gotenberg:8` |
+- **Orden de arranque:** `postgres`, `redis`, `minio` y `gotenberg` con chequeo de salud; `minio-init` espera a `minio`; `migrate` espera a `postgres`; `api` y `worker` esperan a que `migrate` y `minio-init` terminen bien; `web` espera a que la API esté sana.
+- **Imágenes:** construcción en varias etapas sobre `node:24-bookworm-slim` (dependencias → build → ejecución) con pnpm y `prisma generate`; corren con el usuario `node`. La imagen de la API lleva los recursos públicos en `/app/assets` (`PUBLIC_ASSETS_PATH`).
+- **MinIO:** las imágenes oficiales `minio/minio` y `minio/mc` ya no se pueden descargar sin cuenta (Docker Hub y quay.io responden «access denied»), por eso el archivo usa por defecto la bifurcación comunitaria `pgsty/minio`; con `MINIO_IMAGE` y `MINIO_MC_IMAGE` se usa la imagen que indique TICs.
+- **Secretos:** `compose.yaml` no trae valores; los toma del archivo `.env` (plantilla en `.env.example`). Faltan `APP_KEY`, `BETTER_AUTH_SECRET`, `POSTGRES_PASSWORD`, `S3_ACCESS_KEY` o `S3_SECRET_KEY` y Compose se detiene con un error. `S3_ACCESS_KEY` y `S3_SECRET_KEY` son también el usuario raíz de MinIO.
 
-- **Imagen:** construcción en varias etapas (dependencias → build → ejecución) sobre `node:24-bookworm-slim`. Corre con un usuario sin privilegios.
-- **Instalación de una base nueva:** `pnpm db:migrate` (Prisma) y luego `pnpm db:seed`.
-- **Variables de entorno** (solo los nombres; los valores van en el servidor, nunca en el repositorio):
+**Cómo levantarlo:**
+
+```bash
+cp .env.example .env        # completar los secretos
+docker compose up -d --build
+docker compose logs -f migrate api
+```
+
+Una base nueva se llena después con `docker compose run --rm api node_modules/.bin/tsx src/db/seed.ts`.
+
+**Almacenamiento de archivos.** Logos (institución, facultades), documentos de apoyo y sus vistas PDF, y los PDF generados se guardan con el mismo esquema de rutas en los dos controladores: `private/...` y `public/...`.
+
+- `STORAGE_DRIVER=local` (por defecto en desarrollo y pruebas): disco en `STORAGE_PATH`.
+- `STORAGE_DRIVER=s3` (fijo en `compose.yaml`): bucket `S3_BUCKET` en `S3_ENDPOINT`, con las claves en el bucket iguales a las rutas en disco. Las descargas se leen en flujo y un archivo que falta responde igual que en disco (404 en las descargas, imagen por defecto en los logos).
+- Los recursos públicos de solo lectura (`assets/images/silabo/*`) no van al bucket: se leen de `PUBLIC_ASSETS_PATH` (por defecto `assets/` en la raíz del repositorio).
+
+**Migrar los archivos existentes a MinIO** (copia idempotente: omite los objetos que ya están con el mismo tamaño y ETag; `--dry-run` solo lista):
+
+```bash
+pnpm --filter @silabos/api storage:migrate -- --dry-run
+pnpm --filter @silabos/api storage:migrate
+# dentro de Docker, con la carpeta vieja montada en STORAGE_PATH:
+docker compose run --rm -v /ruta/a/storage/app:/data/storage:ro api node_modules/.bin/tsx scripts/storage-migrate.ts --dry-run
+```
+
+Lee `STORAGE_PATH` (carpetas `private` y `public`) y usa las variables `S3_*`; escribe una línea JSON por archivo y un resumen (`uploaded`, `skipped`, `pending`, `bytes`).
+
+**Variables de entorno** (solo los nombres; los valores van en el servidor, nunca en el repositorio):
 
 | Grupo | Variables |
 |---|---|
-| Aplicación | `APP_ENV`, `APP_NAME`, `APP_KEY`, `APP_LOCALE`, `API_PORT`, `API_INTERNAL_URL`, `FRONTEND_URL`, `DISPLAY_TIMEZONE`, `TRUSTED_PROXIES`, `PUBLIC_ASSETS_PATH`, `POST_MAX_SIZE` |
+| Aplicación | `APP_ENV`, `APP_NAME`, `APP_KEY`, `APP_LOCALE`, `API_PORT`, `API_INTERNAL_URL`, `FRONTEND_URL`, `DISPLAY_TIMEZONE`, `TRUSTED_PROXIES`, `PUBLIC_ASSETS_PATH`, `POST_MAX_SIZE`, `WEB_PORT` |
 | Autenticación | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `SESSION_LIFETIME`, `SESSION_COOKIE_PREFIX`, `STATEFUL_DOMAINS`, `BCRYPT_ROUNDS` |
-| Datos | `DATABASE_URL`, `REDIS_URL`, `REDIS_PREFIX`, `STORAGE_PATH`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` |
+| Keycloak | `KEYCLOAK_ENABLED`, `KEYCLOAK_ISSUER`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_REDIRECT_URI`, `KEYCLOAK_POST_LOGOUT_REDIRECT_URI` |
+| Datos | `DATABASE_URL`, `REDIS_URL`, `REDIS_PREFIX`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` |
+| Archivos | `STORAGE_DRIVER`, `STORAGE_PATH`, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE`, `MINIO_IMAGE`, `MINIO_MC_IMAGE`, `MINIO_CONSOLE_PORT` |
 | Colas | `QUEUE_MAX_TIME`, `QUEUE_RETRY_AFTER` |
 | Servicios | `GOTENBERG_URL`, `MAIL_MAILER`, `MAIL_SCHEME`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` |
 | IA y catálogo | `AI_DRIVER`, `AI_BASE_URL`, `AI_MODEL`, `AI_TEMPLATE_MODEL`, `AI_API_KEY`, `AI_CONNECT_TIMEOUT`, `AI_TIMEOUT`, `CATALOG_DRIVER`, `KOHA_BASE_URL` |

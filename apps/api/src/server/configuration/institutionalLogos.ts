@@ -2,7 +2,9 @@ import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { isUuid } from "../academic/structure"
 import { requestRoot } from "../http/request"
-import { diskExists, diskPath, fileBase64, fileModifiedAt, publicPath } from "../http/storage"
+import { fileBase64, fileModifiedAt, publicPath } from "../http/storage"
+import { storageWriter } from "../http/storageWriter"
+import { localFile, storedFile, type FileSource } from "../storage/fileSource"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 
 export type StoredLogo = { disk: string; path: string | null; classification: string | null }
@@ -17,18 +19,31 @@ const INSTITUTION_PATH = "logos/institucion.png"
 const DEFAULT_INSTITUTION = "images/silabo/logo-universidad.png"
 const DEFAULT_FACULTY = "images/silabo/facultad.jpeg"
 
-export async function institutionPath(): Promise<string> {
-  return (await diskExists(DISK, INSTITUTION_PATH)) ? diskPath(DISK, INSTITUTION_PATH) : publicPath(DEFAULT_INSTITUTION)
+async function existing(disk: string, relative: string): Promise<FileSource | null> {
+  const storage = storageWriter()
+  return (await storage.stat(disk, relative)) !== null ? storedFile(storage, disk, relative) : null
 }
 
-async function storedPath(logo: StoredLogo | null): Promise<string | null> {
+export async function institutionFile(): Promise<FileSource> {
+  return (await existing(DISK, INSTITUTION_PATH)) ?? localFile(publicPath(DEFAULT_INSTITUTION))
+}
+
+export async function institutionPath(): Promise<string> {
+  return (await institutionFile()).key
+}
+
+async function storedPath(logo: StoredLogo | null): Promise<FileSource | null> {
   const disk = logo === null ? DISK : logo.disk
   const relative = logo?.path
-  return typeof relative === "string" && relative !== "" && (await diskExists(disk, relative)) ? diskPath(disk, relative) : null
+  return typeof relative === "string" && relative !== "" ? existing(disk, relative) : null
+}
+
+export async function facultyFile(faculty: StoredFaculty | null): Promise<FileSource> {
+  return (await storedPath(faculty?.logo ?? null)) ?? localFile(publicPath(DEFAULT_FACULTY))
 }
 
 export async function facultyPath(faculty: StoredFaculty | null): Promise<string> {
-  return (await storedPath(faculty?.logo ?? null)) ?? publicPath(DEFAULT_FACULTY)
+  return (await facultyFile(faculty)).key
 }
 
 async function findFaculty(id: unknown, store: LogoStore): Promise<StoredFaculty | null> {
@@ -41,12 +56,12 @@ export async function facultyIsConfigured(faculty: StoredFaculty | null): Promis
 }
 
 export async function institutionUrl(request: Request): Promise<string> {
-  return `${requestRoot(request)}/logos/institucion?v=${await fileModifiedAt(await institutionPath())}`
+  return `${requestRoot(request)}/logos/institucion?v=${await fileModifiedAt(await institutionFile())}`
 }
 
 export async function configuredFacultyUrl(request: Request, faculty: StoredFaculty | null): Promise<string | null> {
   if (faculty === null || !(await facultyIsConfigured(faculty))) return null
-  return `${requestRoot(request)}/logos/facultad/${faculty.id}?v=${await fileModifiedAt(await facultyPath(faculty))}`
+  return `${requestRoot(request)}/logos/facultad/${faculty.id}?v=${await fileModifiedAt(await facultyFile(faculty))}`
 }
 
 export async function defaultFacultyUrl(request: Request): Promise<string> {
@@ -63,8 +78,8 @@ export async function presentationLogos(request: Request, facultyId: unknown, st
 
 export async function embeddedLogos(facultyId: string | null, store: LogoStore): Promise<{ institution: string; faculty: string }> {
   return {
-    institution: await fileBase64(await institutionPath()),
-    faculty: await fileBase64(await facultyPath(await findFaculty(facultyId, store))),
+    institution: await fileBase64(await institutionFile()),
+    faculty: await fileBase64(await facultyFile(await findFaculty(facultyId, store))),
   }
 }
 
