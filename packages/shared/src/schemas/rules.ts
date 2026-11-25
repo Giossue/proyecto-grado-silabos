@@ -19,8 +19,12 @@ export function requiredText(required: string, type: string) {
     .refine((value) => value.trim() !== "", { message: required, abort: true })
 }
 
+export function anyValue<T>(): z.ZodType<T, T> {
+  return z.unknown() as z.ZodType<T, T>
+}
+
 export function requiredValue<T = string>(required: string) {
-  return z.custom<T>().refine((value) => !isBlank(value), { message: required, abort: true })
+  return anyValue<T>().refine((value) => !isBlank(value), { message: required, abort: true })
 }
 
 export function optionalText(type: string) {
@@ -56,8 +60,7 @@ export function addIssues(context: z.RefinementCtx, messages: string[]): void {
 const isObject = (value: unknown): boolean => typeof value === "object" && value !== null
 
 export function nullableText(label: string, options: { max?: number; min?: number } = {}) {
-  return z
-    .custom<string | null>()
+  return anyValue<string | null>()
     .optional()
     .superRefine((value, context) => {
       if (value === undefined || value === null) return
@@ -71,15 +74,13 @@ export function nullableText(label: string, options: { max?: number; min?: numbe
 }
 
 export function nullableChoice(label: string, values: readonly string[], message = messages.in(label)) {
-  return z
-    .custom<string | null>()
+  return anyValue<string | null>()
     .optional()
     .refine((value) => value === undefined || value === null || (!isObject(value) && values.includes(phpString(value))), { message })
 }
 
 export function nullableInteger(label: string, options: { min?: number; max?: number } = {}) {
-  return z
-    .custom<string | number | null>()
+  return anyValue<string | number | null>()
     .optional()
     .superRefine((value, context) => {
       if (value === undefined || value === null) return

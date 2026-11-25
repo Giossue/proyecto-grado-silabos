@@ -9,7 +9,7 @@ import golden from "../../server/http/__fixtures__/laravel-golden.json"
 import { sessionCookie } from "../../server/auth/testing"
 import { PrismaService } from "../../prisma/prisma.service"
 import { AuthModule } from "../auth/auth.module"
-import { LegacyModule } from "../legacy/legacy.module"
+import { FallbackModule } from "../fallback/fallback.module"
 
 export const COOKIE = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const HEADERS = ["content-type", "cache-control", "allow", "x-ratelimit-limit", "x-ratelimit-remaining", "retry-after", "x-ratelimit-reset", "x-content-type-options", "x-frame-options", "referrer-policy", "permissions-policy", "content-security-policy", "cross-origin-resource-policy"]
@@ -69,7 +69,7 @@ export async function bothSides(harness: Harness, calls: Call[]): Promise<{ lega
 }
 
 export async function equivalenceApp(module: Type<unknown> | DynamicModule, overrides: [InjectionToken, unknown][]): Promise<NestExpressApplication> {
-  let builder = Test.createTestingModule({ imports: [AuthModule, module, LegacyModule] })
+  let builder = Test.createTestingModule({ imports: [AuthModule, module, FallbackModule] })
     .overrideProvider(PrismaService)
     .useValue({})
   for (const [token, value] of overrides) builder = builder.overrideProvider(token).useValue(value)

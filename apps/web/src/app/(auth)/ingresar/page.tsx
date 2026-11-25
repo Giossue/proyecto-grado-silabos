@@ -1,10 +1,10 @@
 "use client"
 
-import { LogIn } from "lucide-react"
+import { Building2, LogIn } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useEffect} from "react"
+import { useEffect, useState } from "react"
 import { Controller } from "react-hook-form"
-import { login } from "@/api/session"
+import { getAuthProviders, login } from "@/api/session"
 import { PasswordInput } from "@/components/PasswordInput"
 import { TextLink } from "@/components/TextLink"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
@@ -20,16 +20,32 @@ import { toast } from "@/lib/toast"
 import { loginSchema, type LoginValues } from "@silabos/shared/schemas/auth"
 import { sessionState } from "@/state/session"
 
+const KEYCLOAK_ERRORS = new Map([
+  ["keycloak_sin_cuenta", "Tu cuenta institucional no está registrada en el sistema. Pide acceso a Administración."],
+  ["keycloak_error", "No se pudo ingresar con la cuenta institucional. Intenta de nuevo."],
+])
+
 export default function LoginPage() {
   const router = useRouter()
-  const statusValues = useSearchParams().getAll("status")
+  const searchParams = useSearchParams()
+  const statusValues = searchParams.getAll("status")
   const status = statusValues.length === 1 ? statusValues[0] : null
+  const keycloakError = KEYCLOAK_ERRORS.get(searchParams.get("error") ?? "")
+  const [keycloak, setKeycloak] = useState(false)
   const form = useSchemaForm(loginSchema, { defaultValues: { email: "", password: "" } })
   const { errors, isSubmitting: processing } = form.formState
 
   useEffect(() => {
     if (status) toast.success(status)
   }, [status])
+
+  useEffect(() => {
+    let active = true
+    getAuthProviders()
+      .then((providers) => { if (active) setKeycloak(providers.keycloak === true) })
+      .catch(() => undefined)
+    return () => { active = false }
+  }, [])
 
   const submit = async ({ email, password }: LoginValues): Promise<void> => {
     try {
@@ -45,7 +61,7 @@ export default function LoginPage() {
     }
   }
 
-  const error = serverMessage(errors)
+  const error = serverMessage(errors) ?? keycloakError
 
   return (
     <AuthSplitLayout title="Iniciar sesión">
@@ -83,6 +99,14 @@ export default function LoginPage() {
           </Button>
         </FieldGroup>
       </form>
+      {keycloak ? (
+        <Button asChild variant="outline" className="w-full" data-test="keycloak-login-button">
+          <a href="/auth/keycloak">
+            <Building2 data-icon="inline-start" aria-hidden="true" />
+            Ingresar con cuenta institucional
+          </a>
+        </Button>
+      ) : null}
     </AuthSplitLayout>
   )
 }

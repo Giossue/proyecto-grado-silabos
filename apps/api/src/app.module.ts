@@ -6,17 +6,18 @@ import { AiModule } from "./modules/ai/ai.module"
 import { AuthModule } from "./modules/auth/auth.module"
 import { DashboardModule } from "./modules/dashboard/dashboard.module"
 import { ExportsModule } from "./modules/exports/exports.module"
+import { FallbackModule } from "./modules/fallback/fallback.module"
 import { FichaModule } from "./modules/ficha/ficha.module"
-import { FilesModule } from "./modules/files/files.module"
 import { HelpModule } from "./modules/help/help.module"
-import { LegacyModule } from "./modules/legacy/legacy.module"
 import { LibraryModule } from "./modules/library/library.module"
 import { MailModule } from "./modules/mail/mail.module"
 import { NotificationsModule } from "./modules/notifications/notifications.module"
+import { ProcessesModule } from "./modules/processes/processes.module"
 import { SettingsModule } from "./modules/settings/settings.module"
 import { SyllabusModule } from "./modules/syllabus/syllabus.module"
 import { TemplateModule } from "./modules/template/template.module"
 import { UsersModule } from "./modules/users/users.module"
+import { KeycloakModule } from "./modules/keycloak/keycloak.module"
 import { PrismaModule } from "./prisma/prisma.module"
 
 @Module({
@@ -34,11 +35,12 @@ import { PrismaModule } from "./prisma/prisma.module"
     DashboardModule,
     HelpModule,
     ExportsModule,
-    FilesModule,
     UsersModule,
     SettingsModule,
     FichaModule,
-    LegacyModule,
+    ProcessesModule,
+    KeycloakModule,
+    FallbackModule,
   ],
 })
 export class AppModule {}

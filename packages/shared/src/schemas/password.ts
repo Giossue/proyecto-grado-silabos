@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { messages } from "./messages"
-import { isBlank, requiredText } from "./rules"
+import { anyValue, isBlank, requiredText } from "./rules"
 
 export const PASSWORD_CONFIRMATION_MESSAGE = "La confirmación de contraseña no coincide."
 
@@ -14,7 +14,7 @@ export function passwordField(label: string, strength?: PasswordStrength) {
   })
 }
 
-export const passwordConfirmation = z.custom<string | null>().optional()
+export const passwordConfirmation = anyValue<string | null>().optional()
 
 type WithPassword = { password?: unknown; password_confirmation?: unknown }
 

@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { addFailures, checkItems, field, fieldFailures, is, itemsAt, nullableField, requiredField } from "./fields"
 import { LIBRARY_SORTS, sortFields } from "./listSort"
+import { anyValue } from "./rules"
 
 export const OTHER_REASON = "otro"
 
@@ -35,7 +36,7 @@ function commentSchema(texts: CommentTexts, normalize: (value: unknown) => unkno
   return z
     .object({
       reasons: field<string[]>("motivos", [is.array(), is.min(1, texts.chooseReason)], { required: true, requiredMessage: texts.chooseReason }),
-      other: z.custom<string | null>().optional(),
+      other: anyValue<string | null>().optional(),
     })
     .superRefine(async (input, context) => {
       await checkItems(context, itemsAt(input.reasons, ["reasons"]), "motivo", [is.string(), is.distinct(), is.oneOf(Object.keys(LIBRARY_COMMENT_REASONS), "El motivo elegido no es válido.")])

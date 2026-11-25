@@ -10,7 +10,7 @@ import { ApiResponseInterceptor } from "./common/interceptors/api-response.inter
 import { rawBodyMiddleware } from "./common/middleware/raw-body.middleware"
 import { ZodValidationPipe } from "./common/pipes/zod-validation.pipe"
 import { SESSION_COOKIE } from "./common/decorators/authenticated.decorator"
-import { LEGACY_ROOT_PATHS } from "./modules/legacy/legacy.controller"
+import { UNPREFIXED_PATHS } from "./common/http/root-paths"
 
 export const DOCS_PATH = "api/docs"
 
@@ -20,7 +20,7 @@ export function configureApi(app: NestExpressApplication): NestExpressApplicatio
   app.use(rawBodyMiddleware)
   app.use(cookieParser())
   app.enableCors({ origin: webOrigins(), credentials: true, preflightContinue: true })
-  app.setGlobalPrefix(API_PREFIX, { exclude: LEGACY_ROOT_PATHS.map((path) => ({ path, method: RequestMethod.ALL })) })
+  app.setGlobalPrefix(API_PREFIX, { exclude: UNPREFIXED_PATHS.map((path) => ({ path, method: RequestMethod.ALL })) })
   app.useGlobalPipes(new ZodValidationPipe())
   app.useGlobalFilters(new ApiExceptionFilter())
   app.useGlobalInterceptors(new ApiResponseInterceptor(app.get(Reflector)))

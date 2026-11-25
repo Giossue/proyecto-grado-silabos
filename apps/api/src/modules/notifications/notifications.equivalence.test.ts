@@ -17,7 +17,7 @@ import { WebResponseExpressAdapter } from "../../common/http/web-response.adapte
 import { PrismaService } from "../../prisma/prisma.service"
 import { AuthModule } from "../auth/auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
-import { LegacyModule } from "../legacy/legacy.module"
+import { FallbackModule } from "../fallback/fallback.module"
 import { NotificationDestinationsRepository } from "./notification-destinations.repository"
 import { NotificationsModule } from "./notifications.module"
 import { NotificationsRepository } from "./notifications.repository"
@@ -209,7 +209,7 @@ async function expectSame(...calls: Call[]): Promise<Answer[]> {
 }
 
 beforeAll(async () => {
-  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, NotificationsModule, LegacyModule] })
+  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, NotificationsModule, FallbackModule] })
     .overrideProvider(AUTH_BRIDGE)
     .useValue(bridge)
     .overrideProvider(RATE_LIMITER)

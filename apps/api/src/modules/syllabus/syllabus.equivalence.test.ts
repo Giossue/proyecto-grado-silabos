@@ -10,7 +10,6 @@ import type { BridgeDeps } from "../../server/auth/types"
 import { teacherSupportDocuments } from "../../server/academic/supportDocuments"
 import { withCookieQueue, withSetCookies } from "../../server/auth/cookieQueue"
 import { fakeTemplateStore, fieldId, goldenTemplate } from "../../server/configuration/testing"
-import { publicSyllabusImage } from "../../server/configuration/logoRoutes"
 import { downloadExport, requestRevisionDocuments, revisionDocuments, type DocumentDeps, type DocumentRequestDeps } from "../../server/documents/revisionDocuments"
 import { createRateLimiter, type RateLimiter } from "../../server/http/throttle"
 import { unmatchedRoute } from "../../server/http/router"
@@ -34,9 +33,7 @@ import { AuthModule } from "../auth/auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
 import { ExportsModule } from "../exports/exports.module"
 import { DOCUMENT_DEPS, DOCUMENT_REQUEST_DEPS } from "../exports/exports.tokens"
-import { FilesModule } from "../files/files.module"
-import { SYLLABUS_IMAGES } from "../files/files.tokens"
-import { LegacyModule } from "../legacy/legacy.module"
+import { FallbackModule } from "../fallback/fallback.module"
 import { SyllabusModule } from "./syllabus.module"
 import type { TeacherResources } from "./syllabus.providers"
 import {
@@ -456,11 +453,6 @@ function deps() {
 
 let current: ReturnType<typeof deps>
 
-function syllabusImage(web: Request, file: string): Promise<Response> {
-  note("image", file)
-  return publicSyllabusImage(web, file)
-}
-
 type Route = [method: string, pattern: RegExp, handle: (web: Request, match: RegExpExecArray) => Promise<Response>]
 
 const ROUTES: Route[] = [
@@ -491,7 +483,6 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/v1\/revisions\/([^/]+)\/documents$/, (web, m) => revisionDocuments(web, m[1], current.documents)],
   ["POST", /^\/api\/v1\/revisions\/([^/]+)\/documents$/, (web, m) => requestRevisionDocuments(web, m[1], current.documentRequests)],
   ["GET", /^\/api\/v1\/exports\/([^/]+)\/pdf$/, (web, m) => downloadExport(web, m[1], current.documents)],
-  ["GET", /^\/images\/silabo\/([^/]+)$/, (web, m) => syllabusImage(web, m[1])],
 ]
 
 const limiter: RateLimiter = {
@@ -586,7 +577,7 @@ async function expectSame(...calls: Call[]): Promise<Answer[]> {
 const asCoordinator = () => ({ world: world(COORDINATOR) })
 
 beforeAll(async () => {
-  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, SyllabusModule, ExportsModule, FilesModule, LegacyModule] })
+  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, SyllabusModule, ExportsModule, FallbackModule] })
     .overrideProvider(AUTH_BRIDGE)
     .useValue(bridge)
     .overrideProvider(RATE_LIMITER)
@@ -623,8 +614,6 @@ beforeAll(async () => {
     .useValue(live(() => current.documents))
     .overrideProvider(DOCUMENT_REQUEST_DEPS)
     .useValue(live(() => current.documentRequests))
-    .overrideProvider(SYLLABUS_IMAGES)
-    .useValue(syllabusImage)
     .compile()
   app = moduleRef.createNestApplication<NestExpressApplication>(new WebResponseExpressAdapter(), { bodyParser: false })
   configureApi(app)
@@ -884,10 +873,6 @@ describe("the syllabus flow served by Nest answers exactly like the route handle
       scenario = () => ({ artifact: { state: "completado", requestedBy: golden.userId, object: { id: "o-1", disk: "public", path: "x.pdf" } } })
       expect(statuses(await expectSame({ method: "GET", path: `/api/v1/exports/${ARTIFACT}/pdf` }))).toEqual([404])
     })
-
-    it("serves the public syllabus images the same way", async () => {
-      await expectSame({ method: "GET", path: "/images/silabo/otro.png", cookie: false }, { method: "GET", path: "/images/silabo/..%2F..%2Fsecreto", cookie: false })
-    })
   })
 
   it.each([
@@ -903,7 +888,6 @@ describe("the syllabus flow served by Nest answers exactly like the route handle
     ["OPTIONS", `/api/v1/teacher/syllabi/${SYLLABUS}/submit`],
     ["DELETE", `/api/v1/revisions/${REVISION}/documents`],
     ["POST", `/api/v1/exports/${ARTIFACT}/pdf`],
-    ["POST", "/images/silabo/ueb.jpeg"],
   ])("answers %s %s with the router answer of the contract", async (method, path) => {
     await expectSame({ method, path, cookie: false })
   })

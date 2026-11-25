@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, HttpCode, Inject, Param, Post, Put, Req } from "@nestjs/common"
+import { Controller, Delete, Get, HttpCode, Inject, Optional, Param, Post, Put, Req } from "@nestjs/common"
 import {
   ApiAcceptedResponse,
   ApiBadRequestResponse,
@@ -39,6 +39,7 @@ import {
   TwoFactorConfirmationDto,
   TwoFactorDisableDto,
 } from "./dto/authentication.dto"
+import { KeycloakService } from "../keycloak/keycloak.service"
 import { IdentityDeps } from "./identity.deps"
 import { identityReply } from "./identity-reply"
 
@@ -50,7 +51,10 @@ const THROTTLED = { description: "Demasiados intentos; trae Retry-After y X-Rate
 @ApiTags("Autenticación")
 @Controller("authentication")
 export class AuthenticationController {
-  constructor(@Inject(IdentityDeps) private readonly deps: IdentityDeps) {}
+  constructor(
+    @Inject(IdentityDeps) private readonly deps: IdentityDeps,
+    @Optional() @Inject(KeycloakService) private readonly keycloak?: KeycloakService,
+  ) {}
 
   @Post("login")
   @HttpCode(200)
@@ -70,9 +74,11 @@ export class AuthenticationController {
   @ApiCookieAuth(SESSION_COOKIE)
   @ApiOperation({ summary: "Cierra la sesión actual y borra la cookie." })
   @ApiNoContentResponse({ description: "Sesión cerrada." })
+  @ApiOkResponse({ description: "Sesión cerrada que vino de Keycloak: { logout_url } para cerrar también la sesión institucional." })
   @ApiUnauthorizedResponse(GUEST)
   logout(@Req() request: ApiRequest): Promise<WebReply> {
-    return identityReply(request, (web) => logout(web, this.deps.set.authentication))
+    const run = (web: Request) => logout(web, this.deps.set.authentication)
+    return identityReply(request, (web) => (this.keycloak ? this.keycloak.logout(web, () => run(web)) : run(web)))
   }
 
   @Post("account-activation")

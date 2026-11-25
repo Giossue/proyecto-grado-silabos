@@ -1,7 +1,7 @@
 import type { NextConfig } from "next"
 
 const apiOrigin = (process.env.API_INTERNAL_URL ?? "http://localhost:8000").replace(/\/+$/, "")
-const apiPaths = ["/api", "/api/:path*", "/logos/:path*", "/images/silabo/:path*", "/plantilla.schema.json"]
+const apiPaths = ["/api", "/api/:path*", "/logos/:path*", "/images/silabo/:path*", "/plantilla.schema.json", "/auth/keycloak", "/auth/callback"]
 
 const nextConfig: NextConfig = {
   ...(process.env.NEXT_OUTPUT === "standalone" ? { output: "standalone" as const } : {}),

@@ -21,7 +21,7 @@ import { showSession, twoFactorStatus, type ProfileRepository, type SessionDeps 
 import { activeSessions, type ActiveSessionDeps, type ActiveSessionStore } from "../../server/identity/sessions"
 import { confirmTwoFactor, disableTwoFactor, enableTwoFactor, regenerateRecoveryCodes, twoFactorChallenge, type TwoFactorDeps, type TwoFactorStore } from "../../server/identity/twoFactor"
 import type { QueuedMail } from "../../server/mail/mailables"
-import { LegacyModule } from "../legacy/legacy.module"
+import { FallbackModule } from "../fallback/fallback.module"
 import { AuthModule } from "./auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "./auth.tokens"
 import { contentHeaders, cookieHeader, jarWith, live, nestRaw, normalizedCookie, rawOf, served, webRequest, type Call, type Raw } from "./identity-equivalence.testing"
@@ -315,7 +315,7 @@ const signIn = (email = EMAIL, password = PASSWORD): Step => ({ method: "POST", 
 
 beforeAll(async () => {
   state = await freshState()
-  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, LegacyModule] })
+  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, FallbackModule] })
     .overrideProvider(PrismaService)
     .useValue({})
     .overrideProvider(AUTH_BRIDGE)

@@ -2,8 +2,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { HTTP_ERROR_PAGE, NOT_FOUND_PAGE } from "./errorPages"
 import { unmatchedRoute, routesMatching, modelNotFound, routeAllows, unknownRoute } from "./router"
-import * as catchAllRoute from "@/app/api/[...path]/route"
-import * as apiRoute from "@/app/api/route"
 
 const base = "http://localhost:3000"
 
@@ -126,25 +124,6 @@ describe("modelNotFound", () => {
       allow: null,
       body: '{"message":"No query results for model [App\\\\Models\\\\User] abc"}',
     })
-  })
-})
-
-describe("catch-all routes", () => {
-  const catchAlls = [
-    ["api/[...path]", async () => catchAllRoute],
-    ["api", async () => apiRoute],
-  ] as const
-
-  it.each(catchAlls)("%s answers like Laravel's production router and never calls another server", async (_, load) => {
-    const fetch = vi.fn()
-    vi.stubGlobal("fetch", fetch)
-    const routes = (await load()) as unknown as Record<string, (request: Request) => Promise<Response>>
-    for (const method of ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]) {
-      for (const path of ["/api/v1/teacher/syllabi/abc/submit", "/api/v1/unknown", "/sanctum/token", "/api"]) {
-        expect(await snapshot(await routes[method](request(method, path)))).toEqual(await snapshot(unmatchedRoute(request(method, path))))
-      }
-    }
-    expect(fetch).not.toHaveBeenCalled()
   })
 })
 

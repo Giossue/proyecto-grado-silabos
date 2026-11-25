@@ -1,0 +1,3 @@
+export const KEYCLOAK_SETTINGS = Symbol("KEYCLOAK_SETTINGS")
+export const KEYCLOAK_OIDC = Symbol("KEYCLOAK_OIDC")
+export const KEYCLOAK_STORE = Symbol("KEYCLOAK_STORE")

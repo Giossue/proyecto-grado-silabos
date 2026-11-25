@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { join, relative, sep } from "node:path"
 import { describe, expect, it } from "vitest"
 
-const ROOTS = [join(process.cwd(), "src", "server"), join(process.cwd(), "src", "app", "api")]
+const ROOTS = [join(process.cwd(), "src", "server"), join(process.cwd(), "src", "modules")]
 const AUDIT = /eventos_auditoria|recordAudit|insertAuditEvent|AuditEventInput|auditLabels|admin\/auditoria|admin\/reportes/
 
 function sources(directory: string): string[] {

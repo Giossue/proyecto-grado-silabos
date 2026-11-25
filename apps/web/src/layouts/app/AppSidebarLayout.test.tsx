@@ -240,4 +240,26 @@ describe("AppSidebarLayout", () => {
     expect(sessionState.current.value).toBeNull()
     expect(navigation.pathname).toBe("/ingresar")
   })
+
+  it("al cerrar una sesión de Keycloak lleva al cierre de la cuenta institucional", async () => {
+    logout.mockResolvedValue({ logout_url: "https://auth.ueb.edu.ec/auth/realms/SAC/protocol/openid-connect/logout?id_token_hint=t" })
+    const assign = vi.fn()
+    vi.stubGlobal("location", { ...window.location, assign })
+    try {
+      const user = userEvent.setup()
+      await mountShell()
+      await openUserMenu(user)
+      await user.click(document.body.querySelector<HTMLElement>('[data-test="logout-button"]')!)
+      await flush()
+      const confirm = [...document.body.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((item) => item.textContent?.trim() === "Cerrar sesión")
+      await user.click(confirm!)
+      await flush()
+
+      expect(assign).toHaveBeenCalledWith("https://auth.ueb.edu.ec/auth/realms/SAC/protocol/openid-connect/logout?id_token_hint=t")
+      expect(sessionState.current.value).toBeNull()
+      expect(navigation.pathname).toBe("/admin/convocatorias")
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })

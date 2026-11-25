@@ -18,7 +18,7 @@ import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
 import { contentHeaders, live, nestRaw, rawOf, served, webRequest, type Call, type Raw } from "../auth/identity-equivalence.testing"
 import { IDENTITY_RUNTIME, type IdentityRuntime } from "../auth/identity.runtime"
 import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY, TWO_FACTOR_STORE } from "../auth/identity.tokens"
-import { LegacyModule } from "../legacy/legacy.module"
+import { FallbackModule } from "../fallback/fallback.module"
 import { UsersModule } from "./users.module"
 import { IDENTITY_IMPORT_STORE, MANAGED_USER_REPOSITORY } from "./users.deps"
 
@@ -180,7 +180,7 @@ async function multipart(path: string, file: Buffer, fields: Record<string, stri
 
 beforeAll(async () => {
   state = freshState(harness())
-  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, UsersModule, LegacyModule] })
+  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, UsersModule, FallbackModule] })
     .overrideProvider(PrismaService)
     .useValue({})
     .overrideProvider(AUTH_BRIDGE)

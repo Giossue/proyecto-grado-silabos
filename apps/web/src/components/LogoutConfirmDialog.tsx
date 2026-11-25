@@ -21,11 +21,12 @@ export function LogoutConfirmDialog() {
   const confirmLogout = async (): Promise<void> => {
     setLeaving(true)
     try {
-      await logout()
+      const result = await logout()
       sessionState.clear()
       clearIntendedRoute()
       logoutConfirmOpen.value = false
-      router.replace(paths.login)
+      if (result?.logout_url) window.location.assign(result.logout_url)
+      else router.replace(paths.login)
     } finally {
       setLeaving(false)
     }

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import LoginPage from "@/app/(auth)/ingresar/page"
 import TwoFactorChallengePage from "@/app/(auth)/verificar-dos-factores/page"
-import { completeTwoFactorLogin, getSession, login } from "@/api/session"
+import { completeTwoFactorLogin, getAuthProviders, getSession, login } from "@/api/session"
 import { clearIntendedRoute, rememberIntendedRoute } from "@/lib/intended-route"
 import { sessionState } from "@/state/session"
 import { navigation } from "@/test/nextNavigation"
@@ -13,6 +13,7 @@ vi.mock("@/api/session", () => ({
   login: vi.fn(),
   completeTwoFactorLogin: vi.fn(),
   getSession: vi.fn(),
+  getAuthProviders: vi.fn(),
 }))
 
 const authenticatedSession = {
@@ -33,6 +34,7 @@ describe("authentication pages", () => {
     vi.mocked(login).mockReset()
     vi.mocked(completeTwoFactorLogin).mockReset()
     vi.mocked(getSession).mockReset()
+    vi.mocked(getAuthProviders).mockReset().mockResolvedValue({ keycloak: false })
     sessionState.clear()
     clearIntendedRoute()
   })
@@ -153,5 +155,43 @@ describe("authentication pages", () => {
     expect(completeTwoFactorLogin).toHaveBeenCalledWith("123456", "")
     expect(getSession).toHaveBeenCalledOnce()
     expect(sessionState.current.value).toEqual(authenticatedSession)
+  })
+
+  it("shows «Ingresar con cuenta institucional» only when the API offers Keycloak", async () => {
+    vi.mocked(getAuthProviders).mockResolvedValue({ keycloak: true })
+    render(<LoginPage />)
+
+    const link = await screen.findByRole("link", { name: "Ingresar con cuenta institucional" })
+    expect(link).toHaveAttribute("href", "/auth/keycloak")
+    expect(screen.getByRole("button", { name: "Ingresar" })).toBeInTheDocument()
+  })
+
+  it("hides the institutional login when Keycloak is off or the providers call fails", async () => {
+    const { unmount } = render(<LoginPage />)
+    await waitFor(() => expect(getAuthProviders).toHaveBeenCalled())
+    expect(screen.queryByRole("link", { name: "Ingresar con cuenta institucional" })).toBeNull()
+    unmount()
+
+    vi.mocked(getAuthProviders).mockRejectedValue(new Error("offline"))
+    render(<LoginPage />)
+    await waitFor(() => expect(getAuthProviders).toHaveBeenCalledTimes(2))
+    expect(screen.queryByRole("link", { name: "Ingresar con cuenta institucional" })).toBeNull()
+  })
+
+  it.each([
+    ["keycloak_sin_cuenta", "Tu cuenta institucional no está registrada en el sistema. Pide acceso a Administración."],
+    ["keycloak_error", "No se pudo ingresar con la cuenta institucional. Intenta de nuevo."],
+  ])("explains the Keycloak error %s with the login error alert", (code, message) => {
+    navigation.reset(`/ingresar?error=${code}`)
+    render(<LoginPage />)
+
+    expect(screen.getByRole("alert")).toHaveTextContent(message)
+  })
+
+  it("ignores unknown error codes", () => {
+    navigation.reset("/ingresar?error=constructor")
+    render(<LoginPage />)
+
+    expect(screen.queryByRole("alert")).toBeNull()
   })
 })

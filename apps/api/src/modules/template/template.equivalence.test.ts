@@ -44,8 +44,8 @@ import { PrismaService } from "../../prisma/prisma.service"
 import { AuthModule } from "../auth/auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
 import { AssistantRepository } from "../ai/assistant.repository"
-import { LegacyModule } from "../legacy/legacy.module"
-import { dispatchLegacy, type LegacyHandler, type LegacyParams, type LegacyRoute } from "../legacy/legacy-router"
+import { FallbackModule } from "../fallback/fallback.module"
+import { dispatchOracle, type OracleHandler, type OracleParams, type OracleRoute } from "../../common/testing/oracle-router"
 import { LogosRepository } from "./logos.repository"
 import { TemplateLocksRepository } from "./template-locks.repository"
 import { TemplateProvisionRepository } from "./template-provision.repository"
@@ -294,15 +294,15 @@ const structureDeps = (): StructureDeps => ({ bridge, store: templateStore, stru
 const provisionDeps = (): ProvisionDeps => ({ bridge, store: templateStore, provision, ...ids })
 const draftDeps = () => ({ bridge, store: templateStore, rehearsal, limiter })
 
-const param = (params: LegacyParams, name: string) => String(params[name])
-const route = (pathname: string, handlers: Record<string, (request: Request, params: LegacyParams) => Promise<Response> | Response>): LegacyRoute => ({
+const param = (params: OracleParams, name: string) => String(params[name])
+const route = (pathname: string, handlers: Record<string, (request: Request, params: OracleParams) => Promise<Response> | Response>): OracleRoute => ({
   path: pathname,
   handlers: Object.fromEntries(
-    Object.entries(handlers).map(([method, handler]): [string, LegacyHandler] => [method, async (request, context) => handler(request, await context.params)]),
+    Object.entries(handlers).map(([method, handler]): [string, OracleHandler] => [method, async (request, context) => handler(request, await context.params)]),
   ),
 })
 
-const LEGACY: LegacyRoute[] = [
+const LEGACY: OracleRoute[] = [
   route("api/v1/admin/template", { GET: (request) => templateIndex(request, builderDeps()), POST: (request) => createTemplate(request, provisionDeps()) }),
   route("api/v1/admin/template/[template]", { GET: (request, params) => templateShow(request, param(params, "template"), builderDeps()) }),
   route("api/v1/admin/template/[template]/teacher-preview", { GET: (request, params) => teacherPreview(request, param(params, "template"), builderDeps()) }),
@@ -389,7 +389,7 @@ async function answerOf(call: Call, response: Response): Promise<Omit<Answer, "w
 async function legacy(call: Call): Promise<Omit<Answer, "writes" | "sessions">> {
   const body = await encoded(call)
   const request = new Request(new URL(call.path, "http://localhost:3000"), { method: call.method, headers: headersOf(call, body), body: body === undefined ? undefined : body.bytes })
-  return answerOf(call, await dispatchLegacy(LEGACY, request))
+  return answerOf(call, await dispatchOracle(LEGACY, request))
 }
 
 let app: NestExpressApplication
@@ -431,7 +431,7 @@ const assets = process.env.PUBLIC_ASSETS_PATH
 
 beforeAll(async () => {
   process.env.PUBLIC_ASSETS_PATH = path.join(__dirname, "..", "..", "..", "..", "..", "assets")
-  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, TemplateModule, LegacyModule] })
+  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, TemplateModule, FallbackModule] })
     .overrideProvider(AUTH_BRIDGE)
     .useValue(bridge)
     .overrideProvider(RATE_LIMITER)
@@ -648,11 +648,13 @@ describe("template routes served by Nest answer exactly like the route handlers 
       { method: "GET", path: `/logos/facultad/${MISSING}`, cookie: false, headers: { accept: "text/html" } },
       { method: "GET", path: "/images/silabo/ueb.jpeg", cookie: false },
       { method: "GET", path: "/images/silabo/otra.png", cookie: false },
+      { method: "GET", path: "/images/silabo/..%2F..%2Fsecreto", cookie: false },
     )
-    expect(statuses(answers)).toEqual([200, 200, 200, 404, 404, 200, 404])
+    expect(statuses(answers)).toEqual([200, 200, 200, 404, 404, 200, 404, 404])
   })
 
   it.each([
+    ["POST", "/images/silabo/ueb.jpeg"],
     ["PUT", "/api/v1/admin/template"],
     ["DELETE", "/api/v1/admin/template"],
     ["POST", BASE],

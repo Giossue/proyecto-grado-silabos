@@ -11,7 +11,7 @@ import type { BridgeDeps } from "../../server/auth/types"
 import { withCookieQueue, withSetCookies } from "../../server/auth/cookieQueue"
 import { parts } from "../../server/excel/testing"
 import { reportedServerError } from "../../server/http/failures"
-import { unmatchedRoute, unmatchedRouteHandler } from "../../server/http/router"
+import { unmatchedRoute } from "../../server/http/router"
 import { createRateLimiter, type RateLimiter } from "../../server/http/throttle"
 import { createCareerRecord, createParallels, replaceParallelTeacher, updateCareerRecord, updateParallel } from "../../server/academic/careerWrites"
 import { createSubjectRequirement, deleteCurriculumSubject, deleteSubjectRequirement, updateCurriculumConfiguration, updateSubjectLayout } from "../../server/academic/curriculumWrites"
@@ -37,9 +37,8 @@ import { AuthModule } from "../auth/auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
 import { FichaDeps } from "../ficha/ficha-deps"
 import { FichaModule } from "../ficha/ficha.module"
-import { LegacyModule } from "../legacy/legacy.module"
-import { matchLegacyRoute, type LegacyParams } from "../legacy/legacy-router"
-import { LEGACY_ROUTES } from "../legacy/legacy-routes"
+import { FallbackModule } from "../fallback/fallback.module"
+import { matchOracleRoute, type OracleParams, type OracleRoute } from "../../common/testing/oracle-router"
 import { AcademicDeps } from "./academic-deps"
 import { AcademicModule } from "./academic.module"
 
@@ -219,8 +218,8 @@ const fichaFakes = {
   preview: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive }),
 }
 
-type Oracle = (web: Request, params: LegacyParams) => Promise<Response>
-const p = (params: LegacyParams, name: string) => String(params[name])
+type Oracle = (web: Request, params: OracleParams) => Promise<Response>
+const p = (params: OracleParams, name: string) => String(params[name])
 const academic = fakes as unknown as AcademicDeps
 const ficha = fichaFakes as unknown as FichaDeps
 
@@ -277,6 +276,11 @@ const ORACLE: Record<string, Oracle> = {
   "api/v1/academic/asignaturas/[asignatura]/ficha/vista-previa:GET": (web, params) => previewSubjectProfile(web, p(params, "asignatura"), ficha.preview()),
 }
 
+const ORACLE_ROUTES: OracleRoute[] = [...new Set(Object.keys(ORACLE).map((key) => key.split(":")[0]))].map((path) => ({
+  path,
+  handlers: Object.fromEntries(Object.keys(ORACLE).filter((key) => key.startsWith(`${path}:`)).map((key) => [key.split(":")[1], ORACLE[key]])),
+}))
+
 const PORTED: [string, string][] = Object.keys(ORACLE).map((key) => {
   const [route, method] = key.split(":")
   const path = `/${route}`.replace(/\[entity\]/, "periodo").replace(/\[[a-z]+\]/g, MISSING)
@@ -299,10 +303,10 @@ const payloadOf = (call: Call) => (call.form !== undefined ? call.form : call.bo
 async function legacy(call: Call): Promise<Omit<Answer, "writes" | "sessions">> {
   const url = new URL(call.path, "http://localhost:3000")
   const web = new Request(url, { method: call.method, headers: headersOf(call), body: payloadOf(call) })
-  const match = matchLegacyRoute(LEGACY_ROUTES, url.pathname)
+  const match = matchOracleRoute(ORACLE_ROUTES, url.pathname)
   const handler = match ? (match.route.handlers[call.method] ?? (call.method === "HEAD" ? match.route.handlers.GET : undefined)) : undefined
   let response: Response
-  if (!match || handler === undefined || handler === unmatchedRouteHandler) response = unmatchedRoute(web)
+  if (!match || handler === undefined) response = unmatchedRoute(web)
   else {
     const oracle = ORACLE[`${match.route.path}:${call.method === "HEAD" ? "GET" : call.method}`]
     if (oracle === undefined) throw new Error(`No oracle for ${match.route.path} ${call.method}`)
@@ -357,7 +361,7 @@ async function expectSame(...calls: Call[]): Promise<Answer[]> {
 const decoded = (answer: Answer) => Buffer.from(answer.body, "base64").toString("utf8")
 
 beforeAll(async () => {
-  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, AcademicModule, FichaModule, LegacyModule] })
+  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, AcademicModule, FichaModule, FallbackModule] })
     .overrideProvider(AUTH_BRIDGE)
     .useValue(bridge)
     .overrideProvider(RATE_LIMITER)

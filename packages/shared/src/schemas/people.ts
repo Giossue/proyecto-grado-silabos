@@ -2,7 +2,7 @@ import { z } from "zod"
 import { emailField, type UniqueCheck } from "./account"
 import { MANAGED_USER_SORTS, sortFields } from "./listSort"
 import { messages } from "./messages"
-import { addIssues, codePointLength, isBlank, nullableChoice, nullableInteger, nullableText, requiredBoolean, requiredText, requiredValue, UUID_PATTERN } from "./rules"
+import { addIssues, anyValue, codePointLength, isBlank, nullableChoice, nullableInteger, nullableText, requiredBoolean, requiredText, requiredValue, UUID_PATTERN } from "./rules"
 
 export const NAME_MAX_LENGTH = 90
 export const ROLE_CODES = ["administrador", "coordinador", "docente", "bibliotecario"] as const
@@ -58,7 +58,7 @@ export const requiresCareer = (roleCode: unknown): boolean => !(typeof roleCode 
 export type ExistsCheck = (value: string) => Promise<boolean>
 
 export function careerField(options: { required: boolean; requiredMessage: string; exists?: ExistsCheck }) {
-  return z.custom<string | null | undefined>().superRefine(async (value, context) => {
+  return anyValue<string | null | undefined>().superRefine(async (value, context) => {
       if (isBlank(value)) {
         if (options.required) addIssues(context, [options.requiredMessage])
         return
@@ -127,7 +127,7 @@ export function managedUserSchema({ roleCode, unique, careerExists, currentName 
     active: requiredBoolean(messages.required("activo"), messages.boolean("activo")).optional(),
     role_code: roleCodeField().optional(),
     career_id: isBlank(roleCode)
-      ? z.custom<string | null>().optional()
+      ? anyValue<string | null>().optional()
       : careerField({ required: requiresCareer(roleCode), requiredMessage: CAREER_REQUIRED_UNLESS, exists: careerExists }),
     replace_coordinator: optionalBoolean("reemplazo de coordinación"),
     faculty_id: prohibited("facultad"),

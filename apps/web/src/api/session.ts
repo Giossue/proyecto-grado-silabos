@@ -69,7 +69,11 @@ export const closeOtherDeviceSessions = (currentPassword: string) =>
   api<{ message: string; closed_sessions: number }>('/authentication/sessions/others', {
     method: 'DELETE', body: JSON.stringify({ current_password: currentPassword }),
   });
-export const logout = () => api<void>('/authentication/logout', { method: 'POST' });
+export type LogoutResult = { logout_url: string } | undefined;
+export type AuthProviders = { keycloak: boolean };
+
+export const logout = () => api<LogoutResult>('/authentication/logout', { method: 'POST' });
+export const getAuthProviders = () => api<AuthProviders>('/authentication/providers');
 export const leaveActiveRole = () => api<Session>('/active-role', { method: 'DELETE' });
 export const selectActiveRole = (roleAssignmentId: string) =>
   api<Session>('/active-role', { method: 'PUT', body: JSON.stringify({ role_assignment_id: roleAssignmentId }) });

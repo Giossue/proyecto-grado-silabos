@@ -17,8 +17,8 @@ import { WebResponseExpressAdapter } from "../../common/http/web-response.adapte
 import { PrismaService } from "../../prisma/prisma.service"
 import { AuthModule } from "../auth/auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
-import { LegacyModule } from "../legacy/legacy.module"
-import { dispatchLegacy, type LegacyRoute } from "../legacy/legacy-router"
+import { FallbackModule } from "../fallback/fallback.module"
+import { dispatchOracle, type OracleRoute } from "../../common/testing/oracle-router"
 import { TemplateModule } from "../template/template.module"
 import { AssistantRepository } from "./assistant.repository"
 import { ASSISTANT_RUNTIME, type AssistantRuntime } from "./assistant.tokens"
@@ -102,7 +102,7 @@ const bridge: BridgeDeps = {
 
 const deps = (): AssistantRouteDeps => ({ bridge, store, ...runtime })
 
-const LEGACY: LegacyRoute[] = [
+const LEGACY: OracleRoute[] = [
   { path: "api/v1/admin/template/assistant", handlers: { GET: (request: Request) => showAssistant(request, deps()), DELETE: (request: Request) => clearAssistant(request, deps()) } },
   { path: "api/v1/admin/template/assistant/messages", handlers: { POST: (request: Request) => storeAssistantMessage(request, deps()) } },
   {
@@ -134,7 +134,7 @@ async function answerOf(response: Response): Promise<Pick<Answer, "status" | "bo
 
 async function legacy(call: Call): Promise<Pick<Answer, "status" | "body" | "headers">> {
   const request = new Request(new URL(call.path, "http://localhost:3000"), { method: call.method, headers: headersOf(call), body: call.body === undefined ? undefined : JSON.stringify(call.body) })
-  return answerOf(await dispatchLegacy(LEGACY, request))
+  return answerOf(await dispatchOracle(LEGACY, request))
 }
 
 let app: NestExpressApplication
@@ -173,7 +173,7 @@ const draft = () => JSON.parse(JSON.stringify(AssistantDraft.fromTemplate(offici
 const ask = (key: string, message = "Agrega una sección de datos") => ({ method: "POST", path: `${PATH}/messages`, body: { message, idempotency_key: key, draft: draft(), draft_version: "sesion-1:4" } })
 
 beforeAll(async () => {
-  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, TemplateModule, LegacyModule] })
+  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, TemplateModule, FallbackModule] })
     .overrideProvider(AUTH_BRIDGE)
     .useValue(bridge)
     .overrideProvider(RATE_LIMITER)

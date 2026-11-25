@@ -26,7 +26,7 @@ import { WebResponseExpressAdapter } from "../../common/http/web-response.adapte
 import { PrismaService } from "../../prisma/prisma.service"
 import { AuthModule } from "../auth/auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
-import { LegacyModule } from "../legacy/legacy.module"
+import { FallbackModule } from "../fallback/fallback.module"
 import { LibraryReviewsRepository } from "./library-reviews.repository"
 import { LibraryModule } from "./library.module"
 import { LIBRARY_DECISIONS, LIBRARY_DETAIL_STORE, LIBRARY_LOGO_STORE } from "./library.tokens"
@@ -360,7 +360,7 @@ beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), "silabos-library-equivalence-"))
   process.env.STORAGE_PATH = path.join(root, "storage", "app")
   process.env.PUBLIC_ASSETS_PATH = path.join(root, "public")
-  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, LibraryModule, LegacyModule] })
+  const moduleRef = await Test.createTestingModule({ imports: [AuthModule, LibraryModule, FallbackModule] })
     .overrideProvider(AUTH_BRIDGE)
     .useValue(bridge)
     .overrideProvider(RATE_LIMITER)

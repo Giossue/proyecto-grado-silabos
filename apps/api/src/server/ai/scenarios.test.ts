@@ -1,7 +1,6 @@
 // @vitest-environment node
-import { existsSync } from "node:fs"
-import { join } from "node:path"
 import { beforeEach, describe, expect, it } from "vitest"
+import { portedRoutes } from "../../modules/ported-routes"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
 import { AssistantDraft } from "./assistantDraft"
 import { baselineGateway, type AiAgentGateway } from "./gateway"
@@ -110,15 +109,14 @@ describe("template assistant scenarios", () => {
 })
 
 describe("routes that must not exist", () => {
-  const api = join(process.cwd(), "src/app/api/v1")
+  const routes = portedRoutes().map((route) => route.segments.join("/"))
 
   it("does not let Coordination override the AI setting of a field", () => {
-    expect(existsSync(join(api, "coordination/ai-configuration"))).toBe(false)
+    expect(routes.filter((route) => route.startsWith("api/v1/coordination/ai-configuration"))).toEqual([])
   })
 
   it("has no teacher AI chat and keeps the template assistant", () => {
-    expect(existsSync(join(api, "teacher/syllabi/[syllabus]/ai-chat"))).toBe(false)
-    expect(existsSync(join(api, "teacher/syllabi/[syllabi]/ai-chat"))).toBe(false)
-    expect(existsSync(join(api, "admin/template/assistant/route.ts"))).toBe(true)
+    expect(routes.filter((route) => route.endsWith("/ai-chat"))).toEqual([])
+    expect(routes).toContain("api/v1/admin/template/assistant")
   })
 })
