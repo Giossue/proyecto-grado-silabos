@@ -21,8 +21,8 @@ Orden propuesto (aceptado): 1) Zod + react-hook-form, 2) TanStack Query, 3) Driz
 |---|---|---|---|---|
 | M1 | S1, S2 | delegada (en paralelo con M3) | hecho (parcial): esquemas Zod compartidos, formularios con react-hook-form, validación del servidor con Zod | — |
 | M3 | S4 | delegada (en paralelo con M1) | hecho: consultas y relaciones Drizzle, migraciones reales | — |
-| M2 | S3 | por definir | pendiente: TanStack Query | — |
-| M4 | S5 | por definir | pendiente: JSON normal y React Email | — |
+| M2 | S2, S3 | delegada (en paralelo con M4) | en curso: TanStack Query, los 16 formularios restantes y E2E independiente del orden | — |
+| M4 | S5 | delegada (en paralelo con M2) | en curso: JSON normal (salvo codificadores canónicos de firmas y huellas) y React Email | — |
 | M5 | S6 | por definir | pendiente: Better Auth | — |
 
 ## Log
