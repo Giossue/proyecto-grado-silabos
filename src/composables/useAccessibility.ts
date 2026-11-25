@@ -7,7 +7,7 @@ export type AccessibilitySettings = {
     highContrast: boolean;
     textSize: TextSize;
     noMotion: boolean;
-    wideSpacing: boolean;
+    dyslexia: boolean;
 };
 
 const STORAGE_KEY = 'silabos:accesibilidad';
@@ -20,7 +20,7 @@ export const defaultSettings = (): AccessibilitySettings => ({
     highContrast: false,
     textSize: '100',
     noMotion: prefersReducedMotion(),
-    wideSpacing: false,
+    dyslexia: false,
 });
 
 const read = (): AccessibilitySettings => {
@@ -32,7 +32,7 @@ const read = (): AccessibilitySettings => {
             highContrast: typeof saved.highContrast === 'boolean' ? saved.highContrast : defaults.highContrast,
             textSize: TEXT_SIZES.includes(saved.textSize as TextSize) ? (saved.textSize as TextSize) : defaults.textSize,
             noMotion: typeof saved.noMotion === 'boolean' ? saved.noMotion : defaults.noMotion,
-            wideSpacing: typeof saved.wideSpacing === 'boolean' ? saved.wideSpacing : defaults.wideSpacing,
+            dyslexia: typeof saved.dyslexia === 'boolean' ? saved.dyslexia : defaults.dyslexia,
         };
     } catch {
         return defaults;
@@ -44,7 +44,7 @@ export const applyAccessibility = (settings: AccessibilitySettings): void => {
     root.dataset.contrast = settings.highContrast ? 'high' : 'normal';
     root.dataset.textSize = settings.textSize;
     root.dataset.motion = settings.noMotion ? 'none' : 'normal';
-    root.dataset.spacing = settings.wideSpacing ? 'wide' : 'normal';
+    root.dataset.dyslexia = settings.dyslexia ? 'on' : 'off';
 };
 
 const settings = signal<AccessibilitySettings>(defaultSettings());
@@ -53,14 +53,14 @@ const toServer = (value: AccessibilitySettings): AccessibilityPreferences => ({
     high_contrast: value.highContrast,
     text_size: value.textSize,
     no_motion: value.noMotion,
-    wide_spacing: value.wideSpacing,
+    dyslexia: value.dyslexia,
 });
 
 const fromServer = (value: AccessibilityPreferences): AccessibilitySettings => ({
     highContrast: value.high_contrast,
     textSize: TEXT_SIZES.includes(value.text_size as TextSize) ? (value.text_size as TextSize) : '100',
     noMotion: value.no_motion,
-    wideSpacing: value.wide_spacing,
+    dyslexia: value.dyslexia === true,
 });
 
 let known = '';

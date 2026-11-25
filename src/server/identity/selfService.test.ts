@@ -51,9 +51,24 @@ describe("PUT /api/v1/authentication/accessibility", () => {
 
   it("stores the preferences and answers them in the order Laravel set them", async () => {
     const test = harness()
-    const response = await put(test, { wide_spacing: "1", no_motion: false, text_size: "130", high_contrast: true })
-    expect(await response.text()).toContain('"accessibility":{"high_contrast":true,"text_size":"130","no_motion":false,"wide_spacing":true}')
-    expect(test.identity.accounts[0].accessibility).toEqual({ high_contrast: true, text_size: "130", no_motion: false, wide_spacing: true })
+    const response = await put(test, { dyslexia: "1", no_motion: false, text_size: "130", high_contrast: true })
+    expect(await response.text()).toContain('"accessibility":{"high_contrast":true,"text_size":"130","no_motion":false,"dyslexia":true}')
+    expect(test.identity.accounts[0].accessibility).toEqual({ high_contrast: true, text_size: "130", no_motion: false, dyslexia: true })
+  })
+
+  it("treats the dyslexia mode as off and ignores the retired wide spacing when an older client sends it", async () => {
+    const test = harness()
+    const response = await put(test, { high_contrast: false, text_size: "100", no_motion: false, wide_spacing: true })
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain('"accessibility":{"high_contrast":false,"text_size":"100","no_motion":false,"dyslexia":false}')
+    expect(test.identity.accounts[0].accessibility).toEqual({ high_contrast: false, text_size: "100", no_motion: false, dyslexia: false })
+  })
+
+  it("rejects a dyslexia mode that is not true or false", async () => {
+    const test = harness()
+    expect((await (await put(test, { high_contrast: false, text_size: "100", no_motion: false, dyslexia: "si" })).json()).errors).toEqual({
+      dyslexia: ["El campo modo dislexia debe ser verdadero o falso."],
+    })
   })
 
   it("names the fields in Spanish", async () => {
@@ -61,16 +76,15 @@ describe("PUT /api/v1/authentication/accessibility", () => {
     expect((await (await put(test, { high_contrast: "si", text_size: 115, no_motion: true })).json()).errors).toEqual({
       high_contrast: ["El campo alto contraste debe ser verdadero o falso."],
       text_size: ["El campo tamaño del texto debe ser una cadena de texto."],
-      wide_spacing: ["El campo texto espaciado es obligatorio."],
     })
   })
 
   it("picks the only role of a session that has none and saves the preferences, like Laravel", async () => {
     const test = harness({ role: "docente", careerId: CAREER }, { active_role_assignment_id: undefined })
-    const response = await put(test, { high_contrast: true, text_size: "100", no_motion: true, wide_spacing: true })
+    const response = await put(test, { high_contrast: true, text_size: "100", no_motion: true, dyslexia: true })
     expect(response.status).toBe(200)
     expect(JSON.parse(await response.text()).active_role.code).toBe("docente")
-    expect(test.identity.accounts[0].accessibility).toEqual({ high_contrast: true, text_size: "100", no_motion: true, wide_spacing: true })
+    expect(test.identity.accounts[0].accessibility).toEqual({ high_contrast: true, text_size: "100", no_motion: true, dyslexia: true })
   })
 })
 

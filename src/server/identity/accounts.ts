@@ -17,7 +17,7 @@ import {
 
 export type Account = { id: string; name: string; email: string; active: boolean; verified: boolean }
 export type RoleGrant = { id: string; userId: string; role: string; careerId: string | null; active: boolean }
-export type Accessibility = { high_contrast: boolean; text_size: string; no_motion: boolean; wide_spacing: boolean }
+export type Accessibility = { high_contrast: boolean; text_size: string; no_motion: boolean; dyslexia: boolean }
 
 export interface AccountTx {
   nested<T>(work: () => Promise<T>): Promise<T>

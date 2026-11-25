@@ -1170,10 +1170,29 @@ html[data-motion='none'] [class*='animate-spin'] {
     animation-duration: 3s !important;
 }
 
-html[data-spacing='wide'] :where(p, li, td, th, dd, dt, label) {
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('/fonts/opendyslexic/OpenDyslexic-Regular.woff2') format('woff2');
+    font-weight: 100 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('/fonts/opendyslexic/OpenDyslexic-Bold.woff2') format('woff2');
+    font-weight: 600 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* The theme is inline, so the font is set directly instead of through --font-sans. */
+html[data-dyslexia='on'] :where(body, .font-sans) {
+    font-family: 'OpenDyslexic', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+}
+
+html[data-dyslexia='on'] :where(p, li, td, th, dd, dt, label):not(.template-sheet *) {
     line-height: 1.8 !important;
-    letter-spacing: 0.02em;
-    word-spacing: 0.08em;
 }
 
 :root[data-contrast='high'] {

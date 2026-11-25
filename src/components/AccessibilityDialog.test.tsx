@@ -34,6 +34,20 @@ describe("AccessibilityDialog", () => {
     expect(reset()).toBeEnabled()
   })
 
+  it("activa el modo dislexia desde el modal", async () => {
+    localStorage.clear()
+    initializeAccessibility()
+    const user = userEvent.setup()
+    renderWithProviders(<AccessibilityDialog />)
+    await user.click(screen.getByRole("button", { name: "Accesibilidad" }))
+
+    expect(document.body.textContent).toContain("Letra para dislexia")
+    expect(document.body.textContent).not.toContain("Texto más espaciado")
+    await user.click(screen.getByRole("switch", { name: "Modo dislexia" }))
+    expect(document.documentElement.dataset.dyslexia).toBe("on")
+    expect(screen.getByRole("button", { name: "Restablecer" })).toBeEnabled()
+  })
+
   it("el botón flotante mide lo mismo que el de ayuda", () => {
     renderWithProviders(<AccessibilityDialog floating />)
 

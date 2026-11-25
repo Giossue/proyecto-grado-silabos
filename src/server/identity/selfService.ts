@@ -55,7 +55,7 @@ export async function updateAccessibility(request: Request, deps: IdentityWriteD
     high_contrast: phpBoolean(input.high_contrast),
     text_size: stringOf(input.text_size),
     no_motion: phpBoolean(input.no_motion),
-    wide_spacing: phpBoolean(input.wide_spacing),
+    dyslexia: phpBoolean(input.dyslexia),
   }
   await deps.accounts.direct((tx) => tx.setAccessibility(session.user.id, preferences))
   return answerSession(deps, session, original, preferences)

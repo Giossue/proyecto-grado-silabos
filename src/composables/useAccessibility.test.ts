@@ -28,9 +28,21 @@ describe("accesibilidad", () => {
     expect(accessibilitySettings.value.textSize).toBe("100")
     expect(accessibilitySettings.value.highContrast).toBe(false)
 
-    accessibilitySettings.update({ wideSpacing: true })
+    accessibilitySettings.update({ dyslexia: true })
     accessibilitySettings.reset()
-    expect(document.documentElement.dataset.spacing).toBe("normal")
+    expect(document.documentElement.dataset.dyslexia).toBe("off")
+  })
+
+  it("activa el modo dislexia y lo recuerda", () => {
+    expect(document.documentElement.dataset.dyslexia).toBe("off")
+    accessibilitySettings.update({ dyslexia: true })
+
+    expect(document.documentElement.dataset.dyslexia).toBe("on")
+    expect(JSON.parse(localStorage.getItem("silabos:accesibilidad") ?? "{}")).toMatchObject({ dyslexia: true })
+    initializeAccessibility()
+    expect(accessibilitySettings.value.dyslexia).toBe(true)
+    accessibilitySettings.reset()
+    expect(document.documentElement.dataset.dyslexia).toBe("off")
   })
 })
 
@@ -38,16 +50,40 @@ describe("accesibilidad en la cuenta", () => {
   it("adopta las preferencias de la cuenta al iniciar sesión y guarda los cambios", () => {
     vi.useFakeTimers()
     sessionState.replace({
-      user: { id: "u1", name: "Ana", email: "a@x.test", email_verified: true, can_edit_identity: false, accessibility: { high_contrast: true, text_size: "150", no_motion: false, wide_spacing: false } },
+      user: { id: "u1", name: "Ana", email: "a@x.test", email_verified: true, can_edit_identity: false, accessibility: { high_contrast: true, text_size: "150", no_motion: false, dyslexia: false } },
       active_role: null,
       available_roles: [],
     })
     expect(accessibilitySettings.value).toMatchObject({ highContrast: true, textSize: "150" })
     expect(updateAccessibility).not.toHaveBeenCalled()
 
-    accessibilitySettings.update({ wideSpacing: true })
+    accessibilitySettings.update({ dyslexia: true })
     vi.advanceTimersByTime(600)
-    expect(updateAccessibility).toHaveBeenCalledWith(expect.objectContaining({ wide_spacing: true, text_size: "150" }))
+    expect(updateAccessibility).toHaveBeenCalledWith({ high_contrast: true, text_size: "150", no_motion: false, dyslexia: true })
+    sessionState.clear()
+    vi.useRealTimers()
+  })
+
+  it("lee el modo dislexia de la cuenta y lo apaga si la cuenta es anterior a la opción", () => {
+    vi.useFakeTimers()
+    sessionState.replace({
+      user: { id: "u1", name: "Ana", email: "a@x.test", email_verified: true, can_edit_identity: false, accessibility: { high_contrast: false, text_size: "100", no_motion: false, dyslexia: true } },
+      active_role: null,
+      available_roles: [],
+    })
+    expect(accessibilitySettings.value.dyslexia).toBe(true)
+    sessionState.clear()
+
+    sessionState.replace({
+      user: { id: "u2", name: "Luis", email: "l@x.test", email_verified: true, can_edit_identity: false, accessibility: { high_contrast: false, text_size: "115", no_motion: false, wide_spacing: false } as never },
+      active_role: null,
+      available_roles: [],
+    })
+    expect(accessibilitySettings.value).toMatchObject({ textSize: "115", dyslexia: false })
+
+    accessibilitySettings.update({ dyslexia: true })
+    vi.advanceTimersByTime(600)
+    expect(updateAccessibility).toHaveBeenLastCalledWith(expect.objectContaining({ dyslexia: true, text_size: "115" }))
     sessionState.clear()
     vi.useRealTimers()
   })

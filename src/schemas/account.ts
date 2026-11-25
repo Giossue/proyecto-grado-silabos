@@ -36,7 +36,7 @@ export const accessibilitySchema = z.object({
     message: messages.in("tamaño del texto"),
   }),
   no_motion: preference("sin animaciones"),
-  wide_spacing: preference("texto espaciado"),
+  dyslexia: requiredBoolean(messages.boolean("modo dislexia"), messages.boolean("modo dislexia")).optional(),
 })
 
 export const teacherFormationSchema = z.object({

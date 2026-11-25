@@ -21,7 +21,7 @@ const sizes = [
 const toggles = [
   { key: "highContrast", label: "Alto contraste", hint: "Colores más marcados y foco más visible" },
   { key: "noMotion", label: "Sin animaciones", hint: "Quita transiciones y movimientos" },
-  { key: "wideSpacing", label: "Texto más espaciado", hint: "Más espacio entre líneas, letras y palabras" },
+  { key: "dyslexia", label: "Modo dislexia", hint: "Letra para dislexia y más espacio entre líneas" },
 ] as const
 
 export function AccessibilityDialog({ floating, remote }: { floating?: boolean; remote?: boolean }) {
