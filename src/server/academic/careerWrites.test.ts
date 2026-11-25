@@ -44,6 +44,7 @@ let sent: Set<string>
 let locked: boolean
 let finalized: boolean
 let purge: Record<string, string[]> | null
+let convocation: { id: string; state: string; processState: string } | null
 let sequence: number
 
 function nextId(): string {
@@ -142,6 +143,8 @@ function deps(): CareerWriteDeps {
             return id
           },
           restartForParallel: async (id) => void log.push(`restart:${id}`),
+          lockCurrentConvocation: async (careerId) => (careerId === CAREER ? convocation : null),
+          generateParallelSyllabus: async (convocationId, parallelId) => void log.push(`generate:${convocationId}:${parallelId}`),
           activeTeacherAssignment: async (id) => assignments.find((assignment) => assignment.parallelId === id)?.id ?? null,
           lockTeacherAssignment: async (id, careerId) => {
             const assignment = assignments.find((item) => item.id === id)
@@ -237,6 +240,7 @@ beforeEach(() => {
   locked = false
   finalized = false
   purge = null
+  convocation = null
 })
 
 describe("POST /api/v1/coordination/academic/asignatura", () => {
@@ -465,6 +469,73 @@ describe("POST /api/v1/coordination/academic/parallels", () => {
     })
     world.assignments = [makeAssignment({ role: "docente", careerId: CAREER })]
     expect((await storeParallels({ subject_id: SUBJECT, codes: ["B"], shift: "matutina", user_id: TEACHER })).text).toBe(FORBIDDEN)
+  })
+})
+
+describe("a parallel that appears while the career convocation is open", () => {
+  const CONVOCATION = "01a1c5bc-8000-7000-8000-000000000001"
+
+  it("receives its syllabus right away when it is created", async () => {
+    convocation = { id: CONVOCATION, state: "abierta", processState: "abierto" }
+    expect((await storeParallels({ subject_id: SUBJECT, codes: ["B", "C"], shift: "vespertina", user_id: TEACHER })).json).toEqual({ message: "2 paralelos creados dentro de su carrera." })
+    expect(log).toEqual([
+      "begin",
+      `insert-parallel:${SUBJECT}:B:vespertina`,
+      `guard:false:${CAREER}:${SUBJECT}`,
+      `assign:${TEACHER_ROLE}:01a2aaaa-0000-7000-8000-000000000001`,
+      "restart:01a2aaaa-0000-7000-8000-000000000001",
+      `generate:${CONVOCATION}:01a2aaaa-0000-7000-8000-000000000001`,
+      `insert-parallel:${SUBJECT}:C:vespertina`,
+      `guard:false:${CAREER}:${SUBJECT}`,
+      `assign:${TEACHER_ROLE}:01a2aaaa-0000-7000-8000-000000000003`,
+      "restart:01a2aaaa-0000-7000-8000-000000000003",
+      `generate:${CONVOCATION}:01a2aaaa-0000-7000-8000-000000000003`,
+      "commit",
+    ])
+  })
+
+  it("receives its syllabus right away when it gets its teacher", async () => {
+    convocation = { id: CONVOCATION, state: "abierta", processState: "abierto" }
+    expect((await create("asignacion_docente", { user_id: TEACHER, parallel_id: PARALLEL })).text).toBe(CREATED)
+    expect(log).toEqual(["begin", `guard:false:${CAREER}:${SUBJECT}`, `assign:${TEACHER_ROLE}:${PARALLEL}`, `restart:${PARALLEL}`, `generate:${CONVOCATION}:${PARALLEL}`, "commit"])
+    log = []
+    assignments = [{ id: CURRENT_ASSIGNMENT, parallelId: PARALLEL, roleId: "01a1c5bc-7ca2-72f3-9e6b-f76c0f49c499" }]
+    expect((await replaceTeacher(PARALLEL, { user_id: TEACHER })).text).toBe(CREATED)
+    expect(log).toEqual([
+      "begin",
+      `unassign:${CURRENT_ASSIGNMENT}`,
+      `guard:false:${CAREER}:${SUBJECT}`,
+      `assign:${TEACHER_ROLE}:${PARALLEL}`,
+      `restart:${PARALLEL}`,
+      `generate:${CONVOCATION}:${PARALLEL}`,
+      "commit",
+    ])
+  })
+
+  it.each([
+    ["a paused convocation", { state: "pausada", processState: "abierto" }],
+    ["a paused institutional process", { state: "abierta", processState: "pausado" }],
+    ["a convocation in preparation", { state: "preparacion", processState: "abierto" }],
+    ["a finalized convocation", { state: "cerrada", processState: "cerrado" }],
+  ])("waits with %s, as before", async (_, states) => {
+    convocation = { id: CONVOCATION, ...states }
+    expect((await storeParallels({ subject_id: SUBJECT, codes: ["B"], shift: "vespertina", user_id: TEACHER })).json).toEqual({ message: "1 paralelos creados dentro de su carrera." })
+    expect(log).toEqual([
+      "begin",
+      `insert-parallel:${SUBJECT}:B:vespertina`,
+      `guard:false:${CAREER}:${SUBJECT}`,
+      `assign:${TEACHER_ROLE}:01a2aaaa-0000-7000-8000-000000000001`,
+      "restart:01a2aaaa-0000-7000-8000-000000000001",
+      "commit",
+    ])
+  })
+
+  it("rolls the syllabus back with the parallel when the assignment fails", async () => {
+    convocation = { id: CONVOCATION, state: "abierta", processState: "abierto" }
+    grants[0].careerId = OTHER_CAREER
+    await storeParallels({ subject_id: SUBJECT, codes: ["B"], shift: "matutina", user_id: TEACHER })
+    expect(log.some((entry) => entry.startsWith("generate:"))).toBe(false)
+    expect(log.at(-1)).toBe("rollback")
   })
 })
 

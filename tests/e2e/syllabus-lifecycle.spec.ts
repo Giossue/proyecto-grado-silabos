@@ -4,7 +4,7 @@ import path from "node:path"
 import { accounts } from "./support/accounts"
 import { userName } from "./support/db"
 import { expect, test, watchPage } from "./support/fixtures"
-import { addTeacherParallel, regenerateCareerSyllabi, fillBibliography, fillIdentification, fillOutcomes, fillPlanning, fillRichText, openCoordinationReview, openSection, approvedRevisionOf, openTrackedReview, stampCount, openTeacherSyllabus, restartFromReview, settleAutosave, teacherListItem, signWith, submitSyllabus, trackAutosave } from "./support/syllabus"
+import { addTeacherParallel, fillBibliography, fillIdentification, fillOutcomes, fillPlanning, fillRichText, openCoordinationReview, openSection, approvedRevisionOf, openTrackedReview, stampCount, openTeacherSyllabus, restartFromReview, settleAutosave, teacherListItem, signWith, submitSyllabus, trackAutosave } from "./support/syllabus"
 
 const subject = "Cálculo III"
 
@@ -231,22 +231,17 @@ test.describe.serial("syllabus lifecycle", () => {
   test("teacher copies a new parallel from parallel A and submits it", async ({ actor }) => {
     const page = await actor("teacher")
     const health = watchPage(page)
+    const coordinator = await actor("coordinator")
+    const code = await addTeacherParallel(coordinator, subject, await userName(accounts.teacher.email))
     await page.goto("/docente/mis-silabos")
     const target = page
       .getByRole("list", { name: "Mis sílabos" })
       .getByRole("listitem")
       .filter({ has: page.getByRole("heading", { name: subject, exact: true }) })
-      .filter({ hasNot: page.getByText("Paralelo: A", { exact: true }) })
-      .filter({ hasText: /Sin iniciar|Borrador/ })
-      .first()
+      .filter({ has: page.getByText(`Paralelo: ${code}`, { exact: true }) })
     await expect(teacherListItem(page, subject)).toBeVisible()
-    if (!(await target.isVisible())) {
-      const coordinator = await actor("coordinator")
-      await addTeacherParallel(coordinator, subject, await userName(accounts.teacher.email))
-      await regenerateCareerSyllabi(coordinator)
-      await page.reload()
-    }
-    await expect(target).toBeVisible()
+    await expect(target).toHaveCount(1)
+    await expect(target).toContainText("Sin iniciar")
     await target.getByRole("heading", { name: subject, exact: true }).click()
     await page.getByRole("button", { name: "Copiar desde paralelo A" }).click()
     const dialog = page.getByRole("dialog", { name: "¿Copiar desde el paralelo A?" })

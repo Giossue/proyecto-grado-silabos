@@ -46,4 +46,12 @@ describe("careerWriteTx subject columns", () => {
     const { db } = recordingDatabase()
     await expect(careerWriteTx(db, () => undefined, 0).updateSubject("01a1c5ba-10b4-7129-925f-c28a9489323c", { otra: 1 } as never)).rejects.toThrow("Unknown column otra")
   })
+
+  it("reads the career convocation of the process in progress and holds it against a pause or resume", async () => {
+    const { db, statements } = recordingDatabase()
+    expect(await careerWriteTx(db, () => undefined, 0).lockCurrentConvocation("01a1c5ba-10b4-7129-925f-c28a9489323c")).toBeNull()
+    expect(statements[0].text).toContain('"convocatorias_universidad"."estado_convocatoria_universidad" in ($2, $3)')
+    expect(statements[0].text).toMatch(/for share of "convocatorias_carreras"$/)
+    expect(statements[0].values).toEqual(["01a1c5ba-10b4-7129-925f-c28a9489323c", "abierto", "pausado", 1])
+  })
 })

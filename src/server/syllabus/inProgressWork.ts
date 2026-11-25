@@ -41,7 +41,7 @@ export const SYLLABUS_ALIVE = sql`exists (select 1 from convocatorias_carreras v
 
 type ParallelRow = { id: string; subject_id: string; code: string; shift: string | null; subject: string; campus: string | null; modality: string | null; teachers: number }
 
-export type GenerateOptions = { subjectId?: string | null; subjectIds?: string[] | null; allowEmpty?: boolean; skipIncomplete?: boolean }
+export type GenerateOptions = { subjectId?: string | null; subjectIds?: string[] | null; parallelId?: string | null; allowEmpty?: boolean; skipIncomplete?: boolean }
 
 export const CONFIRMATION_FIELD = "confirm_purge"
 export const DEFAULT_REASON = "cambió la base institucional (malla, período académico o plantilla)"
@@ -783,6 +783,7 @@ export class InProgressWork {
     const filters = [sql`asignatura.carrera_id = ${careerId}::uuid`, sql`asignatura.asignatura_activa = true`, sql`asignatura.genera_silabo_asignatura = true`]
     if (options.subjectId != null) filters.push(sql`paralelo.asignatura_id = ${options.subjectId}::uuid`)
     if (options.subjectIds != null) filters.push(options.subjectIds.length === 0 ? sql`false` : sql`paralelo.asignatura_id in (${uuidList(options.subjectIds)})`)
+    if (options.parallelId != null) filters.push(sql`paralelo.paralelo_id = ${options.parallelId}::uuid`)
     const parallels = await this.parallelRows(sql.join(filters, sql` and `), careerId, true)
     if (parallels.length > 0) {
       await this.executor.execute(sql`select asignacion_paralelo_id from asignaciones_paralelo where paralelo_id in (${uuidList(parallels.map((row) => row.id))})

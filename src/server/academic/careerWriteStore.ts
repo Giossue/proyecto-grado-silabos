@@ -3,7 +3,7 @@ import { and, asc, desc, eq, exists, getTableColumns, inArray, isNotNull, max, n
 import type { AnyPgColumn } from "drizzle-orm/pg-core"
 import { db } from "@/db"
 import { byColumnName, fromEpoch, hasRows } from "@/db/expressions"
-import { asignacionesParalelo, asignacionesRol, asignaturas, carreras, paralelos, requisitosAsignatura, silabos, usuarios } from "@/db/schema"
+import { asignacionesParalelo, asignacionesRol, asignaturas, carreras, convocatoriasCarreras, convocatoriasUniversidad, paralelos, requisitosAsignatura, silabos, usuarios } from "@/db/schema"
 import { careerDataLocked } from "../configuration/subjectProfileWriteStore"
 import { uuid7 } from "../http/uuid7"
 import { notificationScope, systemNow, type WriteOptions } from "../notifications/queries"
@@ -154,6 +154,20 @@ export function careerWriteTx(executor: Executor, afterCommit: AfterCommit, now:
     },
     async restartForParallel(parallelId) {
       await progress.restartForParallel(parallelId)
+    },
+    async lockCurrentConvocation(careerId) {
+      const [row] = await executor
+        .select({ id: convocatoriasCarreras.convocatoriaCarreraId, state: convocatoriasCarreras.estadoConvocatoriaCarrera, processState: convocatoriasUniversidad.estadoConvocatoriaUniversidad })
+        .from(convocatoriasCarreras)
+        .innerJoin(convocatoriasUniversidad, eq(convocatoriasUniversidad.convocatoriaUniversidadId, convocatoriasCarreras.convocatoriaUniversidadId))
+        .where(and(eq(convocatoriasCarreras.carreraId, careerId), inArray(convocatoriasUniversidad.estadoConvocatoriaUniversidad, ["abierto", "pausado"])))
+        .orderBy(asc(convocatoriasCarreras.convocatoriaCarreraId))
+        .limit(1)
+        .for("share", { of: convocatoriasCarreras })
+      return row ?? null
+    },
+    async generateParallelSyllabus(convocationId, parallelId) {
+      await progress.generateConvocation(convocationId, { parallelId, allowEmpty: true, skipIncomplete: true })
     },
     async activeTeacherAssignment(parallelId) {
       const [row] = await executor.select({ id: asignacionesParalelo.asignacionParaleloId }).from(asignacionesParalelo).where(ACTIVE_ASSIGNMENT(parallelId)).limit(1)

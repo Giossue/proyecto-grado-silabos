@@ -254,7 +254,7 @@ export async function submitSyllabus(page: Page, account: Account): Promise<void
   await expect(page).toHaveURL(/\/docente\/mis-silabos$/)
 }
 
-export async function addTeacherParallel(page: Page, subject: string, teacherName: string): Promise<void> {
+export async function addTeacherParallel(page: Page, subject: string, teacherName: string): Promise<string> {
   const code = `L${uniqueSuffix()}`
   await page.goto("/coordinacion/materias-asignaciones")
   await page.getByRole("cell", { name: subject, exact: true }).click()
@@ -267,17 +267,7 @@ export async function addTeacherParallel(page: Page, subject: string, teacherNam
   await confirmPurgeIfAsked(page)
   await expect(dialog.getByRole("row").filter({ has: page.getByRole("cell", { name: code, exact: true }) })).toContainText(teacherName)
   await dialog.getByRole("button", { name: "Cerrar" }).last().click()
-}
-
-export async function regenerateCareerSyllabi(page: Page): Promise<void> {
-  for (const action of ["Pausar", "Reanudar"]) {
-    await page.goto("/coordinacion/revisiones")
-    await page.getByRole("button", { name: `${action} convocatoria` }).click()
-    const dialog = page.getByRole("dialog", { name: `${action} la convocatoria` })
-    await dialog.getByRole("button", { name: action, exact: true }).click()
-    await expect(dialog).toBeHidden()
-  }
-  await expect(page.getByRole("button", { name: "Pausar convocatoria" })).toBeVisible()
+  return code
 }
 
 export async function submitSampleSyllabus(page: Page, account: Account, subject: string): Promise<boolean> {

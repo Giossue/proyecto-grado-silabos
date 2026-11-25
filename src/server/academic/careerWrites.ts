@@ -33,6 +33,7 @@ export type SubjectColumn = (typeof SUBJECT_COLUMNS)[number]
 export type SubjectValue = string | number | boolean | null
 export type SubjectRow = { id: string; careerId: string; totalHours: number | null; columns: Record<SubjectColumn, SubjectValue> }
 export type ParallelRow = { id: string; subjectId: string; code: string; shift: string }
+export type CareerConvocation = { id: string; state: string; processState: string }
 
 export interface CareerWriteTx {
   careerLocked(careerId: string): Promise<boolean>
@@ -54,6 +55,8 @@ export interface CareerWriteTx {
   parallelHasActiveTeacher(parallelId: string): Promise<boolean>
   insertTeacherAssignment(roleId: string, parallelId: string): Promise<string>
   restartForParallel(parallelId: string): Promise<void>
+  lockCurrentConvocation(careerId: string): Promise<CareerConvocation | null>
+  generateParallelSyllabus(convocationId: string, parallelId: string): Promise<void>
   activeTeacherAssignment(parallelId: string): Promise<string | null>
   lockTeacherAssignment(assignmentId: string, careerId: string): Promise<string | null>
   deleteTeacherAssignment(assignmentId: string): Promise<void>
@@ -195,7 +198,11 @@ async function teacherRole(tx: CareerWriteTx, userId: string, careerId: string):
   return roleId
 }
 
-async function assignTeacher(tx: CareerWriteTx, context: CareerContext, parallelId: string, userId: string, confirmed: boolean): Promise<void> {
+function openConvocation(convocation: CareerConvocation | null): string | null {
+  return convocation !== null && convocation.state === "abierta" && convocation.processState === "abierto" ? convocation.id : null
+}
+
+async function assignTeacher(tx: CareerWriteTx, context: CareerContext, parallelId: string, userId: string, confirmed: boolean, convocationId: string | null): Promise<void> {
   if (!confirmed && (await tx.parallelsWithStartedSyllabus([parallelId])).length > 0) {
     throw new Rejected(validationError({ purge_required: [PURGE_STARTED], purge_count: ["1"] }))
   }
@@ -210,6 +217,7 @@ async function assignTeacher(tx: CareerWriteTx, context: CareerContext, parallel
       if (await tx.parallelHasActiveTeacher(parallel.id)) throw invalid("user_id", "El paralelo ya tiene un docente asignado.")
       await tx.insertTeacherAssignment(roleId, parallel.id)
       await tx.restartForParallel(parallel.id)
+      if (convocationId !== null) await tx.generateParallelSyllabus(convocationId, parallel.id)
     },
     subjects,
   )
@@ -235,7 +243,9 @@ export async function createCareerRecord(request: Request, entity: string, deps:
     )
     if (errors !== null) return validationError(errors)
     return settle(original, deps, async () => {
-      await deps.transaction((tx) => assignTeacher(tx, context, input.parallel_id as string, input.user_id as string, requestBoolean(input.confirm_purge)))
+      await deps.transaction(async (tx) =>
+        assignTeacher(tx, context, input.parallel_id as string, input.user_id as string, requestBoolean(input.confirm_purge), openConvocation(await tx.lockCurrentConvocation(careerId))),
+      )
       return apiJson({ message: CREATED })
     })
   }
@@ -327,6 +337,7 @@ export async function createParallels(request: Request, deps: CareerWriteDeps = 
   const codes = Object.values(input.codes as PhpArray).map((code) => phpTrim(code as string))
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
+      const convocationId = openConvocation(await tx.lockCurrentConvocation(careerId))
       const subjectId = await tx.lockActiveSubject(input.subject_id as string, careerId)
       if (subjectId === null) throw new Missing(MODELS.subject)
       const existing = await tx.existingParallelCodes(
@@ -336,7 +347,7 @@ export async function createParallels(request: Request, deps: CareerWriteDeps = 
       if (existing.length > 0) throw invalid("codes", `Ya existe el paralelo ${existing.join(", ")} para esta materia.`)
       for (const code of codes) {
         const parallelId = await tx.insertParallel(subjectId, code, input.shift)
-        await assignTeacher(tx, context, parallelId, input.user_id as string, confirmed)
+        await assignTeacher(tx, context, parallelId, input.user_id as string, confirmed, convocationId)
       }
     })
     return apiJson({ message: `${codes.length} paralelos creados dentro de su carrera.` })
@@ -388,6 +399,7 @@ export async function replaceParallelTeacher(request: Request, parallelId: strin
   const confirmed = requestBoolean(input.confirm_purge)
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
+      const convocationId = openConvocation(await tx.lockCurrentConvocation(context.careerId))
       const parallel = await tx.lockParallel(parallelId, context.careerId)
       if (parallel === null) throw new Missing(MODELS.parallel)
       const current = await tx.activeTeacherAssignment(parallel.id)
@@ -396,7 +408,7 @@ export async function replaceParallelTeacher(request: Request, parallelId: strin
         if (assignment === null) throw new Missing(MODELS.teacherAssignment, current)
         await tx.deleteTeacherAssignment(assignment)
       }
-      await assignTeacher(tx, context, parallel.id, input.user_id as string, confirmed)
+      await assignTeacher(tx, context, parallel.id, input.user_id as string, confirmed, convocationId)
     })
     return apiJson({ message: CREATED })
   })
