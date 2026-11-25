@@ -6,7 +6,6 @@ import type { LockDetail } from "@/api/locks"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { formatDateDisplay } from "@/lib/dateDisplay"
 import { paths } from "@/lib/routes"
 import { withoutFinalPeriod } from "@/lib/utils"
 import { useSession } from "@/state/session"
@@ -26,14 +25,13 @@ export function ProcessLockAlert({ lock, title, message, hideAction, icon, banne
   const href = isAdministrator ? paths.admin.convocations : paths.coordination.reviews
   const actionLabel = isAdministrator ? "Ir a Convocatorias" : "Ir a Revisión"
   const Icon = icon ?? Lock
-  const headline = title ? title : lock?.period ? `Edición bloqueada · Convocatoria ${lock.period}` : "Edición bloqueada"
+  const headline = title ?? "Edición bloqueada"
   const summary = message ? withoutFinalPeriod(message) : isAdministrator ? "Pause el proceso para editar" : "Pause la convocatoria de su carrera para editar"
-  const deadline = lock?.delivery_on ? formatDateDisplay(lock.delivery_on, { dateStyle: "long" }) : null
 
   const reason = ((): string | null => {
     if (why) return why
     if (message || !lock) return null
-    const open = deadline ? `abierta, con entrega hasta el ${deadline}` : "abierta"
+    const open = "abierta"
     if (lock.scope === "process") {
       return `Hay una convocatoria ${open}. No puede editar la plantilla mientras siga abierta, porque los docentes ya están llenando sus sílabos con ella. Para editarla, pause la convocatoria. Al reanudar, si la plantilla cambió, se pedirá confirmación y los sílabos de este período se adaptarán a ella: se conserva lo escrito y los enviados o aprobados vuelven a borrador. Los de períodos anteriores no se tocan`
     }
@@ -66,7 +64,7 @@ export function ProcessLockAlert({ lock, title, message, hideAction, icon, banne
     return (
       <div
         role="status"
-        className="flex flex-wrap items-center gap-x-3 gap-y-1 border-y border-primary/15 bg-accent px-4 py-2.5 text-sm text-accent-foreground sm:px-6 dark:border-primary/40 dark:bg-primary/25"
+        className="flex flex-wrap items-center gap-x-3 gap-y-1 border-y border-primary/15 bg-accent px-4 py-1.5 text-sm text-accent-foreground sm:px-6 dark:border-primary/40 dark:bg-primary/25"
       >
         <Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />
         <span className="font-medium">{headline}</span>

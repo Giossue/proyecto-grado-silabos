@@ -8,7 +8,6 @@ import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { MetricTiles } from "@/components/domain/MetricTiles"
 import { PageFrame } from "@/components/domain/PageFrame"
-import { ProcessLockAlert } from "@/components/domain/ProcessLockAlert"
 import { StatusBadge, type StatusTone } from "@/components/domain/StatusBadge"
 import { TableCardLine } from "@/components/domain/TableCardLine"
 import { TablePagination } from "@/components/domain/TablePagination"
@@ -102,11 +101,6 @@ export default function AdminProcessesPage() {
       size="wide"
       loading={!loaded && !error}
       actionsSkeleton={loading && !loaded ? ["w-44"] : []}
-      banner={
-        loaded && inProgress ? (
-          <ProcessLockAlert banner title="Convocatoria en curso" message="Hay una convocatoria abierta o pausada. Finalícela o elimínela antes de abrir otra" hideAction />
-        ) : null
-      }
       actions={
         loaded && !setupReady ? (
           <Tooltip>
@@ -117,8 +111,17 @@ export default function AdminProcessesPage() {
             </TooltipTrigger>
             <TooltipContent>Complete «Antes de empezar» para abrir una convocatoria</TooltipContent>
           </Tooltip>
+        ) : loaded && inProgress ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex" tabIndex={0}>
+                <ConvocationPeriodDialog disabled onSaved={(message) => void changed(message)} />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Hay una convocatoria abierta o pausada. Finalícela o elimínela antes de abrir otra</TooltipContent>
+          </Tooltip>
         ) : loaded ? (
-          <ConvocationPeriodDialog disabled={inProgress} onSaved={(message) => void changed(message)} />
+          <ConvocationPeriodDialog onSaved={(message) => void changed(message)} />
         ) : null
       }
     >

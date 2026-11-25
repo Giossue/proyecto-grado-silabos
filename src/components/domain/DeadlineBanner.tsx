@@ -3,7 +3,7 @@ import type { DashboardDeadline } from "@/api/dashboard"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { cn } from "@/lib/utils"
 
-type Audience = "docente" | "coordinador" | "bibliotecario" | "administrador"
+export type Audience = "docente" | "coordinador" | "bibliotecario" | "administrador"
 
 type Notice = { headline: string; detail: string | null }
 
@@ -38,7 +38,7 @@ const closedNotice: Record<Audience, string> = {
   administrador: "Puede reabrirla con una prórroga o abrir una nueva",
 }
 
-const noticeFor = (deadline: DashboardDeadline, audience: Audience): Notice => {
+export const noticeFor = (deadline: DashboardDeadline, audience: Audience): Notice => {
   const { state, days_until_start: toStart, days_until_due: toDue } = deadline
   const { task, upcoming, until } = tasks[audience]
   const due = formatDate(deadline.due_at)

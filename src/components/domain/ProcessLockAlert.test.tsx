@@ -18,13 +18,15 @@ const signIn = (code: "administrador" | "coordinador") =>
   })
 
 describe("ProcessLockAlert", () => {
-  it("nombra la convocatoria y envía a Coordinación a Revisión, donde se pausa", () => {
+  it("avisa en una línea corta, sin repetir el período ni la fecha, y envía a Coordinación a Revisión", () => {
     signIn("coordinador")
     const { container } = renderWithProviders(
       <ProcessLockAlert lock={{ scope: "convocation", period: "2026-I", institutional_pause: false, delivery_on: "2026-10-30" }} />,
     )
 
-    expect(container.textContent).toContain("Edición bloqueada · Convocatoria 2026-I")
+    expect(container.textContent).toContain("Edición bloqueada")
+    expect(container.textContent).not.toContain("2026-I")
+    expect(container.textContent).not.toContain("30 de octubre")
     expect(container.textContent).toContain("Pause la convocatoria de su carrera para editar")
     const link = screen.getByRole("link")
     expect(link.textContent).toBe("Ir a Revisión")

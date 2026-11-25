@@ -101,7 +101,7 @@ describe("AdminProcessesPage", () => {
     expect(rows[0]!.textContent).toContain("Abierto")
     expect(rows[1]!.textContent).toContain("Sin iniciar")
     expect(rows[1]!.textContent).toContain("Sin fechas")
-    expect(container.textContent).toContain("Convocatoria en curso")
+    expect(container.textContent).not.toContain("Convocatoria en curso")
     expect(periodDialog(container).getAttribute("data-disabled")).toBe("true")
     unmount()
   })

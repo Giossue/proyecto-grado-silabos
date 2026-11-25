@@ -10,7 +10,6 @@ import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog"
 import { RoleDeadlineBanner } from "@/components/domain/RoleDeadlineBanner"
 import { ScreenHelpButton } from "@/components/domain/ScreenHelpButton"
 import { SetupChecklist } from "@/components/domain/SetupChecklist"
-import { SetupNextStepBanner } from "@/components/domain/SetupNextStepBanner"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { BreadcrumbsContext, PageTitleContext } from "@/composables/usePageBreadcrumbs"
 import { useShowsSidebar } from "@/composables/useShowsSidebar"
@@ -37,7 +36,6 @@ export function AppSidebarLayout({ breadcrumbs = [], children }: { breadcrumbs?:
             {!editorOpen ? <AppSidebarHeader breadcrumbs={breadcrumbs} pageTitle={pageTitle} sidebar={sidebarVisible} /> : null}
             {!editorOpen ? (
               <div className="sticky top-0 z-20 shrink-0">
-                <SetupNextStepBanner />
                 <RoleDeadlineBanner />
               </div>
             ) : null}

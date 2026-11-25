@@ -6,6 +6,7 @@ import { AccessibilityDialog } from "@/components/AccessibilityDialog"
 import { AppearanceToggle } from "@/components/AppearanceToggle"
 import { NavUser } from "@/components/NavUser"
 import { NotificationsSheet } from "@/components/NotificationsSheet"
+import { RoleDeadlineChip } from "@/components/domain/RoleDeadlineBanner"
 import { Button } from "@/components/ui/button"
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import type { BreadcrumbItem } from "@/types"
@@ -37,6 +38,7 @@ export function AppSidebarHeader({ sidebar = true }: AppSidebarHeaderProps) {
         ) : null}
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-1 max-sm:contents sm:gap-2">
+        <div className="max-sm:hidden"><RoleDeadlineChip /></div>
         <NotificationsSheet />
         <div className="max-sm:hidden"><AppearanceToggle /></div>
         <AccessibilityDialog remote />

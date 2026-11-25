@@ -57,7 +57,9 @@ test.describe.serial("coordination", () => {
     await page.goto("/coordinacion/malla")
     await expect(page.getByRole("button", { name: "Editar malla" })).toBeDisabled()
     await setConvocation(page, "Pausar")
-    await expect(page.getByText(pausedStatus)).toBeVisible()
+    await page.getByRole("button", { name: "Plazo: En pausa" }).click()
+    await expect(page.getByRole("dialog").getByText(pausedStatus)).toBeVisible()
+    await page.keyboard.press("Escape")
     await expect(page.getByRole("button", { name: "Reanudar convocatoria" })).toBeVisible()
     issues.expectClean()
   })
@@ -231,7 +233,7 @@ test.describe.serial("coordination", () => {
 
   test("coordinator resumes the convocation", async ({ page, issues }) => {
     await setConvocation(page, "Reanudar")
-    await expect(page.getByText(pausedStatus)).toBeHidden()
+    await expect(page.getByRole("button", { name: "Plazo: En pausa" })).toBeHidden()
     await expect(page.getByRole("button", { name: "Pausar convocatoria" })).toBeVisible()
     await page.goto("/coordinacion/malla")
     await expect(page.getByRole("button", { name: "Editar malla" })).toBeDisabled()
