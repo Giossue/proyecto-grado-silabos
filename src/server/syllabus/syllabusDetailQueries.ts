@@ -2,7 +2,7 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { isUuid } from "../academic/structure"
-import { iso8601, uuidList } from "../laravel/sql"
+import { iso8601, uuidList } from "../http/sql"
 import { phpJsonDecode } from "../configuration/phpValues"
 import { teacherNamesOf } from "./coordinationReviewQueries"
 import { identificationSource, syllabusFacts } from "./draftFieldStore"
@@ -150,14 +150,8 @@ export function syllabusDetailStoreOn(executor: Executor): SyllabusDetailStore {
       )
       return new Map(rows.map((row) => [row.field_id, phpJsonDecode(row.value)]))
     },
-    async hasArchivedValues(id) {
-      const [row] = await rowsOf<{ found: boolean }>(
-        executor,
-        sql`select exists (select 1 from valores_campo inner join definiciones_campo on definiciones_campo.definicion_campo_id = valores_campo.definicion_campo_id
-          where valores_campo.silabo_id = ${id}::uuid and definiciones_campo.vigente_en_plantilla = false) as found`,
-      )
-      return row?.found === true
-    },
+    hasArchivedValues: (id) => syllabusHasArchivedValues(executor, id),
+    archivedFields: (id) => archivedFieldsOf(executor, id),
     revisions: (id) => revisionsOf(executor, id),
     revisionSnapshot: (revisionId) => revisionSnapshotOf(executor, revisionId),
     signedFacts: (syllabusId, revision) => signedFactsOf(executor, syllabusId, revision),
@@ -189,4 +183,66 @@ export function syllabusDetailStoreOn(executor: Executor): SyllabusDetailStore {
 
 export function createSyllabusDetailStore(): SyllabusDetailStore {
   return syllabusDetailStoreOn(db as unknown as Executor)
+}
+
+export async function syllabusHasArchivedValues(executor: Executor, syllabusId: string): Promise<boolean> {
+  const [row] = await rowsOf<{ found: boolean }>(
+    executor,
+    sql`select exists (select 1 from valores_campo inner join definiciones_campo on definiciones_campo.definicion_campo_id = valores_campo.definicion_campo_id
+      where valores_campo.silabo_id = ${syllabusId}::uuid and definiciones_campo.vigente_en_plantilla = false) as found`,
+  )
+  return row?.found === true
+}
+
+export type ArchivedField = {
+  sectionId: string
+  sectionKey: string
+  sectionTitle: string
+  sectionOrientation: string
+  id: string
+  key: string
+  label: string
+  responsible: string
+  content: unknown
+}
+
+export async function archivedFieldsOf(executor: Executor, syllabusId: string): Promise<ArchivedField[] | null> {
+  if (!(await syllabusHasArchivedValues(executor, syllabusId))) return null
+  const rows = await rowsOf<{
+    section_id: string
+    section_key: string
+    section_title: string
+    orientation: string
+    id: string
+    key: string | null
+    label: string | null
+    responsible: string
+    stored: string | null
+    has_value: boolean
+    content: string | null
+  }>(
+    executor,
+    sql`select secciones_plantilla.seccion_plantilla_id::text as section_id, secciones_plantilla.clave_seccion_plantilla as section_key,
+        secciones_plantilla.titulo_seccion_plantilla as section_title, secciones_plantilla.orientacion_seccion_plantilla as orientation,
+        definiciones_campo.definicion_campo_id::text as id, campos_plantilla.clave_campo_plantilla as key, campos_plantilla.titulo_campo_plantilla as label,
+        definiciones_campo.quien_llena_definicion_campo as responsible, valores_campo.valor_campo::text as stored, valores_campo.silabo_id is not null as has_value,
+        definiciones_campo.contenido_definicion_campo::text as content
+      from definiciones_campo
+      inner join campos_plantilla on campos_plantilla.campo_plantilla_id = definiciones_campo.campo_plantilla_id
+      inner join secciones_plantilla on secciones_plantilla.seccion_plantilla_id = campos_plantilla.seccion_plantilla_id
+      left join valores_campo on valores_campo.definicion_campo_id = definiciones_campo.definicion_campo_id and valores_campo.silabo_id = ${syllabusId}::uuid
+      where definiciones_campo.definicion_campo_id in (select definicion_campo_id from valores_campo where silabo_id = ${syllabusId}::uuid)
+      order by secciones_plantilla.posicion_seccion_plantilla, campos_plantilla.posicion_campo_plantilla`,
+  )
+  return rows.map((row) => ({
+    sectionId: row.section_id,
+    sectionKey: row.section_key,
+    sectionTitle: row.section_title,
+    sectionOrientation: row.orientation,
+    id: row.id,
+    key: row.key ?? "",
+    label: row.label ?? "",
+    responsible: row.responsible,
+    content: row.has_value ? phpJsonDecode(row.stored) : phpJsonDecode(row.content),
+  }))
 }

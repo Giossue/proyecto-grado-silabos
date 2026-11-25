@@ -1,5 +1,5 @@
 import { DOMParser, type Document, type Element } from "@xmldom/xmldom"
-import { phpRawUrlEncode } from "../laravel/pagination"
+import { phpRawUrlEncode } from "../http/pagination"
 
 export const CATALOG_FIELDS = ["author", "title", "isbn", "any"]
 

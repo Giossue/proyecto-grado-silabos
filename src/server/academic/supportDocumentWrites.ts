@@ -1,18 +1,19 @@
 import "server-only"
+import { MODELS } from "../http/models"
 import { createHash, randomUUID } from "node:crypto"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
-import { laravelSlug } from "../documents/slug"
-import { clientExtension, isMultipart, laravelMultipart, postMaxSize, postTooLarge, type UploadedFile } from "../files/uploads"
+import type { BridgeDeps, AppSession } from "../auth/types"
+import { strSlug } from "../documents/slug"
+import { clientExtension, requestBody, postMaxSize, postTooLarge, type UploadedFile } from "../files/uploads"
 import { detectMimeType, guessExtension } from "../files/mimeType"
 import { spreadsheetProblem } from "../files/spreadsheetCells"
-import { isJsonRequest, isPhpArray, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
-import { laravelHttpError, laravelJson, validationError } from "../laravel/responses"
-import { phpDirname, storageWriter, type StorageWriter } from "../laravel/storageWriter"
-import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
-import { uuid7 } from "../laravel/uuid7"
+import { isPhpArray, type PhpArray, type PhpValue } from "../http/input"
+import { jsonError, apiJson, validationError } from "../http/responses"
+import { phpDirname, storageWriter, type StorageWriter } from "../http/storageWriter"
+import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
+import { uuid7 } from "../http/uuid7"
 import { Missing, settle } from "../syllabus/reviewDecisions"
-import { laravelRouter, routeAllows } from "../laravel/router"
+import { unmatchedRoute, modelNotFound, routeAllows } from "../http/router"
 
 export const SUPPORT_DISK = "private"
 export const MAX_KILOBYTES = 20480
@@ -191,19 +192,17 @@ function validateFile(file: PhpValue | UploadedFile | undefined, errors: Record<
   return file
 }
 
-async function readBody(request: Request): Promise<{ input: PhpArray; files: Record<string, UploadedFile | null> } | null> {
-  if (isMultipart(request)) return laravelMultipart(request)
-  if (request.headers.get("content-type") === null || isJsonRequest(request)) return { input: await laravelInput(request), files: {} }
-  return null
+function readBody(request: Request): Promise<{ input: PhpArray; files: Record<string, UploadedFile | null> }> {
+  return requestBody(request)
 }
 
-async function coordinationCareer(session: LaravelSession, deps: SupportDocumentWriteDeps): Promise<string | null> {
+async function coordinationCareer(session: AppSession, deps: SupportDocumentWriteDeps): Promise<string | null> {
   const role = session.activeRole
   if (role === null || role.role !== "coordinador" || role.careerId === null || !(await deps.store.careerActive(role.careerId))) return null
   return role.careerId
 }
 
-async function readableCareer(session: LaravelSession, deps: SupportDocumentWriteDeps): Promise<string | null> {
+async function readableCareer(session: AppSession, deps: SupportDocumentWriteDeps): Promise<string | null> {
   const role = session.activeRole
   if (role === null || !["coordinador", "docente"].includes(role.role) || role.careerId === null || !(await deps.store.careerActive(role.careerId))) return null
   return role.careerId
@@ -234,9 +233,7 @@ function throttled(deps: SupportDocumentWriteDeps, limit: number | null): { gate
 export async function storeSupportDocument(request: Request, deps: SupportDocumentWriteDeps): Promise<Response> {
   const tooLarge = postTooLarge(request, deps.maxPostSize)
   if (tooLarge !== null) return tooLarge
-  const original = request.clone()
   const body = await readBody(request.clone())
-  if (body === null || body.input._token !== undefined) return deps.bridge.forward(original)
   const { gate, requirements } = throttled(deps, 20)
   const finish = (response: Response) => gate()?.decorate(response) ?? response
   const session = await requireSession(request, requirements, deps.bridge)
@@ -247,14 +244,14 @@ export async function storeSupportDocument(request: Request, deps: SupportDocume
   validateTitle(title, errors)
   const file = validateFile(body.files.file !== undefined ? body.files.file : body.input.file, errors)
   if (errors.file === undefined && file !== null) {
-    if ((await coordinationCareer(session, deps)) === null) return finish(laravelHttpError(403, ""))
+    if ((await coordinationCareer(session, deps)) === null) return finish(jsonError(403, ""))
     const problem = spreadsheetProblem(file.bytes, clientExtension(file.originalName))
     if (problem !== null) add(errors, "file", problem)
   }
   if (Object.keys(errors).length > 0) return finish(validationError(errors))
   const upload = file as UploadedFile
   const careerId = await coordinationCareer(session, deps)
-  if (careerId === null) return finish(laravelHttpError(403, ""))
+  if (careerId === null) return finish(jsonError(403, ""))
 
   const content = upload.bytes
   const extension = clientExtension(upload.originalName).toLowerCase()
@@ -286,7 +283,7 @@ export async function storeSupportDocument(request: Request, deps: SupportDocume
   }
   if (!isPdf) await deps.dispatchView(id)
   return finish(
-    laravelJson(
+    apiJson(
       { message: "Documento subido.", document: { id, title, size: content.length, view: isPdf ? VIEW_READY : VIEW_PENDING, uploaded_at: iso8601(now) } },
       201,
     ),
@@ -295,18 +292,18 @@ export async function storeSupportDocument(request: Request, deps: SupportDocume
 
 export async function destroySupportDocument(request: Request, documentId: string, deps: SupportDocumentWriteDeps): Promise<Response> {
   const original = request.clone()
-  if (!routeAllows(request)) return laravelRouter(request)
+  if (!routeAllows(request)) return unmatchedRoute(request)
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   const documentCareer = await deps.store.documentCareer(documentId)
-  if (documentCareer === null) return deps.bridge.forward(original)
+  if (documentCareer === null) return modelNotFound(MODELS.supportDocument, documentId)
   const careerId = await coordinationCareer(session, deps)
-  if (careerId === null) return laravelHttpError(403, "")
-  if (careerId !== documentCareer) return laravelHttpError(404, "")
+  if (careerId === null) return jsonError(403, "")
+  if (careerId !== documentCareer) return jsonError(404, "")
   return settle(original, deps, async () => {
     await deps.store.transaction(async (tx, afterCommit) => {
       const locked = await tx.lockDocument(documentId)
-      if (locked === null) throw new Missing()
+      if (locked === null) throw new Missing(MODELS.supportDocument, documentId)
       const objectIds = [...new Set([locked.objectId, locked.previewId].filter((value): value is string => value !== null && value !== ""))]
       const objects = await tx.objects(objectIds)
       await tx.deleteDocument(locked.id)
@@ -318,7 +315,7 @@ export async function destroySupportDocument(request: Request, documentId: strin
         }
       })
     })
-    return laravelJson({ message: "Documento eliminado." })
+    return apiJson({ message: "Documento eliminado." })
   })
 }
 
@@ -333,16 +330,16 @@ const VIEW_HEADERS: Record<string, string> = {
 }
 
 export async function viewSupportDocument(request: Request, documentId: string, deps: SupportDocumentWriteDeps): Promise<Response> {
-  if (!routeAllows(request)) return laravelRouter(request)
+  if (!routeAllows(request)) return unmatchedRoute(request)
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   const document = await deps.store.readable(documentId)
-  if (document === null) return deps.bridge.forward(request)
+  if (document === null) return modelNotFound(MODELS.supportDocument, documentId)
   const careerId = await readableCareer(session, deps)
-  if (careerId === null) return laravelHttpError(403, "")
-  if (careerId !== document.careerId) return laravelHttpError(404, "")
+  if (careerId === null) return jsonError(403, "")
+  if (careerId !== document.careerId) return jsonError(404, "")
   const preview = document.view === VIEW_READY ? document.preview : null
-  if (preview === null || !(await deps.storage.exists(preview.disk, preview.path))) return laravelHttpError(404, "")
+  if (preview === null || !(await deps.storage.exists(preview.disk, preview.path))) return jsonError(404, "")
   const bytes = await deps.storage.get(preview.disk, preview.path)
   return new Response(new Uint8Array(bytes), {
     status: 200,
@@ -350,7 +347,7 @@ export async function viewSupportDocument(request: Request, documentId: string, 
       ...VIEW_HEADERS,
       "Content-Type": "application/pdf",
       "Content-Length": String(bytes.length),
-      "Content-Disposition": `inline; filename=${laravelSlug(document.title) || "documento"}.pdf`,
+      "Content-Disposition": `inline; filename=${strSlug(document.title) || "documento"}.pdf`,
     },
   })
 }

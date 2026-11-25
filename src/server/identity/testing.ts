@@ -1,5 +1,5 @@
-import golden from "../laravel/__fixtures__/laravel-golden.json"
-import { createRateLimiter } from "../laravel/throttle"
+import golden from "../http/__fixtures__/laravel-golden.json"
+import { createRateLimiter } from "../http/throttle"
 import type { QueuedMail } from "../mail/mailables"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import type { Accessibility, Account, AccountRepository, AccountTx, RoleGrant } from "./accounts"
@@ -27,6 +27,7 @@ export type FakeIdentity = {
   activity: string[]
   notifications: { userId: string }[]
   mails: QueuedMail[]
+  returnedApprovals?: string[]
   sequence: number
 }
 
@@ -123,7 +124,11 @@ function fakeTx(world: FakeIdentity): AccountTx {
       )
       return row ? { grantId: row.id, userId: row.userId, userName: (find(row.userId) as FakeAccount).name } : null
     },
-    careerHasReviewedSyllabi: async (careerId) => world.careers.some((career) => career.id === careerId && career.reviewed),
+    guardHandover: async () => undefined,
+    returnApprovals: async (careerId) => {
+      world.returnedApprovals = [...(world.returnedApprovals ?? []), careerId]
+      return []
+    },
     async findGrant(userId, role, careerId, activeFirst) {
       const matches = world.grants.filter((row) => row.userId === userId && row.role === role && row.careerId === careerId)
       if (activeFirst) matches.sort((left, right) => Number(right.active) - Number(left.active))
@@ -220,7 +225,7 @@ export function fakeAccounts(world: FakeIdentity): AccountRepository {
   }
 }
 
-export type Harness = { bridge: FakeWorld; identity: FakeIdentity; forwarded: Request[]; deps: IdentityWriteDeps }
+export type Harness = { bridge: FakeWorld; identity: FakeIdentity; deps: IdentityWriteDeps }
 
 export function harness(role: { id?: string; role: string; careerId: string | null } = { role: "administrador", careerId: null }, attributes: Record<string, unknown> = {}): Harness {
   const identity = emptyIdentity()
@@ -231,9 +236,8 @@ export function harness(role: { id?: string; role: string; careerId: string | nu
     users: [makeUser()],
     assignments: [makeAssignment({ id: roleId, role: role.role, careerId: role.careerId, careerLabel: label(identity, role.careerId) })],
   }
-  const forwarded: Request[] = []
   const deps: IdentityWriteDeps = {
-    bridge: fakeDeps(bridge, forwarded),
+    bridge: fakeDeps(bridge),
     accounts: fakeAccounts(identity),
     services: {
       random: (length) => "a".repeat(length),
@@ -256,7 +260,7 @@ export function harness(role: { id?: string; role: string; careerId: string | nu
       timezone: () => "America/Guayaquil",
     },
   }
-  return { bridge, identity, forwarded, deps }
+  return { bridge, identity, deps }
 }
 
 export function jsonRequest(path: string, method: string, body: unknown, headers: Record<string, string> = {}): Request {

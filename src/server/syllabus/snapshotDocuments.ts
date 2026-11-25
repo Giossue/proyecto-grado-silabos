@@ -1,30 +1,27 @@
 import { isPhpArray, list, phpString, record, type PhpRecord } from "../configuration/phpValues"
 import { resolveVariables } from "../configuration/templatePresentation"
-import { isDocument, resolveDocument, trustedDefinition, type TemplateDefinition } from "../configuration/templateRuntime"
-
-export class NeedsLaravel extends Error {}
+import { officialDefinition } from "../configuration/officialTemplate"
+import { resolveDocument, trustedDefinition, type TemplateDefinition } from "../configuration/templateRuntime"
+import { documentFromLegacyMapping } from "../configuration/templateStyle"
+import { historicalFieldDocument } from "../documents/historicalFieldDocument"
 
 export const SIGNATURE_ORDER = ["docente", "biblioteca", "coordinacion"]
 
 const SIGNATURE_LABELS: Record<string, string> = { docente: "Firma del docente", coordinacion: "Firma de coordinación", biblioteca: "Firma de biblioteca" }
 const SIGNATURE_ROLES: Record<string, string> = { docente: "Docente", coordinacion: "Coordinación", biblioteca: "Biblioteca" }
 const SIGNING_ACTIONS: Record<string, string> = { docente: "envio_docente", coordinacion: "aprobacion_coordinacion", biblioteca: "aprobacion_biblioteca" }
-const LEGACY_TYPES = ["fijo", "automatico", "tabla", "unidades"]
-const EMPTY_DOCUMENT: PhpRecord = { type: "doc", content: [{ type: "paragraph" }] }
 
 export type SignatureRecord = { role: string; name: string; signedAt: number; certificateName: string; serial: string; issuer: string }
 
 export function snapshotDefinition(snapshot: PhpRecord): TemplateDefinition {
   if (isPhpArray(snapshot.template_definition)) return trustedDefinition(record(snapshot.template_definition))
-  throw new NeedsLaravel()
+  const official = officialDefinition()
+  const mapping = isPhpArray(snapshot.document_mapping) ? record(snapshot.document_mapping) : null
+  return trustedDefinition({ ...official, document: documentFromLegacyMapping(official.document, mapping) })
 }
 
 export function historicalDocument(field: PhpRecord): PhpRecord {
-  if (isPhpArray(field.document)) return record(field.document)
-  const value = field.value ?? null
-  if (isDocument(value)) return record(value)
-  if (LEGACY_TYPES.includes(phpString(field.type ?? "")) || value !== null) throw new NeedsLaravel()
-  return EMPTY_DOCUMENT
+  return historicalFieldDocument(field)
 }
 
 function responsibleOf(field: PhpRecord): unknown {

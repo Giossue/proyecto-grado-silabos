@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import officialJson from "./officialTemplate.json"
 import { fakeTemplateStore, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "./testing"
@@ -21,7 +21,6 @@ const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
-let forwarded: Request[]
 let log: string[]
 let exists: boolean
 let locked: boolean
@@ -51,7 +50,7 @@ const tx = (): ProvisionTx => ({
 
 function deps(): ProvisionDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     store: fakeTemplateStore(templates),
     provision: {
       templateLocked: async () => locked,
@@ -83,7 +82,6 @@ async function read(response: Response) {
 beforeEach(() => {
   world = { sessions: new Map([[golden.sessionId, { payload: sessionPayload(loggedInAttributes()), lastActivity: NOW - 60 }]]), users: [makeUser()], assignments: [makeAssignment({ role: "administrador", careerId: null })] }
   templates = { template: goldenTemplate(), values: [] }
-  forwarded = []
   log = []
   exists = true
   locked = false

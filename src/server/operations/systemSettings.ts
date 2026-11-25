@@ -3,8 +3,8 @@ import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
-import { DecryptError, decrypt } from "../laravel/encrypter"
-import { laravelJson } from "../laravel/responses"
+import { DecryptError, decrypt } from "../http/encrypter"
+import { apiJson } from "../http/responses"
 
 export type SettingsEnvironment = Record<string, string | undefined>
 
@@ -29,7 +29,7 @@ const FIELDS: [field: string, section: "notifications" | "ai" | "library"][] = [
 ]
 const FORBIDDEN = "No tiene permiso para hacer esto."
 
-export function laravelEnv(environment: SettingsEnvironment, name: string, fallback: unknown = null): unknown {
+export function envValue(environment: SettingsEnvironment, name: string, fallback: unknown = null): unknown {
   const value = environment[name]
   if (value === undefined) return fallback
   const lowered = value.toLowerCase()
@@ -63,18 +63,18 @@ function phpStringCast(value: unknown): string {
 }
 
 export function environmentSettings(environment: SettingsEnvironment): Record<string, unknown> {
-  const time = phpStringCast(laravelEnv(environment, "NOTIFICATION_DIGEST_TIME", "")).trim()
+  const time = phpStringCast(envValue(environment, "NOTIFICATION_DIGEST_TIME", "")).trim()
   return {
-    "notifications.emails": phpBool(laravelEnv(environment, "NOTIFICATION_EMAILS", true)),
+    "notifications.emails": phpBool(envValue(environment, "NOTIFICATION_EMAILS", true)),
     "notifications.digest_time": /^([01]?\d|2[0-3]):[0-5]\d$/.test(time) ? time : "08:00",
-    "ai.driver": laravelEnv(environment, "AI_DRIVER", "disabled"),
-    "ai.base_url": laravelEnv(environment, "AI_BASE_URL"),
-    "ai.model": laravelEnv(environment, "AI_MODEL"),
-    "ai.api_key": laravelEnv(environment, "AI_API_KEY"),
-    "ai.connect_timeout": phpInt(laravelEnv(environment, "AI_CONNECT_TIMEOUT", 2)),
-    "ai.timeout": phpInt(laravelEnv(environment, "AI_TIMEOUT", 20)),
-    "library.driver": laravelEnv(environment, "CATALOG_DRIVER", "disabled"),
-    "library.base_url": laravelEnv(environment, "KOHA_BASE_URL"),
+    "ai.driver": envValue(environment, "AI_DRIVER", "disabled"),
+    "ai.base_url": envValue(environment, "AI_BASE_URL"),
+    "ai.model": envValue(environment, "AI_MODEL"),
+    "ai.api_key": envValue(environment, "AI_API_KEY"),
+    "ai.connect_timeout": phpInt(envValue(environment, "AI_CONNECT_TIMEOUT", 2)),
+    "ai.timeout": phpInt(envValue(environment, "AI_TIMEOUT", 20)),
+    "library.driver": envValue(environment, "CATALOG_DRIVER", "disabled"),
+    "library.base_url": envValue(environment, "KOHA_BASE_URL"),
   }
 }
 
@@ -136,6 +136,6 @@ export function describeSettings(stored: Map<string, unknown>, environment: Sett
 export async function showSystemSettings(request: Request, deps: SystemSettingsDeps = defaultDeps()): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
-  if (session.activeRole?.role !== "administrador") return laravelJson({ message: FORBIDDEN }, 403)
-  return laravelJson(describeSettings(await deps.stored(), deps.environment(), deps.bridge.config.key))
+  if (session.activeRole?.role !== "administrador") return apiJson({ message: FORBIDDEN }, 403)
+  return apiJson(describeSettings(await deps.stored(), deps.environment(), deps.bridge.config.key))
 }

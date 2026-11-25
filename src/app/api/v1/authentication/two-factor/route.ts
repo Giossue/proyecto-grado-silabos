@@ -1,4 +1,4 @@
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 import { twoFactorStatus } from "@/server/identity/session"
 import { disableTwoFactor, enableTwoFactor } from "@/server/identity/twoFactor"
 
@@ -14,4 +14,4 @@ export function DELETE(request: Request): Promise<Response> {
   return disableTwoFactor(request)
 }
 
-export { laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as PUT, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as OPTIONS }

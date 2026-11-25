@@ -2,11 +2,11 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { requireSession, defaultBridgeDeps } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession, SessionRequirements } from "../auth/types"
-import { phpQuery, type PhpValue } from "../laravel/input"
-import { laravelJson, validationError } from "../laravel/responses"
-import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
-import { phpFilterInt, validateInput } from "../laravel/validation"
+import type { BridgeDeps, AppSession, SessionRequirements } from "../auth/types"
+import { phpQuery, type PhpValue } from "../http/input"
+import { apiJson, validationError } from "../http/responses"
+import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
+import { phpFilterInt, validateInput } from "../http/validation"
 import { CATALOG_FIELDS, CatalogUnavailable, createCatalog, pageMeta, type BibliographicCatalog, type CatalogSettings, type KohaFetch } from "./catalog"
 import { kohaFetch } from "./kohaHttp"
 
@@ -70,7 +70,7 @@ export function defaultCatalogDeps(): CatalogDeps {
   return { bridge: defaultBridgeDeps(), limiter: sharedRateLimiter(), settings: catalogSettings, fetch: kohaFetch, facultyLibraries }
 }
 
-type Authorized = { session: LaravelSession; finish: (response: Response) => Response; catalog: () => Promise<BibliographicCatalog> }
+type Authorized = { session: AppSession; finish: (response: Response) => Response; catalog: () => Promise<BibliographicCatalog> }
 
 async function authorize(request: Request, deps: CatalogDeps, role: string): Promise<Authorized | Response> {
   let gate: Throttle | null = null
@@ -85,13 +85,13 @@ async function authorize(request: Request, deps: CatalogDeps, role: string): Pro
   const session = await requireSession(request, requirements, deps.bridge)
   const finish = (response: Response) => (gate as Throttle | null)?.decorate(response) ?? response
   if (session instanceof Response) return finish(session)
-  if (!session.user.active || session.activeRole?.role !== role) return finish(laravelJson({ message: FORBIDDEN }, 403))
+  if (!session.user.active || session.activeRole?.role !== role) return finish(apiJson({ message: FORBIDDEN }, 403))
   return { session, finish, catalog: async () => createCatalog(await deps.settings(), deps.fetch) }
 }
 
 function unavailable(error: unknown): Response {
   if (!(error instanceof CatalogUnavailable)) throw error
-  return laravelJson({ message: error.message, code: "catalog_unavailable" }, 503)
+  return apiJson({ message: error.message, code: "catalog_unavailable" }, 503)
 }
 
 function phpIntval(value: PhpValue | undefined): number {
@@ -118,7 +118,7 @@ export async function searchCatalog(request: Request, deps: CatalogDeps = defaul
   const libraries = careerId === null ? [] : await deps.facultyLibraries(careerId)
   try {
     const page = await (await authorized.catalog()).search(String(input.field), String(input.q), Math.max(1, phpIntval(input.page)), libraries)
-    return finish(laravelJson({ data: page.books, meta: pageMeta(page) }))
+    return finish(apiJson({ data: page.books, meta: pageMeta(page) }))
   } catch (error) {
     return finish(unavailable(error))
   }
@@ -128,7 +128,7 @@ export async function catalogLibraries(request: Request, deps: CatalogDeps = def
   const authorized = await authorize(request, deps, "administrador")
   if (authorized instanceof Response) return authorized
   try {
-    return authorized.finish(laravelJson({ data: await (await authorized.catalog()).libraries() }))
+    return authorized.finish(apiJson({ data: await (await authorized.catalog()).libraries() }))
   } catch (error) {
     return authorized.finish(unavailable(error))
   }

@@ -1,3 +1,5 @@
+import { MODELS } from "../http/models"
+import { Missing } from "../http/failures"
 import { createHash } from "node:crypto"
 import type { QueuedMail } from "../mail/mailables"
 import type { AfterCommit } from "../queue/dispatch"
@@ -31,7 +33,8 @@ export interface AccountTx {
   effectiveRoles(userId: string): Promise<string[]>
   lockEffectiveGrants(userId: string): Promise<RoleGrant[]>
   lockCurrentCoordinator(careerId: string | null, exceptUserId: string): Promise<{ grantId: string; userId: string; userName: string } | null>
-  careerHasReviewedSyllabi(careerId: string | null): Promise<boolean>
+  guardHandover(careerId: string, confirmed: boolean, afterCommit: AfterCommit, now: number): Promise<void>
+  returnApprovals(careerId: string, afterCommit: AfterCommit, now: number): Promise<string[]>
   findGrant(userId: string, role: string, careerId: string | null, activeFirst: boolean): Promise<RoleGrant | null>
   lockActiveGrant(userId: string, role: string, careerId: string): Promise<RoleGrant | null>
   insertGrant(userId: string, role: string, careerId: string | null, at: number): Promise<RoleGrant>
@@ -87,12 +90,6 @@ export class AccountValidation extends Error {
   }
 }
 
-export class NeedsLaravel extends Error {
-  constructor() {
-    super("needs-laravel")
-  }
-}
-
 const invalid = (attribute: string, message: string) => new AccountValidation({ [attribute]: [message] })
 
 const INVITATION_DAYS = 7
@@ -101,7 +98,7 @@ export const STILL_VALID = "La invitación sigue vigente; podrá reenviarla cuan
 
 export async function issueInvitation(ctx: ActionContext, target: Account): Promise<void> {
   const user = await ctx.tx.lockAccount(target.id)
-  if (user === null) throw new NeedsLaravel()
+  if (user === null) throw new Missing(MODELS.user, target.id)
   if (!user.active || user.verified) throw invalid("user", "La cuenta ya está activada o no está disponible para una invitación.")
   await ctx.tx.invalidateInvitations(user.id, ctx.now)
   const token = ctx.services.random(64)
@@ -122,13 +119,13 @@ export async function issueInvitation(ctx: ActionContext, target: Account): Prom
 
 export async function resendActivation(ctx: ActionContext, target: Account, reason: string = RESEND): Promise<void> {
   const locked = await ctx.tx.lockAccount(target.id)
-  if (locked === null) throw new NeedsLaravel()
+  if (locked === null) throw new Missing(MODELS.user, target.id)
   if (locked.verified) throw invalid("user", "La cuenta ya fue activada por su titular; no se reenvía una invitación.")
   if (reason === RESEND && (await ctx.tx.hasActiveInvitation(locked.id, ctx.now))) throw invalid("user", STILL_VALID)
   await issueInvitation(ctx, locked)
 }
 
-export type RoleRequest = { roleCode: string; careerId: string | null; replaceCoordinator: boolean }
+export type RoleRequest = { roleCode: string; careerId: string | null; replaceCoordinator: boolean; confirmed?: boolean }
 
 export async function assignRole(ctx: ActionContext, target: { id: string }, request: RoleRequest): Promise<void> {
   const { tx } = ctx
@@ -151,8 +148,9 @@ export async function assignRole(ctx: ActionContext, target: { id: string }, req
     const holder = await tx.lockCurrentCoordinator(careerId, target.id)
     if (holder !== null) {
       if (request.replaceCoordinator !== true) throw invalid("replace_coordinator", `La carrera ya tiene como coordinador a ${holder.userName}.`)
-      if (await tx.careerHasReviewedSyllabi(careerId)) throw new NeedsLaravel()
+      await tx.guardHandover(String(careerId), request.confirmed === true, ctx.afterCommit, ctx.now)
       await tx.setGrantActive(holder.grantId, false)
+      await tx.returnApprovals(String(careerId), ctx.afterCommit, ctx.now)
     }
   }
   const grant = await tx.findGrant(target.id, role, careerId, false)
@@ -201,7 +199,7 @@ export async function setUserStatus(ctx: ActionContext, target: { id: string }, 
 
 export async function updateManagedUserProfile(ctx: ActionContext, target: { id: string }, data: { name: string; email: string }): Promise<Account> {
   const locked = await ctx.tx.lockAccount(target.id)
-  if (locked === null) throw new NeedsLaravel()
+  if (locked === null) throw new Missing(MODELS.user, target.id)
   const email = data.email.toLowerCase()
   const name = normalizeName(data.name)
   if (name === locked.name && email === locked.email) return locked
@@ -230,7 +228,7 @@ export async function removeUserRole(ctx: ActionContext, target: { id: string },
 
 export async function deleteManagedUser(ctx: ActionContext, target: { id: string }): Promise<void> {
   const locked = await ctx.tx.lockAccount(target.id)
-  if (locked === null) throw new NeedsLaravel()
+  if (locked === null) throw new Missing(MODELS.user, target.id)
   if (locked.verified) throw invalid("user", "La cuenta ya fue activada por su titular. Desactívela en lugar de eliminarla.")
   if (await ctx.tx.hasActivity(locked.id)) throw invalid("user", "La cuenta ya tiene actividad registrada. Desactívela en lugar de eliminarla.")
   await ctx.tx.purgeAccount(locked.id)
@@ -288,7 +286,7 @@ export async function removeCareerTeacher(ctx: ActionContext, target: { id: stri
   const { tx } = ctx
   if (await tx.careerLocked(careerId)) throw invalid("process", "Convocatoria activa")
   const grant = await tx.lockActiveGrant(target.id, ROLE_TEACHER, careerId)
-  if (grant === null) throw new NeedsLaravel()
+  if (grant === null) throw new Missing(MODELS.roleAssignment)
   const parallels = await tx.lockActiveParallelAssignments(grant.id)
   for (const id of parallels) await tx.deleteParallelAssignment(id)
   await tx.setGrantActive(grant.id, false)
@@ -301,7 +299,7 @@ export async function removeCareerTeacher(ctx: ActionContext, target: { id: stri
 
 export async function updateTeacherFormation(ctx: ActionContext, userId: string, formation: string): Promise<boolean> {
   const locked = await ctx.tx.lockFormation(userId)
-  if (locked === null) throw new NeedsLaravel()
+  if (locked === null) throw new Missing(MODELS.user, userId)
   const value = formation.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, "")
   if (locked.formation === value) return false
   await ctx.tx.setFormation(userId, value)

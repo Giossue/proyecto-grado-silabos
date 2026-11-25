@@ -1,6 +1,6 @@
 import { createRedisRateLimiter } from "../redis/rateLimiter"
 import { redisPrefix, sharedRedis } from "../redis/connection"
-import { laravelHttpError } from "./responses"
+import { jsonError } from "./responses"
 
 export type RateLimit = { key: string; maxAttempts: number; decaySeconds: number }
 
@@ -36,11 +36,11 @@ export function createRateLimiter() {
   } satisfies RateLimiter
 }
 
-const globalForLimiter = globalThis as unknown as { laravelRateLimiter?: RateLimiter }
+const globalForLimiter = globalThis as unknown as { sharedThrottleLimiter?: RateLimiter }
 
 export function sharedRateLimiter(): RateLimiter {
-  globalForLimiter.laravelRateLimiter ??= createRedisRateLimiter(sharedRedis(), `${redisPrefix()}throttle:`)
-  return globalForLimiter.laravelRateLimiter
+  globalForLimiter.sharedThrottleLimiter ??= createRedisRateLimiter(sharedRedis(), `${redisPrefix()}throttle:`)
+  return globalForLimiter.sharedThrottleLimiter
 }
 
 export type Throttle = {
@@ -56,7 +56,7 @@ export function throttle(limiter: RateLimiter, limit: RateLimit, now: () => numb
       const current = now()
       const attempt = await limiter.attempt(limit.key, limit.maxAttempts, limit.decaySeconds, current)
       if (attempt.limited) {
-        const response = laravelHttpError(429, "Too Many Attempts.")
+        const response = jsonError(429, "Too Many Attempts.")
         response.headers.set("X-RateLimit-Limit", String(limit.maxAttempts))
         response.headers.set("X-RateLimit-Remaining", "0")
         response.headers.set("Retry-After", String(Math.max(0, attempt.availableAt - current)))

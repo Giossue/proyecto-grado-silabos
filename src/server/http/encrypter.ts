@@ -12,7 +12,7 @@ type Envelope = { iv: string; value: string; mac: string; tag?: string }
 
 export function parseAppKey(appKey: string): Buffer {
   const key = appKey.startsWith("base64:") ? Buffer.from(appKey.slice(7), "base64") : Buffer.from(appKey, "utf8")
-  if (key.length !== KEY_BYTES) throw new Error("Unsupported Laravel APP_KEY length.")
+  if (key.length !== KEY_BYTES) throw new Error("Unsupported APP_KEY length.")
   return key
 }
 

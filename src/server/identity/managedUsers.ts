@@ -2,11 +2,11 @@ import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { phpQuery, type PhpValue } from "../laravel/input"
-import { lengthAwarePaginator, resolveCurrentPage } from "../laravel/pagination"
-import { laravelQuery, laravelRequestUrl } from "../laravel/request"
-import { forbidden, laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
+import { phpQuery, type PhpValue } from "../http/input"
+import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
+import { queryParams, requestUrl } from "../http/request"
+import { forbidden, apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
 import { createManagedUserRepository } from "./managedUserQueries"
 
 export type ManagedUserFilters = { search: string | null; status: string | null; role: string | null; career: string | null }
@@ -72,7 +72,7 @@ export async function managedUsers(request: Request, deps: ManagedUserDeps = def
   const role = ROLE_CODES.includes(stringOrNull(input.role) ?? "") ? (input.role as string) : null
   const careerInput = stringOrNull(input.career)
   const career = careerInput !== null && isUuid(careerInput) ? careerInput : null
-  const query = laravelQuery(new URL(request.url))
+  const query = queryParams(new URL(request.url))
   const currentPage = resolveCurrentPage(query.get("page") ?? null)
   const { total, items } = await deps.users.page({ search: falsy(search) ? null : search, status, role, career }, currentPage, PER_PAGE)
   const data = items.map((user) => {
@@ -90,8 +90,8 @@ export async function managedUsers(request: Request, deps: ManagedUserDeps = def
       assignments: user.assignments.map((assignment) => ({ id: assignment.id, role_name: roleName(assignment.role), career_name: assignment.careerLabel, active: assignment.active })),
     }
   })
-  return laravelJson({
-    users: lengthAwarePaginator({ items: data, total, perPage: PER_PAGE, currentPage, path: laravelRequestUrl(request), query }),
+  return apiJson({
+    users: lengthAwarePaginator({ items: data, total, perPage: PER_PAGE, currentPage, path: requestUrl(request), query }),
     filters: { q: search, status, role, career },
     roles: ROLE_NAMES.map(([codigo, nombre]) => ({ codigo, nombre })),
     careers: await deps.users.careers(),

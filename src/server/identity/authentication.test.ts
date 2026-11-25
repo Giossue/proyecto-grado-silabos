@@ -1,14 +1,14 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import filterEmailGolden from "./__fixtures__/filter-email-golden.json"
 import { createMemoryAttemptLimiter } from "../auth/attemptLimiter"
 import { fakeDeps, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, storedJson, testKey, xsrfHeader, type FakeWorld } from "../auth/testing"
 import type { SessionWriterDeps } from "../auth/sessionWriter"
-import { cookiePrefix } from "../laravel/cookies"
-import { decrypt } from "../laravel/encrypter"
-import { hashPasswordForCookie, loginSessionKey, recallerCookieName } from "../laravel/sessionGuard"
-import { createRateLimiter } from "../laravel/throttle"
+import { cookiePrefix } from "../http/cookies"
+import { decrypt } from "../http/encrypter"
+import { hashPasswordForCookie, loginSessionKey, recallerCookieName } from "../http/sessionGuard"
+import { createRateLimiter } from "../http/throttle"
 import { csrfCookie, filterEmailShape, leaveActiveRole, login, logout, selectActiveRole, updatePassword, type AuthenticationDeps } from "./authentication"
 import type { UserProfile } from "./session"
 
@@ -21,7 +21,6 @@ const OTHER_ROLE = "0193a3c2-3333-7000-8000-000000000003"
 
 let world: FakeWorld
 let remember: Map<string, string | null>
-let forwarded: Request[]
 let twoFactor: boolean
 let sequence: number
 
@@ -29,7 +28,7 @@ const profile: UserProfile = { name: "DOCENTE DEMO", email: EMAIL, formation: nu
 
 function deps(overrides: Partial<AuthenticationDeps> = {}): AuthenticationDeps {
   const writer: SessionWriterDeps = {
-    ...fakeDeps(world, forwarded),
+    ...fakeDeps(world),
     cookie: { path: "/", domain: null, secure: false, sameSite: "lax" },
     random: (length) => String.fromCharCode(65 + (sequence++ % 26)).repeat(length),
     lottery: () => false,
@@ -118,7 +117,6 @@ function cookies(response: Response): Record<string, { value: string; attributes
 beforeEach(() => {
   world = { sessions: new Map(), users: [makeUser({ passwordHash: HASH })], assignments: [makeAssignment()] }
   remember = new Map([[golden.userId, "old-remember-token"]])
-  forwarded = []
   twoFactor = false
   sequence = 0
 })
@@ -138,14 +136,15 @@ describe("GET /sanctum/csrf-cookie", () => {
     expect(world.sessions.get("A".repeat(40))).toMatchObject({ userId: null, ipAddress: "::1" })
   })
 
-  it("stores the full URL with its query sorted like Request::fullUrl() and leaves a query PHP rewrites to Laravel", async () => {
+  it("stores the full URL with its query normalized like Request::fullUrl(), including bracketed keys", async () => {
     const response = await csrfCookie(new Request("http://localhost:3000/sanctum/csrf-cookie?b=2+x&a=1", { headers: { accept: "application/json", "x-forwarded-for": "::1" } }), deps())
     expect(response.status).toBe(204)
     expect(JSON.parse(storedJson(world, "A".repeat(40)) ?? "{}")._previous).toEqual({ url: "http://localhost:3000/sanctum/csrf-cookie?a=1&b=2%20x", route: "sanctum.csrf-cookie" })
-    expect(forwarded).toEqual([])
+    world.sessions.clear()
     const rewritten = await csrfCookie(new Request("http://localhost:3000/sanctum/csrf-cookie?a[]=1", { headers: { accept: "application/json" } }), deps())
-    expect(rewritten.status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    expect(rewritten.status).toBe(204)
+    const [id] = [...world.sessions.keys()]
+    expect(JSON.parse(storedJson(world, id) ?? "{}")._previous).toEqual({ url: "http://localhost:3000/sanctum/csrf-cookie?a%5B0%5D=1", route: "sanctum.csrf-cookie" })
   })
 })
 
@@ -260,7 +259,6 @@ describe("POST /api/v1/authentication/login", () => {
     const response = await login(call("/api/v1/authentication/login", "POST", { email: "ana@localhost", password: PASSWORD }), deps())
     expect(response.status).toBe(422)
     expect(await response.json()).toEqual({ message: "Ingrese un correo electrónico válido.", errors: { email: ["Ingrese un correo electrónico válido."] } })
-    expect(forwarded).toHaveLength(0)
   })
 })
 
@@ -294,11 +292,12 @@ describe("POST /api/v1/authentication/logout", () => {
     expect(Object.keys(cookies(response))).toEqual(["XSRF-TOKEN", golden.cookieName])
   })
 
-  it("leaves to Laravel a logout that has to forget a remember cookie", async () => {
+  it("forgets the remember cookie on logout, like SessionGuard::clearUserDataFromStorage", async () => {
     withSession(loggedIn())
-    await logout(call("/api/v1/authentication/logout", "POST", undefined, { cookie: `${COOKIE}; ${recallerCookieName()}=x` }), deps())
-    expect(forwarded).toHaveLength(1)
-    expect(world.sessions.has(golden.sessionId)).toBe(true)
+    const response = await logout(call("/api/v1/authentication/logout", "POST", undefined, { cookie: `${COOKIE}; ${recallerCookieName()}=x` }), deps())
+    expect(response.status).toBe(204)
+    expect(world.sessions.has(golden.sessionId)).toBe(false)
+    expect(response.headers.getSetCookie().find((cookie) => cookie.startsWith(`${recallerCookieName()}=`))).toMatch(/Max-Age=0/)
   })
 })
 
@@ -385,12 +384,19 @@ describe("PUT /api/v1/authentication/password", () => {
     expect(remember.get(golden.userId)).toBe("A".repeat(60))
   })
 
-  it("answers 401 to a guest and leaves production to Laravel's stronger password rule", async () => {
+  it("answers 401 to a guest and applies the production password rule of Password::defaults()", async () => {
     withSession(anonymous())
     expect((await change({})).status).toBe(401)
     withSession(loggedIn())
-    const response = await updatePassword(call("/api/v1/authentication/password", "PUT", {}), deps({ production: () => true }))
-    expect(response.status).toBe(299)
+    const body = { current_password: "secreto", password: "corta", password_confirmation: "corta" }
+    const response = await updatePassword(call("/api/v1/authentication/password", "PUT", body), deps({ production: () => true }))
+    expect(response.status).toBe(422)
+    expect((JSON.parse(await response.text()) as { errors: Record<string, string[]> }).errors.password).toEqual([
+      "El campo contraseña debe tener al menos 12 caracteres.",
+      "validation.password.mixed",
+      "validation.password.symbols",
+      "validation.password.numbers",
+    ])
   })
 })
 

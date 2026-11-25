@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { nativeMethods, routerComparison } from "@/server/laravel/routerTesting"
+import { nativeMethods, routerComparison } from "@/server/http/routerTesting"
 import * as reviews from "./reviews/route"
 import * as history from "./history/route"
 import * as libraries from "../admin/library-catalog/libraries/route"
@@ -23,15 +23,15 @@ describe("library routes", () => {
     const fetchMock = vi.fn(async () => new Response("{}", { status: 405 }))
     vi.stubGlobal("fetch", fetchMock)
     for (const method of nativeMethods(module, ["GET"], [...PASS_THROUGH])) {
-      const { next, laravel } = await routerComparison(module, method, path)
-      expect(next).toEqual(laravel)
+      const { next, unmatched } = await routerComparison(module, method, path)
+      expect(next).toEqual(unmatched)
     }
     expect(fetchMock).not.toHaveBeenCalled()
     expect(module.GET).not.toBe(module.POST)
   })
 
   it("answers 401 in Next without a stateful Referer", async () => {
-    vi.stubEnv("LARAVEL_APP_KEY", `base64:${Buffer.alloc(32).toString("base64")}`)
+    vi.stubEnv("APP_KEY", `base64:${Buffer.alloc(32).toString("base64")}`)
     const response = await reviews.GET(new Request("http://localhost:3000/api/v1/library/reviews", { headers: { accept: "application/json" } }))
     expect(response.status).toBe(401)
     expect(await response.text()).toBe('{"message":"Unauthenticated."}')

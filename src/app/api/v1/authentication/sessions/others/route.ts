@@ -1,8 +1,8 @@
 import { destroyOtherSessions } from "@/server/identity/selfService"
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 
 export function DELETE(request: Request): Promise<Response> {
   return destroyOtherSessions(request)
 }
 
-export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as GET, unmatchedRouteHandler as HEAD, unmatchedRouteHandler as POST, unmatchedRouteHandler as PUT, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as OPTIONS }

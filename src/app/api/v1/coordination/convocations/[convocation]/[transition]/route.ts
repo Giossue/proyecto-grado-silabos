@@ -1,4 +1,4 @@
-import { laravelRouter, laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRoute, unmatchedRouteHandler } from "@/server/http/router"
 import { resumeConvocation } from "@/server/syllabus/convocationWrites"
 import { pauseConvocation } from "@/server/syllabus/convocations"
 
@@ -8,7 +8,7 @@ export async function POST(request: Request, context: Context): Promise<Response
   const { convocation, transition } = await context.params
   if (transition === "pausar") return pauseConvocation(request, convocation)
   if (transition === "reanudar") return resumeConvocation(request, convocation)
-  return laravelRouter(request)
+  return unmatchedRoute(request)
 }
 
-export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as GET, unmatchedRouteHandler as HEAD, unmatchedRouteHandler as PUT, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as DELETE, unmatchedRouteHandler as OPTIONS }

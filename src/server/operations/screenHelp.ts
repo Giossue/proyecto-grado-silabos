@@ -1,9 +1,9 @@
 import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
-import { laravelInput } from "../laravel/input"
-import { laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
+import { requestInput } from "../http/input"
+import { apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
 import catalog from "./screenHelpCatalog.json"
 
 type HelpText = { title: string; content: string }
@@ -38,15 +38,15 @@ export function helpUnderPrefix(prefix: string): ScreenHelp[] {
 export async function showScreenHelp(request: Request, deps: ScreenHelpDeps = defaultDeps()): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
-  const input = await laravelInput(request)
+  const input = await requestInput(request)
   const errors = await validateInput(input, { screen: ["required", "string", { max: 160 }, { regex: SCREEN }] }, { screen: "pantalla" })
   if (Object.keys(errors).length > 0) return validationError(errors)
-  return laravelJson({ help: helpForScreen(String(input.screen)) })
+  return apiJson({ help: helpForScreen(String(input.screen)) })
 }
 
 export async function availableScreenHelp(request: Request, deps: ScreenHelpDeps = defaultDeps()): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   const prefix = ROLE_PREFIXES[session.activeRole?.role ?? ""] ?? null
-  return laravelJson({ help: prefix === null ? [] : helpUnderPrefix(prefix) })
+  return apiJson({ help: prefix === null ? [] : helpUnderPrefix(prefix) })
 }

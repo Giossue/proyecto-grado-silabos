@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { academicGovernance, type CareerRoleCount, type GovernanceCareer, type GovernanceFaculty, type GovernancePeriod, type GovernanceProcess } from "./governance"
 
@@ -21,7 +21,6 @@ const MATRIZ = "Campus Matriz Dr. Gabriel Galarza López"
 
 let root: string
 let world: FakeWorld
-let forwarded: Request[]
 let processes: GovernanceProcess[]
 let faculties: GovernanceFaculty[]
 let careers: GovernanceCareer[]
@@ -31,7 +30,7 @@ let roleCounts: CareerRoleCount[]
 let today: string
 
 const deps = () => ({
-  bridge: fakeDeps(world, forwarded),
+  bridge: fakeDeps(world),
   today: () => today,
   governance: {
     processes: async () => processes,
@@ -80,8 +79,8 @@ const career = (overrides: Partial<GovernanceCareer> = {}): GovernanceCareer => 
 
 beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), "silabos-governance-"))
-  process.env.LARAVEL_STORAGE_PATH = path.join(root, "storage", "app")
-  process.env.LARAVEL_PUBLIC_PATH = path.join(root, "public")
+  process.env.STORAGE_PATH = path.join(root, "storage", "app")
+  process.env.PUBLIC_ASSETS_PATH = path.join(root, "public")
   const logo = path.join(root, "storage", "app", "private", "logos", "facultades", FACULTY, "logo.png")
   await mkdir(path.dirname(logo), { recursive: true })
   await writeFile(logo, "logo")
@@ -89,8 +88,8 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  delete process.env.LARAVEL_STORAGE_PATH
-  delete process.env.LARAVEL_PUBLIC_PATH
+  delete process.env.STORAGE_PATH
+  delete process.env.PUBLIC_ASSETS_PATH
   await rm(root, { recursive: true, force: true })
 })
 
@@ -101,7 +100,6 @@ beforeEach(() => {
     assignments: [],
   }
   asRole("administrador")
-  forwarded = []
   today = "2026-11-23"
   processes = [{ id: PROCESS, periodId: PERIOD, state: "abierto" }]
   faculties = [
@@ -217,12 +215,13 @@ describe("GET admin/academic/{section?}", () => {
     expect(body.catalogs.careers[0].deactivate_block).toBeNull()
   })
 
-  it("maps the route section like Laravel and leaves unknown sections to Laravel", async () => {
+  it("maps the route section like Laravel and aborts unknown sections with 404", async () => {
     expect((await json("carreras")).section).toBe("careers")
     expect((await json("facultades")).section).toBe("faculties")
     expect((await json("periodos-academicos")).section).toBe("academic-periods")
-    expect((await list("otra")).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    const unknown = await list("otra")
+    expect(unknown.status).toBe(404)
+    expect(await unknown.text()).toBe('{\n    "message": ""\n}')
   })
 
   it("is reserved to the Administrator role", async () => {

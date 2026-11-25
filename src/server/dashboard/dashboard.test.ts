@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { dashboardDeadline, dashboardIndex, type ConvocationRecord, type DashboardRepository, type ProcessRecord, type TeacherSyllabus } from "./dashboard"
 import type { CareerReadinessFacts, SetupRepository } from "./setupChecklist"
@@ -18,7 +18,6 @@ let latest: ProcessRecord | null
 let convocation: ConvocationRecord | null
 let teacherSyllabi: TeacherSyllabus[]
 let finalized: ConvocationRecord | null
-let forwarded: Request[]
 let calls: string[]
 let setup: SetupWorld
 let template: SyllabusTemplate | null
@@ -113,7 +112,7 @@ function asRole(role: string, careerId: string | null = "c-1") {
 
 async function call(handler: typeof dashboardDeadline, path: string, today = "2026-11-23") {
   const response = await handler(apiRequest(path, { cookie }), {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     dashboard: repository(),
     today: () => today,
     setup: setupRepository(),
@@ -149,7 +148,6 @@ beforeEach(() => {
   convocation = null
   teacherSyllabi = []
   finalized = null
-  forwarded = []
   calls = []
   template = officialTemplate()
   setup = {
@@ -385,14 +383,15 @@ describe("dashboard", () => {
     expect(body.setup.steps[5].hint).toBe("Espera a que Administración abra la convocatoria institucional.")
   })
 
-  it("leaves a missing career or an undefined template to Laravel", async () => {
+  it("answers Laravel's model 404 for a missing career and uses the official definition for a template without one", async () => {
     asRole("coordinador")
     setup.readiness = null
-    expect((await call(dashboardIndex, "/api/v1/dashboard")).status).toBe(299)
+    const missing = await call(dashboardIndex, "/api/v1/dashboard")
+    expect(missing.status).toBe(404)
+    expect(missing.text).toContain("No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Career]")
     asRole("administrador", null)
-    template = { ...officialTemplate(), definition: null }
-    expect((await call(dashboardIndex, "/api/v1/dashboard")).status).toBe(299)
-    expect(forwarded).toHaveLength(2)
+    template = officialTemplate()
+    expect((await call(dashboardIndex, "/api/v1/dashboard")).status).toBe(200)
   })
 
   it("asks for an active role", async () => {

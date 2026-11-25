@@ -1,4 +1,4 @@
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { phpShape, type PhpRecord } from "../configuration/phpValues"
 import { contentForField, fieldDocument } from "../configuration/templateDraft"
@@ -204,8 +204,8 @@ export function sessionWorld(role = "administrador"): FakeWorld {
   }
 }
 
-export function bridgeFor(world: FakeWorld, forwarded: Request[] = []) {
-  return fakeDeps(world, forwarded)
+export function bridgeFor(world: FakeWorld) {
+  return fakeDeps(world)
 }
 
 export function assistantRequest(method: string, path: string, body?: unknown): Request {

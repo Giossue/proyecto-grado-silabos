@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import { phpShape, type PhpRecord } from "./phpValues"
 import { fakeTemplateStore, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "./testing"
 import { designTemplateTable, templateIndex, templateShow, type TemplateBuilderDeps, type TemplateLock } from "./templateBuilder"
@@ -17,12 +17,11 @@ const POINTER = "Para cambiarla use Opciones avanzadas → Editar JSON."
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
-let forwarded: Request[]
 let lock: TemplateLock | null
 let changedDuringPause: boolean
 
 const deps = (): TemplateBuilderDeps => ({
-  bridge: fakeDeps(world, forwarded),
+  bridge: fakeDeps(world),
   store: fakeTemplateStore(templates),
   locks: { processLock: async () => lock, changedDuringPause: async () => changedDuringPause },
 })
@@ -86,7 +85,6 @@ beforeEach(() => {
   }
   asRole("administrador")
   templates = { template: goldenTemplate(), values: [] }
-  forwarded = []
   lock = null
   changedDuringPause = false
 })
@@ -151,7 +149,6 @@ describe("GET admin/template and admin/template/{template}", () => {
   it("answers Laravel's model 404 for unknown templates", async () => {
     const unknown = await show("0199a1c5-0000-7000-8000-000000000999")
     expect({ status: unknown.status, text: await unknown.text() }).toEqual({ status: 404, text: modelNotFound("SyllabusTemplate", "0199a1c5-0000-7000-8000-000000000999") })
-    expect(forwarded).toHaveLength(0)
   })
 })
 

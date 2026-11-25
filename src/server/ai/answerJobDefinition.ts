@@ -1,6 +1,6 @@
 import "server-only"
-import { laravelBridgeConfig } from "../laravel/config"
-import { uuid7 } from "../laravel/uuid7"
+import { sessionConfig } from "../http/config"
+import { uuid7 } from "../http/uuid7"
 import { dispatch } from "../queue/dispatch"
 import { defineJob } from "../queue/job"
 import { answerTemplateAssistant, failTemplateAssistant, type AnswerDeps } from "./answerJob"
@@ -20,7 +20,7 @@ export function defaultAnswerDeps(): AnswerDeps {
       const config = aiConfig()
       return new TemplateAssistant({ gateway: gatewayFor(config), config, system: templateSystemPrompt, processState: () => store.processState() })
     },
-    appKey: () => laravelBridgeConfig().appKey,
+    appKey: () => sessionConfig().appKey,
     now: () => Math.floor(Date.now() / 1000),
     newProposalId: uuid7,
   }

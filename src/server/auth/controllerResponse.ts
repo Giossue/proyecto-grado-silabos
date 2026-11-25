@@ -1,6 +1,6 @@
-import { laravelJson } from "../laravel/responses"
+import { apiJson } from "../http/responses"
 
-const CONTROLLER_HEADERS = [...laravelJson(null).headers].filter(([name]) => !["content-type", "cache-control"].includes(name))
+const CONTROLLER_HEADERS = [...apiJson(null).headers].filter(([name]) => !["content-type", "cache-control"].includes(name))
 
 export function fromController(response: Response): Response {
   for (const [name, value] of CONTROLLER_HEADERS) response.headers.set(name, value)
@@ -8,7 +8,7 @@ export function fromController(response: Response): Response {
 }
 
 export function controllerJson(payload: unknown, status = 200): Response {
-  return fromController(laravelJson(payload, status))
+  return fromController(apiJson(payload, status))
 }
 
 export function emptyResponse(status = 204): Response {

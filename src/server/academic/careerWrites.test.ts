@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { GenerationRejected } from "../syllabus/inProgressWork"
 import {
@@ -33,7 +33,6 @@ const FINALIZED = { purge_required: ["finalizada"], purge_count: ["0"], purge_mo
 type Grant = { id: string; userId: string; careerId: string; role: string; active: boolean; eligible: boolean }
 
 let world: FakeWorld
-let forwarded: Request[]
 let log: string[]
 let subjects: Map<string, SubjectRow & { active: boolean }>
 let parallels: Map<string, ParallelRow & { active: boolean }>
@@ -77,7 +76,7 @@ function subjectRow(id: string, careerId: string, overrides: Partial<SubjectRow[
 
 function deps(): CareerWriteDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     careerActive: async (id) => id === CAREER || id === OTHER_CAREER,
     subjectInCareer: async (id, careerId) => subjects.get(id)?.careerId === careerId,
     activeSubjectInCareer: async (id, careerId) => subjects.get(id)?.careerId === careerId && subjects.get(id)?.active === true,
@@ -108,7 +107,10 @@ function deps(): CareerWriteDeps {
             const subject = subjects.get(id)
             return subject && subject.careerId === careerId ? structuredClone(subject) : null
           },
-          updateSubject: async (id, columns) => void log.push(`update-subject:${id}:${JSON.stringify(columns)}`),
+          updateSubject: async (id, columns) => {
+            if ("orden_asignatura_en_ciclo" in columns && columns.orden_asignatura_en_ciclo === null) throw new Error("null value in column violates not-null constraint")
+            log.push(`update-subject:${id}:${JSON.stringify(columns)}`)
+          },
           subjectsOfParallel: async (id) => (parallels.has(id) ? [parallels.get(id)?.subjectId as string] : []),
           parallelsWithStartedSyllabus: async (ids) => ids.filter((id) => started.has(id)),
           lockParallel: async (id, careerId) => {
@@ -214,7 +216,6 @@ beforeEach(() => {
     users: [makeUser()],
     assignments: [makeAssignment({ role: "coordinador", careerId: CAREER })],
   }
-  forwarded = []
   log = []
   sequence = 0
   subjects = new Map([
@@ -295,15 +296,14 @@ describe("POST /api/v1/coordination/academic/asignatura", () => {
     expect((await create("asignatura", subjectBody)).text).toBe(FORBIDDEN)
   })
 
-  it("leaves every other entity and non JSON bodies to Laravel", async () => {
+  it("answers 404 for every other entity and reads multipart bodies natively", async () => {
     expect((await create("paralelo", {})).status).toBe(404)
     const form = await createCareerRecord(
       new Request(apiRequest("/api/v1/coordination/academic/asignatura", { cookie, method: "POST", headers: { "content-type": "multipart/form-data; boundary=x" } }), { body: "--x--" }),
       "asignatura",
       deps(),
     )
-    expect(form.status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    expect(form.status).toBe(419)
   })
 })
 
@@ -404,12 +404,12 @@ describe("PATCH /api/v1/coordination/academic/asignatura/{record}", () => {
     expect(log.slice(0, 3)).toEqual(["begin", `guard:true:${CAREER}:null`, `replace:true:${JSON.stringify({ careerIds: CAREER, subjectId: SUBJECT })}`])
   })
 
-  it("is forbidden for a subject of another career, refuses while the convocation is open and leaves a null position to Laravel", async () => {
+  it("is forbidden for a subject of another career, refuses while the convocation is open and answers 500 for a null position, like the NOT NULL column", async () => {
     expect((await update("asignatura", OTHER_SUBJECT, { ...subjectBody, code: "OTR-101" })).text).toBe(FORBIDDEN)
     locked = true
     expect((await update("asignatura", SUBJECT, subjectBody)).json?.errors).toEqual({ process: ["Convocatoria activa"] })
     locked = false
-    expect((await update("asignatura", SUBJECT, { ...subjectBody, position: null })).status).toBe(299)
+    expect(await update("asignatura", SUBJECT, { ...subjectBody, position: null })).toMatchObject({ status: 500, text: '{\n    "message": "Server Error"\n}' })
     expect((await update("paralelo", SUBJECT, subjectBody)).status).toBe(404)
     expect(await update("asignatura", "abc", subjectBody)).toMatchObject({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/asignatura/abc could not be found."\n}' })
   })
@@ -495,8 +495,8 @@ describe("PATCH /api/v1/coordination/academic/parallels/{parallel}", () => {
     expect(log).toEqual(["begin", `guard:false:${CAREER}:${SUBJECT}`, "commit"])
   })
 
-  it("a parallel of another career or an unknown one is left to Laravel", async () => {
-    expect((await editParallel(OTHER_PARALLEL, { code: "B", shift: "nocturna" })).status).toBe(299)
+  it("a parallel of another career answers Laravel's model 404 and a malformed one the router 404", async () => {
+    expect(await editParallel(OTHER_PARALLEL, { code: "B", shift: "nocturna" })).toMatchObject({ status: 404, text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Parallel]."\n}' })
     expect(await editParallel("abc", { code: "B", shift: "nocturna" })).toMatchObject({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/parallels/abc could not be found."\n}' })
     expect((await editParallel(PARALLEL, { code: "B", shift: "nocturna", confirm_purge: "x" })).json?.errors).toEqual({
       confirm_purge: ["El campo confirmación de borrado debe ser verdadero o falso."],
@@ -529,8 +529,8 @@ describe("PUT /api/v1/coordination/academic/parallels/{parallel}/teacher", () =>
     expect((await replaceTeacher(PARALLEL, { user_id: TEACHER })).json?.errors).toEqual(FINALIZED)
   })
 
-  it("validates the teacher with its own label and leaves a foreign parallel to Laravel", async () => {
+  it("validates the teacher with its own label and answers Laravel's model 404 for a foreign parallel", async () => {
     expect((await replaceTeacher(PARALLEL, {})).json?.errors).toEqual({ user_id: ["El campo docente es obligatorio."] })
-    expect((await replaceTeacher(OTHER_PARALLEL, { user_id: TEACHER })).status).toBe(299)
+    expect(await replaceTeacher(OTHER_PARALLEL, { user_id: TEACHER })).toMatchObject({ status: 404, text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Parallel]."\n}' })
   })
 })

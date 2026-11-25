@@ -1,8 +1,8 @@
 import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import { isJsonRequest, laravelInput, type PhpArray } from "../laravel/input"
-import { laravelJson, validationError } from "../laravel/responses"
-import { dataGet, validateAttributes, type Rule } from "../laravel/validation"
+import { requestInput, type PhpArray } from "../http/input"
+import { apiJson, validationError } from "../http/responses"
+import { dataGet, validateAttributes, type Rule } from "../http/validation"
 import { defineBlock } from "./blockDefinition"
 import { defaultFacultyUrl, institutionUrl } from "./institutionalLogos"
 import { isPhpArray, list, phpIntCast, phpShape, phpToBool, record, type PhpRecord } from "./phpValues"
@@ -148,23 +148,21 @@ export async function templateIndex(request: Request, deps: TemplateBuilderDeps 
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (!managesTemplates(session)) return laravelJson({ message: FORBIDDEN }, 403)
+  if (!managesTemplates(session)) return apiJson({ message: FORBIDDEN }, 403)
   const found = template as SyllabusTemplate | null
   if (found === null) {
     const lock = await deps.locks.processLock()
-    return laravelJson({ processLock: lock === null ? null : PROCESS_LOCK, processLockDetail: lockDetail(lock), template: null })
+    return apiJson({ processLock: lock === null ? null : PROCESS_LOCK, processLockDetail: lockDetail(lock), template: null })
   }
-  if (found.definition === null) return deps.bridge.forward(request)
-  return laravelJson(phpShape(await builderProps(request, found, found.definition, deps)))
+  return apiJson(phpShape(await builderProps(request, found, found.definition, deps)))
 }
 
 export async function templateShow(request: Request, templateId: string, deps: TemplateBuilderDeps = defaultTemplateBuilderDeps()): Promise<Response> {
   const bound = await boundTemplate(request, templateId, deps)
   if (bound instanceof Response) return bound
-  if (!managesTemplates(bound.session)) return laravelJson({ message: FORBIDDEN }, 403)
+  if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
   const { template } = bound
-  if (template.definition === null) return deps.bridge.forward(request)
-  return laravelJson(phpShape(await builderProps(request, template, template.definition, deps)))
+  return apiJson(phpShape(await builderProps(request, template, template.definition, deps)))
 }
 
 function normalizedLabel(label: unknown): string {
@@ -251,14 +249,12 @@ function validatedDesign(input: PhpArray, excluded: Set<string>): PhpRecord {
 }
 
 export async function designTemplateTable(request: Request, templateId: string, deps: TemplateBuilderDeps = defaultTemplateBuilderDeps()): Promise<Response> {
-  if (!isJsonRequest(request)) return deps.bridge.forward(request)
   const original = request.clone()
-  const input = await laravelInput(request)
+  const input = await requestInput(request)
   const bound = await boundTemplate(original, templateId, deps)
   if (bound instanceof Response) return bound
   const definition = bound.template.definition
-  if (definition === null) return deps.bridge.forward(original)
-  if (!managesTemplates(bound.session)) return laravelJson({ message: FORBIDDEN }, 403)
+  if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
   const { errors, excluded } = await validateAttributes(input, designRules(input), DESIGN_ATTRIBUTES, { messages: DESIGN_MESSAGES })
   if (Object.keys(errors).length > 0) return validationError(errors)
   try {
@@ -271,7 +267,7 @@ export async function designTemplateTable(request: Request, templateId: string, 
     if (locked !== null) return validationError({ kind: [locked] })
     const block = defineBlock(kind, buildTable(design), variables)
     const read = readTable(kind, block, variables)
-    return laravelJson(phpShape({ kind, definition: block, design: read.design ?? design, initial: initialValue(block.value, {}) }))
+    return apiJson(phpShape({ kind, definition: block, design: read.design ?? design, initial: initialValue(block.value, {}) }))
   } catch (error) {
     if (error instanceof TemplateValidationError) return validationError(error.errors)
     throw error

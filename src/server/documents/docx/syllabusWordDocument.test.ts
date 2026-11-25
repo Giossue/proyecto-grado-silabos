@@ -4,9 +4,8 @@ import JSZip from "jszip"
 import { describe, expect, it } from "vitest"
 import golden from "../__fixtures__/laravel-word-golden.json"
 import type { PhpRecord } from "../../configuration/phpValues"
-import { NeedsLaravel } from "../../syllabus/snapshotDocuments"
 import textGolden from "../__fixtures__/laravel-text-pdf-golden.json"
-import { renderDocx, renderSyllabusDocuments, rendersInNext, validateBundle, type DocumentBundle, type DocumentRenderInput } from "../syllabusRenderer"
+import { renderDocx, renderSyllabusDocuments, validateBundle, type DocumentBundle, type DocumentRenderInput } from "../syllabusRenderer"
 import { imageInfo, InvalidImage } from "./imageInfo"
 import { columnWidths } from "./tableGrid"
 
@@ -99,15 +98,24 @@ describe("Word document like PhpWordDocumentRenderer", () => {
     expect(xml).toContain('<w:body><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="240" w:after="240"/></w:pPr>')
   })
 
-  it("leaves snapshots without a frozen template or with legacy blocks to Laravel", async () => {
-    await expect(renderDocx(inputOf(plantilla, { template_definition: null }), noLogos)).rejects.toBeInstanceOf(NeedsLaravel)
-    const legacy = { sections: [{ key: "x", title: "X", blocks: [{ title: "B", fields: [{ key: "k", value: "texto" }] }] }] }
-    await expect(renderDocx(inputOf(plantilla, legacy), noLogos)).rejects.toBeInstanceOf(NeedsLaravel)
-    expect(await rendersInNext(inputOf(plantilla, legacy).snapshot, true)).toBe(false)
-    expect(await rendersInNext({ sections: [] }, true)).toBe(false)
-    expect(await rendersInNext(inputOf(plantilla).snapshot, true)).toBe(true)
-    expect(await rendersInNext(inputOf(plantilla).snapshot, false)).toBe(true)
-    expect(await rendersInNext(inputOf(plantilla, legacy).snapshot, false)).toBe(false)
+  it("renders snapshots without a frozen template and legacy blocks natively, like SyllabusWordDocument and WordFieldRenderer", async () => {
+    expect(await documentXml(await renderDocx(inputOf(plantilla, { template_definition: null }), noLogos))).toContain("<w:document")
+    const legacy = {
+      sections: [
+        {
+          key: "x",
+          title: "X",
+          blocks: [
+            { title: "Primero", fields: [{ key: "k", label: "Campo", value: "línea uno\n- viñeta" }] },
+            { title: "Segundo", fields: [{ key: "v", value: "" }] },
+          ],
+        },
+      ],
+    }
+    const xml = await documentXml(await renderDocx(inputOf(plantilla, legacy), noLogos))
+    expect(xml).toContain("Campo")
+    expect(xml).toContain("línea uno")
+    expect(xml).toMatch(/<w:numPr><w:numId w:val="2"\/><w:ilvl w:val="0"\/><\/w:numPr>[\s\S]*?viñeta/)
   })
 
   it("writes Laravel's plain-text PDF when Gotenberg is off", async () => {

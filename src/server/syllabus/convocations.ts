@@ -1,18 +1,19 @@
 import "server-only"
+import { HttpFailure, Missing } from "../http/failures"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { phpQuery } from "../laravel/input"
-import { lengthAwarePaginator, resolveCurrentPage } from "../laravel/pagination"
-import { laravelQuery, laravelRequestUrl } from "../laravel/request"
-import { aborted, forbidden, laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
+import { phpQuery } from "../http/input"
+import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
+import { queryParams, requestUrl } from "../http/request"
+import { aborted, forbidden, apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
 import { CONVOCATION_OPEN, hasRole, ROLE_COORDINATOR } from "./policy"
 import { convocationName } from "./syllabusSql"
 import { phpFalsy } from "./teacherSyllabi"
 import { createConvocationRepository } from "./convocationQueries"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export const TEMPLATE_NAME = "Plantilla institucional de sílabo"
 
@@ -54,7 +55,7 @@ export function defaultConvocationDeps(): ConvocationDeps {
   return { bridge: defaultBridgeDeps(), convocations: createConvocationRepository(), now: () => Math.floor(Date.now() / 1000) }
 }
 
-function mayView(session: LaravelSession, convocation: ConvocationRecord): boolean {
+function mayView(session: AppSession, convocation: ConvocationRecord): boolean {
   return hasRole(session, ROLE_COORDINATOR) && session.activeRole?.careerId === convocation.careerId
 }
 
@@ -80,7 +81,7 @@ export async function convocations(request: Request, deps: ConvocationDeps = def
   if (Object.keys(errors).length > 0) return validationError(errors)
   const search = typeof input.q === "string" ? input.q.replace(PHP_TRIM, "") : null
   const state = typeof input.state === "string" && CONVOCATION_STATES.includes(input.state) ? input.state : null
-  const query = laravelQuery(new URL(request.url))
+  const query = queryParams(new URL(request.url))
   const currentPage = resolveCurrentPage(query.get("page") ?? null)
   const filters = { careerId: session.activeRole?.careerId ?? null, search: phpFalsy(search) ? null : search, state }
   const { total, items } = await deps.convocations.page(filters, currentPage, PER_PAGE)
@@ -94,13 +95,13 @@ export async function convocations(request: Request, deps: ConvocationDeps = def
     template: TEMPLATE_NAME,
     syllabi_count: item.syllabiCount,
   }))
-  return laravelJson({
+  return apiJson({
     filters: { q: filters.search, state },
-    convocations: lengthAwarePaginator({ items: data, total, perPage: PER_PAGE, currentPage, path: laravelRequestUrl(request), query }),
+    convocations: lengthAwarePaginator({ items: data, total, perPage: PER_PAGE, currentPage, path: requestUrl(request), query }),
   })
 }
 
-async function boundConvocation(request: Request, id: string, deps: ConvocationDeps): Promise<{ session: LaravelSession; convocation: ConvocationRecord } | Response> {
+async function boundConvocation(request: Request, id: string, deps: ConvocationDeps): Promise<{ session: AppSession; convocation: ConvocationRecord } | Response> {
   let convocation: ConvocationRecord | null = null
   const session = await requireSession(
     request,
@@ -129,7 +130,7 @@ export async function convocationDetail(request: Request, id: string, deps: Conv
     .sort((left, right) => byteOrder(`${left.item.liveSubject}|${left.item.parallel}`, `${right.item.liveSubject}|${right.item.parallel}`) || left.index - right.index)
     .map(({ item }) => item)
   const count = (state: string) => syllabi.filter((item) => item.state === state).length
-  return laravelJson({
+  return apiJson({
     convocation: {
       id: convocation.id,
       name: convocationName(convocation.career, convocation.period),
@@ -158,8 +159,6 @@ export async function convocationDetail(request: Request, id: string, deps: Conv
 
 class StateChanged extends Error {}
 
-class Missing extends Error {}
-
 export async function pauseConvocation(request: Request, id: string, deps: ConvocationDeps = defaultConvocationDeps()): Promise<Response> {
   const bound = await boundConvocation(request, id, deps)
   if (bound instanceof Response) return bound
@@ -168,14 +167,14 @@ export async function pauseConvocation(request: Request, id: string, deps: Convo
   try {
     await deps.convocations.transaction(async (tx) => {
       const state = await tx.lockConvocation(convocation.id)
-      if (state === null) throw new Missing()
+      if (state === null) throw new Missing(MODELS.convocation, convocation.id)
       if (state !== CONVOCATION_OPEN) throw new StateChanged()
       await tx.updateState(convocation.id, "pausada")
     })
   } catch (error) {
     if (error instanceof StateChanged) return validationError({ convocation: ["Solo una convocatoria abierta puede pausarse."] })
-    if (error instanceof Missing) return deps.bridge.forward(request)
+    if (error instanceof HttpFailure) return error.response
     throw error
   }
-  return laravelJson({ message: "Convocatoria en pausa. Los docentes de la carrera no editan ni envían; la malla queda editable." })
+  return apiJson({ message: "Convocatoria en pausa. Los docentes de la carrera no editan ni envían; la malla queda editable." })
 }

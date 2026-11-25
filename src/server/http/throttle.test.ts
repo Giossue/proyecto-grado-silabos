@@ -7,7 +7,7 @@ import { createRateLimiter, throttle, type RateLimiter } from "./throttle"
 const limit = { key: "k", maxAttempts: 2, decaySeconds: 60 }
 const PREFIX = "t11a-test:throttle:"
 
-function behavesLikeLaravelThrottle(limiter: () => RateLimiter) {
+function behavesLikeThrottle(limiter: () => RateLimiter) {
   it("counts each hit in a fixed window and answers 429 with Laravel's headers and body", async () => {
     const store = limiter()
     let now = 1000
@@ -45,7 +45,7 @@ function behavesLikeLaravelThrottle(limiter: () => RateLimiter) {
 }
 
 describe("throttle with the in-memory limiter", () => {
-  behavesLikeLaravelThrottle(createRateLimiter)
+  behavesLikeThrottle(createRateLimiter)
 
   it("opens a new window once the old one is over", async () => {
     const store = createRateLimiter()
@@ -67,7 +67,7 @@ describe.skipIf(testRedisUrl() === null)("throttle with the Redis limiter", () =
     await redis.quit()
   })
 
-  behavesLikeLaravelThrottle(() => createRedisRateLimiter(redis, PREFIX))
+  behavesLikeThrottle(() => createRedisRateLimiter(redis, PREFIX))
 
   it("stores the counter and the timer with the window as expiry, like RateLimiter::hit()", async () => {
     const store = createRedisRateLimiter(redis, PREFIX)

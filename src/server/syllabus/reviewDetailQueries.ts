@@ -1,7 +1,7 @@
 import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
-import { iso8601 } from "../laravel/sql"
+import { iso8601 } from "../http/sql"
 import { LIBRARY_FROM, OUTCOME_SQL, RESPONSIBLE_SQL, STATE_SQL } from "../library/reviewQueries"
 import { teacherNamesOf } from "./coordinationReviewQueries"
 import type { HistoryEntry, ReviewDetailStore } from "./reviewDetails"

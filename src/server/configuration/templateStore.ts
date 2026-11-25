@@ -2,6 +2,7 @@ import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { isRecord, phpCount, phpJsonDecode } from "./phpValues"
+import { officialDefinition } from "./officialTemplate"
 import { trustedDefinition } from "./templateRuntime"
 import type { SyllabusTemplate, TemplateBlock, TemplateField, TemplateSection } from "./templatePresentation"
 
@@ -41,7 +42,7 @@ export async function loadTemplate(executor: Executor, lock = false): Promise<Sy
   )
   if (!row) return null
   const decoded = phpJsonDecode(row.definition)
-  const definition = isRecord(decoded) && phpCount(decoded) > 0 ? trustedDefinition(decoded) : null
+  const definition = isRecord(decoded) && phpCount(decoded) > 0 ? trustedDefinition(decoded) : officialDefinition()
   const sections = await rows<SectionRow>(
     executor,
     sql`select seccion_plantilla_id::text as id, clave_seccion_plantilla as clave, titulo_seccion_plantilla as titulo,

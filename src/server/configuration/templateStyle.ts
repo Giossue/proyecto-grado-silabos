@@ -1,5 +1,5 @@
 import { isList, isPhpArray, isRecord, phpTrim, mbStrlen, type PhpRecord } from "./phpValues"
-import { phpIsNumeric } from "../laravel/validation"
+import { phpIsNumeric } from "../http/validation"
 import { TemplateValidationError } from "./templateRuntime"
 
 const PAPERS = ["letter", "a4", "legal"]
@@ -194,4 +194,33 @@ export function documentWithLayout(document: PhpRecord, layout: PhpRecord): PhpR
       body: pick("body_font_size", sizes.body),
     },
   })
+}
+
+function legacyNumber(value: unknown, fallback: unknown, integer: boolean): unknown {
+  if (!phpIsNumeric(value as never)) return fallback
+  const parsed = Number(String(value).trim())
+  return integer ? Math.trunc(parsed) : parsed
+}
+
+export function documentFromLegacyMapping(base: PhpRecord, mapping: PhpRecord | null): PhpRecord {
+  const layout = isRecord(mapping?.layout) ? mapping.layout : {}
+  const titleBlock = mapping?.title_block
+  const title = isRecord(titleBlock) ? titleBlock.text : null
+  const sizes = isRecord(base.sizes) ? base.sizes : {}
+  const baseTitle = isRecord(base.title) ? base.title : {}
+  const document: PhpRecord = {
+    ...base,
+    margin_cm: legacyNumber(layout.margin_cm, base.margin_cm, false),
+    sizes: {
+      title: legacyNumber(layout.title_font_size, sizes.title, true),
+      section: legacyNumber(layout.section_font_size, sizes.section, true),
+      body: legacyNumber(layout.body_font_size, sizes.body, true),
+    },
+    title: { ...baseTitle, text: typeof title === "string" && phpTrim(title) !== "" ? phpTrim(title) : baseTitle.text },
+  }
+  if (!isPhpArray(mapping?.appearance)) {
+    document.colors = { ...(isRecord(base.colors) ? base.colors : {}), table_header_background: null, table_header_text: null }
+    document.body = { alignment: "left" }
+  }
+  return defineDocumentStyle(document)
 }

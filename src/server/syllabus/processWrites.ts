@@ -1,22 +1,22 @@
 import "server-only"
+import { passesDateRule } from "../http/phpDates"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { isJsonRequest, laravelInput, type PhpValue } from "../laravel/input"
-import { forbidden, laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
+import { requestInput, type PhpValue } from "../http/input"
+import { forbidden, apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
 import { notificationDate, storeInternalNotifications, type NotificationScope } from "../notifications/store"
 import { notifyConvocationResumed, timestampMs } from "./convocationWrites"
 import { hasRole, ROLE_ADMINISTRATOR } from "./policy"
-import { display, processDay, type ProcessRow } from "./processes"
+import { display, processDay, processInstant, type ProcessRow } from "./processes"
 import { createProcessWriteDeps } from "./processWriteStore"
 import { deadlineBlockReason } from "./finalizedChangeNotice"
-import { laravelBoolean } from "./inProgressWork"
+import { requestBoolean } from "./inProgressWork"
 import type { ReopenPlan, TemplateChange } from "./reopenCatchUp"
 import { Missing, Rejected, settle } from "./reviewDecisions"
-import { NeedsLaravel } from "./snapshotDocuments"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type LockedSyllabusProcess = {
   id: string
@@ -85,7 +85,7 @@ function reject(errors: Record<string, string[]>): never {
   throw new Rejected(validationError(errors))
 }
 
-async function bindProcess(request: Request, id: string, deps: ProcessWriteDeps): Promise<{ session: LaravelSession; process: ProcessRow } | Response> {
+async function bindProcess(request: Request, id: string, deps: ProcessWriteDeps): Promise<{ session: AppSession; process: ProcessRow } | Response> {
   let process: ProcessRow | null = null
   const session = await requireSession(
     request,
@@ -106,12 +106,11 @@ async function bindProcess(request: Request, id: string, deps: ProcessWriteDeps)
 
 export async function deleteProcess(request: Request, id: string, deps: ProcessWriteDeps = defaultProcessWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
   const bound = await bindProcess(request, id, deps)
   if (bound instanceof Response) return bound
   const { session, process } = bound
   if (!hasRole(session, ROLE_ADMINISTRATOR) || !["abierto", "pausado"].includes(process.state)) return forbidden()
-  const input = await laravelInput(request)
+  const input = await requestInput(request)
   const errors = await validateInput(
     input,
     { mensaje: ["required", "string", { max: 1000 }] },
@@ -123,7 +122,7 @@ export async function deleteProcess(request: Request, id: string, deps: ProcessW
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
       const locked = await tx.lockProcess(process.id)
-      if (locked === null) throw new Missing()
+      if (locked === null) throw new Missing(MODELS.process, process.id)
       if (locked.state === "cerrado") reject({ process: ["Una convocatoria cerrada no se elimina: queda como historial."] })
       const convocations = await tx.lockConvocations(locked.id)
       const syllabi = await tx.lockSyllabi(convocations)
@@ -142,7 +141,7 @@ export async function deleteProcess(request: Request, id: string, deps: ProcessW
         periodId: locked.periodId,
       })
     })
-    return laravelJson({ message: "Convocatoria institucional eliminada." })
+    return apiJson({ message: "Convocatoria institucional eliminada." })
   })
 }
 
@@ -175,29 +174,28 @@ export async function resumeProcess(request: Request, id: string, deps: ProcessW
   if (bound instanceof Response) return bound
   const { session, process } = bound
   if (!hasRole(session, ROLE_ADMINISTRATOR) || process.state !== "pausado") return forbidden()
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
-  const input = await laravelInput(request)
+  const input = await requestInput(request)
   const errors = await validateInput(input, { confirmar_rehacer: ["sometimes", "boolean"] }, { confirmar_rehacer: "confirmación para rehacer los sílabos" })
   if (Object.keys(errors).length > 0) return validationError(errors)
   return settle(original, deps, async () => {
     const confirmation = await deps.transaction(async (tx) => {
       const locked = await tx.lockProcess(process.id)
-      if (locked === null) throw new Missing()
+      if (locked === null) throw new Missing(MODELS.process, process.id)
       if (locked.state !== "pausado") reject({ process: [WRONG_STATE] })
       const problem = await tx.templateProblem("process")
       if (problem !== null) reject({ process: [problem] })
       const change = await tx.templateChange(locked.id, "pause")
       if (change !== null) {
         const counts = await tx.syllabusCounts(locked.id, false)
-        if (!laravelBoolean(input.confirmar_rehacer)) return counts
+        if (!requestBoolean(input.confirmar_rehacer)) return counts
         await tx.adaptToTemplate(locked.id, change)
       }
       await tx.updateState(locked.id, "abierto")
       await notifyProcessResumed(tx, locked, deps)
       return null
     })
-    if (confirmation !== null) return laravelJson({ message: PAUSE_TEMPLATE_CHANGED, code: "plantilla_cambiada", counts: confirmation }, 422)
-    return laravelJson({ message: "Proceso reanudado. Los envíos vuelven a admitirse." })
+    if (confirmation !== null) return apiJson({ message: PAUSE_TEMPLATE_CHANGED, code: "plantilla_cambiada", counts: confirmation }, 422)
+    return apiJson({ message: "Proceso reanudado. Los envíos vuelven a admitirse." })
   })
 }
 
@@ -215,31 +213,25 @@ type DeadlineConfirmation = { code: string; counts: Record<string, number>; pend
 
 export async function extendProcessDeadline(request: Request, id: string, deps: ProcessWriteDeps = defaultProcessWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
   const bound = await bindProcess(request, id, deps)
   if (bound instanceof Response) return bound
   const { session, process } = bound
   if (!hasRole(session, ROLE_ADMINISTRATOR)) return forbidden()
-  const input = await laravelInput(request)
-  try {
-    input.due_at = processDay(input.due_at, false) as PhpValue
-  } catch (error) {
-    if (error instanceof NeedsLaravel) return deps.bridge.forward(original)
-    throw error
-  }
+  const input = await requestInput(request)
+  input.due_at = processDay(input.due_at, false) as PhpValue
   const errors = await validateInput(
     input,
-    { stage: ["prohibited"], due_at: ["required"], confirmar_rehacer: ["sometimes", "boolean"], confirmar_cambios: ["sometimes", "boolean"] },
+    { stage: ["prohibited"], due_at: ["required", { check: (value) => passesDateRule(value), message: "El campo :attribute debe ser una fecha válida." }], confirmar_rehacer: ["sometimes", "boolean"], confirmar_cambios: ["sometimes", "boolean"] },
     { stage: "etapa", due_at: "fecha límite", confirmar_rehacer: "confirmación para rehacer los sílabos", confirmar_cambios: "confirmación para aplicar los cambios pendientes" },
     { messages: { "stage.prohibited": "La prórroga solo modifica la fecha límite de entrega." } },
   )
   if (Object.keys(errors).length > 0) return validationError(errors)
-  const requested = Math.floor(Date.parse(input.due_at as string) / 1000)
+  const requested = processInstant(input.due_at)
   const requestedOn = institutionDayOf(requested)
   return settle(original, deps, async () => {
     const outcome = await deps.transaction(async (tx): Promise<DeadlineConfirmation | { reopened: boolean }> => {
       const locked = await tx.lockProcess(process.id)
-      if (locked === null) throw new Missing()
+      if (locked === null) throw new Missing(MODELS.process, process.id)
       const reopening = locked.state === "cerrado"
       if (reopening) await tx.lockOtherProcesses(locked.id)
       const previousOn = institutionDayOf(locked.dueAt)
@@ -261,9 +253,9 @@ export async function extendProcessDeadline(request: Request, id: string, deps: 
         const pending = Object.values(plan.counts).reduce((sum, value) => sum + value, 0) > 0 ? plan.counts : null
         if (change !== null) {
           const counts = await tx.syllabusCounts(locked.id, true)
-          if (!laravelBoolean(input.confirmar_rehacer)) return { code: "plantilla_cambiada", counts, pending }
+          if (!requestBoolean(input.confirmar_rehacer)) return { code: "plantilla_cambiada", counts, pending }
         }
-        if (pending !== null && !laravelBoolean(input.confirmar_cambios)) return { code: "cambios_pendientes", counts: pending, pending: null }
+        if (pending !== null && !requestBoolean(input.confirmar_cambios)) return { code: "cambios_pendientes", counts: pending, pending: null }
         reopened = await tx.reopen(locked.id)
       }
       const extension = locked.extensions + 1
@@ -283,12 +275,12 @@ export async function extendProcessDeadline(request: Request, id: string, deps: 
       return { reopened: reopening }
     })
     if ("code" in outcome) {
-      if (outcome.code === "cambios_pendientes") return laravelJson({ message: PENDING_CHANGES, code: outcome.code, counts: outcome.counts }, 422)
-      return laravelJson(
+      if (outcome.code === "cambios_pendientes") return apiJson({ message: PENDING_CHANGES, code: outcome.code, counts: outcome.counts }, 422)
+      return apiJson(
         { message: CLOSED_TEMPLATE_CHANGED, code: outcome.code, counts: outcome.counts, ...(outcome.pending === null ? {} : { pending_counts: outcome.pending }) },
         422,
       )
     }
-    return laravelJson({ message: outcome.reopened ? "Plazo prorrogado. La convocatoria se volvió a abrir." : "Plazo prorrogado para todas las convocatorias del proceso." })
+    return apiJson({ message: outcome.reopened ? "Plazo prorrogado. La convocatoria se volvió a abrir." : "Plazo prorrogado para todas las convocatorias del proceso." })
   })
 }

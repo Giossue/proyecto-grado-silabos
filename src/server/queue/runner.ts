@@ -30,7 +30,7 @@ export async function runJob<T>(definition: JobDefinition<T>, data: T, context: 
     await work()
     return "handled"
   }
-  const overlap = redisLock(deps.redis, `laravel-queue-overlap:${definition.name}:${definition.uniqueId(data)}`, Math.ceil(jobTimeout(job) + 30), { prefix: deps.prefix })
+  const overlap = redisLock(deps.redis, `queue-overlap:${definition.name}:${definition.uniqueId(data)}`, Math.ceil(jobTimeout(job) + 30), { prefix: deps.prefix })
   if (!(await overlap.acquire())) return "skipped"
   try {
     await work()

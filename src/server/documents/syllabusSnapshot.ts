@@ -4,20 +4,18 @@ import { conditionResponses, conditionShows, evaluateConditions, clearHidden, ty
 import { resolveVariables, type SyllabusTemplate } from "../configuration/templatePresentation"
 import { fieldConditions, INSTITUTIONAL, normalizeFieldDocument, resolveDocument, withoutOwnOptionsDocument, type TemplateDefinition } from "../configuration/templateRuntime"
 import { dataGet, identificationOf, type IdentificationSource } from "../syllabus/identificationCard"
-import { NeedsLaravel } from "../syllabus/snapshotDocuments"
+import { failModelNotFound } from "../http/failures"
+import { MODELS } from "../http/models"
+import type { ArchivedField } from "../syllabus/syllabusDetailQueries"
 import { TEMPLATE_NAME } from "../syllabus/convocations"
-import { hasAmbiguousNumbers } from "./canonicalJson"
 
 export const SNAPSHOT_VERSION = 9
-
-export type SnapshotRawJson = { definition: string | null; context: string | null; values: string[]; contents: string[] }
 
 export interface SnapshotSource {
   template(): Promise<SyllabusTemplate | null>
   values(syllabusId: string): Promise<Map<string, unknown>>
   identification(syllabusId: string): Promise<IdentificationSource>
-  hasArchivedValues(syllabusId: string): Promise<boolean>
-  rawJson(syllabusId: string): Promise<SnapshotRawJson>
+  archivedFields(syllabusId: string): Promise<ArchivedField[] | null>
   logos: LogoStore
 }
 
@@ -77,6 +75,16 @@ export function visibleSections(sections: SnapshotSection[], conditions: Record<
   return visible
 }
 
+export function archivedSections(fields: ArchivedField[], definition: TemplateDefinition): SnapshotSection[] {
+  const sections = new Map<string, SnapshotSection>()
+  for (const field of fields) {
+    const section = sections.get(field.sectionId) ?? { key: field.sectionKey, title: field.sectionTitle, orientation: field.sectionOrientation, fields: [] }
+    section.fields.push({ definition_id: field.id, key: field.key, label: field.label, quien_llena: field.responsible, document: normalizeFieldDocument(field.content, definition) })
+    sections.set(field.sectionId, section)
+  }
+  return [...sections.values()]
+}
+
 function templateSections(template: SyllabusTemplate, values: Map<string, unknown>, definition: TemplateDefinition): SnapshotSection[] {
   return template.sections.map((section) => ({
     key: section.key,
@@ -98,17 +106,17 @@ function templateSections(template: SyllabusTemplate, values: Map<string, unknow
 }
 
 export async function buildSyllabusSnapshot(syllabusId: string, source: SnapshotSource): Promise<PhpRecord> {
-  const raw = await source.rawJson(syllabusId)
-  if ([raw.definition, raw.context, ...raw.values, ...raw.contents].some(hasAmbiguousNumbers)) throw new NeedsLaravel()
   const template = await source.template()
-  if (template === null || template.definition === null || (await source.hasArchivedValues(syllabusId))) throw new NeedsLaravel()
+  if (template === null) failModelNotFound(MODELS.template)
   const definition = template.definition
+  const archived = await source.archivedFields(syllabusId)
   const values = await source.values(syllabusId)
   const card = await source.identification(syllabusId)
   const identification = identificationOf(card)
   const variables = resolveVariables(definition, { identification, academic_context: card.context })
   const facultyId = dataGet(card.context, "career.faculty_id")
-  const sections = visibleSections(templateSections(template, values, definition), fieldConditions(definition)).map((section) => ({
+  const structure = archived === null ? templateSections(template, values, definition) : archivedSections(archived, definition)
+  const sections = visibleSections(structure, fieldConditions(definition)).map((section) => ({
     ...section,
     fields: section.fields.map((field) => ({ ...field, value: resolveDocument(record(field.document), variables, definition) })),
   }))

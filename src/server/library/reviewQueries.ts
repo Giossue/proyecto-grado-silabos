@@ -1,7 +1,7 @@
 import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
-import { accentMatches, iso8601 } from "../laravel/sql"
+import { accentMatches, iso8601 } from "../http/sql"
 import type { LibraryReviewRepository, ReviewFilters, ReviewRow, SyllabusSummary } from "./reviews"
 
 export const OUTCOME_SQL = sql.raw(`CASE

@@ -49,15 +49,3 @@ export function canonicalJson(value: unknown): string {
 export function canonicalHash(value: unknown): string {
   return createHash("sha256").update(canonicalJson(value), "utf8").digest("hex")
 }
-
-const NUMBER_TOKEN = /-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g
-
-export function hasAmbiguousNumbers(json: string | null | undefined): boolean {
-  if (json === null || json === undefined) return false
-  for (const token of json.replace(/"(?:[^"\\]|\\.)*"/g, '""').match(NUMBER_TOKEN) ?? []) {
-    const value = Number(token)
-    const float = /[.eE]/.test(token)
-    if (float ? Number.isInteger(value) : !Number.isSafeInteger(value)) return true
-  }
-  return false
-}

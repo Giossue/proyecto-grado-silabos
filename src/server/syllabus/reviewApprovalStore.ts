@@ -2,19 +2,15 @@ import "server-only"
 import { randomUUID } from "node:crypto"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
-import { record } from "../configuration/phpValues"
-import { gotenbergEnabled, gotenbergSettings } from "../documents/gotenbergConverter"
 import { exportRequestTxOn } from "../documents/syllabusExportStore"
 import { dispatchSyllabusExport } from "../documents/syllabusExportJob"
-import { rendersInNext } from "../documents/syllabusRenderer"
-import { uuid7 } from "../laravel/uuid7"
+import { uuid7 } from "../http/uuid7"
 import { systemNow, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { signatureTxOn } from "../signatures/signatureStore"
 import type { ReviewApprovalDeps, ReviewApprovalTx } from "./reviewApproval"
 import { dbTransaction, reviewDecisionTx, type TransactionRunner } from "./reviewDecisionStore"
 import { reviewDetailStoreOn } from "./reviewDetailQueries"
-import { revisionSnapshotOf } from "./syllabusDetailQueries"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export type ExportDispatch = (artifactId: string) => unknown
@@ -53,17 +49,12 @@ export function reviewApprovalTx(executor: Executor, afterCommit: AfterCommit, n
   }
 }
 
-export async function revisionRendersInNext(executor: Executor, revisionId: string): Promise<boolean> {
-  return rendersInNext(record(await revisionSnapshotOf(executor, revisionId)), gotenbergEnabled(gotenbergSettings()))
-}
-
 export type ReviewApprovalOptions = WriteOptions & { dispatch?: ExportDispatch; newId?: () => string; newKey?: () => string }
 
 export function reviewApprovalDepsOn(executor: Executor, transaction: TransactionRunner, options: ReviewApprovalOptions = {}): Omit<ReviewApprovalDeps, "bridge" | "settings"> {
   const now = options.now ?? systemNow
   return {
     store: reviewDetailStoreOn(executor),
-    renderable: (revisionId) => revisionRendersInNext(executor, revisionId),
     now,
     newId: options.newId ?? uuid7,
     newKey: options.newKey ?? randomUUID,

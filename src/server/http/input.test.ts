@@ -1,14 +1,14 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import { laravelInput } from "./input"
+import { bodyInput } from "./input"
 
 function post(body: unknown, query = ""): Request {
   return new Request(`http://localhost:3000/api/v1/x${query}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
 }
 
-describe("laravelInput", () => {
+describe("bodyInput", () => {
   it("trims every string and turns empty ones into null, like TrimStrings and ConvertEmptyStringsToNull", async () => {
-    expect(await laravelInput(post({ title: "  Hola  ", note: "   ", list: [" a ", ""] }, "?screen=%20panel%20"))).toEqual({
+    expect(await bodyInput(post({ title: "  Hola  ", note: "   ", list: [" a ", ""] }, "?screen=%20panel%20"))).toEqual({
       title: "Hola",
       note: null,
       list: { "0": "a", "1": null },
@@ -18,7 +18,7 @@ describe("laravelInput", () => {
 
   it("keeps the spaces of the keys that Laravel never trims but still turns empty strings into null", async () => {
     const text = { type: "text", text: " Hola " }
-    const input = await laravelInput(
+    const input = await bodyInput(
       post({ content: { text: " a " }, value: " b ", values: [" c "], sections: [{ title: " T ", fields: [{ key: " k ", content: { content: [text, { text: "" }] } }] }] }),
     )
     expect(input).toEqual({

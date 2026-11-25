@@ -1,17 +1,17 @@
 import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { phpQuery, type PhpArray, type PhpValue } from "../laravel/input"
-import { lengthAwarePaginator, resolveCurrentPage } from "../laravel/pagination"
-import { laravelQuery, laravelRequestUrl } from "../laravel/request"
-import { aborted, forbidden, laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
+import { phpQuery, type PhpArray, type PhpValue } from "../http/input"
+import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
+import { queryParams, requestUrl } from "../http/request"
+import { aborted, forbidden, apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
 import { hasRole, mayView, ROLE_COORDINATOR, type SyllabusFacts } from "./policy"
 import { revisionDiff } from "./revisionDiff"
 import { createCoordinationReviewRepository } from "./coordinationReviewQueries"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type ReviewListRow = {
   id: string
@@ -67,18 +67,18 @@ export function reviewStage(row: { approved: boolean; verified: boolean }): stri
   return row.approved || !row.verified ? "biblioteca" : "coordinacion"
 }
 
-async function coordinator(request: Request, deps: CoordinationReviewDeps): Promise<LaravelSession | Response> {
+async function coordinator(request: Request, deps: CoordinationReviewDeps): Promise<AppSession | Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   return hasRole(session, ROLE_COORDINATOR) ? session : forbidden()
 }
 
 function paginate<T>(request: Request, items: T[], total: number, currentPage: number) {
-  return lengthAwarePaginator({ items, total, perPage: PER_PAGE, currentPage, path: laravelRequestUrl(request), query: laravelQuery(new URL(request.url)) })
+  return lengthAwarePaginator({ items, total, perPage: PER_PAGE, currentPage, path: requestUrl(request), query: queryParams(new URL(request.url)) })
 }
 
 function currentPage(request: Request): number {
-  return resolveCurrentPage(laravelQuery(new URL(request.url)).get("page") ?? null)
+  return resolveCurrentPage(queryParams(new URL(request.url)).get("page") ?? null)
 }
 
 export async function coordinationReviews(request: Request, deps: CoordinationReviewDeps = defaultCoordinationReviewDeps()): Promise<Response> {
@@ -103,7 +103,7 @@ export async function coordinationReviews(request: Request, deps: CoordinationRe
     teachers: teachers.get(item.id) ?? [],
     submitted_at: item.submittedAt,
   }))
-  return laravelJson({ filters: { search }, syllabi: paginate(request, data, total, page) })
+  return apiJson({ filters: { search }, syllabi: paginate(request, data, total, page) })
 }
 
 export async function coordinationHistory(request: Request, deps: CoordinationReviewDeps = defaultCoordinationReviewDeps()): Promise<Response> {
@@ -136,7 +136,7 @@ export async function coordinationHistory(request: Request, deps: CoordinationRe
     author: item.author,
     approved_at: item.approvedAt,
   }))
-  return laravelJson({ filters: { q: search === "" ? null : search, period: periodId }, periods, syllabi: paginate(request, data, total, page) })
+  return apiJson({ filters: { q: search === "" ? null : search, period: periodId }, periods, syllabi: paginate(request, data, total, page) })
 }
 
 export async function compareRevisions(request: Request, beforeId: string, afterId: string, deps: CoordinationReviewDeps = defaultCoordinationReviewDeps()): Promise<Response> {
@@ -169,7 +169,7 @@ export async function compareRevisions(request: Request, beforeId: string, after
   if (first.number > second.number) [first, second] = [second, first]
   const syllabus = await deps.reviews.syllabusSummary(first.syllabusId)
   const latest = [...syllabus.revisions].sort((left, right) => right.number - left.number)[0]
-  return laravelJson({
+  return apiJson({
     syllabus: {
       id: syllabus.id,
       subject: syllabus.subject,

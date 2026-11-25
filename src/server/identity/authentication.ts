@@ -1,22 +1,22 @@
 import "server-only"
+import { passwordRules, storedPassword } from "./passwordPolicy"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { bcryptHash, bcryptVerify } from "../auth/bcrypt"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import { sharedAttemptLimiter, type AttemptLimiter } from "../auth/attemptLimiter"
 import { isEligible } from "../auth/activeRole"
-import { clientIp, invalidateSession, laravelRandom, regenerateSession, regenerateToken, withWriter, type SessionWriterDeps } from "../auth/sessionWriter"
-import { controllerJson, emptyResponse, FORWARD, fromController, statefulRequest, type Outcome, type StatefulContext } from "../auth/statefulRequest"
+import { clientIp, invalidateSession, sessionRandom, regenerateSession, regenerateToken, withWriter, type SessionWriterDeps } from "../auth/sessionWriter"
+import { controllerJson, emptyResponse, fromController, statefulRequest, type Outcome, type StatefulContext } from "../auth/statefulRequest"
 import type { BridgeDeps } from "../auth/types"
 import { institutionToday } from "../dashboard/dashboardQueries"
-import { parseCookieHeader } from "../laravel/cookies"
-import { recallerCookieName } from "../laravel/sessionGuard"
-import { isPhpArray, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
-import { expectsJson } from "../laravel/request"
-import { aborted, laravelHttpError, laravelJson, unauthenticated, validationError } from "../laravel/responses"
-import { sharedRateLimiter, throttle, type RateLimiter } from "../laravel/throttle"
-import { validateInput } from "../laravel/validation"
-import { acceptsBody } from "./accountWrites"
+import { parseCookieHeader } from "../http/cookies"
+import { recallerCookieName } from "../http/sessionGuard"
+import { isPhpArray, requestInput, type PhpValue } from "../http/input"
+import { expectsJson } from "../http/request"
+import { aborted, jsonError, apiJson, serverError, unauthenticated, validationError } from "../http/responses"
+import { sharedRateLimiter, throttle, type RateLimiter } from "../http/throttle"
+import { validateInput } from "../http/validation"
 import { createProfileRepository, sessionPayload, type ProfileRepository } from "./session"
 
 export type Credential = { id: string; passwordHash: string; twoFactorEnabled: boolean }
@@ -68,6 +68,7 @@ export type AuthenticationDeps = {
   hashPassword: (plain: string) => Promise<string>
   dummyHash: () => Promise<string>
   production: () => boolean
+  pwned?: (prefix: string) => Promise<string>
 }
 
 let dummy: Promise<string> | null = null
@@ -88,7 +89,7 @@ export function authenticationDepsOn(
     attempts: sharedAttemptLimiter(),
     verifyPassword: bcryptVerify,
     hashPassword: (plain) => bcryptHash(plain, cost),
-    dummyHash: () => (dummy ??= bcryptHash(laravelRandom(40), cost)),
+    dummyHash: () => (dummy ??= bcryptHash(sessionRandom(40), cost)),
     production: () => process.env.APP_ENV === "production",
     ...overrides,
   }
@@ -138,19 +139,14 @@ export function csrfCookie(request: Request, deps: AuthenticationDeps = defaultA
   return statefulRequest(request, deps.writer, { group: "web", routeName: "sanctum.csrf-cookie" }, async () => emptyResponse(204))
 }
 
-function hasArray(input: PhpArray, ...names: string[]): boolean {
-  return names.some((name) => isPhpArray(input[name] ?? null))
-}
-
 export function login(request: Request, deps: AuthenticationDeps = defaultAuthenticationDeps()): Promise<Response> {
   return statefulRequest(
     request,
     deps.writer,
     { group: "api" },
     async (context): Promise<Outcome> => {
-      if (!acceptsBody(request)) return FORWARD
-      const input = await laravelInput(request)
-      if (hasArray(input, "email", "password", "correo_electronico")) return FORWARD
+      const input = await requestInput(request)
+      if (isPhpArray(("email" in input ? input.email : input.correo_electronico) ?? null)) return serverError()
       const shape = filterEmailShape(input.email)
       const ip = clientIp(request) ?? ""
       const throttled = "email" in input ? input.email : input.correo_electronico
@@ -177,7 +173,7 @@ export function login(request: Request, deps: AuthenticationDeps = defaultAuthen
       if (await deps.attempts.tooManyAttempts(throttleKey, 5)) return tooMany(throttleKey)
       const credential = await deps.credentials.findActiveUserByEmail(email)
       const matches = await deps.verifyPassword(stringInput(input.password), credential ? credential.passwordHash : await deps.dummyHash())
-      if (matches === null) return FORWARD
+      if (matches === null) return serverError()
       const accountKey = `login-account:${email}`
       if (await deps.attempts.tooManyAttempts(accountKey, 20)) return tooMany(accountKey)
       if (credential === null || !matches) {
@@ -200,7 +196,7 @@ export function login(request: Request, deps: AuthenticationDeps = defaultAuthen
       await regenerateSession(context.state, deps.writer)
       return gate.decorate(await payloadOf(context, deps))
     },
-    () => laravelJson({ message: "Inicie sesión desde la aplicación web." }, 400),
+    () => apiJson({ message: "Inicie sesión desde la aplicación web." }, 400),
   )
 }
 
@@ -208,7 +204,7 @@ export function logout(request: Request, deps: AuthenticationDeps = defaultAuthe
   return statefulRequest(request, deps.writer, { group: "api", authenticates: true }, async (context): Promise<Outcome> => {
     const user = context.user
     if (user === null) return unauthenticated()
-    if (parseCookieHeader(request.headers.get("cookie")).has(recallerCookieName())) return FORWARD
+    if (parseCookieHeader(request.headers.get("cookie")).has(recallerCookieName())) context.forgetRecaller()
     if (((await deps.credentials.rememberToken(user.id)) ?? "") !== "") await deps.credentials.setRememberToken(user.id, deps.writer.random(60))
     context.logout()
     await invalidateSession(context.state, deps.writer)
@@ -220,7 +216,7 @@ export function logout(request: Request, deps: AuthenticationDeps = defaultAuthe
 function verifiedUser(context: StatefulContext, request: Request): Outcome | null {
   if (context.user === null) return unauthenticated()
   if (context.user.emailVerifiedAt !== null) return null
-  return expectsJson(request) ? fromController(laravelHttpError(403, "Your email address is not verified.")) : FORWARD
+  return fromController(expectsJson(request) ? jsonError(403, "Your email address is not verified.") : serverError())
 }
 
 export function selectActiveRole(request: Request, deps: AuthenticationDeps = defaultAuthenticationDeps()): Promise<Response> {
@@ -228,8 +224,7 @@ export function selectActiveRole(request: Request, deps: AuthenticationDeps = de
     const blocked = verifiedUser(context, request)
     if (blocked !== null) return blocked
     const user = context.user!
-    if (!acceptsBody(request)) return FORWARD
-    const input = await laravelInput(request)
+    const input = await requestInput(request)
     const errors = await validateInput(input, { role_assignment_id: ["required", "uuid"] }, {}, {
       messages: { "role_assignment_id.required": "Seleccione un rol.", "role_assignment_id.uuid": "El rol seleccionado no es válido." },
     })
@@ -258,37 +253,30 @@ export function leaveActiveRole(request: Request, deps: AuthenticationDeps = def
   })
 }
 
-const BCRYPT_LOOKING = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/
-
 export function updatePassword(request: Request, deps: AuthenticationDeps = defaultAuthenticationDeps()): Promise<Response> {
   return statefulRequest(request, deps.writer, { group: "api", authenticates: true }, async (context): Promise<Outcome> => {
     const user = context.user
     if (user === null) return unauthenticated()
-    if (deps.production() || !acceptsBody(request)) return FORWARD
-    const input = await laravelInput(request)
-    const fields = ["current_password", "password", "password_confirmation"]
-    if (fields.some((name) => input[name] !== undefined && input[name] !== null && typeof input[name] !== "string")) return FORWARD
+    const input = await requestInput(request)
     const current = input.current_password
-    const matches = typeof current === "string" ? await deps.verifyPassword(current, user.passwordHash) : false
-    if (matches === null) return FORWARD
+    if (isPhpArray(current ?? null)) return serverError()
+    const matches = current === undefined || current === null ? false : await deps.verifyPassword(stringInput(current), user.passwordHash)
+    if (matches === null) return serverError()
     const password = input.password
-    if (typeof password === "string" && BCRYPT_LOOKING.test(password)) return FORWARD
     const errors = await validateInput(
       input,
       {
         current_password: ["required", "string", { check: () => matches, message: "La contraseña es incorrecta." }],
         password: [
-          "required",
-          "string",
-          { min: 8 },
-          { check: (value) => "password_confirmation" in input && input.password_confirmation === value, message: "La confirmación de contraseña no coincide." },
+          ...passwordRules(input, { production: deps.production(), pwned: deps.pwned }),
           { check: (value) => "current_password" in input && input.current_password !== value, message: "La contraseña nueva debe ser distinta de la actual." },
         ],
       },
       { current_password: "contraseña actual", password: "contraseña" },
     )
     if (Object.keys(errors).length > 0) return fromController(validationError(errors))
-    const hash = await deps.hashPassword(stringInput(password))
+    const hash = await storedPassword(stringInput(password), deps.hashPassword)
+    if (hash === null) return serverError()
     await deps.credentials.setPassword(user.id, hash)
     await deps.credentials.setRememberToken(user.id, deps.writer.random(60))
     await deps.credentials.deleteOtherSessions(user.id, context.state.id)

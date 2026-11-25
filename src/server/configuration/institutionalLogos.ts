@@ -2,8 +2,8 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { isUuid } from "../academic/structure"
-import { laravelRoot } from "../laravel/request"
-import { diskExists, diskPath, fileBase64, fileModifiedAt, publicPath } from "../laravel/storage"
+import { requestRoot } from "../http/request"
+import { diskExists, diskPath, fileBase64, fileModifiedAt, publicPath } from "../http/storage"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 
 export type StoredLogo = { disk: string; path: string | null; classification: string | null }
@@ -42,16 +42,16 @@ export async function facultyIsConfigured(faculty: StoredFaculty | null): Promis
 }
 
 export async function institutionUrl(request: Request): Promise<string> {
-  return `${laravelRoot(request)}/logos/institucion?v=${await fileModifiedAt(await institutionPath())}`
+  return `${requestRoot(request)}/logos/institucion?v=${await fileModifiedAt(await institutionPath())}`
 }
 
 export async function configuredFacultyUrl(request: Request, faculty: StoredFaculty | null): Promise<string | null> {
   if (faculty === null || !(await facultyIsConfigured(faculty))) return null
-  return `${laravelRoot(request)}/logos/facultad/${faculty.id}?v=${await fileModifiedAt(await facultyPath(faculty))}`
+  return `${requestRoot(request)}/logos/facultad/${faculty.id}?v=${await fileModifiedAt(await facultyPath(faculty))}`
 }
 
 export async function defaultFacultyUrl(request: Request): Promise<string> {
-  return `${laravelRoot(request)}/${DEFAULT_FACULTY}?v=${await fileModifiedAt(publicPath(DEFAULT_FACULTY))}`
+  return `${requestRoot(request)}/${DEFAULT_FACULTY}?v=${await fileModifiedAt(publicPath(DEFAULT_FACULTY))}`
 }
 
 export async function facultyUrl(request: Request, facultyId: unknown, store: LogoStore): Promise<string> {

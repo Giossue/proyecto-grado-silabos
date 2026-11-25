@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import {
   convocationDetail,
   convocations,
@@ -23,7 +23,6 @@ const CONVOCATION = "cc000000-0000-4000-8000-000000000001"
 const PROCESS = "cd000000-0000-4000-8000-000000000001"
 
 let world: FakeWorld
-let forwarded: Request[]
 let listCalls: { filters: ConvocationListFilters; page: number }[]
 let rows: ProcessListRow[]
 let record: ConvocationRecord | null
@@ -63,7 +62,7 @@ const repository = (): ConvocationRepository => ({
   },
 })
 
-const deps = () => ({ bridge: fakeDeps(world, forwarded), convocations: repository(), now: () => NOW })
+const deps = () => ({ bridge: fakeDeps(world), convocations: repository(), now: () => NOW })
 
 async function send(handler: (request: Request) => Promise<Response>, path: string, method = "GET") {
   const response = await handler(apiRequest(path, { cookie, method, headers: { "x-csrf-token": golden.csrfToken } }))
@@ -90,7 +89,6 @@ beforeEach(() => {
     users: [makeUser()],
     assignments: [makeAssignment({ role: "coordinador", careerId: CAREER })],
   }
-  forwarded = []
   listCalls = []
   rows = [
     { processId: PROCESS, processState: "abierto", period: "2026-2", convocationId: CONVOCATION, convocationState: "abierta", syllabiCount: 7 },

@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeTemplateStore, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import { phpShape, type PhpRecord } from "../configuration/phpValues"
@@ -11,6 +11,7 @@ import { presentDefinition, resolveVariables, syllabusSectionPayload } from "../
 import { identificationOf } from "./identificationCard"
 import { teacherSyllabusDetail, type CopySource, type DetailRevision, type DetailSyllabus, type ReviewComment, type SyllabusDetailStore } from "./syllabusDetail"
 import type { SignatureRecord } from "./snapshotDocuments"
+import type { ArchivedField } from "./syllabusDetailQueries"
 
 const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
 
@@ -24,7 +25,6 @@ const FACULTY = "f0000000-0000-4000-8000-000000000001"
 
 let root: string
 let world: FakeWorld
-let forwarded: Request[]
 let templateWorld: FakeTemplateWorld
 let syllabus: DetailSyllabus | null
 let revisions: DetailRevision[]
@@ -33,7 +33,7 @@ let comments: ReviewComment[]
 let signatures: SignatureRecord[]
 let sources: CopySource[]
 let values: Map<string, unknown>
-let archived: boolean
+let archived: ArchivedField[] | null
 let today: string
 
 const identificationSource = () => ({
@@ -47,7 +47,8 @@ const store = (): SyllabusDetailStore => ({
   syllabus: async (id) => (syllabus !== null && syllabus.id === id.toLowerCase() ? syllabus : null),
   teachers: async () => ["Ana Pérez", "Ana Pérez"],
   values: async () => values,
-  hasArchivedValues: async () => archived,
+  hasArchivedValues: async () => archived !== null,
+  archivedFields: async () => archived,
   revisions: async () => revisions,
   revisionSnapshot: async (id) => snapshots.get(id) ?? null,
   signedFacts: async () => ({ coordination: null, verification: null }),
@@ -59,7 +60,7 @@ const store = (): SyllabusDetailStore => ({
 })
 
 const deps = () => ({
-  bridge: fakeDeps(world, forwarded),
+  bridge: fakeDeps(world),
   store: store(),
   templates: fakeTemplateStore(templateWorld),
   logos: { faculty: async () => null },
@@ -111,18 +112,17 @@ async function show(id = SYLLABUS) {
 
 beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), "silabos-detail-"))
-  process.env.LARAVEL_STORAGE_PATH = path.join(root, "storage", "app")
-  process.env.LARAVEL_PUBLIC_PATH = path.join(root, "public")
+  process.env.STORAGE_PATH = path.join(root, "storage", "app")
+  process.env.PUBLIC_ASSETS_PATH = path.join(root, "public")
 })
 
 afterAll(async () => {
-  delete process.env.LARAVEL_STORAGE_PATH
-  delete process.env.LARAVEL_PUBLIC_PATH
+  delete process.env.STORAGE_PATH
+  delete process.env.PUBLIC_ASSETS_PATH
   await rm(root, { recursive: true, force: true })
 })
 
 beforeEach(() => {
-  forwarded = []
   world = {
     sessions: new Map([[golden.sessionId, { id: golden.sessionId, userId: golden.userId, payload: sessionPayload(loggedInAttributes()), lastActivity: NOW }]]),
     users: [makeUser()],
@@ -136,7 +136,7 @@ beforeEach(() => {
   signatures = []
   sources = [{ id: SOURCE, parallel: "B", state: "borrador" }]
   values = new Map()
-  archived = false
+  archived = null
   today = "2026-11-23"
 })
 
@@ -282,20 +282,28 @@ describe("GET teacher/syllabi/{syllabus}", () => {
     expect(variables.nombre_coordinador).toBeUndefined()
   })
 
-  it("leaves legacy snapshots, archived answers and unknown syllabi to Laravel", async () => {
+  it("shows a legacy snapshot with the official template and archived answers as their frozen sections", async () => {
     syllabus = draft({ state: "en_revision" })
     revisions = [revision()]
     snapshots.set(REVISION, { sections: [] })
-    expect((await show()).status).toBe(299)
+    const legacy = await show()
+    expect(legacy.status).toBe(200)
+    expect(legacy.json?.syllabus.sections).toEqual([])
     syllabus = draft()
     revisions = []
-    archived = true
-    expect((await show()).status).toBe(299)
-    archived = false
-    expect(forwarded).toHaveLength(2)
+    const answer = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Respuesta archivada" }] }] }
+    archived = [{ sectionId: "s-9", sectionKey: "anterior", sectionTitle: "Sección retirada", sectionOrientation: "portrait", id: "f-9", key: "metodos", label: "Métodos", responsible: "docente", content: answer }]
+    const frozen = await show()
+    expect(frozen.status).toBe(200)
+    const sections = frozen.json?.syllabus.sections as { key: string; fields: { id: string; teacher_editable: boolean; required: boolean; value: unknown }[] }[]
+    expect(sections.map((section) => section.key)).toEqual(["anterior"])
+    expect(sections[0].fields[0]).toMatchObject({ id: "f-9", teacher_editable: true, required: true })
+    expect(JSON.stringify(sections[0].fields[0].value)).toContain("Respuesta archivada")
+  })
+
+  it("answers Laravel's model 404 for unknown syllabi", async () => {
     syllabus = null
     expect(await show()).toMatchObject({ status: 404, text: modelNotFound("Syllabus", SYLLABUS) })
     expect(await show("no-es-uuid")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "no-es-uuid") })
-    expect(forwarded).toHaveLength(2)
   })
 })

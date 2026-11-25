@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
-import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
+import golden from "../http/__fixtures__/laravel-golden.json"
+import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, storedJson, type FakeWorld } from "../auth/testing"
 import { markAllNotificationsRead, markNotificationRead, openNotification, type NotificationWriteRepository, type StoredNotification } from "./notifications"
 import type { DestinationLookups } from "./notificationDestination"
 
@@ -17,7 +17,6 @@ const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 let world: FakeWorld
 let stored: (StoredNotification & { visible: boolean })[]
 let writes: string[]
-let forwarded: Request[]
 let lookups: DestinationLookups
 
 function notice(overrides: Partial<StoredNotification & { visible: boolean }> = {}): StoredNotification & { visible: boolean } {
@@ -60,7 +59,7 @@ const noLookups = (): DestinationLookups => ({
 })
 
 function deps() {
-  return { bridge: fakeDeps(world, forwarded), notifications: repository(), lookups }
+  return { bridge: fakeDeps(world), notifications: repository(), lookups }
 }
 
 function post(path: string, headers: Record<string, string> = {}): Request {
@@ -79,7 +78,6 @@ beforeEach(() => {
   }
   stored = [notice(), notice({ id: FOREIGN, userId: OTHER_USER })]
   writes = []
-  forwarded = []
   lookups = noLookups()
 })
 
@@ -170,16 +168,20 @@ describe("POST /api/v1/notifications/{notification}/open", () => {
     expect(stored[0].readAt).toBe(String(NOW))
   })
 
-  it("lets Laravel answer when opening switches the active role, since that writes the session", async () => {
+  it("switches the active role in the session when opening needs it, like SelectActiveRole", async () => {
     const coordinator = makeAssignment({ id: "r-coord", role: "coordinador", careerId: "c-1" })
     world.assignments = [makeAssignment(), coordinator]
     world.sessions.set(SESSION_ID, { payload: sessionPayload(loggedInAttributes({ active_role_assignment_id: "r-coord" })), lastActivity: NOW - 60 })
     stored[0] = notice({ type: "silabo.aprobado", resourceType: "silabo", resourceId: MISSING })
     lookups = { ...noLookups(), syllabusExists: async () => true, teacherAssignmentIds: async () => [golden.roleId] }
     const response = await openNotification(post(`/api/v1/notifications/${OWN}/open`), OWN, deps())
-    expect(response.status).toBe(299)
-    expect(forwarded).toHaveLength(1)
-    expect(stored[0].readAt).toBeNull()
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ role_changed: true })
+    expect(stored[0].readAt).not.toBeNull()
+    expect(world.sessions.has(SESSION_ID)).toBe(true)
+    const stored2 = [...world.sessions.keys()].filter((id) => id !== SESSION_ID)
+    expect(stored2).toHaveLength(1)
+    expect(JSON.parse(storedJson(world, stored2[0]) ?? "{}").active_role_assignment_id).toBe(golden.roleId)
   })
 
   it("forbids another user's notice", async () => {

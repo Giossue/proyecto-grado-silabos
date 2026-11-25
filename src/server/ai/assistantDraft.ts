@@ -88,7 +88,6 @@ function fingerprintOf(definition: TemplateDefinition, sections: AssistantSectio
 }
 
 export function templateDefinitionOf(template: SyllabusTemplate): TemplateDefinition {
-  if (template.definition === null) throw new Error("The template has no stored definition.")
   return template.definition
 }
 

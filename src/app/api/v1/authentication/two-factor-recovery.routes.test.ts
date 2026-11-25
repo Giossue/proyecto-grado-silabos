@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { nativeMethods, routerComparison } from "@/server/laravel/routerTesting"
+import { nativeMethods, routerComparison } from "@/server/http/routerTesting"
 import * as twoFactor from "./two-factor/route"
 import * as confirm from "./two-factor/confirm/route"
 import * as recoveryCodes from "./two-factor/recovery-codes/route"
@@ -30,8 +30,8 @@ describe("two-factor, password reset and account activation routes", () => {
     vi.stubGlobal("fetch", fetchMock)
     const unserved = nativeMethods(module, served, others)
     for (const method of unserved) {
-      const { next, laravel } = await routerComparison(module, method, path)
-      expect(next).toEqual(laravel)
+      const { next, unmatched } = await routerComparison(module, method, path)
+      expect(next).toEqual(unmatched)
     }
     expect(fetchMock).not.toHaveBeenCalled()
     for (const method of served) expect(unserved.map((name) => module[name])).not.toContain(module[method])
@@ -40,7 +40,7 @@ describe("two-factor, password reset and account activation routes", () => {
   it.each(ROUTES.filter(([path]) => !path.endsWith("/challenge") && !path.endsWith("-reset") && !path.endsWith("-activation")))(
     "answers 401 in Next on %s without a stateful Referer",
     async (path, module, served) => {
-      vi.stubEnv("LARAVEL_APP_KEY", `base64:${Buffer.alloc(32).toString("base64")}`)
+      vi.stubEnv("APP_KEY", `base64:${Buffer.alloc(32).toString("base64")}`)
       const method = served.includes("GET") ? "GET" : "POST"
       const response = await module[method](new Request(`http://localhost:3000${path}`, { method, headers: { accept: "application/json" } }))
       expect(response.status).toBe(401)
@@ -49,7 +49,7 @@ describe("two-factor, password reset and account activation routes", () => {
   )
 
   it("answers 400 in Next on the challenge without the web app", async () => {
-    vi.stubEnv("LARAVEL_APP_KEY", `base64:${Buffer.alloc(32).toString("base64")}`)
+    vi.stubEnv("APP_KEY", `base64:${Buffer.alloc(32).toString("base64")}`)
     const response = await challenge.POST(new Request("http://localhost:3000/api/v1/authentication/two-factor/challenge", { method: "POST", headers: { accept: "application/json" } }))
     expect(response.status).toBe(400)
     expect(await response.text()).toBe('{"message":"Inicie sesi\\u00f3n desde la aplicaci\\u00f3n web."}')

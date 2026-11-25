@@ -1,5 +1,5 @@
 import { requestRevisionDocuments, revisionDocuments } from "@/server/documents/revisionDocuments"
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 
 type Context = { params: Promise<{ revision: string }> }
 
@@ -13,4 +13,4 @@ export async function POST(request: Request, context: Context): Promise<Response
   return requestRevisionDocuments(request, revision)
 }
 
-export { laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as PUT, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as DELETE, unmatchedRouteHandler as OPTIONS }

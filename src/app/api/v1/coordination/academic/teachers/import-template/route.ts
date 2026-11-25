@@ -1,5 +1,5 @@
 import { teacherImportTemplate } from "@/server/identity/imports"
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 import { destroyCareerTeacher } from "@/server/identity/careerTeachers"
 
 export function GET(request: Request): Promise<Response> {
@@ -10,4 +10,4 @@ export function DELETE(request: Request): Promise<Response> {
   return destroyCareerTeacher(request, "import-template")
 }
 
-export { laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as POST, unmatchedRouteHandler as PUT, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as OPTIONS }

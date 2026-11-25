@@ -1,10 +1,10 @@
 import "server-only"
-import { laravelHttpError } from "@/server/laravel/responses"
+import { jsonError } from "@/server/http/responses"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
-import { laravelJson } from "../laravel/responses"
+import { apiJson } from "../http/responses"
 import { findActiveCareer } from "./structureQueries"
 
 export type SupportDocumentRecord = { id: string; title: string; size: number; view: string; uploadedAt: string }
@@ -46,9 +46,9 @@ async function list(request: Request, roles: string[], deps: SupportDocumentDeps
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   const role = session.activeRole
-  if (role === null || !roles.includes(role.role) || role.careerId === null || !(await deps.documents.careerActive(role.careerId))) return laravelHttpError(403, "")
+  if (role === null || !roles.includes(role.role) || role.careerId === null || !(await deps.documents.careerActive(role.careerId))) return jsonError(403, "")
   const documents = await deps.documents.forCareer(role.careerId)
-  return laravelJson({
+  return apiJson({
     data: documents.map((document) => ({ id: document.id, title: document.title, size: document.size, view: document.view, uploaded_at: document.uploadedAt })),
   })
 }

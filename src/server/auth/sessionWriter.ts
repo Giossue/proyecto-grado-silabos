@@ -1,8 +1,8 @@
 import "server-only"
 import { randomBytes, randomInt } from "node:crypto"
-import { cookiePrefix } from "../laravel/cookies"
-import { decrypt, DecryptError, encrypt } from "../laravel/encrypter"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { cookiePrefix } from "../http/cookies"
+import { decrypt, DecryptError, encrypt } from "../http/encrypter"
+import { phpJsonEncode } from "../http/phpJson"
 import type { BridgeDeps, OutgoingCookie, StoredSession } from "./types"
 
 export const SESSION_ID_LENGTH = 40
@@ -20,7 +20,7 @@ export type SessionWriterDeps = BridgeDeps & {
 
 export type SessionState = { id: string; attributes: Record<string, unknown>; exists: boolean }
 
-export function laravelRandom(length: number): string {
+export function sessionRandom(length: number): string {
   let result = ""
   while (result.length < length) {
     const size = length - result.length
@@ -46,7 +46,7 @@ export function withWriter(bridge: BridgeDeps): SessionWriterDeps {
   return {
     ...bridge,
     cookie: sessionCookieOptions(),
-    random: laravelRandom,
+    random: sessionRandom,
     lottery: () => randomInt(1, LOTTERY[1] + 1) <= LOTTERY[0],
   }
 }
@@ -196,7 +196,7 @@ export function encryptCookieValue(name: string, value: string, deps: Pick<Bridg
 
 export function writerDepsOf(deps: BridgeDeps): SessionWriterDeps {
   if ("lottery" in deps && "random" in deps && "cookie" in deps) return deps as SessionWriterDeps
-  return { ...deps, cookie: sessionCookieOptions(), random: laravelRandom, lottery: () => false }
+  return { ...deps, cookie: sessionCookieOptions(), random: sessionRandom, lottery: () => false }
 }
 
 export function setCookieHeader(name: string, encrypted: string, options: CookieOptions, expires: number, httpOnly: boolean, now: number): string {

@@ -1,7 +1,7 @@
 import "server-only"
 import { createHash, timingSafeEqual } from "node:crypto"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { LaravelSession } from "../auth/types"
+import type { AppSession } from "../auth/types"
 import { freeTextNormalize } from "../configuration/freeText"
 import { phpTrim, type PhpRecord } from "../configuration/phpValues"
 import { profileContext } from "../configuration/subjectProfile"
@@ -13,12 +13,12 @@ import type { TemplateStore } from "../configuration/templateStore"
 import { importSession, readUpload, type ImportDeps, type ImportFileRules } from "../excel/importRequest"
 import { xlsxDownload } from "../excel/workbook"
 import type { UploadedFile } from "../files/uploads"
-import { phpJsonEncode } from "../laravel/phpJson"
-import { laravelHttpError, laravelJson, validationError } from "../laravel/responses"
-import { sharedRateLimiter } from "../laravel/throttle"
-import type { Rule } from "../laravel/validation"
-import type { PhpArray, PhpValue } from "../laravel/input"
-import { laravelBoolean } from "../syllabus/inProgressWork"
+import { phpJsonEncode } from "../http/phpJson"
+import { jsonError, apiJson, validationError } from "../http/responses"
+import { sharedRateLimiter } from "../http/throttle"
+import type { Rule } from "../http/validation"
+import type { PhpArray, PhpValue } from "../http/input"
+import { requestBoolean } from "../syllabus/inProgressWork"
 import { Rejected, settle } from "../syllabus/reviewDecisions"
 import { fichaClean, fichaCoverage, fichaDocument, fichaSchema } from "./fichaFieldValues"
 import { createFichaImportDeps } from "./fichaImportStore"
@@ -79,7 +79,7 @@ function rejectWith(errors: Record<string, string[]>): never {
   throw new Rejected(validationError(errors))
 }
 
-async function careerContext(session: LaravelSession, store: Pick<FichaImportStore, "careerActive">): Promise<string | null> {
+async function careerContext(session: AppSession, store: Pick<FichaImportStore, "careerActive">): Promise<string | null> {
   const role = session.activeRole
   if (!session.user.active || role === null || role.role !== "coordinador" || role.careerId === null) return null
   return (await store.careerActive(role.careerId)) ? role.careerId : null
@@ -116,7 +116,7 @@ async function fichaContext(careerId: string, reader: FichaReader): Promise<Cont
 }
 
 function contextFailure(error: unknown, careerId: string): Response {
-  if (error instanceof CareerMissing) return laravelHttpError(404, `No query results for model [${CAREER_MODEL}] ${careerId}`)
+  if (error instanceof CareerMissing) return jsonError(404, `No query results for model [${CAREER_MODEL}] ${careerId}`)
   if (error instanceof TemplateValidationError) return validationError(error.errors)
   throw error
 }
@@ -125,7 +125,7 @@ export async function fichaTemplate(request: Request, deps: FichaImportDeps = de
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   const careerId = await careerContext(session, deps.store)
-  if (careerId === null) return laravelHttpError(403, "")
+  if (careerId === null) return jsonError(403, "")
   if (await deps.store.careerLocked(careerId)) return validationError({ process: [CONVOCATION_LOCK] })
   try {
     const { definition } = await fichaContext(careerId, deps.store)
@@ -137,9 +137,9 @@ export async function fichaTemplate(request: Request, deps: FichaImportDeps = de
 
 type Preview = { definition: FichaDefinition; fileHash: string; subjects: FichaEntry[] }
 
-async function previewWorkbook(file: UploadedFile, session: LaravelSession, deps: FichaImportDeps): Promise<Preview | Response> {
+async function previewWorkbook(file: UploadedFile, session: AppSession, deps: FichaImportDeps): Promise<Preview | Response> {
   const careerId = await careerContext(session, deps.store)
-  if (careerId === null) return laravelHttpError(403, "")
+  if (careerId === null) return jsonError(403, "")
   if (await deps.store.careerLocked(careerId)) return validationError({ process: [CONVOCATION_LOCK] })
   try {
     const { definition } = await fichaContext(careerId, deps.store)
@@ -196,7 +196,7 @@ export async function previewFichaImport(request: Request, deps: FichaImportDeps
   try {
     const preview = await previewWorkbook(read.upload.file, session, deps)
     if (preview instanceof Response) return finish(preview)
-    return finish(laravelJson({ preview: await previewDetail(preview, deps) }))
+    return finish(apiJson({ preview: await previewDetail(preview, deps) }))
   } catch (error) {
     if (error instanceof TemplateValidationError) return finish(validationError(error.errors))
     throw error
@@ -279,7 +279,7 @@ async function applyEntries(
   try {
     fresh = await fichaContext(careerId, tx)
   } catch (error) {
-    if (error instanceof CareerMissing) throw new Rejected(laravelHttpError(404, `No query results for model [${CAREER_MODEL}] ${careerId}`))
+    if (error instanceof CareerMissing) throw new Rejected(jsonError(404, `No query results for model [${CAREER_MODEL}] ${careerId}`))
     throw error
   }
   if (fichaFingerprint(preview.definition) !== fichaFingerprint(fresh.definition)) {
@@ -339,11 +339,11 @@ export async function applyFichaImport(request: Request, deps: FichaImportDeps =
         }
         assertSelection(preview, subjectIds, fieldsBySubject)
         const careerId = preview.definition.careerId
-        if (session.activeRole === null || session.activeRole.careerId !== careerId) return laravelHttpError(403, "")
+        if (session.activeRole === null || session.activeRole.careerId !== careerId) return jsonError(403, "")
         const applied = await deps.transaction((tx) =>
-          tx.keepContent(laravelBoolean(input.confirm_purge), careerId, subjectIds, () => applyEntries(tx, preview, subjectIds, fieldsBySubject)),
+          tx.keepContent(requestBoolean(input.confirm_purge), careerId, subjectIds, () => applyEntries(tx, preview, subjectIds, fieldsBySubject)),
         )
-        return laravelJson({ message: "Proyecto de carrera aplicado.", applied })
+        return apiJson({ message: "Proyecto de carrera aplicado.", applied })
       } catch (error) {
         if (error instanceof TemplateValidationError) return validationError(error.errors)
         throw error

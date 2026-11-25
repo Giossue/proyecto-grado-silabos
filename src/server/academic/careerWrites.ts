@@ -1,16 +1,17 @@
 import "server-only"
+import { MODELS } from "../http/models"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { ROLE_COMBINATION_MESSAGE, roleCombinationConflicts } from "../identity/accountRules"
-import { isJsonRequest, isPhpArray, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
-import { forbidden, laravelJson, validationError } from "../laravel/responses"
-import { phpIsNumeric, validateInput, type Rule } from "../laravel/validation"
-import { laravelBoolean, type WorkScope } from "../syllabus/inProgressWork"
+import { isJsonRequest, isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
+import { forbidden, apiJson, validationError } from "../http/responses"
+import { phpIsNumeric, validateInput, type Rule } from "../http/validation"
+import { requestBoolean, type WorkScope } from "../syllabus/inProgressWork"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { createCareerWriteDeps } from "./careerWriteStore"
 import { phpIntCast } from "./governanceWrites"
 import { CONVOCATION_LOCK_REASON, CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES } from "./structure"
-import { laravelRouter, routeAllows } from "../laravel/router"
+import { unmatchedRoute, routeAllows } from "../http/router"
 
 export const SUBJECT_COLUMNS = [
   "codigo_asignatura",
@@ -78,7 +79,7 @@ export type CareerWriteDeps = {
   transaction<T>(work: (tx: CareerWriteTx) => Promise<T>): Promise<T>
 }
 
-export type CareerContext = { session: LaravelSession; careerId: string }
+export type CareerContext = { session: AppSession; careerId: string }
 
 export function defaultCareerWriteDeps(): CareerWriteDeps {
   return { bridge: defaultBridgeDeps(), ...createCareerWriteDeps() }
@@ -190,7 +191,7 @@ function subjectAttributes(input: PhpArray): Partial<Record<SubjectColumn, PhpVa
     ["horas_aa", "horas_autonomas"],
   ]
   for (const [key, column] of optional) if (key in input) attributes[column] = input[key]
-  if ("generates_syllabus" in input) attributes.genera_silabo_asignatura = laravelBoolean(input.generates_syllabus)
+  if ("generates_syllabus" in input) attributes.genera_silabo_asignatura = requestBoolean(input.generates_syllabus)
   return attributes
 }
 
@@ -226,7 +227,7 @@ async function assignTeacher(tx: CareerWriteTx, context: CareerContext, parallel
     context.careerId,
     async () => {
       const parallel = await tx.lockParallel(parallelId, context.careerId)
-      if (parallel === null) throw new Missing()
+      if (parallel === null) throw new Missing(MODELS.parallel)
       const roleId = await teacherRole(tx, userId, context.careerId)
       if (await tx.parallelHasActiveTeacher(parallel.id)) throw invalid("user_id", "El paralelo ya tiene un docente asignado.")
       await tx.insertTeacherAssignment(roleId, parallel.id)
@@ -239,13 +240,12 @@ async function assignTeacher(tx: CareerWriteTx, context: CareerContext, parallel
 async function prepared(request: Request, deps: CareerWriteDeps): Promise<{ context: CareerContext; input: PhpArray } | Response> {
   const context = await careerSession(request.clone(), deps.bridge, deps.careerActive)
   if (context instanceof Response) return context
-  return { context, input: await laravelInput(request) }
+  return { context, input: await requestInput(request) }
 }
 
 export async function createCareerRecord(request: Request, entity: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (!["asignatura", "asignacion_docente"].includes(entity) || !routeAllows(request)) return laravelRouter(request)
-  if (notJson(request)) return deps.bridge.forward(original)
+  if (!["asignatura", "asignacion_docente"].includes(entity) || !routeAllows(request)) return unmatchedRoute(request)
   const ready = await prepared(request, deps)
   if (ready instanceof Response) return ready
   const { context, input } = ready
@@ -261,15 +261,15 @@ export async function createCareerRecord(request: Request, entity: string, deps:
     )
     if (Object.keys(errors).length > 0) return validationError(errors)
     return settle(original, deps, async () => {
-      await deps.transaction((tx) => assignTeacher(tx, context, input.parallel_id as string, input.user_id as string, laravelBoolean(input.confirm_purge)))
-      return laravelJson({ message: CREATED })
+      await deps.transaction((tx) => assignTeacher(tx, context, input.parallel_id as string, input.user_id as string, requestBoolean(input.confirm_purge)))
+      return apiJson({ message: CREATED })
     })
   }
   const errors = await validateSubject(input, deps, careerId, null)
   if (Object.keys(errors).length > 0) return validationError(errors)
   return settle(original, deps, async () => {
     await deps.transaction((tx) => insertCareerSubject(tx, context, input))
-    return laravelJson({ message: CREATED })
+    return apiJson({ message: CREATED })
   })
 }
 
@@ -277,7 +277,7 @@ export async function insertCareerSubject(tx: CareerWriteTx, context: CareerCont
   const careerId = context.careerId
   if (await tx.careerLocked(careerId)) throw invalid("process", CONVOCATION_LOCK_REASON)
   const career = await tx.lockCareer(careerId)
-  if (career === null) throw new Missing()
+  if (career === null) throw new Missing(MODELS.career)
   if (phpIntCast(input.cycle) > career.cycleCount) throw invalid("cycle", "El ciclo excede la configuración de esta malla.")
   const last = await tx.lastPosition(career.id, input.cycle)
   const position = "position" in input ? phpIntCast(input.position) : last === null ? 0 : last + 1
@@ -292,15 +292,14 @@ export async function insertCareerSubject(tx: CareerWriteTx, context: CareerCont
     orden_asignatura_en_ciclo: position,
     unidad_curricular_asignatura: input.organization_unit ?? null,
     modalidad_asignatura: subjectModality(input),
-    genera_silabo_asignatura: "generates_syllabus" in input ? laravelBoolean(input.generates_syllabus) : true,
+    genera_silabo_asignatura: "generates_syllabus" in input ? requestBoolean(input.generates_syllabus) : true,
   })
   return id
 }
 
 export async function updateCareerRecord(request: Request, entity: string, recordId: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (entity !== "asignatura" || !routeAllows(request)) return laravelRouter(request)
-  if (notJson(request)) return deps.bridge.forward(original)
+  if (entity !== "asignatura" || !routeAllows(request)) return unmatchedRoute(request)
   const ready = await prepared(request, deps)
   if (ready instanceof Response) return ready
   const { context, input } = ready
@@ -308,16 +307,15 @@ export async function updateCareerRecord(request: Request, entity: string, recor
   if (!(await deps.subjectInCareer(recordId, careerId))) return forbidden()
   const errors = await validateSubject(input, deps, careerId, recordId)
   if (Object.keys(errors).length > 0) return validationError(errors)
-  if ("position" in input && input.position === null) return deps.bridge.forward(original)
-  const confirmed = laravelBoolean(input.confirm_purge)
+  const confirmed = requestBoolean(input.confirm_purge)
   const attributes = subjectAttributes(input)
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
       if (await tx.careerLocked(careerId)) throw invalid("process", CONVOCATION_LOCK_REASON)
-      const toggles = "generates_syllabus" in input && (await tx.subjectGeneratesSyllabus(recordId)) !== laravelBoolean(input.generates_syllabus)
+      const toggles = "generates_syllabus" in input && (await tx.subjectGeneratesSyllabus(recordId)) !== requestBoolean(input.generates_syllabus)
       const change = async () => {
         const subject = await tx.lockSubject(recordId, careerId)
-        if (subject === null) throw new Missing()
+        if (subject === null) throw new Missing(MODELS.subject)
         if (input.cycle !== undefined && input.cycle !== null) {
           const career = await tx.lockCareer(subject.careerId)
           if (phpIntCast(input.cycle) > (career?.cycleCount ?? 0)) throw invalid("cycle", "El ciclo excede la configuración de esta malla.")
@@ -329,13 +327,12 @@ export async function updateCareerRecord(request: Request, entity: string, recor
       if (toggles) await tx.guard(confirmed, careerId, () => tx.replace(confirmed, change, { careerIds: careerId, subjectId: recordId }), null)
       else await tx.keepContent(confirmed, careerId, change)
     })
-    return laravelJson({ message: "Registro académico actualizado." })
+    return apiJson({ message: "Registro académico actualizado." })
   })
 }
 
 export async function createParallels(request: Request, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (notJson(request)) return deps.bridge.forward(original)
   const ready = await prepared(request, deps)
   if (ready instanceof Response) return ready
   const { context, input } = ready
@@ -360,12 +357,12 @@ export async function createParallels(request: Request, deps: CareerWriteDeps = 
     { messages: { "user_id.required": "Seleccione el docente del paralelo.", "user_id.exists": "Elija un docente activo con el correo verificado." } },
   )
   if (Object.keys(errors).length > 0) return validationError(errors)
-  const confirmed = laravelBoolean(input.confirm_purge)
+  const confirmed = requestBoolean(input.confirm_purge)
   const codes = Object.values(input.codes as PhpArray).map((code) => phpTrim(code as string))
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
       const subjectId = await tx.lockActiveSubject(input.subject_id as string, careerId)
-      if (subjectId === null) throw new Missing()
+      if (subjectId === null) throw new Missing(MODELS.subject)
       const existing = await tx.existingParallelCodes(
         subjectId,
         codes.map((code) => code.toUpperCase()),
@@ -376,14 +373,13 @@ export async function createParallels(request: Request, deps: CareerWriteDeps = 
         await assignTeacher(tx, context, parallelId, input.user_id as string, confirmed)
       }
     })
-    return laravelJson({ message: `${codes.length} paralelos creados dentro de su carrera.` })
+    return apiJson({ message: `${codes.length} paralelos creados dentro de su carrera.` })
   })
 }
 
 export async function updateParallel(request: Request, parallelId: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (!routeAllows(request)) return laravelRouter(request)
-  if (notJson(request)) return deps.bridge.forward(original)
+  if (!routeAllows(request)) return unmatchedRoute(request)
   const ready = await prepared(request, deps)
   if (ready instanceof Response) return ready
   const { context, input } = ready
@@ -394,12 +390,12 @@ export async function updateParallel(request: Request, parallelId: string, deps:
     { code: "código de paralelo", shift: "jornada", confirm_purge: "confirmación de borrado" },
   )
   if (Object.keys(errors).length > 0) return validationError(errors)
-  const confirmed = laravelBoolean(input.confirm_purge)
+  const confirmed = requestBoolean(input.confirm_purge)
   const code = phpTrim(input.code as string)
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
       const parallel = await tx.lockParallel(parallelId, context.careerId)
-      if (parallel === null) throw new Missing()
+      if (parallel === null) throw new Missing(MODELS.parallel)
       await tx.guard(
         confirmed,
         context.careerId,
@@ -415,14 +411,13 @@ export async function updateParallel(request: Request, parallelId: string, deps:
         [parallel.subjectId],
       )
     })
-    return laravelJson({ message: "Paralelo actualizado." })
+    return apiJson({ message: "Paralelo actualizado." })
   })
 }
 
 export async function replaceParallelTeacher(request: Request, parallelId: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (!routeAllows(request)) return laravelRouter(request)
-  if (notJson(request)) return deps.bridge.forward(original)
+  if (!routeAllows(request)) return unmatchedRoute(request)
   const ready = await prepared(request, deps)
   if (ready instanceof Response) return ready
   const { context, input } = ready
@@ -432,19 +427,19 @@ export async function replaceParallelTeacher(request: Request, parallelId: strin
     { user_id: "docente", confirm_purge: "confirmación de borrado" },
   )
   if (Object.keys(errors).length > 0) return validationError(errors)
-  const confirmed = laravelBoolean(input.confirm_purge)
+  const confirmed = requestBoolean(input.confirm_purge)
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
       const parallel = await tx.lockParallel(parallelId, context.careerId)
-      if (parallel === null) throw new Missing()
+      if (parallel === null) throw new Missing(MODELS.parallel)
       const current = await tx.activeTeacherAssignment(parallel.id)
       if (current !== null) {
         const assignment = await tx.lockTeacherAssignment(current, context.careerId)
-        if (assignment === null) throw new Missing()
+        if (assignment === null) throw new Missing(MODELS.teacherAssignment, current)
         await tx.deleteTeacherAssignment(assignment)
       }
       await assignTeacher(tx, context, parallel.id, input.user_id as string, confirmed)
     })
-    return laravelJson({ message: CREATED })
+    return apiJson({ message: CREATED })
   })
 }

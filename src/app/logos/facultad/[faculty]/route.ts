@@ -1,5 +1,5 @@
 import { facultyLogo } from "@/server/configuration/logoRoutes"
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 
 type Context = { params: Promise<{ faculty: string }> }
 
@@ -8,4 +8,4 @@ export async function GET(request: Request, context: Context): Promise<Response>
   return facultyLogo(request, faculty)
 }
 
-export { laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as POST, unmatchedRouteHandler as PUT, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as DELETE, unmatchedRouteHandler as OPTIONS }

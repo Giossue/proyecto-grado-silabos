@@ -1,10 +1,11 @@
 import "server-only"
+import { HttpFailure, Missing } from "../http/failures"
 import { ruleFailures } from "@/lib/blocks/rules"
 import type { BlockRule } from "@/lib/blocks/types"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { aborted, laravelJson } from "../laravel/responses"
+import { aborted, apiJson } from "../http/responses"
 import { fieldLimitCount, fieldLimitExceeded } from "../configuration/fieldLimit"
 import { isPhpArray, list, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
 import { clearHidden, shownResponses, syllabusConditions, type Answers } from "../configuration/responseConditions"
@@ -35,8 +36,8 @@ import type { DraftSyllabus, LockedSyllabus } from "./draftField"
 import { identificationOf, type IdentificationSource } from "./identificationCard"
 import { mayEdit } from "./policy"
 import { createDraftValidationStore } from "./draftValidationQueries"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type ValidationField = { id: string; key: string; responsible: string; content: unknown; displayName: string }
 export type ValidationTeacher = { id: string; name: string; formation: string | null }
@@ -45,8 +46,7 @@ export type ValidationIssue = { field_id: string | null; code: string; severity:
 export interface DraftValidationTx {
   lockSyllabus(id: string): Promise<LockedSyllabus | null>
   templateStore: TemplateStore
-  hasArchivedValues(id: string): Promise<boolean>
-  liveFields(): Promise<ValidationField[]>
+  documentFields(id: string): Promise<ValidationField[]>
   values(id: string): Promise<Map<string, unknown>>
   identification(id: string): Promise<IdentificationSource>
   teachers(id: string): Promise<ValidationTeacher[]>
@@ -62,8 +62,6 @@ export type DraftValidationDeps = { bridge: BridgeDeps; store: DraftValidationSt
 export function defaultDraftValidationDeps(): DraftValidationDeps {
   return { bridge: defaultBridgeDeps(), store: createDraftValidationStore(), today: institutionToday }
 }
-
-class Missing extends Error {}
 
 function answered(template: PhpRecord, value: PhpRecord, definition: TemplateDefinition): boolean {
   if (template.type === RESPONSE_NODE) return !responseAnswered(template.attrs ?? []) && responseAnswered(value.attrs ?? [])
@@ -155,11 +153,11 @@ function fieldIssues(
   return [...issues, ...blockIssues(field, stored, variables, definition)]
 }
 
-async function runValidation(tx: DraftValidationTx, session: LaravelSession, syllabusId: string) {
+async function runValidation(tx: DraftValidationTx, session: AppSession, syllabusId: string) {
   const locked = await tx.lockSyllabus(syllabusId)
-  if (locked === null) throw new Missing()
+  if (locked === null) throw new Missing(MODELS.syllabus, syllabusId)
   const template = await tx.templateStore.template()
-  if (template === null || template.definition === null || (await tx.hasArchivedValues(locked.id))) throw new Missing()
+  if (template === null) throw new Missing(MODELS.template)
   const definition = template.definition
   const values = await tx.values(locked.id)
   const variables = resolveVariables(definition, { identification: identificationOf(await tx.identification(locked.id)) })
@@ -167,7 +165,7 @@ async function runValidation(tx: DraftValidationTx, session: LaravelSession, syl
   const conditions = syllabusConditions(template, fieldConditions(definition), values, templates)
   const limits = fieldLimits(definition)
   const issues: ValidationIssue[] = []
-  for (const field of await tx.liveFields()) {
+  for (const field of await tx.documentFields(locked.id)) {
     if (!teacherEditable({ id: field.id, responsible: field.responsible } as TemplateField, templates) || conditions.hidden.has(field.id)) continue
     const limit = limitAllowed(field.responsible) ? (limits[field.key] ?? null) : null
     issues.push(...fieldIssues(field, templates[field.id] ?? field.content, values.get(field.id) ?? null, conditions.answers, limit, variables, definition))
@@ -190,7 +188,6 @@ async function runValidation(tx: DraftValidationTx, session: LaravelSession, syl
 }
 
 export async function validateDraft(request: Request, syllabusId: string, deps: DraftValidationDeps = defaultDraftValidationDeps()): Promise<Response> {
-  const original = request.clone()
   let syllabus: DraftSyllabus | null = null
   const session = await requireSession(
     request,
@@ -211,11 +208,11 @@ export async function validateDraft(request: Request, syllabusId: string, deps: 
   try {
     result = await deps.store.transaction((tx) => runValidation(tx, session, (syllabus as DraftSyllabus).id))
   } catch (error) {
-    if (error instanceof Missing) return deps.bridge.forward(original)
+    if (error instanceof HttpFailure) return error.response
     throw error
   }
   const blocking = result.issues.filter((issue) => issue.severity === "error").length
-  return laravelJson({
+  return apiJson({
     message: blocking === 0 ? "Validación completada sin errores bloqueantes." : "Validación completada. Revise los campos señalados.",
     validation: { version_bloqueo: result.version, blocking_errors: blocking, warnings: result.issues.length - blocking, results: result.issues },
   })

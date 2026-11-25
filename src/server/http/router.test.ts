@@ -1,8 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { HTTP_ERROR_PAGE, NOT_FOUND_PAGE } from "./errorPages"
-import { laravelFallback, proxyToLaravel } from "./proxy"
-import { laravelFallbackEnabled, laravelRouter, laravelRoutesMatching, modelNotFound, routeAllows, unknownRoute } from "./router"
+import { unmatchedRoute, routesMatching, modelNotFound, routeAllows, unknownRoute } from "./router"
 
 const base = "http://localhost:3000"
 
@@ -25,17 +24,17 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe("laravelRoutesMatching", () => {
+describe("routesMatching", () => {
   it("honours optional parameters and where constraints like Laravel's compiled routes", () => {
-    expect(laravelRoutesMatching("/api/v1/admin/academic").flatMap((route) => route.methods)).toEqual(["GET", "HEAD"])
-    expect(laravelRoutesMatching("/api/v1/admin/academic/carrera").flatMap((route) => route.methods).sort()).toEqual(["GET", "HEAD", "POST"])
-    expect(laravelRoutesMatching("/api/v1/admin/system-settings/ia").flatMap((route) => route.methods)).toEqual(["PUT"])
-    expect(laravelRoutesMatching("/api/v1/admin/system-settings/otra")).toEqual([])
-    expect(laravelRoutesMatching("/api/v1/coordination/academic/curriculum/no-uuid")).toEqual([])
+    expect(routesMatching("/api/v1/admin/academic").flatMap((route) => route.methods)).toEqual(["GET", "HEAD"])
+    expect(routesMatching("/api/v1/admin/academic/carrera").flatMap((route) => route.methods).sort()).toEqual(["GET", "HEAD", "POST"])
+    expect(routesMatching("/api/v1/admin/system-settings/ia").flatMap((route) => route.methods)).toEqual(["PUT"])
+    expect(routesMatching("/api/v1/admin/system-settings/otra")).toEqual([])
+    expect(routesMatching("/api/v1/coordination/academic/curriculum/no-uuid")).toEqual([])
   })
 
   it("lets \\d in a where constraint match any Unicode digit, like PCRE with the u modifier", () => {
-    expect(laravelRoutesMatching("/api/v1/teacher/history/\u0661\u0661\u0661\u0661\u0661\u0661\u0661\u0661-1111-1111-1111-111111111111")).toHaveLength(1)
+    expect(routesMatching("/api/v1/teacher/history/\u0661\u0661\u0661\u0661\u0661\u0661\u0661\u0661-1111-1111-1111-111111111111")).toHaveLength(1)
   })
 
   it("tells whether Laravel has a route for the request's path and method", () => {
@@ -46,9 +45,9 @@ describe("laravelRoutesMatching", () => {
   })
 })
 
-describe("laravelRouter", () => {
+describe("unmatchedRoute", () => {
   it("answers an unknown API route with Laravel's production 404 JSON", async () => {
-    expect(await snapshot(laravelRouter(request("GET", "/api/v1/nope")))).toEqual({
+    expect(await snapshot(unmatchedRoute(request("GET", "/api/v1/nope")))).toEqual({
       status: 404,
       contentType: "application/json",
       cacheControl: "no-cache, private",
@@ -58,38 +57,38 @@ describe("laravelRouter", () => {
   })
 
   it("treats the bare /api path as a route outside the API, like Request::is('api/*')", async () => {
-    expect((await snapshot(laravelRouter(request("GET", "/api")))).body).toBe(NOT_FOUND_PAGE)
-    expect((await snapshot(laravelRouter(request("GET", "/api", { accept: "application/json" })))).body).toBe('{\n    "message": "The route api could not be found."\n}')
+    expect((await snapshot(unmatchedRoute(request("GET", "/api")))).body).toBe(NOT_FOUND_PAGE)
+    expect((await snapshot(unmatchedRoute(request("GET", "/api", { accept: "application/json" })))).body).toBe('{\n    "message": "The route api could not be found."\n}')
   })
 
   it("answers an unknown route outside the API with Laravel's HTML 404 page unless JSON is expected", async () => {
-    expect(await snapshot(laravelRouter(request("GET", "/sanctum/nope")))).toEqual({
+    expect(await snapshot(unmatchedRoute(request("GET", "/sanctum/nope")))).toEqual({
       status: 404,
       contentType: "text/html; charset=utf-8",
       cacheControl: "no-cache, private",
       allow: null,
       body: NOT_FOUND_PAGE,
     })
-    expect((await snapshot(laravelRouter(request("GET", "/sanctum/nope", { accept: "application/json" })))).body).toBe(
+    expect((await snapshot(unmatchedRoute(request("GET", "/sanctum/nope", { accept: "application/json" })))).body).toBe(
       '{\n    "message": "The route sanctum/nope could not be found."\n}',
     )
   })
 
   it("answers a known path with another method with Laravel's 405 and its Allow header", async () => {
-    expect(await snapshot(laravelRouter(request("PUT", "/api/v1/session")))).toEqual({
+    expect(await snapshot(unmatchedRoute(request("PUT", "/api/v1/session")))).toEqual({
       status: 405,
       contentType: "application/json",
       cacheControl: "no-cache, private",
       allow: "GET, HEAD",
       body: '{\n    "message": "The PUT method is not supported for route api/v1/session. Supported methods: GET, HEAD."\n}',
     })
-    expect((await snapshot(laravelRouter(request("DELETE", "/api/v1/admin/academic/carrera")))).body).toBe(
+    expect((await snapshot(unmatchedRoute(request("DELETE", "/api/v1/admin/academic/carrera")))).body).toBe(
       '{\n    "message": "The DELETE method is not supported for route api/v1/admin/academic/carrera. Supported methods: GET, HEAD, POST."\n}',
     )
   })
 
   it("renders Symfony's HTML 405 page outside the API", async () => {
-    expect(await snapshot(laravelRouter(request("PUT", "/sanctum/csrf-cookie")))).toEqual({
+    expect(await snapshot(unmatchedRoute(request("PUT", "/sanctum/csrf-cookie")))).toEqual({
       status: 405,
       contentType: "text/html; charset=utf-8",
       cacheControl: "no-cache, private",
@@ -99,18 +98,18 @@ describe("laravelRouter", () => {
   })
 
   it("answers OPTIONS on a known path with 200 and the comma-joined methods, like Laravel's router", async () => {
-    expect(await snapshot(laravelRouter(request("OPTIONS", "/api/v1/session")))).toEqual({
+    expect(await snapshot(unmatchedRoute(request("OPTIONS", "/api/v1/session")))).toEqual({
       status: 200,
       contentType: "text/html; charset=utf-8",
       cacheControl: "no-cache, private",
       allow: "GET,HEAD",
       body: "",
     })
-    expect((await snapshot(laravelRouter(request("OPTIONS", "/api/v1/nope")))).status).toBe(404)
+    expect((await snapshot(unmatchedRoute(request("OPTIONS", "/api/v1/nope")))).status).toBe(404)
   })
 
   it("keeps the raw path of the request in the message, as Request::path() does", async () => {
-    expect((await snapshot(laravelRouter(request("GET", "/api/v1/caf%C3%A9/")))).body).toBe(
+    expect((await snapshot(unmatchedRoute(request("GET", "/api/v1/caf%C3%A9/")))).body).toBe(
       '{\n    "message": "The route api/v1/caf%C3%A9 could not be found."\n}',
     )
   })
@@ -128,32 +127,23 @@ describe("modelNotFound", () => {
   })
 })
 
-describe("LARAVEL_FALLBACK", () => {
-  it("is on unless it is set to off", () => {
-    expect(laravelFallbackEnabled()).toBe(true)
-    vi.stubEnv("LARAVEL_FALLBACK", "on")
-    expect(laravelFallbackEnabled()).toBe(true)
-    vi.stubEnv("LARAVEL_FALLBACK", "off")
-    expect(laravelFallbackEnabled()).toBe(false)
-  })
+describe("catch-all routes", () => {
+  const catchAlls = [
+    ["api/[...path]", () => import("@/app/api/[...path]/route")],
+    ["api", () => import("@/app/api/route")],
+    ["sanctum/[...path]", () => import("@/app/sanctum/[...path]/route")],
+  ] as const
 
-  it("keeps proxyToLaravel away from Laravel when off and answers like Laravel's router for an unknown route", async () => {
-    vi.stubEnv("LARAVEL_FALLBACK", "off")
+  it.each(catchAlls)("%s answers like Laravel's production router and never calls another server", async (_, load) => {
     const fetch = vi.fn()
     vi.stubGlobal("fetch", fetch)
-    const response = await proxyToLaravel(request("POST", "/api/v1/teacher/syllabi/abc/submit"))
+    const routes = (await load()) as unknown as Record<string, (request: Request) => Promise<Response>>
+    for (const method of ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]) {
+      for (const path of ["/api/v1/teacher/syllabi/abc/submit", "/api/v1/unknown", "/sanctum/token", "/api"]) {
+        expect(await snapshot(await routes[method](request(method, path)))).toEqual(await snapshot(unmatchedRoute(request(method, path))))
+      }
+    }
     expect(fetch).not.toHaveBeenCalled()
-    expect(await snapshot(response)).toEqual(await snapshot(unknownRoute(request("POST", "/api/v1/teacher/syllabi/abc/submit"))))
-    expect(response.status).toBe(404)
-  })
-
-  it("still forwards to Laravel when on", async () => {
-    vi.stubEnv("LARAVEL_URL", "http://laravel.test")
-    const fetch = vi.fn(async () => new Response("ok", { status: 201 }))
-    vi.stubGlobal("fetch", fetch)
-    const response = await proxyToLaravel(request("GET", "/api/v1/session?x=1"))
-    expect(fetch).toHaveBeenCalledWith("http://laravel.test/api/v1/session?x=1", expect.objectContaining({ method: "GET" }))
-    expect(response.status).toBe(201)
   })
 })
 
@@ -161,34 +151,21 @@ describe("Auditoría and Reportes removed from the system", () => {
   const removed = ["api/v1/admin/audit-events", "api/v1/admin/audit-events/export", "api/v1/admin/reports", "api/v1/admin/reports/export"]
 
   it("no longer lists their routes, so every method is an unknown route", () => {
-    for (const path of removed) expect(laravelRoutesMatching(`/${path}`)).toEqual([])
+    for (const path of removed) expect(routesMatching(`/${path}`)).toEqual([])
   })
 
-  it.each(removed)("answers %s with Laravel's production 404 and never forwards it, even with the fallback on", async (path) => {
-    vi.stubEnv("LARAVEL_URL", "http://laravel.test")
-    const fetch = vi.fn(async () => new Response("{}", { status: 200 }))
-    vi.stubGlobal("fetch", fetch)
+  it.each(removed)("answers %s with Laravel's production 404", async (path) => {
     for (const method of ["GET", "HEAD", "POST", "DELETE", "OPTIONS"]) {
       for (const variant of [`/${path}`, `/${path}?period=1`, `/${path.replace("admin/", "admin%2F").replace(/-/g, "%2D")}`]) {
-        expect(await snapshot(await laravelFallback(request(method, variant)))).toEqual(await snapshot(unknownRoute(request(method, variant))))
-        expect(await snapshot(await proxyToLaravel(request(method, variant)))).toEqual(await snapshot(unknownRoute(request(method, variant))))
+        expect(await snapshot(unmatchedRoute(request(method, variant)))).toEqual(await snapshot(unknownRoute(request(method, variant))))
       }
     }
-    expect(fetch).not.toHaveBeenCalled()
-    expect(await snapshot(await laravelFallback(request("GET", `/${path}`)))).toEqual({
+    expect(await snapshot(unmatchedRoute(request("GET", `/${path}`)))).toEqual({
       status: 404,
       contentType: "application/json",
       cacheControl: "no-cache, private",
       allow: null,
       body: `{\n    "message": "The route ${path} could not be found."\n}`,
     })
-  })
-
-  it("keeps forwarding the neighbouring admin routes that Laravel still serves", async () => {
-    vi.stubEnv("LARAVEL_URL", "http://laravel.test")
-    const fetch = vi.fn(async () => new Response("ok", { status: 201 }))
-    vi.stubGlobal("fetch", fetch)
-    expect((await laravelFallback(request("GET", "/api/v1/admin/reports-extra"))).status).toBe(201)
-    expect(fetch).toHaveBeenCalledTimes(1)
   })
 })

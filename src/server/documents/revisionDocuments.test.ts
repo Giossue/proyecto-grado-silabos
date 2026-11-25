@@ -3,14 +3,14 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import type { ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
-import { createRateLimiter } from "../laravel/throttle"
+import { createRateLimiter } from "../http/throttle"
 import { downloadExport, requestRevisionDocuments, revisionDocuments, type ArtifactRow, type DocumentDeps, type DocumentRequestDeps, type StoredArtifact } from "./revisionDocuments"
 import type { ExportArtifactRow } from "./syllabusExport"
-import { laravelSlug } from "./slug"
+import { strSlug } from "./slug"
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
@@ -23,7 +23,6 @@ const OBJECT = "f1000000-0000-4000-8000-000000000001"
 
 let root: string
 let world: FakeWorld
-let forwarded: Request[]
 let syllabus: DetailSyllabus
 let revision: ReviewRevision | null
 let approval: { approvedAt: string; approvedBy: string } | null
@@ -32,7 +31,7 @@ let artifact: StoredArtifact | null
 
 function deps(): DocumentDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     store: {
       revision: async (id) => (revision !== null && revision.id === id ? revision : null),
       syllabus: async () => syllabus,
@@ -46,18 +45,17 @@ function deps(): DocumentDeps {
 
 beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), "silabos-documents-"))
-  process.env.LARAVEL_STORAGE_PATH = path.join(root, "storage", "app")
+  process.env.STORAGE_PATH = path.join(root, "storage", "app")
   await mkdir(path.join(root, "storage", "app", "private", "exports", REVISION, ARTIFACT), { recursive: true })
   await writeFile(path.join(root, "storage", "app", "private", "exports", REVISION, ARTIFACT, "syllabus.pdf"), "%PDF-1.7 prueba\n%%EOF\n")
 })
 
 afterAll(async () => {
-  delete process.env.LARAVEL_STORAGE_PATH
+  delete process.env.STORAGE_PATH
   await rm(root, { recursive: true, force: true })
 })
 
 beforeEach(() => {
-  forwarded = []
   world = {
     sessions: new Map([[golden.sessionId, { id: golden.sessionId, userId: golden.userId, payload: sessionPayload(loggedInAttributes()), lastActivity: NOW }]]),
     users: [makeUser()],
@@ -150,7 +148,6 @@ describe("POST revisions/{r}/documents", () => {
   type Requested = { id: string; revisionId: string; key: string; requestedBy: string; requestedAt: number; state: string }
   let requested: Requested[]
   let dispatched: string[]
-  let renderable: boolean
   let approved: boolean
   let limiter: ReturnType<typeof createRateLimiter>
 
@@ -162,7 +159,6 @@ describe("POST revisions/{r}/documents", () => {
     return {
       ...deps(),
       limiter,
-      renderable: async () => renderable,
       existing,
       newId: () => NEW_ARTIFACT,
       async transaction(work) {
@@ -194,7 +190,6 @@ describe("POST revisions/{r}/documents", () => {
   beforeEach(() => {
     requested = []
     dispatched = []
-    renderable = true
     approved = true
     limiter = createRateLimiter()
   })
@@ -243,13 +238,10 @@ describe("POST revisions/{r}/documents", () => {
     expect([limited.status, limited.limit, limited.remaining]).toEqual([429, "20", "0"])
   })
 
-  it("leaves to Laravel what Next cannot render or read", async () => {
-    renderable = false
-    expect((await post({ idempotency_key: KEY })).text).toBe("from-laravel")
-    renderable = true
-    expect((await post("idempotency_key=x", { "content-type": "application/x-www-form-urlencoded" })).text).toBe("from-laravel")
+  it("reads a form body like JSON instead of handing it elsewhere", async () => {
+    const response = await post("idempotency_key=x", { "content-type": "application/x-www-form-urlencoded" })
+    expect(response.status).toBe(422)
     expect(requested).toEqual([])
-    expect(forwarded).toHaveLength(2)
   })
 })
 
@@ -261,6 +253,6 @@ describe("Str::slug", () => {
     ["a@b", "a-at-b"],
     ["///", ""],
   ])("%s → %s", (value, expected) => {
-    expect(laravelSlug(value)).toBe(expected)
+    expect(strSlug(value)).toBe(expected)
   })
 })

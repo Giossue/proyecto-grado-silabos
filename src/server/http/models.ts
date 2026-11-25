@@ -2,6 +2,16 @@ const MODULES = "App\\Modules"
 
 export const MODELS = {
   user: "App\\Models\\User",
+  career: `${MODULES}\\Academic\\Infrastructure\\Persistence\\Models\\Career`,
+  period: `${MODULES}\\Academic\\Infrastructure\\Persistence\\Models\\AcademicPeriod`,
+  parallel: `${MODULES}\\Academic\\Infrastructure\\Persistence\\Models\\Parallel`,
+  teacherAssignment: `${MODULES}\\Academic\\Infrastructure\\Persistence\\Models\\TeacherAssignment`,
+  requirement: `${MODULES}\\Academic\\Infrastructure\\Persistence\\Models\\SubjectRequirement`,
+  message: `${MODULES}\\AiAssistance\\Infrastructure\\Persistence\\Models\\TemplateAssistantMessage`,
+  block: `${MODULES}\\Configuration\\Infrastructure\\Persistence\\Models\\TemplateBlockRecord`,
+  invitation: `${MODULES}\\Identity\\Infrastructure\\Persistence\\Models\\ActivationInvitation`,
+  submission: `${MODULES}\\Library\\Infrastructure\\Persistence\\Models\\LibrarySubmission`,
+  review: `${MODULES}\\Syllabus\\Infrastructure\\Persistence\\Models\\CoordinationReview`,
   faculty: `${MODULES}\\Academic\\Infrastructure\\Persistence\\Models\\Faculty`,
   subject: `${MODULES}\\Academic\\Infrastructure\\Persistence\\Models\\Subject`,
   supportDocument: `${MODULES}\\Academic\\Infrastructure\\Persistence\\Models\\SupportDocument`,

@@ -1,11 +1,11 @@
 // @vitest-environment node
 import { createHash } from "node:crypto"
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, NOW, sessionCookie, sessionPayload, xsrfHeader, type FakeWorld } from "../auth/testing"
 import type { SessionWriterDeps } from "../auth/sessionWriter"
 import type { OutgoingCookie } from "../auth/types"
-import { createRateLimiter } from "../laravel/throttle"
+import { createRateLimiter } from "../http/throttle"
 import type { QueuedMail } from "../mail/mailables"
 import { activateAccount, resetPassword, sendResetLink, type Invitation, type RecoveryDeps, type RecoveryStore } from "./passwordRecovery"
 

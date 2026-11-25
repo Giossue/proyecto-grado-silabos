@@ -3,10 +3,10 @@ import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { decodePng } from "../files/png"
-import { createStorageWriter, type StorageWriter } from "../laravel/storageWriter"
+import { createStorageWriter, type StorageWriter } from "../http/storageWriter"
 import type { StoredObjectInput } from "./supportDocumentWrites"
 import { GenerationRejected, purgeRequired } from "../syllabus/inProgressWork"
 import {
@@ -33,7 +33,6 @@ const PERIOD = "01a1c5bc-79d3-730d-84f4-6a91c41c8a75"
 const NEW_ID = "01a2aaaa-0000-7000-8000-000000000001"
 
 let world: FakeWorld
-let forwarded: Request[]
 let log: string[]
 let faculties: Map<string, FacultyRow & { active: boolean }>
 let careers: Map<string, CareerRow & { active: boolean; roles: boolean; inProgress: boolean }>
@@ -48,7 +47,7 @@ let createdFaculties: unknown[]
 
 function deps(): GovernanceWriteDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     now: () => NOW,
     activeFacultyExists: async (id) => faculties.get(id)?.active === true,
     facultyExists: async (id) => faculties.has(id),
@@ -71,7 +70,10 @@ function deps(): GovernanceWriteDeps {
           updateColumns: async (entity, id, columns) => void log.push(`update:${entity}:${id}:${JSON.stringify(columns)}`),
           facultyHasActiveCareers: async (id) => [...careers.values()].some((career) => career.facultyId === id && career.active),
           careerInProgress: async (id) => careers.get(id)?.inProgress === true,
-          careerHasActiveRoles: async (id) => careers.get(id)?.roles === true,
+          retireCareerUsers: async (id) => {
+            log.push(`retire:${id}`)
+            return careers.get(id)?.roles === true ? 2 : 0
+          },
           setActive: async (entity, id, active) => void log.push(`active:${entity}:${id}:${active}`),
           replace: async (confirmed, change, periodId) => {
             log.push(`replace:${confirmed}:${periodId}`)
@@ -118,7 +120,6 @@ beforeEach(() => {
     users: [makeUser()],
     assignments: [makeAssignment({ role: "administrador", careerId: null })],
   }
-  forwarded = []
   root = mkdtempSync(path.join(tmpdir(), "silabos-facultad-"))
   storage = createStorageWriter(root)
   objects = []
@@ -239,13 +240,16 @@ describe("POST /api/v1/admin/academic/{entity}", () => {
     expect((await create("periodo", { starts_on: "2027-02-30", ends_on: "2027-03-20" })).json?.errors).toEqual({ starts_on: ["El campo fecha de inicio debe ser una fecha válida."] })
   })
 
-  it("is forbidden for a coordinator and leaves unusual dates to Laravel", async () => {
+  it("is forbidden for a coordinator and reads dates like the date rule and Carbon", async () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
     expect((await create("carrera", { ...careerBody, cycle_count: 8 })).text).toBe(FORBIDDEN)
     world.assignments = [makeAssignment({ role: "administrador", careerId: null })]
     expect((await create("facultad", { nombre: "F" })).json?.errors).toEqual({ campus: ["El campo campus es obligatorio."], logo: ["El campo logotipo es obligatorio."] })
-    expect((await create("periodo", { starts_on: "next monday", ends_on: "2027-03-20" })).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    expect((await create("periodo", { starts_on: "next monday", ends_on: "2027-03-20" })).json?.errors).toEqual({ starts_on: ["El campo fecha de inicio debe ser una fecha válida."] })
+    expect((await create("periodo", { starts_on: "2026-13-01", ends_on: "2027-02-30" })).json?.errors).toEqual({
+      starts_on: ["El campo fecha de inicio debe ser una fecha válida."],
+      ends_on: ["El campo fecha de fin debe ser una fecha válida."],
+    })
   })
 })
 
@@ -313,10 +317,10 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}/status", () => {
     expect((await status("carrera", CAREER, { active: false })).json?.errors).toEqual({ record: ["La carrera participa en una convocatoria en curso. Espere a que se cierre."] })
   })
 
-  it("leaves retiring the coordinator and teachers of a career to Laravel, and forbids coordinators", async () => {
+  it("retires the coordinator and teachers of a deactivated career, like SetAcademicRecordStatus::retireUsers, and forbids coordinators", async () => {
     careers.set(CAREER, { ...(careers.get(CAREER) as CareerRow & { active: boolean; roles: boolean; inProgress: boolean }), roles: true })
-    expect((await status("carrera", CAREER, { active: false })).status).toBe(299)
-    expect(log.at(-1)).toBe("rollback")
+    expect((await status("carrera", CAREER, { active: false })).status).toBe(200)
+    expect(log.filter((entry) => entry.startsWith("retire:") || entry.startsWith("active:"))).toEqual([`retire:${CAREER}`, `active:carrera:${CAREER}:false`])
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
     expect((await status("carrera", CAREER, { active: true })).text).toBe(FORBIDDEN)
     expect((await status("carrera", CAREER, { active: "x" })).status).toBe(403)
@@ -330,7 +334,6 @@ describe("career and period forms sent as multipart, as the admin screens send t
     )
     expect(response).toEqual({ status: 201, text: `{"message":"Registro institucional creado.","id":"${NEW_ID}"}` })
     expect(created).toEqual([{ facultyId: FACULTY, modality: "Presencial", code: "SW-10", name: "Software nueva", cycleCount: 8 }])
-    expect(forwarded).toEqual([])
   })
 
   it("updates a career from a multipart form with the spoofed PATCH method", async () => {
@@ -338,6 +341,5 @@ describe("career and period forms sent as multipart, as the admin screens send t
       updateGovernanceRecord(request, "carrera", CAREER, deps()),
     )
     expect(response).toEqual({ status: 200, text: '{"message":"Datos institucionales actualizados."}' })
-    expect(forwarded).toEqual([])
   })
 })

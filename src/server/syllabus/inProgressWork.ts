@@ -1,11 +1,13 @@
 import "server-only"
+import { MODELS } from "../http/models"
+import { failServerError, Missing } from "../http/failures"
 import { randomUUID } from "node:crypto"
 import { unlink } from "node:fs/promises"
 import { sql, type SQL } from "drizzle-orm"
-import { diskPath } from "../laravel/storage"
-import { phpJsonEncode } from "../laravel/phpJson"
-import { uuidList } from "../laravel/sql"
-import { uuid7 } from "../laravel/uuid7"
+import { diskPath } from "../http/storage"
+import { phpJsonEncode } from "../http/phpJson"
+import { uuidList } from "../http/sql"
+import { uuid7 } from "../http/uuid7"
 import type { AfterCommit } from "../queue/dispatch"
 import { loadSubjectContext } from "../configuration/subjectProfilePreview"
 import { isPhpArray, isRecord, phpEquals, phpIdentical, phpJsonDecode, phpShape, record, type PhpRecord } from "../configuration/phpValues"
@@ -27,7 +29,6 @@ import { recipientsOn } from "../notifications/queries"
 import { scheduleWorkflowNotification, storeInternalNotifications, type NotificationScope } from "../notifications/store"
 import { sameStructure, fieldResponseNormalize, documentIsEmpty } from "../configuration/templateRehearsal"
 import { dataGet } from "./identificationCard"
-import { NeedsLaravel } from "./snapshotDocuments"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export class GenerationRejected extends Error {
@@ -77,7 +78,7 @@ type DocumentsFor = (parallel: ParallelRow, syllabus: WorkSyllabus) => Promise<M
 
 export type SubjectProfiles = Map<string, Map<string, PhpRecord | null>>
 
-export function laravelBoolean(value: unknown): boolean {
+export function requestBoolean(value: unknown): boolean {
   if (value === true) return true
   if (typeof value === "number") return value === 1
   if (typeof value !== "string") return false
@@ -254,7 +255,7 @@ export class InProgressWork {
       sql`select asignatura.nombre_asignatura as name from paralelos paralelo inner join asignaturas asignatura on asignatura.asignatura_id = paralelo.asignatura_id
         where paralelo.paralelo_id = ${syllabus.parallelId}::uuid limit 1`,
     )
-    if (!row) throw new NeedsLaravel()
+    if (!row) failServerError()
     return row.name
   }
 
@@ -362,7 +363,7 @@ export class InProgressWork {
         where convocatoria.convocatoria_carrera_id = ${syllabus.convocationId}::uuid limit 1`,
     )
     const parallel = await this.parallelById(syllabus.parallelId)
-    if (!row || parallel === null || parallel.modality === null) throw new NeedsLaravel()
+    if (!row || parallel === null || parallel.modality === null) failServerError()
     const context = deepCopy(syllabus.context)
     dataSet(context, "career.name", row.name)
     dataSet(context, "career.code", row.code)
@@ -434,7 +435,7 @@ export class InProgressWork {
     }
     const context = await this.profileContext()
     const [subject] = await rowsOf<{ id: string }>(this.executor, sql`select asignatura_id::text as id from paralelos where paralelo_id = ${syllabus.parallelId}::uuid limit 1`)
-    if (!subject) throw new NeedsLaravel()
+    if (!subject) failServerError()
     const templates = await profileTemplates(context, subject.id)
     let state = syllabus.state
     if (SENT_STATES.includes(syllabus.state)) {
@@ -544,7 +545,7 @@ export class InProgressWork {
     const facts = await this.convocationFacts([...new Set(syllabi.map((syllabus) => syllabus.convocationId))])
     for (const syllabus of syllabi) {
       const fact = facts.get(syllabus.convocationId)
-      if (fact === undefined) throw new NeedsLaravel()
+      if (fact === undefined) failServerError()
       const built = await this.contextOf(syllabus.parallelId, fact.periodId)
       if (built === null) continue
       const { parallel, context } = built
@@ -707,7 +708,7 @@ export class InProgressWork {
 
   private async institutionalTemplate(): Promise<SyllabusTemplate> {
     if (this.template === undefined) this.template = await this.templates.template()
-    if (this.template === null || this.template.definition === null) throw new NeedsLaravel()
+    if (this.template === null) throw new Missing(MODELS.template)
     return this.template
   }
 
@@ -736,7 +737,7 @@ export class InProgressWork {
       this.executor,
       sql`select codigo_periodo_academico as code, cantidad_semanas_lectivas as weeks from periodos_academicos where periodo_academico_id = ${periodId}::uuid limit 1`,
     )
-    if (subject === null || !period || parallel.modality === null) throw new NeedsLaravel()
+    if (subject === null || !period || parallel.modality === null) failServerError()
     return {
       ...subject,
       parallel: { id: parallel.id, code: parallel.code, shift: parallel.shift },
@@ -751,7 +752,7 @@ export class InProgressWork {
         from convocatorias_carreras convocatoria inner join convocatorias_universidad proceso on proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
         where convocatoria.convocatoria_carrera_id = ${convocationId}::uuid limit 1`,
     )
-    if (!row) throw new NeedsLaravel()
+    if (!row) failServerError()
     return { careerId: row.career_id, periodId: row.period_id }
   }
 
@@ -774,7 +775,7 @@ export class InProgressWork {
   async generateForParallel(convocationId: string, parallelId: string): Promise<string> {
     const { careerId, periodId } = await this.convocationPeriod(convocationId)
     const [parallel] = await this.parallelRows(sql`paralelo.paralelo_id = ${parallelId}::uuid`, careerId, false)
-    if (!parallel) throw new NeedsLaravel()
+    if (!parallel) failServerError()
     return this.generate(convocationId, periodId, parallel)
   }
 
@@ -823,7 +824,7 @@ export class InProgressWork {
       sql`select silabos.silabo_id::text as id from silabos where silabos.convocatoria_carrera_id = ${syllabus.convocationId}::uuid
         and silabos.paralelo_id = ${syllabus.parallelId}::uuid and ${SYLLABUS_ALIVE} limit 1`,
     )
-    if (!fresh) throw new NeedsLaravel()
+    if (!fresh) failServerError()
     return fresh.id
   }
 }

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeTemplateStore, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import type { PhpRecord } from "../configuration/phpValues"
@@ -16,13 +16,12 @@ const SUBJECT = "a0000000-0000-4000-8000-000000000001"
 const OTHER_TEACHER = "90000000-0000-4000-8000-000000000002"
 
 let world: FakeWorld
-let forwarded: Request[]
 let templates: FakeTemplateWorld
 let facts: DraftSyllabus | null
 let locked: { id: string; state: string; version: number; subjectId: string } | null
 let values: Map<string, unknown>
 let teachers: ValidationTeacher[]
-let archived: boolean
+let fields: ValidationField[]
 let committed: boolean
 
 const template = goldenTemplate()
@@ -38,7 +37,7 @@ const doc = (text: string): PhpRecord => ({ type: "doc", content: [{ type: "para
 
 function deps(): DraftValidationDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     today: () => "2027-01-15",
     store: {
       syllabus: async (id) => (facts !== null && facts.id === id.toLowerCase() ? facts : null),
@@ -46,8 +45,7 @@ function deps(): DraftValidationDeps {
         const result = await work({
           lockSyllabus: async () => locked,
           templateStore: fakeTemplateStore(templates),
-          hasArchivedValues: async () => archived,
-          liveFields: async () => [METHODS, TECHNIQUES, ETHICS],
+          documentFields: async () => fields,
           values: async () => values,
           identification: async () => ({ context: { subject: { name: "Redes" } }, parallelCode: "A", parallelShift: null, teachers: [] }),
           teachers: async () => teachers,
@@ -72,7 +70,6 @@ beforeEach(() => {
     users: [makeUser()],
     assignments: [makeAssignment({ role: "docente", careerId: CAREER })],
   }
-  forwarded = []
   templates = { template: goldenTemplate(), values: [] }
   facts = {
     id: SYLLABUS,
@@ -89,7 +86,7 @@ beforeEach(() => {
   locked = { id: SYLLABUS, state: "borrador", version: 7, subjectId: SUBJECT }
   values = new Map()
   teachers = [{ id: golden.userId, name: "Ana Pérez", formation: "Magíster en Redes" }]
-  archived = false
+  fields = [METHODS, TECHNIQUES, ETHICS]
   committed = false
 })
 
@@ -154,7 +151,7 @@ describe("POST teacher/syllabi/{syllabus}/validate", () => {
     expect((await validate()).status).toBe(403)
   })
 
-  it("leaves unknown syllabi and drafts with archived answers to Laravel", async () => {
+  it("answers Laravel's model 404 for unknown syllabi and validates the fields the store gives for drafts with archived answers", async () => {
     expect(await validate("no-es-uuid")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "no-es-uuid") })
     facts = null
     expect(await validate()).toMatchObject({ status: 404, text: modelNotFound("Syllabus", SYLLABUS) })
@@ -170,7 +167,9 @@ describe("POST teacher/syllabi/{syllabus}/validate", () => {
       hasLibrarySubmission: false,
       subjectId: SUBJECT,
     }
-    archived = true
-    expect((await validate()).status).toBe(299)
+    fields = [METHODS]
+    const response = await validate()
+    expect(response.status).toBe(200)
+    expect(JSON.stringify(response.json)).not.toContain(ETHICS.id)
   })
 })

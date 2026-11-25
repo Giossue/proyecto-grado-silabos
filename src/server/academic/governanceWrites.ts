@@ -1,22 +1,25 @@
 import "server-only"
+import { deleteGovernanceRecord } from "./deletions"
+import { HttpFailure } from "../http/failures"
+import { MODELS } from "../http/models"
 import { createHash, randomUUID } from "node:crypto"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { FACULTY_LOGO, isUploadedFile, logoErrors } from "../files/logos"
 import { fitPng, PngError } from "../files/png"
-import { isMultipart, laravelMultipart, postMaxSize, postTooLarge, spoofedMethod, type UploadedFile } from "../files/uploads"
-import { isJsonRequest, isPhpArray, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
-import { storageWriter, type StorageWriter } from "../laravel/storageWriter"
-import { uuid7 } from "../laravel/uuid7"
-import { forbidden, laravelJson, validationError } from "../laravel/responses"
-import { mergeErrors, validateInput, type Rule } from "../laravel/validation"
-import { GenerationRejected, laravelBoolean } from "../syllabus/inProgressWork"
+import { requestBody, postMaxSize, postTooLarge, spoofedMethod, type UploadedFile } from "../files/uploads"
+import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
+import { storageWriter, type StorageWriter } from "../http/storageWriter"
+import { uuid7 } from "../http/uuid7"
+import { forbidden, apiJson, validationError } from "../http/responses"
+import { mergeErrors, validateInput, type Rule } from "../http/validation"
+import { GenerationRejected, requestBoolean } from "../syllabus/inProgressWork"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
-import { NeedsLaravel } from "../syllabus/snapshotDocuments"
+import { passesDateRule, plainDateOf } from "../http/phpDates"
 import { createGovernanceWriteDeps } from "./governanceWriteStore"
-import { CONVOCATION_LOCK_REASON, isUuid, STUDY_MODALITIES } from "./structure"
+import { CONVOCATION_LOCK_REASON, STUDY_MODALITIES } from "./structure"
 import type { StoredObjectInput } from "./supportDocumentWrites"
-import { laravelRouter } from "../laravel/router"
+import { unmatchedRoute } from "../http/router"
 
 export const CAMPUSES = [
   "Campus Matriz Dr. Gabriel Galarza López",
@@ -48,7 +51,7 @@ export interface GovernanceWriteTx {
   updateColumns(entity: "facultad" | "carrera" | "periodo", id: string, columns: Record<string, unknown>): Promise<void>
   facultyHasActiveCareers(id: string): Promise<boolean>
   careerInProgress(id: string): Promise<boolean>
-  careerHasActiveRoles(id: string): Promise<boolean>
+  retireCareerUsers(id: string): Promise<number>
   setActive(entity: "facultad" | "carrera", id: string, active: boolean): Promise<void>
   replace<T>(confirmed: boolean, change: () => Promise<T>, periodId: string | null): Promise<T>
   guard<T>(confirmed: boolean, careerIds: string[] | null, change: () => Promise<T>, periodId: string | null): Promise<T>
@@ -101,10 +104,8 @@ async function storeFacultyLogo(tx: GovernanceWriteTx, deps: GovernanceWriteDeps
 
 type GovernanceBody = { input: PhpArray; files: Record<string, UploadedFile | null> }
 
-async function readGovernanceBody(request: Request): Promise<GovernanceBody | null> {
-  if (isMultipart(request)) return laravelMultipart(request)
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return null
-  return { input: await laravelInput(request), files: {} }
+function readGovernanceBody(request: Request): Promise<GovernanceBody> {
+  return requestBody(request)
 }
 
 function phpDecoded(value: unknown): PhpValue {
@@ -122,9 +123,10 @@ function decodeLibraries(input: PhpArray): void {
   } catch {}
 }
 
-function librariesNeedLaravel(libraries: PhpValue | undefined): boolean {
-  if (libraries === undefined) return false
-  return !isPhpArray(libraries) || Object.keys(libraries).length > 20 || Object.values(libraries).some((item) => typeof item !== "string" || !LIBRARY.test(item)) || new Set(Object.values(libraries)).size !== Object.keys(libraries).length
+const LIBRARY = /^[A-Za-z0-9_-]{1,20}$/
+const LIBRARY_RULES: Record<string, Rule[]> = {
+  catalog_libraries: ["sometimes", "array", { max: 20 }],
+  "catalog_libraries.*": ["string", "distinct", { regex: LIBRARY }],
 }
 
 function logoOf(body: GovernanceBody): PhpValue | UploadedFile | undefined {
@@ -137,7 +139,6 @@ export function defaultGovernanceWriteDeps(): GovernanceWriteDeps {
 
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/
-const LIBRARY = /^[A-Za-z0-9_-]{1,20}$/
 const END_BEFORE_START = "La fecha de fin debe ser igual o posterior a la fecha de inicio."
 
 function validDay(value: string): boolean {
@@ -167,16 +168,7 @@ export function periodLabel(startsOn: string, endsOn: string): string {
 }
 
 function dateRule(): Rule {
-  return {
-    fails: (value) => {
-      if (typeof value === "string") {
-        if (!DATE_ONLY.test(value)) throw new NeedsLaravel()
-        return validDay(value) ? [] : ["El campo :attribute debe ser una fecha válida."]
-      }
-      if (typeof value === "number") throw new NeedsLaravel()
-      return ["El campo :attribute debe ser una fecha válida."]
-    },
-  }
+  return { fails: (value) => (passesDateRule(value) ? [] : ["El campo :attribute debe ser una fecha válida."]) }
 }
 
 function labelled(errors: Record<string, string[]>, labels: Record<string, string>): Record<string, string[]> {
@@ -208,6 +200,7 @@ const CAREER_LABELS = { faculty_id: "facultad", modality: "modalidad", code: "c�
 const FACULTY_LABELS = { nombre: "nombre", campus: "campus", catalog_libraries: "catalog libraries", confirm_purge: "confirmación de borrado" }
 
 async function validatePeriod(input: PhpArray, creating: boolean): Promise<Record<string, string[]>> {
+  for (const key of ["starts_on", "ends_on"]) if (typeof input[key] === "string" || typeof input[key] === "number") input[key] = plainDateOf(input[key]) as PhpValue
   const rules: Record<string, Rule[]> = {
     starts_on: ["required", dateRule()],
     ends_on: ["required", dateRule()],
@@ -228,16 +221,16 @@ async function validatePeriod(input: PhpArray, creating: boolean): Promise<Recor
   return errors
 }
 
-async function careerSession(request: Request, deps: GovernanceWriteDeps): Promise<LaravelSession | Response> {
+async function careerSession(request: Request, deps: GovernanceWriteDeps): Promise<AppSession | Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!session.user.active || session.activeRole?.role !== "administrador") return forbidden()
   return session
 }
 
-async function forwardAuthenticated(request: Request, original: Request, deps: GovernanceWriteDeps): Promise<Response> {
-  const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
-  return session instanceof Response ? session : deps.bridge.forward(original)
+async function unauthorizedEntity(request: Request, deps: GovernanceWriteDeps): Promise<Response> {
+  const session = await careerSession(request, deps)
+  return session instanceof Response ? session : forbidden()
 }
 
 async function run(original: Request, deps: GovernanceWriteDeps, work: () => Promise<Response>): Promise<Response> {
@@ -255,9 +248,8 @@ export async function createGovernanceRecord(request: Request, entity: string, d
   const tooLarge = postTooLarge(request, deps.maxPostSize ?? postMaxSize())
   if (tooLarge !== null) return tooLarge
   const original = request.clone()
-  if (!["facultad", "carrera", "periodo"].includes(entity)) return forwardAuthenticated(request, original, deps)
+  if (!["facultad", "carrera", "periodo"].includes(entity)) return unauthorizedEntity(request, deps)
   const body = await readGovernanceBody(request.clone())
-  if (body === null || body.input._token !== undefined) return deps.bridge.forward(original)
   const session = await careerSession(request, deps)
   if (session instanceof Response) return session
   const input = body.input
@@ -265,8 +257,7 @@ export async function createGovernanceRecord(request: Request, entity: string, d
   try {
     if (entity === "facultad") {
       decodeLibraries(input)
-      if (librariesNeedLaravel(input.catalog_libraries)) return deps.bridge.forward(original)
-      errors = labelled(await validateInput(input, { nombre: ["required", "string", { max: 180 }], campus: ["required", { in: CAMPUSES }] }, FACULTY_LABELS), FACULTY_LABELS)
+      errors = labelled(await validateInput(input, { nombre: ["required", "string", { max: 180 }], campus: ["required", { in: CAMPUSES }], ...LIBRARY_RULES }, FACULTY_LABELS), FACULTY_LABELS)
       const logo = logoErrors(logoOf(body), "logotipo", true)
       if (logo.length > 0) errors.logo = logo
     } else if (entity === "carrera") {
@@ -287,7 +278,7 @@ export async function createGovernanceRecord(request: Request, entity: string, d
       )
     } else errors = await validatePeriod(input, true)
   } catch (error) {
-    if (error instanceof NeedsLaravel) return deps.bridge.forward(original)
+    if (error instanceof HttpFailure) return error.response
     throw error
   }
   if (Object.keys(errors).length > 0) return validationError(errors)
@@ -320,7 +311,7 @@ export async function createGovernanceRecord(request: Request, entity: string, d
         null,
       ),
     )
-    return laravelJson({ message: "Registro institucional creado.", id }, 201)
+    return apiJson({ message: "Registro institucional creado.", id }, 201)
   })
 }
 
@@ -343,9 +334,8 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
   const tooLarge = postTooLarge(request, deps.maxPostSize ?? postMaxSize())
   if (tooLarge !== null) return tooLarge
   const original = request.clone()
-  if (!["facultad", "carrera", "periodo"].includes(entity) || !isUuid(recordId)) return forwardAuthenticated(request, original, deps)
+  if (!["facultad", "carrera", "periodo"].includes(entity)) return unauthorizedEntity(request, deps)
   const body = await readGovernanceBody(request.clone())
-  if (body === null || body.input._token !== undefined) return deps.bridge.forward(original)
   const session = await careerSession(request, deps)
   if (session instanceof Response) return session
   const input = body.input
@@ -354,9 +344,8 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
   try {
     if (entity === "facultad") {
       decodeLibraries(input)
-      if (librariesNeedLaravel(input.catalog_libraries)) return deps.bridge.forward(original)
       errors = labelled(
-        await validateInput(input, { nombre: ["required", "string", { max: 180 }], campus: ["required", { in: CAMPUSES }], confirm_purge: ["nullable", "boolean"] }, FACULTY_LABELS),
+        await validateInput(input, { nombre: ["required", "string", { max: 180 }], campus: ["required", { in: CAMPUSES }], ...LIBRARY_RULES, confirm_purge: ["nullable", "boolean"] }, FACULTY_LABELS),
         FACULTY_LABELS,
       )
       const value = logoOf(body)
@@ -383,16 +372,16 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
       )
     } else errors = await validatePeriod(input, false)
   } catch (error) {
-    if (error instanceof NeedsLaravel) return deps.bridge.forward(original)
+    if (error instanceof HttpFailure) return error.response
     throw error
   }
   if (Object.keys(errors).length > 0) return validationError(errors)
-  const confirmed = laravelBoolean(input.confirm_purge)
+  const confirmed = requestBoolean(input.confirm_purge)
   return run(original, deps, async () => {
     await deps.transaction(async (tx) => {
       if (entity === "periodo") {
         const period = await tx.lockPeriod(recordId)
-        if (period === null) throw new Missing()
+        if (period === null) throw new Missing(MODELS.period, recordId)
         if (await tx.periodRunning(period.id)) throw new Rejected(validationError({ process: [CONVOCATION_LOCK_REASON] }))
         const startsOn = input.starts_on as string
         const endsOn = input.ends_on as string
@@ -422,7 +411,7 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
       }
       if (entity === "facultad") {
         const faculty = await tx.lockFaculty(recordId)
-        if (faculty === null) throw new Missing()
+        if (faculty === null) throw new Missing(MODELS.faculty, recordId)
         const careers = await tx.careersOfFaculty(faculty.id)
         await tx.guard(
           confirmed,
@@ -444,7 +433,7 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
         return
       }
       const career = await tx.lockCareer(recordId)
-      if (career === null) throw new Missing()
+      if (career === null) throw new Missing(MODELS.career, recordId)
       await tx.guard(
         confirmed,
         [career.id],
@@ -465,27 +454,26 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
         null,
       )
     })
-    return laravelJson({ message: "Datos institucionales actualizados." })
+    return apiJson({ message: "Datos institucionales actualizados." })
   })
 }
 
 export async function setGovernanceStatus(request: Request, entity: string, recordId: string, deps: GovernanceWriteDeps = defaultGovernanceWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (!["facultad", "carrera"].includes(entity) || !isUuid(recordId)) return forwardAuthenticated(request, original, deps)
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
+  if (!["facultad", "carrera"].includes(entity)) return unauthorizedEntity(request, deps)
   const session = await careerSession(request.clone(), deps)
   if (session instanceof Response) return session
-  const input = await laravelInput(request)
+  const input = await requestInput(request)
   const errors = await validateInput(input, { active: ["required", "boolean"] }, { active: "activo" })
   if (Object.keys(errors).length > 0) return validationError(errors)
-  const active = laravelBoolean(input.active)
+  const active = requestBoolean(input.active)
   return run(original, deps, async () => {
     await deps.transaction(async (tx) =>
       tx.replace(
         false,
         async () => {
           const record = entity === "facultad" ? await tx.lockFaculty(recordId) : await tx.lockCareer(recordId)
-          if (record === null) throw new Missing()
+          if (record === null) throw new Missing(entity === "facultad" ? MODELS.faculty : MODELS.career, recordId)
           if (!active) {
             const blocked =
               entity === "facultad"
@@ -496,14 +484,14 @@ export async function setGovernanceStatus(request: Request, entity: string, reco
                   ? "La carrera participa en una convocatoria en curso. Espere a que se cierre."
                   : null
             if (blocked !== null) throw new Rejected(validationError({ record: [blocked] }))
-            if (entity === "carrera" && (await tx.careerHasActiveRoles(record.id))) throw new NeedsLaravel()
+            if (entity === "carrera") await tx.retireCareerUsers(record.id)
           }
           await tx.setActive(entity as "facultad" | "carrera", record.id, active)
         },
         null,
       ),
     )
-    return laravelJson({ message: active ? "Registro reactivado." : "Registro desactivado sin borrar su historial." })
+    return apiJson({ message: active ? "Registro reactivado." : "Registro desactivado sin borrar su historial." })
   })
 }
 
@@ -512,6 +500,6 @@ export async function postGovernanceRecord(request: Request, entity: string, rec
   if (tooLarge !== null) return tooLarge
   const method = await spoofedMethod(request)
   if (method === "PATCH") return updateGovernanceRecord(request, entity, recordId, deps)
-  if (method === "POST") return laravelRouter(request)
-  return forwardAuthenticated(request.clone(), request, deps)
+  if (method === "DELETE") return deleteGovernanceRecord(request, entity, recordId)
+  return unmatchedRoute(new Request(request.url, { method: method === "POST" ? "POST" : method, headers: request.headers }))
 }

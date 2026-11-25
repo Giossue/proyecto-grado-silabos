@@ -1,7 +1,8 @@
 import "server-only"
 import { createHash, timingSafeEqual } from "node:crypto"
-import { sql, type SQL } from "drizzle-orm"
+import type { Redis } from "ioredis"
 import { HOTP, Secret } from "otpauth"
+import { redisPrefix } from "../redis/connection"
 
 export const TOTP_PERIOD = 30
 export const TOTP_DIGITS = 6
@@ -49,32 +50,20 @@ export async function verifyTotp(secret: string, code: string, cache: TotpReplay
   return false
 }
 
-export type CacheExecutor = { execute(query: SQL): Promise<{ rows: unknown[] }> }
+export type ReplayRedis = Pick<Redis, "get" | "set">
 
-const SERIALIZED_INT = /^i:(-?\d+);$/
+const INTEGER = /^-?\d+$/
 
-export function laravelCachePrefix(env: NodeJS.ProcessEnv = process.env): string {
-  return env.LARAVEL_CACHE_PREFIX ?? "silabos-ueb"
-}
-
-export function databaseReplayCache(executor: CacheExecutor, prefix: string, now: () => number): TotpReplayCache {
+export function redisReplayCache(connection: ReplayRedis | (() => ReplayRedis), prefix?: string): TotpReplayCache {
+  const redis = () => (typeof connection === "function" ? connection() : connection)
+  const keyOf = (key: string) => (prefix ?? redisPrefix()) + key
   return {
     async get(key) {
-      const [row] = (await executor.execute(sql`select value, expiration from datos_temporales where key = ${prefix + key}`)).rows as {
-        value: string
-        expiration: string | number
-      }[]
-      if (!row) return null
-      if (Number(row.expiration) <= now()) {
-        await executor.execute(sql`delete from datos_temporales where key = ${prefix + key} and expiration <= ${now()}`)
-        return null
-      }
-      const match = SERIALIZED_INT.exec(row.value)
-      return match ? Number(match[1]) : null
+      const value = await redis().get(keyOf(key))
+      return value !== null && INTEGER.test(value) ? Number(value) : null
     },
     async put(key, value, seconds) {
-      await executor.execute(sql`insert into datos_temporales (key, value, expiration) values (${prefix + key}, ${`i:${value};`}, ${now() + seconds})
-        on conflict (key) do update set value = excluded.value, expiration = excluded.expiration`)
+      await redis().set(keyOf(key), String(value), "EX", seconds)
     },
   }
 }

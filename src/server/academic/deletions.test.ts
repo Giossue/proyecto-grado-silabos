@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { deleteCareerRecord, deleteGovernanceRecord, deleteParallel, type AcademicDeletionStore, type DeletionTx } from "./deletions"
 
@@ -15,7 +15,6 @@ const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 type Row = Record<string, unknown>
 
 let world: FakeWorld
-let forwarded: Request[]
 let activeCareers: Set<string>
 let periods: Map<string, { code: string; hasProcess: boolean }>
 let assignments: Map<string, { careerId: string }>
@@ -66,7 +65,7 @@ const store = (): AcademicDeletionStore => ({
   },
 })
 
-const deps = () => ({ bridge: fakeDeps(world, forwarded), store: store() })
+const deps = () => ({ bridge: fakeDeps(world), store: store() })
 
 function remove(path: string, headers: Record<string, string> = { "x-csrf-token": golden.csrfToken }): Request {
   return apiRequest(path, { method: "DELETE", cookie, headers })
@@ -86,7 +85,6 @@ beforeEach(() => {
     users: [makeUser()],
     assignments: [],
   }
-  forwarded = []
   activeCareers = new Set([CAREER])
   periods = new Map([[PERIOD, { code: "Abril-Agosto 2027", hasProcess: false }]])
   assignments = new Map([[ASSIGNMENT, { careerId: CAREER }]])
@@ -144,17 +142,20 @@ describe("DELETE /api/v1/admin/academic/{entity}/{record}", () => {
     expect(transactions).toBe(0)
   })
 
-  it("lets Laravel answer a missing period after rolling back", async () => {
+  it("answers Laravel's model 404 for a missing period after rolling back", async () => {
     asRole("administrador", null)
     periods.clear()
-    expect((await deleteGovernanceRecord(remove(path), "periodo", PERIOD, deps())).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    const response = await deleteGovernanceRecord(remove(path), "periodo", PERIOD, deps())
+    expect(response.status).toBe(404)
+    expect(await response.text()).toBe(`{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\AcademicPeriod] ${PERIOD}"\n}`)
     expect(committed).toEqual([])
   })
 
-  it("lets Laravel answer a non-UUID period id", async () => {
+  it("answers Laravel's 500 for a non-UUID period id, which PostgreSQL rejects", async () => {
     asRole("administrador", null)
-    expect((await deleteGovernanceRecord(remove("/api/v1/admin/academic/periodo/abc"), "periodo", "abc", deps())).status).toBe(299)
+    const response = await deleteGovernanceRecord(remove("/api/v1/admin/academic/periodo/abc"), "periodo", "abc", deps())
+    expect(response.status).toBe(500)
+    expect(await response.text()).toBe('{\n    "message": "Server Error"\n}')
     expect(transactions).toBe(0)
   })
 })
@@ -174,13 +175,14 @@ describe("DELETE /api/v1/coordination/academic/{entity}/{record}", () => {
     ])
   })
 
-  it("lets Laravel answer another career's assignment, a non-UUID id and any other entity", async () => {
+  it("answers Laravel's model 404 for another career's assignment, and the router 404 for a non-UUID id and any other entity", async () => {
     asRole("coordinador", CAREER)
     assignments.set(ASSIGNMENT, { careerId: "otra" })
-    expect((await deleteCareerRecord(remove(path), "asignacion_docente", ASSIGNMENT, deps())).status).toBe(299)
+    const foreign = await deleteCareerRecord(remove(path), "asignacion_docente", ASSIGNMENT, deps())
+    expect(foreign.status).toBe(404)
+    expect(await foreign.text()).toBe(`{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\TeacherAssignment] ${ASSIGNMENT}"\n}`)
     expect((await deleteCareerRecord(remove("/api/v1/coordination/academic/asignacion_docente/x"), "asignacion_docente", "x", deps())).status).toBe(404)
     expect((await deleteCareerRecord(remove(`/api/v1/coordination/academic/teachers/${ASSIGNMENT}`), "teachers", ASSIGNMENT, deps())).status).toBe(404)
-    expect(forwarded).toHaveLength(1)
     expect(committed).toEqual([])
   })
 
@@ -229,10 +231,12 @@ describe("DELETE /api/v1/coordination/academic/parallels/{parallel}", () => {
     expect(committed).toEqual([])
   })
 
-  it("lets Laravel answer another career's parallel and a non-UUID id", async () => {
+  it("answers Laravel's model 404 for another career's parallel and the router 404 for a non-UUID id", async () => {
     asRole("coordinador", CAREER)
     parallels.set(PARALLEL, { careerId: "otra", code: "A", teacherAssignments: 0, syllabi: [] })
-    expect((await deleteParallel(remove(path), PARALLEL, deps())).status).toBe(299)
+    const foreign = await deleteParallel(remove(path), PARALLEL, deps())
+    expect(foreign.status).toBe(404)
+    expect(await foreign.text()).toBe('{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Parallel]."\n}')
     expect((await deleteParallel(remove("/api/v1/coordination/academic/parallels/x"), "x", deps())).status).toBe(404)
     expect(committed).toEqual([])
   })

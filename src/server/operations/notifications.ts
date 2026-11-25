@@ -1,9 +1,9 @@
 import "server-only"
-import { requireSession, defaultBridgeDeps } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
-import { lengthAwarePaginator, resolveCurrentPage } from "../laravel/pagination"
-import { hasArrayParameter, laravelQuery, laravelRequestUrl } from "../laravel/request"
-import { laravelHttpError, laravelJson, validationError } from "../laravel/responses"
+import { requireSession, requireSessionWith, defaultBridgeDeps } from "../auth/requireSession"
+import type { BridgeDeps, AppSession } from "../auth/types"
+import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
+import { hasArrayParameter, queryParams, requestUrl } from "../http/request"
+import { jsonError, apiJson, validationError } from "../http/responses"
 import { contextLabel, resolveDestination, type DestinationLookups } from "./notificationDestination"
 import { createDestinationLookups, createNotificationRepository, createNotificationWriteRepository } from "./notificationQueries"
 
@@ -66,7 +66,7 @@ export async function listNotifications(request: Request, deps: NotificationDeps
   if (session instanceof Response) return session
 
   const url = new URL(request.url)
-  const query = laravelQuery(url)
+  const query = queryParams(url)
   if (hasArrayParameter(url, "status")) return validationError({ status: [NOT_A_STRING, NOT_ALLOWED] })
   const requested = query.get("status") ?? null
   if (requested !== null && !STATUSES.includes(requested)) return validationError({ status: [NOT_ALLOWED] })
@@ -89,9 +89,9 @@ export async function listNotifications(request: Request, deps: NotificationDeps
     })
   }
 
-  return laravelJson({
+  return apiJson({
     filters: { status },
-    notifications: lengthAwarePaginator({ items: data, total, perPage: PER_PAGE, currentPage, path: laravelRequestUrl(request), query }),
+    notifications: lengthAwarePaginator({ items: data, total, perPage: PER_PAGE, currentPage, path: requestUrl(request), query }),
     unread_count: await deps.notifications.unreadCount(session.user.id),
   })
 }
@@ -109,10 +109,22 @@ export async function markAllNotificationsRead(request: Request, deps: Notificat
   const session = await requireSession(request, { verified: true }, deps.bridge)
   if (session instanceof Response) return session
   await deps.notifications.markAllRead(session.user.id, deps.bridge.now())
-  return laravelJson({ message: "Todas las notificaciones quedaron marcadas como leídas." })
+  return apiJson({ message: "Todas las notificaciones quedaron marcadas como leídas." })
 }
 
-type OwnedNotification = { session: LaravelSession; notification: StoredNotification }
+type OwnedNotification = { session: AppSession; notification: StoredNotification }
+
+function notificationRequirements(id: string, deps: NotificationWriteDeps, activeRole: "optional" | undefined, found: (notification: StoredNotification) => void) {
+  return {
+    verified: true,
+    activeRole,
+    afterAuthentication: async () => {
+      const notification = UUID.test(id) ? await deps.notifications.find(id) : null
+      if (notification) found(notification)
+      return notification ? null : jsonError(404, `No query results for model [${MODEL}] ${id}`)
+    },
+  }
+}
 
 async function ownedNotification(
   request: Request,
@@ -121,21 +133,10 @@ async function ownedNotification(
   activeRole: "optional" | undefined,
 ): Promise<OwnedNotification | Response> {
   let notification: StoredNotification | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole,
-      afterAuthentication: async () => {
-        notification = UUID.test(id) ? await deps.notifications.find(id) : null
-        return notification ? null : laravelHttpError(404, `No query results for model [${MODEL}] ${id}`)
-      },
-    },
-    deps.bridge,
-  )
+  const session = await requireSession(request, notificationRequirements(id, deps, activeRole, (value) => (notification = value)), deps.bridge)
   if (session instanceof Response) return session
   const found = notification as StoredNotification | null
-  if (found === null || found.userId !== session.user.id) return laravelJson({ message: FORBIDDEN }, 403)
+  if (found === null || found.userId !== session.user.id) return apiJson({ message: FORBIDDEN }, 403)
   return { session, notification: found }
 }
 
@@ -147,7 +148,7 @@ export async function markNotificationRead(
   const owned = await ownedNotification(request, id, deps, undefined)
   if (owned instanceof Response) return owned
   if (owned.notification.readAt === null) await deps.notifications.markRead(owned.notification.id, deps.bridge.now())
-  return laravelJson({ message: "Notificación marcada como leída." })
+  return apiJson({ message: "Notificación marcada como leída." })
 }
 
 export async function openNotification(
@@ -155,14 +156,20 @@ export async function openNotification(
   id: string,
   deps: NotificationWriteDeps = defaultNotificationWriteDeps(),
 ): Promise<Response> {
-  const owned = await ownedNotification(request, id, deps, "optional")
-  if (owned instanceof Response) return owned
-  const { session, notification } = owned
-  const destination = await resolveDestination(notification, session.user.id, session.activeRole, session.eligibleRoles, deps.lookups)
-  const target = destination?.assignment ?? null
-  const changed = target !== null && target.id !== session.activeRole?.id
-  if (changed) return deps.bridge.forward(request)
-  if (notification.readAt === null) await deps.notifications.markRead(notification.id, deps.bridge.now())
-  if (destination === null) return laravelJson({ path: null, role_changed: false, message: NO_SCREEN })
-  return laravelJson({ path: destination.path, role_changed: false })
+  let found: StoredNotification | null = null
+  const requirements = notificationRequirements(id, deps, "optional", (value) => (found = value))
+  return requireSessionWith(request, requirements, deps.bridge, async (session, mutation) => {
+    const notification = found as StoredNotification | null
+    if (notification === null || notification.userId !== session.user.id) return apiJson({ message: FORBIDDEN }, 403)
+    if (notification.readAt === null) await deps.notifications.markRead(notification.id, deps.bridge.now())
+    const destination = await resolveDestination(notification, session.user.id, session.activeRole, session.eligibleRoles, deps.lookups)
+    if (destination === null) return apiJson({ path: null, role_changed: false, message: NO_SCREEN })
+    const target = destination.assignment
+    const changed = target !== null && target.id !== session.activeRole?.id
+    if (changed) {
+      mutation.put("active_role_assignment_id", target.id)
+      await mutation.regenerate()
+    }
+    return apiJson({ path: destination.path, role_changed: changed })
+  })
 }

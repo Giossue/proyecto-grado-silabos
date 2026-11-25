@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, testKey, type FakeWorld } from "../auth/testing"
-import { encrypt } from "../laravel/encrypter"
+import { encrypt } from "../http/encrypter"
 import { showSystemSettings, type SettingsEnvironment } from "./systemSettings"
 
 const SESSION_ID = golden.sessionId

@@ -1,5 +1,5 @@
 import { clearTemplateHandler } from "@/server/configuration/templateProvisionerHandlers"
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 
 type Context = { params: Promise<{ template: string }> }
 
@@ -8,4 +8,4 @@ export async function DELETE(request: Request, context: Context): Promise<Respon
   return clearTemplateHandler(request, template)
 }
 
-export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as GET, unmatchedRouteHandler as HEAD, unmatchedRouteHandler as POST, unmatchedRouteHandler as PUT, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as OPTIONS }

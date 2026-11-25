@@ -1,15 +1,16 @@
 import { HTTP_ERROR_PAGE, NOT_FOUND_PAGE } from "./errorPages"
-import { laravelHttpError } from "./responses"
+import { jsonError } from "./responses"
 import { expectsJson } from "./request"
-import routeTable from "./routeTable.json"
+import apiRoutes from "./apiRoutes.json"
 
-export type LaravelRoute = { methods: string[]; uri: string; wheres: Record<string, string>; bindings: Record<string, string> }
+export type ApiRoute = { methods: string[]; uri: string; wheres: Record<string, string>; bindings: Record<string, string> }
 
 const ROUTER_VERBS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 const HTML_HEADERS = { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache, private" }
 const STATUS_TEXTS: Record<number, string> = { 404: "Not Found", 405: "Method Not Allowed" }
+const MINIMAL_TITLES: Record<number, string> = { 401: "Unauthorized", 403: "Forbidden", 404: "Not Found", 419: "Page Expired", 429: "Too Many Requests", 500: "Server Error", 503: "Service Unavailable" }
 
-export const LARAVEL_ROUTES: readonly LaravelRoute[] = routeTable as LaravelRoute[]
+export const API_ROUTES: readonly ApiRoute[] = apiRoutes as ApiRoute[]
 
 export const REMOVED_ROUTES: readonly string[] = ["api/v1/admin/audit-events", "api/v1/admin/audit-events/export", "api/v1/admin/reports", "api/v1/admin/reports/export"]
 
@@ -17,7 +18,7 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")
 }
 
-function compile(route: LaravelRoute): RegExp {
+function compile(route: ApiRoute): RegExp {
   const segments = route.uri === "/" ? [] : route.uri.split("/")
   let pattern = ""
   for (const segment of segments) {
@@ -32,7 +33,7 @@ function compile(route: LaravelRoute): RegExp {
   return new RegExp(`^${pattern === "" ? "/" : pattern}$`, "su")
 }
 
-const COMPILED = LARAVEL_ROUTES.map((route) => ({ route, regex: compile(route) }))
+const COMPILED = API_ROUTES.map((route) => ({ route, regex: compile(route) }))
 
 function rawUrlDecode(path: string): string | null {
   const bytes: number[] = []
@@ -52,29 +53,39 @@ function rawUrlDecode(path: string): string | null {
   }
 }
 
-export function laravelRoutesMatching(pathname: string): LaravelRoute[] {
+export function routesMatching(pathname: string): ApiRoute[] {
   const decoded = rawUrlDecode(pathname.replace(/\/+$/, "") || "/")
   if (decoded === null) return []
   return COMPILED.filter(({ regex }) => regex.test(decoded)).map(({ route }) => route)
 }
 
-export function removedFromSystem(pathname: string): boolean {
-  const decoded = rawUrlDecode(pathname.replace(/\/+$/, "") || "/")
-  return decoded !== null && REMOVED_ROUTES.includes(decoded.replace(/^\/+/, ""))
-}
-
 export function routeAllows(request: Request): boolean {
-  return laravelRoutesMatching(new URL(request.url).pathname).some((route) => route.methods.includes(request.method))
+  return routesMatching(new URL(request.url).pathname).some((route) => route.methods.includes(request.method))
 }
 
-export function laravelPath(request: Request): string {
+export function routePath(request: Request): string {
   const trimmed = new URL(request.url).pathname.replace(/^\/+|\/+$/g, "")
   return trimmed === "" ? "/" : trimmed
 }
 
 function rendersJson(request: Request): boolean {
-  const path = laravelPath(request)
+  const path = routePath(request)
   return (path.startsWith("api/") && path.length > 4) || expectsJson(request)
+}
+
+export function minimalErrorPage(status: number, message: string = MINIMAL_TITLES[status]): string {
+  return NOT_FOUND_PAGE.replace("<title>Not Found</title>", `<title>${MINIMAL_TITLES[status]}</title>`)
+    .replace("404                    </h1>", `${status}                    </h1>`)
+    .replace("Not Found                    </div>", `${escapeHtml(message)}                    </div>`)
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;")
+}
+
+export function httpError(request: Request, status: number, message = ""): Response {
+  if (rendersJson(request)) return jsonError(status, status === 500 ? "Server Error" : message)
+  return new Response(minimalErrorPage(status, message || MINIMAL_TITLES[status]), { status, headers: HTML_HEADERS })
 }
 
 function htmlError(status: number, headers: Record<string, string> = {}): Response {
@@ -84,33 +95,29 @@ function htmlError(status: number, headers: Record<string, string> = {}): Respon
 
 export function unknownRoute(request: Request): Response {
   if (!rendersJson(request)) return htmlError(404)
-  return laravelHttpError(404, `The route ${laravelPath(request)} could not be found.`)
+  return jsonError(404, `The route ${routePath(request)} could not be found.`)
 }
 
 function methodNotAllowed(request: Request, methods: string[]): Response {
   const allow = methods.join(", ")
   if (!rendersJson(request)) return htmlError(405, { Allow: allow })
-  const response = laravelHttpError(405, `The ${request.method} method is not supported for route ${laravelPath(request)}. Supported methods: ${allow}.`)
+  const response = jsonError(405, `The ${request.method} method is not supported for route ${routePath(request)}. Supported methods: ${allow}.`)
   response.headers.set("Allow", allow)
   return response
 }
 
-export function laravelRouter(request: Request): Response {
-  const routes = laravelRoutesMatching(new URL(request.url).pathname)
+export function unmatchedRoute(request: Request): Response {
+  const routes = routesMatching(new URL(request.url).pathname)
   const others = ROUTER_VERBS.filter((verb) => verb !== request.method && routes.some((route) => route.methods.includes(verb)))
   if (routes.some((route) => route.methods.includes(request.method)) || others.length === 0) return unknownRoute(request)
   if (request.method === "OPTIONS") return new Response("", { status: 200, headers: { Allow: others.join(","), ...HTML_HEADERS } })
   return methodNotAllowed(request, others)
 }
 
-export function laravelRouterHandler(request: Request): Promise<Response> {
-  return Promise.resolve(laravelRouter(request))
+export function unmatchedRouteHandler(request: Request): Promise<Response> {
+  return Promise.resolve(unmatchedRoute(request))
 }
 
 export function modelNotFound(model: string, id: string): Response {
-  return laravelHttpError(404, `No query results for model [${model}] ${id}`)
-}
-
-export function laravelFallbackEnabled(): boolean {
-  return (process.env.LARAVEL_FALLBACK ?? "on").trim().toLowerCase() !== "off"
+  return jsonError(404, `No query results for model [${model}] ${id}`)
 }

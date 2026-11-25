@@ -1,4 +1,4 @@
-import { laravelTrim } from "./request"
+import { trimInput } from "./request"
 
 export type PhpArray = { [key: string]: PhpValue }
 export type PhpValue = string | number | boolean | null | PhpArray
@@ -22,7 +22,7 @@ const UNTRIMMED = [
 ].map((pattern) => new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`, "su"))
 
 function cleanString(value: string, key: string): string | null {
-  const trimmed = UNTRIMMED.some((pattern) => pattern.test(key)) ? value : laravelTrim(value)
+  const trimmed = UNTRIMMED.some((pattern) => pattern.test(key)) ? value : trimInput(value)
   return trimmed === "" ? null : trimmed
 }
 
@@ -94,7 +94,7 @@ export function phpQuery(url: URL): PhpArray {
   return result
 }
 
-export async function laravelInput(request: Request): Promise<PhpArray> {
+export async function bodyInput(request: Request): Promise<PhpArray> {
   const query = phpQuery(new URL(request.url))
   const body = isJsonRequest(request) ? await jsonBody(request) : {}
   const merged: PhpArray = { ...body }
@@ -121,8 +121,8 @@ async function formBody(request: Request): Promise<PhpArray> {
   return {}
 }
 
-export async function laravelRequestInput(request: Request): Promise<PhpArray> {
-  if (isJsonRequest(request)) return laravelInput(request)
+export async function requestInput(request: Request): Promise<PhpArray> {
+  if (isJsonRequest(request)) return bodyInput(request)
   const merged: PhpArray = { ...(await formBody(request)) }
   for (const [key, value] of Object.entries(phpQuery(new URL(request.url)))) if (!(key in merged)) merged[key] = value
   return merged

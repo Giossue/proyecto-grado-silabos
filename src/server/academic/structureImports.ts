@@ -1,14 +1,14 @@
 import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { LaravelSession } from "../auth/types"
+import type { AppSession } from "../auth/types"
 import { importTemplate, type TemplateSelect } from "../excel/importTemplate"
 import { importKey, phpIntValue, phpIsNumeric, phpLength, PhpMap, ctypeDigit } from "../excel/importKeys"
 import { importRows, importSession, spreadsheetUpload, type CheckedRow, type ImportDeps, type ImportResult } from "../excel/importRequest"
 import type { ImportRow } from "../excel/spreadsheetReader"
 import { xlsxDownload } from "../excel/workbook"
-import type { PhpArray } from "../laravel/input"
-import { laravelJson } from "../laravel/responses"
-import { sharedRateLimiter } from "../laravel/throttle"
+import type { PhpArray } from "../http/input"
+import { apiJson } from "../http/responses"
+import { sharedRateLimiter } from "../http/throttle"
 import { settle } from "../syllabus/reviewDecisions"
 import type { CareerContext, CareerWriteTx } from "./careerWrites"
 import { insertCareerSubject } from "./careerWrites"
@@ -83,19 +83,19 @@ export function defaultStructureImportDeps(): StructureImportDeps {
   return { bridge: defaultBridgeDeps(), limiter: sharedRateLimiter(), store: createStructureImportStore(), ...createStructureImportTransactions() }
 }
 
-const forbiddenWith = (message: string) => laravelJson({ message }, 403)
+const forbiddenWith = (message: string) => apiJson({ message }, 403)
 
-function mayImportCareers(session: LaravelSession): boolean {
+function mayImportCareers(session: AppSession): boolean {
   return session.activeRole?.role === "administrador"
 }
 
-async function curriculumCareer(session: LaravelSession, deps: StructureImportDeps): Promise<{ id: string; cycleCount: number } | null> {
+async function curriculumCareer(session: AppSession, deps: StructureImportDeps): Promise<{ id: string; cycleCount: number } | null> {
   const role = session.activeRole
   if (role?.role !== "coordinador" || role.careerId === null || !(await deps.store.careerActive(role.careerId))) return null
   return deps.store.career(role.careerId)
 }
 
-function unitFromText(text: string): string | null {
+export function unitFromText(text: string): string | null {
   const lower = text.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, "").toLowerCase()
   if (lower === "") return null
   if (lower in CURRICULAR_UNITS) return lower
@@ -193,7 +193,7 @@ export async function importCareers(request: Request, deps: StructureImportDeps 
   if (rows instanceof Response) return finish(rows)
   const { checked, payloads } = await checkCareers(rows, deps)
   const valid = checked.every((row) => row.errors.length === 0)
-  if (!upload.confirm || !valid) return finish(laravelJson({ rows: checked, valid, created: 0 } satisfies ImportResult))
+  if (!upload.confirm || !valid) return finish(apiJson({ rows: checked, valid, created: 0 } satisfies ImportResult))
   return finish(
     await settle(original, deps, async () => {
       const created = await deps.governance(async (tx) => {
@@ -210,7 +210,7 @@ export async function importCareers(request: Request, deps: StructureImportDeps 
         }
         return count
       })
-      return laravelJson({ rows: checked, valid, created } satisfies ImportResult)
+      return apiJson({ rows: checked, valid, created } satisfies ImportResult)
     }),
   )
 }
@@ -321,7 +321,7 @@ export async function importCurriculum(request: Request, deps: StructureImportDe
   if (rows instanceof Response) return finish(rows)
   const { checked, payloads, existing } = await checkCurriculum(rows, career, deps)
   const valid = checked.every((row) => row.errors.length === 0)
-  if (!upload.confirm || !valid) return finish(laravelJson({ rows: checked, valid, created: 0 } satisfies ImportResult))
+  if (!upload.confirm || !valid) return finish(apiJson({ rows: checked, valid, created: 0 } satisfies ImportResult))
   const context: CareerContext = { session, careerId: career.id }
   return finish(
     await settle(original, deps, async () => {
@@ -346,7 +346,7 @@ export async function importCurriculum(request: Request, deps: StructureImportDe
         }
         return count
       })
-      return laravelJson({ rows: checked, valid, created } satisfies ImportResult)
+      return apiJson({ rows: checked, valid, created } satisfies ImportResult)
     }),
   )
 }

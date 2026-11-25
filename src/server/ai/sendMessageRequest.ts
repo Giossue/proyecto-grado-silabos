@@ -1,8 +1,8 @@
 import { isPhpArray, list, phpString, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
 import { KEY_PATTERN, RESPONSIBLES } from "../configuration/templateDraft"
 import { defineCondition, normalizeFieldDocument, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
-import type { PhpArray } from "../laravel/input"
-import { validateInput, type Rule } from "../laravel/validation"
+import type { PhpArray } from "../http/input"
+import { validateInput, type Rule } from "../http/validation"
 import type { AssistantField, AssistantSection } from "./assistantDraft"
 
 export const UNREADABLE_DRAFT = "El borrador tiene un contenido que no se puede leer. Guárdelo o recargue la página."

@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import { teacherHistory, teacherHistoryCareer, teacherSyllabi, type PastSyllabusRow, type TeacherPageFilters, type TeacherSyllabusRepository, type TeacherSyllabusRow } from "./teacherSyllabi"
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
@@ -11,7 +11,6 @@ const CAREER = "c0000000-0000-4000-8000-000000000001"
 const OTHER_CAREER = "c0000000-0000-4000-8000-000000000002"
 
 let world: FakeWorld
-let forwarded: Request[]
 let pages: { filters: TeacherPageFilters; page: number; perPage: number }[]
 let current: TeacherSyllabusRow[]
 let past: PastSyllabusRow[]
@@ -58,7 +57,7 @@ const repository = (): TeacherSyllabusRepository => ({
   },
 })
 
-const deps = () => ({ bridge: fakeDeps(world, forwarded), syllabi: repository() })
+const deps = () => ({ bridge: fakeDeps(world), syllabi: repository() })
 
 async function call(handler: (request: Request) => Promise<Response>, path: string) {
   const response = await handler(apiRequest(path, { cookie }))
@@ -76,7 +75,6 @@ beforeEach(() => {
     users: [makeUser()],
     assignments: [makeAssignment({ role: "docente", careerId: CAREER })],
   }
-  forwarded = []
   pages = []
   current = [row()]
   past = []
@@ -217,6 +215,5 @@ describe("GET /api/v1/teacher/history/{career}", () => {
     const { status, text } = await historyCareer("/api/v1/teacher/history/abc", "abc")
     expect(status).toBe(404)
     expect(text).toBe('{\n    "message": "The route api/v1/teacher/history/abc could not be found."\n}')
-    expect(forwarded).toHaveLength(0)
   })
 })

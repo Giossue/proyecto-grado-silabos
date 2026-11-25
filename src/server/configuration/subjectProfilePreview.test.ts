@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { buildIdentification } from "../syllabus/identificationCard"
 import { fakeTemplateStore, fieldId, goldenFields, goldenTemplate, type FakeTemplateWorld } from "./testing"
@@ -42,12 +42,11 @@ const SUBJECT_ROW: SubjectContextRow = {
 let root: string
 let world: FakeWorld
 let templates: FakeTemplateWorld
-let forwarded: Request[]
 let subjects: Map<string, string>
 let contexts: Map<string, PhpRecord>
 
 const deps = (): SubjectPreviewDeps => ({
-  bridge: fakeDeps(world, forwarded),
+  bridge: fakeDeps(world),
   store: fakeTemplateStore(templates),
   subjectCareer: async (id) => subjects.get(id) ?? null,
   careerActive: async (id) => [CAREER, OTHER_CAREER].includes(id),
@@ -74,13 +73,13 @@ function fieldsOf(body: { sections: { fields: Field[] }[] }): Map<string, Field>
 
 beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), "silabos-preview-"))
-  process.env.LARAVEL_STORAGE_PATH = path.join(root, "storage", "app")
-  process.env.LARAVEL_PUBLIC_PATH = path.join(root, "public")
+  process.env.STORAGE_PATH = path.join(root, "storage", "app")
+  process.env.PUBLIC_ASSETS_PATH = path.join(root, "public")
 })
 
 afterAll(async () => {
-  delete process.env.LARAVEL_STORAGE_PATH
-  delete process.env.LARAVEL_PUBLIC_PATH
+  delete process.env.STORAGE_PATH
+  delete process.env.PUBLIC_ASSETS_PATH
   await rm(root, { recursive: true, force: true })
 })
 
@@ -91,7 +90,6 @@ beforeEach(() => {
     assignments: [],
   }
   templates = { template: goldenTemplate(), values: [] }
-  forwarded = []
   subjects = new Map([[SUBJECT, CAREER]])
   contexts = new Map([
     [
@@ -179,13 +177,14 @@ describe("GET academic/asignaturas/{asignatura}/ficha/vista-previa", () => {
     expect(await read(await get())).toEqual({ status: 403, text: EMPTY_FORBIDDEN })
   })
 
-  it("leaves unknown subjects, non-UUID ids and an undefined template to Laravel", async () => {
+  it("answers Laravel's model 404 for unknown subjects and a missing template, and the router 404 for non-UUID ids", async () => {
     asRole("coordinador", CAREER)
-    expect((await get("01a1c5bc-7a00-7000-8000-0000000000ff")).status).toBe(299)
+    const unknown = await get("01a1c5bc-7a00-7000-8000-0000000000ff")
+    expect([unknown.status, await unknown.text()]).toEqual([404, '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a1c5bc-7a00-7000-8000-0000000000ff"\n}'])
     expect((await get("abc")).status).toBe(404)
-    templates.template = { ...goldenTemplate(), definition: null }
-    expect((await get()).status).toBe(299)
-    expect(forwarded).toHaveLength(2)
+    templates.template = null
+    const missing = await get()
+    expect([missing.status, await missing.text()]).toEqual([404, '{\n    "message": "No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\SyllabusTemplate]."\n}'])
   })
 
   it("answers 401 without a session", async () => {

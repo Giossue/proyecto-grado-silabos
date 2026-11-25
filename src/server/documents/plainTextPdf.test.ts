@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest"
 import golden from "./__fixtures__/laravel-text-pdf-golden.json"
 import wordGolden from "./__fixtures__/laravel-word-golden.json"
 import type { PhpRecord } from "../configuration/phpValues"
-import { NeedsLaravel } from "../syllabus/snapshotDocuments"
 import { plainTextPdf, syllabusLines } from "./plainTextPdf"
 import type { DocumentRenderInput } from "./syllabusRenderer"
 
@@ -50,7 +49,26 @@ describe("SyllabusDocumentContent::lines", () => {
     expect(plainTextPdf(lines).toString("base64")).toBe(sample.pdf)
   })
 
-  it("leaves snapshots without a template definition to Laravel", () => {
-    expect(() => syllabusLines({ ...inputOf("plantilla"), snapshot: { sections: [] } })).toThrow(NeedsLaravel)
+  it("reads snapshots without a frozen template with the official template, like TemplateContext::fromSnapshot", () => {
+    const lines = syllabusLines({ ...inputOf("plantilla"), snapshot: { sections: [] } })
+    expect(lines[0]).not.toBe("")
+    expect(lines.slice(1, 4)).toEqual(syllabusLines(inputOf("plantilla")).slice(1, 4))
+  })
+
+  it("prints legacy fields and blocks like SyllabusDocumentContent, with PHP's float and nested value formats", () => {
+    const snapshot = {
+      sections: [
+        {
+          title: "Unidades",
+          fields: [{ label: "Tabla", type: "tabla", config: { columns: [{ key: "h", label: "Horas" }], rows: [{ key: "u1", label: "Unidad 1" }] }, value: { u1: { h: 2 } } }],
+          blocks: [
+            { title: "Bloque", document: { type: "doc", content: [{ type: "paragraph", content: [{ type: "field", attrs: { key: "tema" } }] }] }, fields: [{ key: "tema", value: "Células" }] },
+            { title: "Datos", fields: [{ label: "Créditos", value: 0.1 + 0.2 }, { label: "Lista", value: { horas: 4.5, detalle: { a: 1 } } }] },
+          ],
+        },
+      ],
+    }
+    const lines = syllabusLines({ ...inputOf("plantilla"), snapshot })
+    expect(lines.slice(4)).toEqual(["Unidades", "Tabla:  | Horas\nUnidad 1 | 2", "  Bloque", "Células", "  Datos", "    Créditos: 0.3", '    Lista: horas: 4.5 · detalle: {"a":1}', ""])
   })
 })

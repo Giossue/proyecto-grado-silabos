@@ -1,10 +1,10 @@
 import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { isJsonRequest, laravelInput, type PhpArray } from "../laravel/input"
-import { aborted, forbidden, laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
+import { requestInput, type PhpArray } from "../http/input"
+import { aborted, forbidden, apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
 import { isPhpArray, list } from "../configuration/phpValues"
 import { scheduleWorkflowNotification, type NotificationScope } from "../notifications/store"
 import { SignatureRejected, signatureSettings, type SignatureSettings } from "../signatures/cmsVerifier"
@@ -15,8 +15,8 @@ import { blockedDecision, Missing, Rejected, settle, type DecisionRevision, type
 import type { ReviewDetailStore, ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
 import { createLibraryDecisionDeps } from "./reviewDecisionStore"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type LockedLibrarySubmission = { id: string; verified: boolean }
 
@@ -59,7 +59,7 @@ export const LIBRARY_COMMENT_REASONS: Record<string, string> = {
   [OTHER]: "Otro motivo",
 }
 
-type Bound = { session: LaravelSession; revision: ReviewRevision; syllabus: DetailSyllabus }
+type Bound = { session: AppSession; revision: ReviewRevision; syllabus: DetailSyllabus }
 
 async function bindRevision(request: Request, revisionId: string, deps: LibraryDecisionDeps): Promise<Bound | Response> {
   let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
@@ -109,12 +109,11 @@ async function signedSettle(original: Request, deps: LibraryDecisionDeps, work: 
 
 export async function verifyLibraryReview(request: Request, revisionId: string, deps: LibraryDecisionDeps = defaultLibraryDecisionDeps()): Promise<Response> {
   const original = request.clone()
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
   const bound = await bindRevision(original, revisionId, deps)
   if (bound instanceof Response) return bound
   const { session, revision, syllabus } = bound
   if (!hasRole(session, ROLE_LIBRARIAN)) return forbidden()
-  const input: PhpArray = await laravelInput(request)
+  const input: PhpArray = await requestInput(request)
   const errors = await validateInput(input, { signature: ["nullable", "array"] }, { signature: "firma electrónica" })
   if (Object.keys(errors).length > 0) return validationError(errors)
   return signedSettle(original, deps, async () => {
@@ -125,9 +124,9 @@ export async function verifyLibraryReview(request: Request, revisionId: string, 
     await deps.transaction(async (tx) => {
       const block = await tx.lockedDecisionBlock(revision.syllabusId)
       const locked = await tx.lockSyllabus(revision.syllabusId)
-      if (locked === null) throw new Missing()
+      if (locked === null) throw new Missing(MODELS.syllabus, revision.syllabusId)
       const submission = await tx.lockSubmission(revision.id)
-      if (submission === null) throw new Missing()
+      if (submission === null) throw new Missing(MODELS.submission)
       if (submission.verified) return
       if (locked.state !== "en_revision" || (await tx.latestRevisionId(locked.id)) !== revision.id || (await tx.revisionStage(revision.id)) !== LIBRARY) {
         rejectRevision("Este sílabo ya no espera la revisión de biblioteca.")
@@ -144,20 +143,19 @@ export async function verifyLibraryReview(request: Request, revisionId: string, 
         revisionNumber: revision.number,
       })
     })
-    return laravelJson({ message: "Sílabo firmado y enviado a coordinación." }, 201)
+    return apiJson({ message: "Sílabo firmado y enviado a coordinación." }, 201)
   })
 }
 
 export async function commentLibraryReview(request: Request, revisionId: string, deps: LibraryDecisionDeps = defaultLibraryDecisionDeps()): Promise<Response> {
   const original = request.clone()
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
   const bound = await bindRevision(original, revisionId, deps)
   if (bound instanceof Response) return bound
   const { session, revision, syllabus } = bound
   if (!hasRole(session, ROLE_LIBRARIAN) || !mayReview(session, syllabus)) return forbidden()
   const block = decisionBlock(syllabus)
   if (block !== null) return blockedDecision(block)
-  const input: PhpArray = await laravelInput(request)
+  const input: PhpArray = await requestInput(request)
   const reasons = input.reasons
   const otherRequired = (isPhpArray(reasons) ? list(reasons) : reasons === undefined || reasons === null ? [] : [reasons]).includes(OTHER)
   const errors = await validateInput(
@@ -184,11 +182,11 @@ export async function commentLibraryReview(request: Request, revisionId: string,
     await deps.transaction(async (tx) => {
       const lockedBlock = await tx.lockedDecisionBlock(revision.syllabusId)
       const locked = await tx.lockSyllabus(revision.syllabusId)
-      if (locked === null) throw new Missing()
+      if (locked === null) throw new Missing(MODELS.syllabus, revision.syllabusId)
       if (locked.state !== "en_revision" || (await tx.latestRevisionId(locked.id)) !== revision.id) rejectRevision("La revisión dejó de estar disponible para solicitar corrección.")
       if (lockedBlock !== null) rejectRevision(lockedBlock)
       const current = await tx.lockRevision(revision.id)
-      if (current === null) throw new Missing()
+      if (current === null) throw new Missing(MODELS.revision, revision.id)
       if (current.correctionRequested) rejectRevision("Esta revisión ya tiene una solicitud de corrección.")
       if ((await tx.revisionStage(revision.id)) !== LIBRARY) rejectRevision("La revisión no está en su etapa; otro revisor la tiene ahora.")
       const now = deps.now()
@@ -202,6 +200,6 @@ export async function commentLibraryReview(request: Request, revisionId: string,
         revisionNumber: revision.number,
       })
     })
-    return laravelJson({ message: "Comentario enviado. El docente corregirá el sílabo y lo reenviará; volverá a biblioteca." }, 201)
+    return apiJson({ message: "Comentario enviado. El docente corregirá el sílabo y lo reenviará; volverá a biblioteca." }, 201)
   })
 }

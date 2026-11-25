@@ -1,8 +1,8 @@
 import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
-import { institutionDateSql } from "../laravel/sql"
-import { uuid7 } from "../laravel/uuid7"
+import { institutionDateSql } from "../http/sql"
+import { uuid7 } from "../http/uuid7"
 import type { ProcessRepository, ProcessRow, ProcessTx } from "./processes"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 

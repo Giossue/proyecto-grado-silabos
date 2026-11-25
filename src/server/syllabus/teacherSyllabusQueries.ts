@@ -1,7 +1,7 @@
 import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
-import { accentMatches, uuidList } from "../laravel/sql"
+import { accentMatches, uuidList } from "../http/sql"
 import type { PastSyllabusRow, TeacherPageFilters, TeacherSyllabusRepository, TeacherSyllabusRow } from "./teacherSyllabi"
 import {
   careerIs,

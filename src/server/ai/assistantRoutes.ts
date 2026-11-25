@@ -1,13 +1,16 @@
+import { fromController } from "../auth/controllerResponse"
+import { MODELS } from "../http/models"
+import { modelNotFoundResponse } from "../http/failures"
 import { randomUUID } from "node:crypto"
 import { requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { FORBIDDEN, managesTemplates } from "../configuration/templateReads"
 import { phpString, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
 import { toRuntime } from "../configuration/templateDraft"
-import { isJsonRequest, laravelInput } from "../laravel/input"
-import { aborted, laravelHttpError, laravelJson, validationError } from "../laravel/responses"
-import { uuid7 } from "../laravel/uuid7"
+import { requestInput } from "../http/input"
+import { aborted, jsonError, apiJson, validationError } from "../http/responses"
+import { uuid7 } from "../http/uuid7"
 import { OPEN_STATES, type AssistantStore, type AssistantTx, type StoredMessage, type StoredProposal } from "./assistantStore"
 import { assistantAvailable, type AiConfig } from "./config"
 import { sendMessageErrors, validatedDraft } from "./sendMessageRequest"
@@ -61,7 +64,7 @@ async function settled(work: () => Promise<Response>): Promise<Response> {
   }
 }
 
-function admin(request: Request, deps: AssistantRouteDeps): Promise<LaravelSession | Response> {
+function admin(request: Request, deps: AssistantRouteDeps): Promise<AppSession | Response> {
   return requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
 }
 
@@ -94,12 +97,12 @@ function changesList(proposal: StoredProposal): unknown {
 export async function showAssistant(request: Request, deps: AssistantRouteDeps): Promise<Response> {
   const session = await admin(request, deps)
   if (session instanceof Response) return session
-  if (!managesTemplates(session)) return laravelJson({ message: FORBIDDEN }, 403)
+  if (!managesTemplates(session)) return apiJson({ message: FORBIDDEN }, 403)
   const locked = await deps.store.openProcess()
   const template = await deps.store.template()
-  if (template === null) return deps.bridge.forward(request)
+  if (template === null) return fromController(modelNotFoundResponse(MODELS.template))
   const messages = await deps.store.conversation(template.id, session.user.id)
-  return laravelJson({
+  return apiJson({
     available: assistantAvailable(deps.config()),
     locked,
     suggestions: SUGGESTIONS,
@@ -120,14 +123,13 @@ export async function showAssistant(request: Request, deps: AssistantRouteDeps):
 }
 
 export async function storeAssistantMessage(request: Request, deps: AssistantRouteDeps): Promise<Response> {
-  if (!isJsonRequest(request)) return deps.bridge.forward(request)
   const original = request.clone()
-  const input = toRuntime(await laravelInput(request)) as PhpRecord
+  const input = toRuntime(await requestInput(request)) as PhpRecord
   const session = await admin(original.clone(), deps)
   if (session instanceof Response) return session
-  if (!managesTemplates(session)) return laravelJson({ message: FORBIDDEN }, 403)
+  if (!managesTemplates(session)) return apiJson({ message: FORBIDDEN }, 403)
   const template = await deps.store.template()
-  if (template === null || template.definition === null) return deps.bridge.forward(original)
+  if (template === null) return fromController(modelNotFoundResponse(MODELS.template))
   const config = deps.config()
   const errors = await sendMessageErrors(input, template.definition, config.chatMessageCharacters)
   if (Object.keys(errors).length > 0) return validationError(errors)
@@ -140,11 +142,11 @@ export async function storeAssistantMessage(request: Request, deps: AssistantRou
     const dispatched: string[] = []
     const answerId = await deps.store.transaction(async (tx: AssistantTx) => {
       const templateId = await tx.lockTemplateId()
-      if (templateId === null) reject(await deps.bridge.forward(original))
+      if (templateId === null) reject(fromController(modelNotFoundResponse(MODELS.template)))
       const existing = await tx.questionByKey(templateId as string, session.user.id, key)
       if (existing !== null) {
         const answer = await tx.answerTo(existing)
-        if (answer === null) reject(laravelHttpError(404, `No query results for model [${MESSAGE_MODEL}].`))
+        if (answer === null) reject(jsonError(404, `No query results for model [${MESSAGE_MODEL}].`))
         return answer as string
       }
       if (await tx.conversationBusy(templateId as string, session.user.id)) reject(validationError({ message: [BUSY] }))
@@ -166,22 +168,22 @@ export async function storeAssistantMessage(request: Request, deps: AssistantRou
       return answer
     })
     for (const id of dispatched) await deps.dispatchAnswer(id)
-    return laravelJson({ message: "El pedido quedó registrado.", assistant_message_id: answerId }, 202)
+    return apiJson({ message: "El pedido quedó registrado.", assistant_message_id: answerId }, 202)
   })
 }
 
 export async function clearAssistant(request: Request, deps: AssistantRouteDeps): Promise<Response> {
   const session = await admin(request, deps)
   if (session instanceof Response) return session
-  if (!managesTemplates(session)) return laravelJson({ message: FORBIDDEN }, 403)
+  if (!managesTemplates(session)) return apiJson({ message: FORBIDDEN }, 403)
   const template = await deps.store.template()
-  if (template === null) return deps.bridge.forward(request)
+  if (template === null) return fromController(modelNotFoundResponse(MODELS.template))
   if (await deps.store.conversationBusy(template.id, session.user.id)) return validationError({ chat: [BUSY] })
   await deps.store.hideConversation(template.id, session.user.id, deps.bridge.now())
-  return laravelJson({ message: "Nuevo chat iniciado." })
+  return apiJson({ message: "Nuevo chat iniciado." })
 }
 
-async function boundProposal(request: Request, id: string, deps: AssistantRouteDeps): Promise<{ session: LaravelSession; proposal: StoredProposal } | Response> {
+async function boundProposal(request: Request, id: string, deps: AssistantRouteDeps): Promise<{ session: AppSession; proposal: StoredProposal } | Response> {
   let proposal: StoredProposal | null = null
   const session = await requireSession(
     request,
@@ -190,13 +192,13 @@ async function boundProposal(request: Request, id: string, deps: AssistantRouteD
       activeRole: "required",
       afterAuthentication: async () => {
         proposal = isUuid(id) ? await deps.store.proposal(id) : null
-        return proposal === null ? laravelHttpError(404, `No query results for model [${PROPOSAL_MODEL}] ${id}`) : null
+        return proposal === null ? jsonError(404, `No query results for model [${PROPOSAL_MODEL}] ${id}`) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (!managesTemplates(session)) return laravelJson({ message: FORBIDDEN }, 403)
+  if (!managesTemplates(session)) return apiJson({ message: FORBIDDEN }, 403)
   return { session, proposal: proposal as unknown as StoredProposal }
 }
 
@@ -207,7 +209,7 @@ export async function showProposal(request: Request, id: string, deps: Assistant
   if (proposal.requestedBy !== session.user.id) return aborted(404)
   const structure = proposal.structure
   const blockChanges = structure.block_changes
-  return laravelJson({
+  return apiJson({
     id: proposal.id,
     status: proposal.state,
     draft_version: proposal.draftVersion,
@@ -225,13 +227,13 @@ async function decide(request: Request, id: string, deps: AssistantRouteDeps, st
   return settled(async () => {
     await deps.store.transaction(async (tx) => {
       const locked = await tx.lockProposal(proposal.id)
-      if (locked === null) reject(laravelHttpError(404, `No query results for model [${PROPOSAL_MODEL}] ${proposal.id}`))
+      if (locked === null) reject(jsonError(404, `No query results for model [${PROPOSAL_MODEL}] ${proposal.id}`))
       const current = locked as StoredProposal
       if (current.requestedBy !== session.user.id) reject(aborted(404))
       if (current.state !== PENDING) reject(validationError({ proposal: [NOT_PENDING] }))
       await tx.decideProposal(current.id, state, session.user.id, deps.bridge.now())
     })
-    return laravelJson({ message: reply })
+    return apiJson({ message: reply })
   })
 }
 

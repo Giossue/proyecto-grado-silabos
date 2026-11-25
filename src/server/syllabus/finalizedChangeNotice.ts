@@ -1,6 +1,6 @@
 import "server-only"
 import { sql } from "drizzle-orm"
-import { uuidList } from "../laravel/sql"
+import { uuidList } from "../http/sql"
 import { phpEquals, type PhpRecord } from "../configuration/phpValues"
 import { decidedHandovers } from "./coordinationHandover"
 import { institutionalTemplateProblem } from "./convocationWriteStore"

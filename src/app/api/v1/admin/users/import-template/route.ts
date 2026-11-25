@@ -1,5 +1,5 @@
 import { userImportTemplate } from "@/server/identity/imports"
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 import { destroyManagedUser, updateManagedUser } from "@/server/identity/accountWrites"
 
 export function GET(request: Request): Promise<Response> {
@@ -14,4 +14,4 @@ export function DELETE(request: Request): Promise<Response> {
   return destroyManagedUser(request, "import-template")
 }
 
-export { laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as POST, unmatchedRouteHandler as PUT, unmatchedRouteHandler as OPTIONS }

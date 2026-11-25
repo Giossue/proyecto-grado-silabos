@@ -5,9 +5,9 @@ import { defaultBridgeDeps } from "../auth/requireSession"
 import { withWriter, type SessionWriterDeps } from "../auth/sessionWriter"
 import { statefulRequest } from "../auth/statefulRequest"
 import { binaryFileResponse } from "../files/binaryFileResponse"
-import { expectsJson } from "../laravel/request"
-import { publicPath } from "../laravel/storage"
-import { laravelRouter, modelNotFound, routeAllows, unknownRoute } from "../laravel/router"
+import { expectsJson } from "../http/request"
+import { publicPath } from "../http/storage"
+import { unmatchedRoute, modelNotFound, routeAllows, unknownRoute } from "../http/router"
 import { createLogoStore, facultyPath, institutionPath, type LogoStore } from "./institutionalLogos"
 
 export type LogoRouteDeps = { writer: SessionWriterDeps; store: LogoStore }
@@ -29,7 +29,7 @@ export function institutionLogo(request: Request, deps: LogoRouteDeps = defaultL
 }
 
 export async function facultyLogo(request: Request, facultyId: string, deps: LogoRouteDeps = defaultLogoRouteDeps()): Promise<Response> {
-  if (!routeAllows(request)) return laravelRouter(request)
+  if (!routeAllows(request)) return unmatchedRoute(request)
   return statefulRequest(request, deps.writer, { group: "web", routeName: "logos.faculty" }, async () => {
     const faculty = isUuid(facultyId) ? await deps.store.faculty(facultyId) : null
     if (faculty === null) return expectsJson(request) ? modelNotFound(FACULTY_MODEL, facultyId) : unknownRoute(request)

@@ -1,11 +1,13 @@
 import "server-only"
+import { aborted } from "../http/responses"
+import { fromController } from "../auth/controllerResponse"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
-import { phpIsNumeric } from "../laravel/validation"
-import { phpFloat } from "../laravel/phpJson"
-import { laravelJson } from "../laravel/responses"
+import type { BridgeDeps, AppSession } from "../auth/types"
+import { phpIsNumeric } from "../http/validation"
+import { phpFloat } from "../http/phpJson"
+import { apiJson } from "../http/responses"
 import { createAcademicStructureRepository } from "./structureQueries"
-import { laravelRouter, routeAllows } from "../laravel/router"
+import { unmatchedRoute, routeAllows } from "../http/router"
 
 export const FORBIDDEN = "No tiene permiso para hacer esto."
 export const CONVOCATION_LOCK_REASON = "Convocatoria activa"
@@ -96,10 +98,10 @@ export function isUuid(value: string): boolean {
 }
 
 export function forbidden(): Response {
-  return laravelJson({ message: FORBIDDEN }, 403)
+  return apiJson({ message: FORBIDDEN }, 403)
 }
 
-export async function careerContext(session: LaravelSession, activeCareer: (careerId: string) => Promise<CareerRecord | null>): Promise<CareerRecord | null> {
+export async function careerContext(session: AppSession, activeCareer: (careerId: string) => Promise<CareerRecord | null>): Promise<CareerRecord | null> {
   const role = session.activeRole
   if (!session.user.active || role?.role !== "coordinador" || role.careerId === null) return null
   return activeCareer(role.careerId)
@@ -198,16 +200,16 @@ export async function curriculumBuilder(
   curriculumId: string,
   deps: AcademicStructureDeps = defaultAcademicStructureDeps(),
 ): Promise<Response> {
-  if (!routeAllows(request)) return laravelRouter(request)
+  if (!routeAllows(request)) return unmatchedRoute(request)
   const career = await authorizedCareer(request, deps)
   if (career instanceof Response) return career
-  if (curriculumId !== career.id) return deps.bridge.forward(request)
+  if (curriculumId !== career.id) return fromController(aborted(404))
 
   const lock = await deps.academic.careerLock(career.id)
   const subjects = await deps.academic.curriculumSubjects(career.id)
   const requirements = await deps.academic.requirements(subjects.map((subject) => subject.id))
 
-  return laravelJson({
+  return apiJson({
     career: {
       id: career.id,
       name: career.name,
@@ -269,7 +271,7 @@ export async function teacherAssignments(request: Request, deps: AcademicStructu
   const parallels = await deps.academic.unassignedParallels(career.id)
   const teacherUsers = await deps.academic.teacherUsers(career.id)
 
-  return laravelJson({
+  return apiJson({
     career: { id: career.id, name: career.name, lock_reason: lock === null ? null : CONVOCATION_LOCK_REASON, lock: lockPayload(lock) },
     teacherAssignments: assignments.map((assignment) => ({
       id: assignment.id,

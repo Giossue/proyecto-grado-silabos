@@ -1,12 +1,13 @@
 import "server-only"
 import { eligibleAssignments, isEligible } from "./activeRole"
-import { isStateful, passesCsrf } from "./requireSession"
+import { inputCsrfToken, isStateful, passesCsrf } from "./requireSession"
 import {
   collectGarbage,
   encryptCookieValue,
   migrateSession,
   regenerateToken,
   saveSession,
+  serializeCookie,
   sessionCookie,
   setCookieHeader,
   startSession,
@@ -14,20 +15,22 @@ import {
   type SessionState,
   type SessionWriterDeps,
 } from "./sessionWriter"
-import type { LaravelSession, RoleAssignmentRecord, SessionUser } from "./types"
-import { parseCookieHeader } from "../laravel/cookies"
-import { laravelFullUrl } from "../laravel/request"
-import { laravelHttpError, unauthenticated } from "../laravel/responses"
+import type { AppSession, RoleAssignmentRecord, SessionUser } from "./types"
+import { parseCookieHeader } from "../http/cookies"
+import { requestFullUrl } from "../http/request"
+import { jsonError, serverError, unauthenticated } from "../http/responses"
+import { httpError } from "../http/router"
+import { forgetRecallerCookie, recallUser } from "./recaller"
 import { controllerJson, emptyResponse, fromController } from "./controllerResponse"
-import { hashPasswordForCookie, loginSessionKey, passwordHashSessionKey, recallerCookieName } from "../laravel/sessionGuard"
+import { hashPasswordForCookie, loginSessionKey, passwordHashSessionKey, recallerCookieName } from "../http/sessionGuard"
 import { timingSafeEqual } from "node:crypto"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ROLE_KEY = "active_role_assignment_id"
 const REMEMBER_MINUTES = 576000
+const REMEMBER_TOKEN_LENGTH = 60
 
-export const FORWARD = Symbol("forward")
-export type Outcome = Response | typeof FORWARD
+export type Outcome = Response
 
 export type StatefulOptions = { group: "web" | "api"; routeName?: string; authenticates?: boolean }
 
@@ -99,11 +102,15 @@ export class StatefulContext {
     this.queued.push(setCookieHeader(name, value, this.deps.cookie, now + REMEMBER_MINUTES * 60, true, now))
   }
 
+  forgetRecaller(): void {
+    this.queued.push(...forgetRecaller(parseCookieHeader(this.request.headers.get("cookie")), this.deps))
+  }
+
   rememberRole(assignment: RoleAssignmentRecord | null): void {
     this.cachedRole = assignment
   }
 
-  async session(): Promise<LaravelSession | null> {
+  async session(): Promise<AppSession | null> {
     if (this.user === null) return null
     const activeRole = await this.activeRole()
     return { user: this.user, activeRole, eligibleRoles: await this.eligibleRoles(), attributes: this.state.attributes }
@@ -134,39 +141,63 @@ export async function statefulRequest(
   handler: (context: StatefulContext) => Promise<Outcome>,
   stateless: () => Response | Promise<Response> = unauthenticated,
 ): Promise<Response> {
-  const original = request.clone()
   if (options.group === "api" && !isStateful(request, deps.config.statefulDomains)) return stateless()
-  const fullUrl = laravelFullUrl(request)
-  if (request.method === "GET" && fullUrl === null) return deps.forward(original)
+  const fullUrl = requestFullUrl(request)
   const cookies = parseCookieHeader(request.headers.get("cookie"))
   const state = await startSession(cookies.get(deps.config.cookieName), deps)
   const loginId = state.attributes[loginSessionKey()]
-  const user = typeof loginId === "string" && UUID.test(loginId) ? await deps.store.findUser(loginId) : null
-  if (!passesCsrf(request, state.attributes, deps)) {
+  let user = typeof loginId === "string" && UUID.test(loginId) ? await deps.store.findUser(loginId) : null
+  if (!passesCsrf(request, state.attributes, deps, await inputCsrfToken(request))) {
     await collectGarbage(deps)
     await saveSession(state, request, user?.id ?? null, deps)
-    return withCookies(laravelHttpError(419, "CSRF token mismatch."), [sessionCookie(state, deps)])
+    return withCookies(jsonError(419, "CSRF token mismatch."), [sessionCookie(state, deps)])
   }
-  if (user === null && cookies.has(recallerCookieName())) return deps.forward(original)
-  if (user !== null) {
+  const finish = async (outcome: Response, guardId: string | null, extra: string[] = []): Promise<Response> => {
+    await collectGarbage(deps)
+    const xsrf = xsrfCookie(state, deps)
+    await saveSession(state, request, guardId, deps)
+    return withCookies(outcome, [xsrf, sessionCookie(state, deps), ...extra])
+  }
+  if (user === null && cookies.has(recallerCookieName())) {
+    const recalled = await recallUser(cookies, deps)
+    if (recalled.kind === "invalid-id") return finish(options.group === "api" ? serverError() : httpError(request, 500), null)
+    if (recalled.kind === "user") {
+      user = recalled.user
+      state.attributes[loginSessionKey()] = user.id
+      await migrateSession(state, true, deps)
+    }
+  }
+  if (user !== null && options.group === "api") {
     const stored = state.attributes[passwordHashSessionKey]
     const validHash =
-      options.group === "web" ||
       stored === undefined ||
       stored === null ||
       (typeof stored === "string" && (sameHash(hashPasswordForCookie(user.passwordHash, deps.config.appKey), stored) || sameHash(user.passwordHash, stored)))
-    if (!validHash || !user.active) return deps.forward(original)
+    if (!validHash) {
+      state.attributes = {}
+      return finish(unauthenticated(), null, forgetRecaller(cookies, deps))
+    }
+  }
+  if (user !== null && !user.active) {
+    const extra = forgetRecaller(cookies, deps)
+    delete state.attributes[loginSessionKey()]
+    if (user.rememberToken !== undefined && user.rememberToken !== null && user.rememberToken !== "") await deps.store.cycleRememberToken(user.id, deps.random(REMEMBER_TOKEN_LENGTH))
+    state.attributes = {}
+    await migrateSession(state, true, deps)
+    regenerateToken(state, deps)
+    return finish(httpError(request, 403, "La cuenta está desactivada."), null, extra)
   }
   const context = new StatefulContext(request, state, deps, user)
   const outcome = await handler(context)
-  if (outcome === FORWARD) return deps.forward(original)
-  await collectGarbage(deps)
   if (options.group === "api" && context.user !== null) {
     state.attributes[passwordHashSessionKey] = hashPasswordForCookie(context.user.passwordHash, deps.config.appKey)
   }
-  const xsrf = xsrfCookie(state, deps)
-  if (options.routeName && fullUrl !== null && storesCurrentUrl(request)) putPrevious(state.attributes, fullUrl, options.routeName)
+  if (options.routeName && storesCurrentUrl(request)) putPrevious(state.attributes, fullUrl, options.routeName)
   const guardId = options.authenticates && user !== null ? user.id : (context.user?.id ?? null)
-  await saveSession(state, request, guardId, deps)
-  return withCookies(outcome, [xsrf, sessionCookie(state, deps), ...context.queued])
+  return finish(outcome, guardId, context.queued)
+}
+
+function forgetRecaller(cookies: Map<string, string>, deps: SessionWriterDeps): string[] {
+  if (!cookies.has(recallerCookieName())) return []
+  return [serializeCookie(forgetRecallerCookie(deps.cookie, deps.now(), encryptCookieValue(recallerCookieName(), "", deps)))]
 }

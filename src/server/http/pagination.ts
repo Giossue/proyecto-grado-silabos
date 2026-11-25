@@ -1,4 +1,4 @@
-import type { LaravelQuery } from "./request"
+import type { QueryParams } from "./request"
 
 const ON_EACH_SIDE = 3
 const INT64_MAX = BigInt("9223372036854775807")
@@ -30,7 +30,7 @@ type PaginatorInput<T> = {
   perPage: number
   currentPage: number
   path: string
-  query: LaravelQuery
+  query: QueryParams
 }
 
 type PageLink = { url: string | null; label: string; page?: number | null; active: boolean }

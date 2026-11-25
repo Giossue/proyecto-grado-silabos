@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { GenerationRejected, purgeRequired } from "../syllabus/inProgressWork"
 import type { PhpRecord } from "./phpValues"
@@ -27,7 +27,6 @@ const stored = (value: string): PhpRecord => ({ type: "doc", content: [{ type: "
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
-let forwarded: Request[]
 let subjects: Map<string, string>
 let lockedCareers: Set<string>
 let purge: Record<string, string[]> | null
@@ -58,7 +57,7 @@ function deps(): SubjectProfileWriteDeps {
     },
   }
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     store: fakeTemplateStore(templates),
     subjectCareer: async (id) => subjects.get(id) ?? null,
     careerActive: async () => true,
@@ -99,7 +98,6 @@ beforeEach(() => {
     assignments: [],
   }
   templates = { template: goldenTemplate(), values: [] }
-  forwarded = []
   subjects = new Map([[SUBJECT, CAREER]])
   lockedCareers = new Set()
   purge = null
@@ -196,15 +194,15 @@ describe("PUT academic/asignaturas/{asignatura}/ficha", () => {
     expect(log).toContain(`keep:true:${CAREER}:${SUBJECT}`)
   })
 
-  it("without a CSRF token answers 419 and leaves an unknown or non-UUID subject to Laravel", async () => {
+  it("without a CSRF token answers 419 and answers Laravel's model 404 for an unknown subject", async () => {
     const anonymous = await updateSubjectProfile(
       new Request(apiRequest(`/api/v1/academic/asignaturas/${SUBJECT}/ficha`, { method: "PUT", headers: { "content-type": "application/json" } }), { body: "{}" }),
       SUBJECT,
       deps(),
     )
     expect(anonymous.status).toBe(419)
-    expect((await put({ values: [] }, "01a1c5bc-7a00-7000-8000-0000000000ff")).status).toBe(299)
+    const unknown = await put({ values: [] }, "01a1c5bc-7a00-7000-8000-0000000000ff")
+    expect([unknown.status, unknown.text]).toEqual([404, '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a1c5bc-7a00-7000-8000-0000000000ff"\n}'])
     expect((await put({ values: [] }, "no-es-uuid")).status).toBe(404)
-    expect(forwarded).toHaveLength(1)
   })
 })

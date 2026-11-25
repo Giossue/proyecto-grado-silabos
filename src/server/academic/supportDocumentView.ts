@@ -1,7 +1,7 @@
 import "server-only"
 import { createHash } from "node:crypto"
 import { fitSheetsToPageWidth } from "../files/fitPageWidth"
-import { phpDirname, type StorageWriter } from "../laravel/storageWriter"
+import { phpDirname, type StorageWriter } from "../http/storageWriter"
 import type { StoredObjectInput } from "./supportDocumentWrites"
 
 export type ViewOriginal = { disk: string; path: string; name: string; ownerId: string | null }

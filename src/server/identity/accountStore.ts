@@ -1,8 +1,13 @@
 import "server-only"
+import { type Executor } from "../syllabus/teacherSyllabusQueries"
+import { notificationScope } from "../notifications/queries"
+import { returnApprovals } from "../syllabus/coordinationHandover"
+import { FinalizedChangeNotice } from "../syllabus/finalizedChangeNotice"
+import { InProgressWork } from "../syllabus/inProgressWork"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { careerLabelSql } from "../academic/careerLabel"
-import { uuid7 } from "../laravel/uuid7"
+import { uuid7 } from "../http/uuid7"
 import type { Account, AccountRepository, AccountTx, RoleGrant } from "./accounts"
 
 type Row = Record<string, unknown>
@@ -104,11 +109,13 @@ export function accountTx(executor: AccountExecutor): AccountTx {
         limit 1 for update of asignacion`)
       return row ? { grantId: String(row.asignacion_rol_id), userId: String(row.usuario_id), userName: String(row.nombre_usuario) } : null
     },
-    async careerHasReviewedSyllabi(careerId) {
-      if (careerId === null) return false
-      return exists(sql`select 1 from silabos
-        inner join convocatorias_carreras on convocatorias_carreras.convocatoria_carrera_id = silabos.convocatoria_carrera_id
-        where convocatorias_carreras.carrera_id = ${careerId}::uuid and silabos.estado_silabo in ('en_revision', 'aprobado')`)
+    async guardHandover(careerId, confirmed, afterCommit, now) {
+      const work = new InProgressWork(executor as unknown as Executor, afterCommit, notificationScope(executor as unknown as Executor, afterCommit, now))
+      await new FinalizedChangeNotice(work, now).guardHandover(confirmed, careerId)
+    },
+    async returnApprovals(careerId, afterCommit, now) {
+      const work = new InProgressWork(executor as unknown as Executor, afterCommit, notificationScope(executor as unknown as Executor, afterCommit, now))
+      return returnApprovals(executor as unknown as Executor, afterCommit, careerId, (where) => work.syllabi(where, { lock: true }))
     },
     async findGrant(userId, role, careerId, activeFirst) {
       const order = activeFirst ? sql` order by asignacion_rol_activa desc` : sql``

@@ -1,5 +1,5 @@
-import { phpJsonEncode } from "../laravel/phpJson"
-import { validateInput, type Rule } from "../laravel/validation"
+import { phpJsonEncode } from "../http/phpJson"
+import { validateInput, type Rule } from "../http/validation"
 import { isList, isPhpArray, isRecord, list, phpCount, phpIntCast, phpString, phpTrim, record, type PhpRecord } from "./phpValues"
 import {
   CAREER,

@@ -1,7 +1,7 @@
 import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
-import { iso8601, uuidList } from "../laravel/sql"
+import { iso8601, uuidList } from "../http/sql"
 import { phpJsonDecode } from "../configuration/phpValues"
 import type { CoordinationReviewRepository, HistoryFilters, HistoryRow, ReviewListRow } from "./coordinationReviews"
 import { syllabusFacts } from "./draftFieldStore"

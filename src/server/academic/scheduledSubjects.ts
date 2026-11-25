@@ -1,11 +1,10 @@
 import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
-import { profileContext } from "../configuration/subjectProfile"
 import { profileProgress } from "../configuration/subjectProfileFields"
 import { createTemplateStore, type TemplateStore } from "../configuration/templateStore"
 import { TemplateValidationError } from "../configuration/templateRuntime"
-import { laravelJson, validationError } from "../laravel/responses"
+import { apiJson, validationError } from "../http/responses"
 import {
   authorizedCareer,
   baseOptions,
@@ -130,11 +129,10 @@ export function defaultScheduledSubjectsDeps(): ScheduledSubjectsDeps {
 
 type Progress = Map<string, { filled: number; total: number }>
 
-async function progressOf(templates: TemplateStore, subjectIds: string[]): Promise<Progress | null> {
+async function progressOf(templates: TemplateStore, subjectIds: string[]): Promise<Progress> {
   const template = await templates.template()
   if (template === null) return new Map(subjectIds.map((id) => [id, { filled: 0, total: 0 }]))
-  const context = await profileContext(templates)
-  return context === null ? null : profileProgress(context, subjectIds)
+  return profileProgress({ template, definition: template.definition, store: templates }, subjectIds)
 }
 
 export async function scheduledSubjects(request: Request, deps: ScheduledSubjectsDeps = defaultScheduledSubjectsDeps()): Promise<Response> {
@@ -162,7 +160,6 @@ export async function scheduledSubjectsResponse(request: Request, career: Career
       deps.templates,
       active.map((subject) => subject.id),
     )
-    if (complete === null || progress === null) return deps.bridge.forward(request)
 
     const rows = subjects.flatMap((subject) => {
       const group = parallels.filter((parallel) => parallel.subjectId === subject.id)
@@ -193,7 +190,7 @@ export async function scheduledSubjectsResponse(request: Request, career: Career
       ]
     })
 
-    return laravelJson({
+    return apiJson({
       career: { id: career.id, name: career.name, lock_reason: lock === null ? null : CONVOCATION_LOCK_REASON, lock: lockPayload(lock) },
       scheduledSubjects: rows,
       options: {

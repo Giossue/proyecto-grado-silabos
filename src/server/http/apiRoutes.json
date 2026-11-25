@@ -1411,33 +1411,6 @@
       "GET",
       "HEAD"
     ],
-    "uri": "health/live",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "GET",
-      "HEAD"
-    ],
-    "uri": "/",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "GET",
-      "HEAD"
-    ],
-    "uri": "health/ready",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "GET",
-      "HEAD"
-    ],
     "uri": "logos/institucion",
     "wheres": {},
     "bindings": {}
@@ -1462,27 +1435,6 @@
     ],
     "uri": "plantilla.schema.json",
     "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "GET",
-      "HEAD"
-    ],
-    "uri": "storage/{path}",
-    "wheres": {
-      "path": ".*"
-    },
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "PUT"
-    ],
-    "uri": "storage/{path}",
-    "wheres": {
-      "path": ".*"
-    },
     "bindings": {}
   }
 ]

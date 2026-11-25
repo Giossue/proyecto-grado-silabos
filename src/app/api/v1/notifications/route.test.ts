@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { nativeMethods, routerComparison } from "@/server/laravel/routerTesting"
+import { nativeMethods, routerComparison } from "@/server/http/routerTesting"
 import * as notifications from "./route"
 import * as emailPreferences from "./email-preferences/route"
 import * as readAll from "./read-all/route"
@@ -28,8 +28,8 @@ describe("notification routes", () => {
     vi.stubGlobal("fetch", fetchMock)
     const served = ALL.filter((method) => !others.includes(method))
     for (const method of nativeMethods(module, served, others)) {
-      const { next, laravel } = await routerComparison(module, method, path, { notification: NOTIFICATION })
-      expect(next).toEqual(laravel)
+      const { next, unmatched } = await routerComparison(module, method, path, { notification: NOTIFICATION })
+      expect(next).toEqual(unmatched)
     }
     expect(fetchMock).not.toHaveBeenCalled()
   })

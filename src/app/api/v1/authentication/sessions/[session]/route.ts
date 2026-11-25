@@ -1,5 +1,5 @@
 import { destroySession } from "@/server/identity/selfService"
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 
 type Context = { params: Promise<{ session: string }> }
 
@@ -7,4 +7,4 @@ export async function DELETE(request: Request, context: Context): Promise<Respon
   return destroySession(request, (await context.params).session)
 }
 
-export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as GET, unmatchedRouteHandler as HEAD, unmatchedRouteHandler as POST, unmatchedRouteHandler as PUT, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as OPTIONS }

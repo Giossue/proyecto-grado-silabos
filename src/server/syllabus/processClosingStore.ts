@@ -2,14 +2,13 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { phpJsonDecode } from "../configuration/phpValues"
-import { canonicalJson, hasAmbiguousNumbers } from "../documents/canonicalJson"
+import { canonicalJson } from "../documents/canonicalJson"
 import { buildSyllabusSnapshot } from "../documents/syllabusSnapshot"
 import { snapshotSourceOn } from "../documents/syllabusSnapshotStore"
 import { systemNow, type WriteOptions } from "../notifications/queries"
-import type { ClosingDeps, ClosingTx } from "./processClosing"
+import { CLOSED_DOCUMENT, type ClosingDeps, type ClosingTx } from "./processClosing"
 import { processRepositoryOn, processTx } from "./processQueries"
 import { dbTransaction, type TransactionRunner } from "./reviewDecisionStore"
-import { NeedsLaravel } from "./snapshotDocuments"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 const PROCESS_ALIVE = sql`exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)`
@@ -32,12 +31,16 @@ function closingTx(executor: Executor): ClosingTx {
             and exists (select 1 from convocatorias_carreras where convocatorias_carreras.convocatoria_carrera_id = silabos.convocatoria_carrera_id and ${PROCESS_ALIVE})
           for update of silabos`,
       )
-      if (rows.some((row) => hasAmbiguousNumbers(row.context))) throw new NeedsLaravel()
       return rows.map((row) => ({ id: row.id, context: phpJsonDecode(row.context) }))
     },
     snapshot: (syllabusId) => buildSyllabusSnapshot(syllabusId, snapshotSourceOn(executor)),
-    async storeContext(syllabusId, context) {
-      await executor.execute(sql`update silabos set datos_academicos_silabo = ${canonicalJson(context)}::jsonb where silabo_id = ${syllabusId}::uuid`)
+    async storeClosedDocument(syllabusId, snapshot) {
+      await executor.execute(sql`update silabos set datos_academicos_silabo = (case jsonb_typeof(datos_academicos_silabo)
+          when 'object' then datos_academicos_silabo
+          when 'array' then (select coalesce(jsonb_object_agg((item.position - 1)::text, item.value), '{}'::jsonb)
+            from jsonb_array_elements(datos_academicos_silabo) with ordinality as item(value, position))
+          else '{}'::jsonb end) || jsonb_build_object(${CLOSED_DOCUMENT}::text, ${canonicalJson(snapshot)}::jsonb)
+        where silabo_id = ${syllabusId}::uuid`)
     },
     async closeConvocations(processId) {
       await executor.execute(sql`update convocatorias_carreras set estado_previo_cierre_convocatoria_carrera = estado_convocatoria_carrera,

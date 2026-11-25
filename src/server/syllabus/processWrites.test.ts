@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
 import type { ProcessRow } from "./processes"
 import { deleteProcess, extendProcessDeadline, resumeProcess, type LockedSyllabusProcess, type ProcessWriteDeps } from "./processWrites"
@@ -22,7 +22,6 @@ const SYLLABI = ["50000000-0000-4000-8000-000000000001", "50000000-0000-4000-800
 const NOTICE = "Se repite la convocatoria con la malla corregida."
 
 let world: FakeWorld
-let forwarded: Request[]
 let notices: NotificationWorld
 let row: ProcessRow | null
 let locked: LockedSyllabusProcess | null
@@ -37,7 +36,7 @@ let log: string[]
 
 function deps(): ProcessWriteDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     find: async (id) => (row !== null && row.id === id.toLowerCase() ? row : null),
     now: () => NOW,
     nowMs: () => NOW * 1000 + 7,
@@ -149,7 +148,6 @@ beforeEach(() => {
     users: [makeUser()],
     assignments: [makeAssignment({ role: "administrador", careerId: null })],
   }
-  forwarded = []
   notices = notificationWorld({
     users: [recipient(TEACHER), recipient(COORDINATOR), recipient(LIBRARIAN), recipient(golden.userId)],
     periods: new Map([[`convocatoria:${CONVOCATION}`, PERIOD], [`proceso_silabos:${PROCESS}`, PERIOD]]),
@@ -290,7 +288,6 @@ describe("POST /api/v1/admin/processes/{process}/reanudar", () => {
       `state:${PROCESS}:abierto`,
       "commit",
     ])
-    expect(forwarded).toEqual([])
   })
 })
 
@@ -353,7 +350,6 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
         "commit",
       ])
       expect(notices.notifications.map((item) => item.type)).toEqual(["proceso.plazo_extendido"])
-      expect(forwarded).toEqual([])
     })
 
     it("asks to confirm a template change after closing and reports the pending changes too", async () => {

@@ -27,8 +27,9 @@ export function sessionStoreOn(executor: SessionExecutor): SessionStore {
         usuario_activo: boolean
         correo_verificado_en: string | null
         preferencias_correo_usuario: unknown
+        codigo_recordarme: string | null
       }>(sql`select usuario_id, contrasena, usuario_activo, correo_verificado_en::text as correo_verificado_en,
-               preferencias_correo_usuario
+               preferencias_correo_usuario, codigo_recordarme
              from usuarios where usuario_id = ${id} limit 1`)
       if (!row) return null
       return {
@@ -37,6 +38,7 @@ export function sessionStoreOn(executor: SessionExecutor): SessionStore {
         active: row.usuario_activo,
         emailVerifiedAt: row.correo_verificado_en,
         emailPreferences: row.preferencias_correo_usuario,
+        rememberToken: row.codigo_recordarme,
       } satisfies SessionUser
     },
     async effectiveRoleAssignments(userId) {

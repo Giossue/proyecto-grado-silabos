@@ -1,7 +1,7 @@
 import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
-import { institutionDateSql } from "../laravel/sql"
+import { institutionDateSql } from "../http/sql"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 import type { TemplateLock, TemplateLockStore } from "./templateBuilder"
 

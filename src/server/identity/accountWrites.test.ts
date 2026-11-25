@@ -91,12 +91,10 @@ describe("POST /api/v1/admin/users", () => {
     })
   })
 
-  it("asks Laravel when the email needs the full RFC parser", async () => {
+  it("accepts the addresses the RFC parser accepts, such as a quoted local part", async () => {
     const test = seeded()
     const response = await create(test, { nombres: "Ana", apellidos: "Paz", correo_electronico: '"ana paz"@silabos.test', role_code: "bibliotecario" })
-    expect(response.status).toBe(299)
-    expect(test.forwarded).toHaveLength(1)
-    expect(await test.forwarded[0].json()).toMatchObject({ nombres: "Ana" })
+    expect(response.status).toBe(201)
   })
 
   it("is forbidden without the administrator role", async () => {
@@ -175,13 +173,12 @@ describe("PATCH /api/v1/admin/users/{user}", () => {
     ])
   })
 
-  it("leaves a replacement that returns reviewed syllabi to Laravel without writing", async () => {
+  it("replaces the coordinator and returns the approvals the previous one decided to review, like AssignRole and CoordinationHandover", async () => {
     const test = seeded()
-    test.identity.careers[0].reviewed = true
     const response = await update(test, TEACHER, { ...identityOf(TEACHER, test), role_code: "coordinador", career_id: CAREER, replace_coordinator: true })
-    expect(response.status).toBe(299)
-    expect(test.identity.grants.find((row) => row.id === COORDINATOR_ROLE)?.active).toBe(true)
-    expect(await test.forwarded[0].json()).toMatchObject({ replace_coordinator: true })
+    expect(response.status).toBe(200)
+    expect(test.identity.grants.find((row) => row.id === COORDINATOR_ROLE)?.active).toBe(false)
+    expect(test.identity.returnedApprovals).toEqual([CAREER])
   })
 
   it("rejects incompatible roles", async () => {
@@ -231,13 +228,12 @@ describe("PATCH /api/v1/admin/users/{user}", () => {
     expect(test.identity.mails.map((mail) => mail.to)).toEqual(["corregido@silabos.test"])
   })
 
-  it("leaves unknown or malformed ids to Laravel", async () => {
+  it("answers Laravel's model 404 for unknown or malformed ids", async () => {
     const test = seeded()
     for (const id of ["no-uuid", "01a1c5bc-1111-7000-8000-00000000ffff"]) {
       const response = await update(test, id, {})
       expect({ status: response.status, text: await response.text() }).toEqual({ status: 404, text: modelNotFound("User", id) })
     }
-    expect(test.forwarded).toHaveLength(0)
   })
 })
 

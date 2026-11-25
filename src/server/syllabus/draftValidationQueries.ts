@@ -1,18 +1,23 @@
 import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
-import { uuidList } from "../laravel/sql"
+import { uuidList } from "../http/sql"
 import { phpJsonDecode, phpTrim } from "../configuration/phpValues"
 import type { DraftValidationStore, DraftValidationTx, ValidationField } from "./draftValidation"
 import { draftTx, identificationSource, syllabusFacts } from "./draftFieldStore"
-import { syllabusDetailStoreOn } from "./syllabusDetailQueries"
+import { syllabusHasArchivedValues } from "./syllabusDetailQueries"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
-async function liveFields(executor: Executor): Promise<ValidationField[]> {
+async function documentFields(executor: Executor, syllabusId: string): Promise<ValidationField[]> {
+  const archived = await syllabusHasArchivedValues(executor, syllabusId)
   const definitions = await rowsOf<{ id: string; block_id: string | null; responsible: string; content: string | null }>(
     executor,
-    sql`select definicion_campo_id::text as id, campo_plantilla_id::text as block_id, quien_llena_definicion_campo as responsible,
-        contenido_definicion_campo::text as content from definiciones_campo where vigente_en_plantilla = true`,
+    archived
+      ? sql`select definicion_campo_id::text as id, campo_plantilla_id::text as block_id, quien_llena_definicion_campo as responsible,
+          contenido_definicion_campo::text as content from definiciones_campo
+          where definicion_campo_id in (select definicion_campo_id from valores_campo where silabo_id = ${syllabusId}::uuid)`
+      : sql`select definicion_campo_id::text as id, campo_plantilla_id::text as block_id, quien_llena_definicion_campo as responsible,
+          contenido_definicion_campo::text as content from definiciones_campo where vigente_en_plantilla = true`,
   )
   const blockIds = [...new Set(definitions.flatMap((row) => (row.block_id === null ? [] : [row.block_id])))]
   const blocks =
@@ -35,12 +40,10 @@ async function liveFields(executor: Executor): Promise<ValidationField[]> {
 
 function validationTx(executor: Executor): DraftValidationTx {
   const draft = draftTx(executor)
-  const details = syllabusDetailStoreOn(executor)
   return {
     lockSyllabus: (id) => draft.lockSyllabus(id),
     templateStore: draft.templateStore,
-    hasArchivedValues: (id) => details.hasArchivedValues(id),
-    liveFields: () => liveFields(executor),
+    documentFields: (id) => documentFields(executor, id),
     values: (id) => draft.values(id),
     identification: (id) => identificationSource(executor, id),
     async teachers(id) {

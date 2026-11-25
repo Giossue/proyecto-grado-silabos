@@ -5,16 +5,15 @@ import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import golden from "./__fixtures__/laravel-documents-golden.json"
 import { goldenTemplate } from "../configuration/testing"
-import { NeedsLaravel } from "../syllabus/snapshotDocuments"
-import { canonicalHash, canonicalJson, hasAmbiguousNumbers } from "./canonicalJson"
-import { buildSyllabusSnapshot, SNAPSHOT_VERSION, visibleSections, type SnapshotRawJson, type SnapshotSource } from "./syllabusSnapshot"
+import { canonicalHash, canonicalJson } from "./canonicalJson"
+import type { ArchivedField } from "../syllabus/syllabusDetailQueries"
+import { buildSyllabusSnapshot, SNAPSHOT_VERSION, visibleSections, type SnapshotSource } from "./syllabusSnapshot"
 
 const SYLLABUS = "50000000-0000-4000-8000-000000000001"
 const FACULTY = "f0000000-0000-4000-8000-000000000001"
 
 let root: string
-let raw: SnapshotRawJson
-let archived: boolean
+let archived: ArchivedField[] | null
 let values: Map<string, unknown>
 
 const source = (): SnapshotSource => ({
@@ -26,29 +25,27 @@ const source = (): SnapshotSource => ({
     parallelShift: "matutina",
     teachers: [{ name: "Ana Pérez", email: "ana@ueb.edu.ec", formation: "Magíster" }],
   }),
-  hasArchivedValues: async () => archived,
-  rawJson: async () => raw,
+  archivedFields: async () => archived,
   logos: { faculty: async () => null },
 })
 
 beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), "silabos-snapshot-"))
-  process.env.LARAVEL_STORAGE_PATH = path.join(root, "storage", "app")
-  process.env.LARAVEL_PUBLIC_PATH = path.join(root, "public")
+  process.env.STORAGE_PATH = path.join(root, "storage", "app")
+  process.env.PUBLIC_ASSETS_PATH = path.join(root, "public")
   await mkdir(path.join(root, "public", "images", "silabo"), { recursive: true })
   await writeFile(path.join(root, "public", "images", "silabo", "logo-universidad.png"), "universidad")
   await writeFile(path.join(root, "public", "images", "silabo", "facultad.jpeg"), "facultad")
 })
 
 afterAll(async () => {
-  delete process.env.LARAVEL_STORAGE_PATH
-  delete process.env.LARAVEL_PUBLIC_PATH
+  delete process.env.STORAGE_PATH
+  delete process.env.PUBLIC_ASSETS_PATH
   await rm(root, { recursive: true, force: true })
 })
 
 beforeEach(() => {
-  raw = { definition: '{"document":{"line_height":1.15}}', context: '{"career":{"credits":3}}', values: [], contents: [] }
-  archived = false
+  archived = null
   values = new Map()
 })
 
@@ -56,13 +53,6 @@ describe("canonical JSON (CanonicalHasher)", () => {
   it.each(golden.canonical.map((item, index) => [index, item] as const))("case %i matches Laravel byte for byte", (_index, item) => {
     expect(canonicalJson(item.value)).toBe(item.json)
     expect(canonicalHash(item.value)).toBe(item.hash)
-  })
-
-  it("flags float literals that JavaScript cannot tell apart from integers", () => {
-    expect(hasAmbiguousNumbers('{"a":1.5,"b":"10.0","c":[2]}')).toBe(false)
-    expect(hasAmbiguousNumbers('{"a":10.0}')).toBe(true)
-    expect(hasAmbiguousNumbers('{"a":1e5}')).toBe(true)
-    expect(hasAmbiguousNumbers('{"a":12345678901234567890}')).toBe(true)
   })
 })
 
@@ -99,11 +89,24 @@ describe("SyllabusSnapshot::build", () => {
     expect(JSON.stringify(stored?.document)).toContain("Respuesta guardada")
   })
 
-  it("leaves to Laravel a syllabus with answers of retired fields or float literals it cannot reproduce", async () => {
-    archived = true
-    await expect(buildSyllabusSnapshot(SYLLABUS, source())).rejects.toBeInstanceOf(NeedsLaravel)
-    archived = false
-    raw = { ...raw, values: ['{"type":"doc","hours":2.0}'] }
-    await expect(buildSyllabusSnapshot(SYLLABUS, source())).rejects.toBeInstanceOf(NeedsLaravel)
+  it("freezes the sections of the retired fields a syllabus still answers, like SyllabusDocumentFields::archivedSections", async () => {
+    const answer = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Respuesta archivada" }] }] }
+    archived = [
+      { sectionId: "s-2", sectionKey: "anterior", sectionTitle: "Sección retirada", sectionOrientation: "landscape", id: "f-2", key: "metodos", label: "Métodos", responsible: "docente", content: answer },
+      { sectionId: "s-1", sectionKey: "datos", sectionTitle: "Datos", sectionOrientation: "portrait", id: "f-1", key: "tema", label: "Tema", responsible: "docente", content: { type: "doc", content: [{ type: "paragraph" }] } },
+    ]
+    const snapshot = await buildSyllabusSnapshot(SYLLABUS, source())
+    const sections = snapshot.sections as { key: string; orientation: string; fields: { definition_id: string; label: string; value: unknown }[] }[]
+    expect(sections.map((section) => [section.key, section.orientation, section.fields.map((field) => field.definition_id)])).toEqual([
+      ["anterior", "landscape", ["f-2"]],
+      ["datos", "portrait", ["f-1"]],
+    ])
+    expect(JSON.stringify(sections[0].fields[0].value)).toContain("Respuesta archivada")
+  })
+
+  it("answers Laravel's model 404 when the institutional template does not exist", async () => {
+    const response = await buildSyllabusSnapshot(SYLLABUS, { ...source(), template: async () => null }).catch((error: { response: Response }) => error.response)
+    expect((response as Response).status).toBe(404)
+    expect(await (response as Response).json()).toEqual({ message: "No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate]." })
   })
 })

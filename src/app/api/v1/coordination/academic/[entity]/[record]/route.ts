@@ -1,6 +1,6 @@
 import { updateCareerRecord } from "@/server/academic/careerWrites"
 import { deleteCareerRecord } from "@/server/academic/deletions"
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 
 type Context = { params: Promise<{ entity: string; record: string }> }
 
@@ -14,4 +14,4 @@ export async function PATCH(request: Request, context: Context): Promise<Respons
   return updateCareerRecord(request, entity, record)
 }
 
-export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as GET, unmatchedRouteHandler as HEAD, unmatchedRouteHandler as POST, unmatchedRouteHandler as PUT, unmatchedRouteHandler as OPTIONS }

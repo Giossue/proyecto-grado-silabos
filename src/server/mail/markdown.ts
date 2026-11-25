@@ -14,7 +14,7 @@ type InlineParser = {
 
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
-class LaravelMarkdownRenderer extends HtmlRenderer {
+class MailMarkdownRenderer extends HtmlRenderer {
   constructor() {
     super({ safe: true })
   }
@@ -31,7 +31,7 @@ class LaravelMarkdownRenderer extends HtmlRenderer {
   }
 }
 
-function laravelParser(): Parser {
+function markdownParser(): Parser {
   const parser = new Parser()
   const inline = (parser as unknown as { inlineParser: InlineParser }).inlineParser
   inline.parse = function (this: InlineParser, block: Node) {
@@ -56,8 +56,8 @@ function unusedPrivateCharacter(text: string): string {
 }
 
 export function markdownToHtml(markdown: string): string {
-  if (!markdown.includes("\ufeff")) return new LaravelMarkdownRenderer().render(laravelParser().parse(markdown))
+  if (!markdown.includes("\ufeff")) return new MailMarkdownRenderer().render(markdownParser().parse(markdown))
   const placeholder = unusedPrivateCharacter(markdown)
-  const html = new LaravelMarkdownRenderer().render(laravelParser().parse(markdown.replaceAll("\ufeff", placeholder)))
+  const html = new MailMarkdownRenderer().render(markdownParser().parse(markdown.replaceAll("\ufeff", placeholder)))
   return html.replaceAll(placeholder, "\ufeff")
 }

@@ -6,8 +6,7 @@ const port = Number(process.env.E2E_PORT ?? 3200)
 const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${port}`
 const scratch = process.env.E2E_SCRATCH_DIR ?? path.join(os.tmpdir(), "silabos-e2e")
 const serverEnv = {
-  LARAVEL_FALLBACK: "off",
-  SANCTUM_STATEFUL_DOMAINS: new URL(baseURL).host,
+  STATEFUL_DOMAINS: new URL(baseURL).host,
 }
 
 export default defineConfig({

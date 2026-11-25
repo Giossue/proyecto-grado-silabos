@@ -3,9 +3,9 @@ import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { requireSession, defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
-import { isJsonRequest, isPhpArray, laravelInput, phpCount, type PhpArray, type PhpValue } from "../laravel/input"
-import { laravelJson, validationError } from "../laravel/responses"
-import { sharedRateLimiter, throttle, type RateLimiter } from "../laravel/throttle"
+import { isPhpArray, requestInput, phpCount, type PhpArray, type PhpValue } from "../http/input"
+import { apiJson, validationError } from "../http/responses"
+import { sharedRateLimiter, throttle, type RateLimiter } from "../http/throttle"
 import { emailOptionsFor } from "./emailNoticeCatalog"
 
 export type EmailPreferencesDeps = { bridge: BridgeDeps }
@@ -34,7 +34,7 @@ export async function showEmailPreferences(
   const session = await requireSession(request, { verified: true }, deps.bridge)
   if (session instanceof Response) return session
   const roles = (await deps.bridge.store.effectiveRoleAssignments(session.user.id)).map((assignment) => assignment.role)
-  return laravelJson({ options: emailOptionsFor(roles, session.user.emailPreferences) })
+  return apiJson({ options: emailOptionsFor(roles, session.user.emailPreferences) })
 }
 
 function createEmailPreferencesRepository(): EmailPreferencesRepository {
@@ -74,7 +74,6 @@ function storedPreferences(current: unknown): Record<string, unknown> {
 }
 
 export async function updateEmailPreferences(request: Request, deps: EmailPreferencesUpdateDeps = defaultUpdateDeps()): Promise<Response> {
-  if (!isJsonRequest(request)) return deps.bridge.forward(request)
   const limit = (userId: string) => ({ key: `throttle:20,1:${userId}`, maxAttempts: 20, decaySeconds: 60 })
   let gate: ReturnType<typeof throttle> | null = null
   const session = await requireSession(
@@ -93,12 +92,12 @@ export async function updateEmailPreferences(request: Request, deps: EmailPrefer
 
   const roles = (await deps.bridge.store.effectiveRoleAssignments(session.user.id)).map((assignment) => assignment.role)
   const allowed = emailOptionsFor(roles, null).map((option) => option.type)
-  const input: PhpArray = await laravelInput(request)
+  const input: PhpArray = await requestInput(request)
   const errors = validate(input.preferences, allowed)
   if (Object.keys(errors).length > 0) return finish(validationError(errors))
 
   const requested = Object.fromEntries(Object.entries(input.preferences as PhpArray).map(([key, item]) => [key, item === true || item === 1 || item === "1"]))
   const preferences = { ...storedPreferences(session.user.emailPreferences), ...requested }
   await deps.preferences.save(session.user.id, preferences)
-  return finish(laravelJson({ options: emailOptionsFor(roles, preferences) }))
+  return finish(apiJson({ options: emailOptionsFor(roles, preferences) }))
 }

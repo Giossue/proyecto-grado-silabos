@@ -1,17 +1,17 @@
 import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { isJsonRequest, laravelInput } from "../laravel/input"
-import { forbidden, laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
+import { requestInput } from "../http/input"
+import { forbidden, apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
 import { notificationDate, storeInternalNotifications, type NotificationScope } from "../notifications/store"
 import type { ConvocationRecord } from "./convocations"
 import type { GenerateOptions } from "./inProgressWork"
 import { createConvocationWriteDeps } from "./convocationWriteStore"
 import { Missing, Rejected, settle } from "./reviewDecisions"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type LockedProcess = { id: string; state: string; periodId: string }
 export type LockedConvocation = { id: string; careerId: string; careerLabel: string; state: string; processState: string; dueAt: number }
@@ -45,7 +45,7 @@ function reject(errors: Record<string, string[]>): never {
   throw new Rejected(validationError(errors))
 }
 
-function isCoordinatorOf(session: LaravelSession, careerId: string | null): boolean {
+function isCoordinatorOf(session: AppSession, careerId: string | null): boolean {
   return session.user.active && session.activeRole?.role === "coordinador" && (careerId === null ? session.activeRole.careerId !== null : session.activeRole.careerId === careerId)
 }
 
@@ -56,7 +56,7 @@ const PROCESS_NOT_OPEN: Record<string, string> = {
 
 async function openConvocation(tx: ConvocationWriteTx, convocationId: string): Promise<void> {
   const convocation = await tx.lockConvocation(convocationId)
-  if (convocation === null) throw new Missing()
+  if (convocation === null) throw new Missing(MODELS.convocation, convocationId)
   if (convocation.state !== "preparacion") reject({ convocation: ["Solo una convocatoria en preparación puede abrirse."] })
   if (convocation.processState !== "abierto") {
     reject({ convocation: [PROCESS_NOT_OPEN[convocation.processState] ?? "El proceso institucional todavía no se abre. Podrá abrir cuando Administración lo inicie."] })
@@ -83,11 +83,10 @@ async function openConvocation(tx: ConvocationWriteTx, convocationId: string): P
 
 export async function createConvocation(request: Request, deps: ConvocationWriteDeps = defaultConvocationWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!isCoordinatorOf(session, null)) return forbidden()
-  const input = await laravelInput(request)
+  const input = await requestInput(request)
   const errors = await validateInput(input, { process_id: ["required", "uuid", { exists: (value) => deps.openProcessExists(String(value)) }] }, { process_id: "proceso" })
   if (Object.keys(errors).length > 0) return validationError(errors)
   const processId = input.process_id as string
@@ -95,14 +94,14 @@ export async function createConvocation(request: Request, deps: ConvocationWrite
   return settle(original, deps, async () => {
     const id = await deps.transaction(async (tx) => {
       const process = await tx.lockProcess(processId)
-      if (process === null) throw new Missing()
+      if (process === null) throw new Missing(MODELS.process, processId)
       if (process.state !== "abierto") reject({ process_id: ["La convocatoria institucional todavía no está abierta."] })
       if (await tx.careerHasConvocation(careerId, process.id)) reject({ process_id: ["Esta carrera ya tiene una convocatoria para el período institucional."] })
       const convocationId = await tx.createConvocation(careerId, process.id)
       await openConvocation(tx, convocationId)
       return convocationId
     })
-    return laravelJson({ message: "Convocatoria iniciada: se generó un sílabo por cada paralelo.", convocation_id: id }, 201)
+    return apiJson({ message: "Convocatoria iniciada: se generó un sílabo por cada paralelo.", convocation_id: id }, 201)
   })
 }
 
@@ -148,7 +147,7 @@ export async function resumeConvocation(request: Request, id: string, deps: Conv
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
       const locked = await tx.lockConvocation(convocation.id)
-      if (locked === null) throw new Missing()
+      if (locked === null) throw new Missing(MODELS.convocation, convocation.id)
       if (locked.state !== "pausada") reject({ convocation: ["Solo una convocatoria pausada puede reanudarse."] })
       if (locked.processState !== "abierto") {
         reject({ convocation: ["El proceso institucional no está abierto; la convocatoria se reanudará cuando Administración lo reanude."] })
@@ -157,6 +156,6 @@ export async function resumeConvocation(request: Request, id: string, deps: Conv
       await tx.updateState(locked.id, "abierta")
       await notifyConvocationResumed(tx, locked, timestampMs(deps.nowMs()))
     })
-    return laravelJson({ message: "Convocatoria reanudada. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla queda protegida." })
+    return apiJson({ message: "Convocatoria reanudada. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla queda protegida." })
   })
 }

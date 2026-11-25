@@ -1,12 +1,13 @@
 import "server-only"
+import { HttpFailure, Missing } from "../http/failures"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { isJsonRequest, laravelInput, type PhpArray } from "../laravel/input"
-import { expectsJson } from "../laravel/request"
-import { aborted, forbidden, laravelJson, validationError } from "../laravel/responses"
-import { validateInput, type Rule } from "../laravel/validation"
-import { uuid7 } from "../laravel/uuid7"
+import { requestInput, type PhpArray } from "../http/input"
+import { expectsJson } from "../http/request"
+import { aborted, forbidden, apiJson, validationError } from "../http/responses"
+import { validateInput, type Rule } from "../http/validation"
+import { uuid7 } from "../http/uuid7"
 import { isPhpArray, list, phpIntCast, record, type PhpRecord } from "../configuration/phpValues"
 import { scheduleWorkflowNotification, type NotificationScope } from "../notifications/store"
 import { institutionToday } from "../dashboard/dashboardQueries"
@@ -15,11 +16,11 @@ import { SignatureRejected, signatureSettings, type SignatureSettings } from "..
 import { decisionSignatureFrom } from "../signatures/decisionSignature"
 import { signDecision, type SignatureTx, type Verifier } from "../signatures/signDecision"
 import { hasRole, isRunning, ROLE_TEACHER } from "./policy"
-import { NeedsLaravel, signingStatement, snapshotDefinition } from "./snapshotDocuments"
+import { signingStatement, snapshotDefinition } from "./snapshotDocuments"
 import type { DetailSyllabus } from "./syllabusDetail"
 import { createSubmissionDeps } from "./submissionStore"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type SubmissionSchedule = { convocationState: string; processState: string; startsOn: string; dueOn: string }
 export type KeyedRevision = { id: string; number: number; submittedBy: string }
@@ -68,8 +69,8 @@ export interface SubmissionStore {
 export type SubmissionDeps = {
   bridge: BridgeDeps
   store: SubmissionStore
-  validate: (request: Request, syllabusId: string) => Promise<number | null>
-  payload: (request: Request, session: LaravelSession, syllabusId: string) => Promise<PhpRecord>
+  validate: (request: Request, syllabusId: string) => Promise<number | Response>
+  payload: (request: Request, session: AppSession, syllabusId: string) => Promise<PhpRecord>
   settings: () => SignatureSettings & { requireHolderMatch: boolean }
   verify?: Verifier
   today: () => string
@@ -100,8 +101,6 @@ class Rejected extends Error {
   }
 }
 
-class Missing extends Error {}
-
 function reject(attribute: string, message: string): never {
   throw new Rejected(validationError({ [attribute]: [message] }))
 }
@@ -109,12 +108,12 @@ function reject(attribute: string, message: string): never {
 function conflict(request: Request, version: number): never {
   throw new Rejected(
     expectsJson(request)
-      ? laravelJson({ message: CONFLICT, code: "conflicto_version_borrador", version_bloqueo_actual: version }, 409)
-      : laravelJson({ message: CONFLICT }, 409),
+      ? apiJson({ message: CONFLICT, code: "conflicto_version_borrador", version_bloqueo_actual: version }, 409)
+      : apiJson({ message: CONFLICT }, 409),
   )
 }
 
-function maySubmit(session: LaravelSession, syllabus: DetailSyllabus): boolean {
+function maySubmit(session: AppSession, syllabus: DetailSyllabus): boolean {
   return (
     hasRole(session, ROLE_TEACHER) &&
     session.activeRole?.careerId === syllabus.careerId &&
@@ -140,12 +139,12 @@ function assertOpen(schedule: SubmissionSchedule, today: string): void {
 async function assertSubmittable(original: Request, syllabus: DetailSyllabus, expected: number, deps: SubmissionDeps): Promise<void> {
   if (!EDITABLE.includes(syllabus.state)) reject("syllabus", "El expediente no está listo para envío.")
   const schedule = await deps.store.schedule(syllabus.id)
-  if (schedule === null) throw new Missing()
+  if (schedule === null) throw new Missing(MODELS.convocation)
   assertOpen(schedule, deps.today())
   if (syllabus.version !== expected) conflict(original, syllabus.version)
 }
 
-type Bound = { session: LaravelSession; syllabus: DetailSyllabus }
+type Bound = { session: AppSession; syllabus: DetailSyllabus }
 
 async function bound(request: Request, syllabusId: string, deps: SubmissionDeps): Promise<Bound | Response> {
   let syllabus: DetailSyllabus | null = null
@@ -172,7 +171,7 @@ async function settled(original: Request, deps: SubmissionDeps, work: () => Prom
   } catch (error) {
     if (error instanceof Rejected) return error.response
     if (error instanceof SignatureRejected) return validationError({ signature: [error.message] })
-    if (error instanceof Missing || error instanceof NeedsLaravel) return deps.bridge.forward(original)
+    if (error instanceof HttpFailure) return error.response
     throw error
   }
 }
@@ -196,18 +195,17 @@ async function unchangedVerification(tx: SubmissionTx, syllabusId: string, snaps
   return canonicalHash(bibliographyAnswers(record(verified.snapshot))) === canonicalHash(bibliographyAnswers(snapshot)) ? verified : null
 }
 
-async function sent(request: Request, session: LaravelSession, syllabusId: string, number: number, deps: SubmissionDeps): Promise<Response> {
-  return laravelJson({ message: `Revisión ${number} enviada.`, syllabus: await deps.payload(request, session, syllabusId) })
+async function sent(request: Request, session: AppSession, syllabusId: string, number: number, deps: SubmissionDeps): Promise<Response> {
+  return apiJson({ message: `Revisión ${number} enviada.`, syllabus: await deps.payload(request, session, syllabusId) })
 }
 
 async function versionInput(request: Request, rules: Record<string, Rule[]>): Promise<{ input: PhpArray; errors: Record<string, string[]> }> {
-  const input: PhpArray = await laravelInput(request)
+  const input: PhpArray = await requestInput(request)
   return { input, errors: await validateInput(input, rules, ATTRIBUTES) }
 }
 
 export async function submissionStatement(request: Request, syllabusId: string, deps: SubmissionDeps = defaultSubmissionDeps()): Promise<Response> {
   const original = request.clone()
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
   const auth = await bound(original, syllabusId, deps)
   if (auth instanceof Response) return auth
   if (!maySubmit(auth.session, auth.syllabus)) return forbidden()
@@ -216,7 +214,7 @@ export async function submissionStatement(request: Request, syllabusId: string, 
   return settled(original, deps, async () => {
     await assertSubmittable(original, auth.syllabus, phpIntCast(input.version_bloqueo), deps)
     const snapshot = await deps.store.snapshot(auth.syllabus.id)
-    return laravelJson({
+    return apiJson({
       statement: signingStatement(auth.syllabus.id, TEACHER, canonicalHash(snapshot)),
       required: !(await deps.store.signed(auth.syllabus.id, TEACHER)),
     })
@@ -225,7 +223,6 @@ export async function submissionStatement(request: Request, syllabusId: string, 
 
 export async function submitSyllabus(request: Request, syllabusId: string, deps: SubmissionDeps = defaultSubmissionDeps()): Promise<Response> {
   const original = request.clone()
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
   const auth = await bound(original, syllabusId, deps)
   if (auth instanceof Response) return auth
   const { session, syllabus } = auth
@@ -249,13 +246,13 @@ export async function submitSyllabus(request: Request, syllabusId: string, deps:
     await assertSubmittable(original, syllabus, expected, deps)
     await deps.store.snapshot(syllabus.id)
     const blocking = await deps.validate(original, syllabus.id)
-    if (blocking === null) throw new Missing()
+    if (blocking instanceof Response) throw new HttpFailure(blocking)
     if (blocking > 0) reject("validation", "Corrija los errores determinísticos antes de enviar.")
     const settings = deps.settings()
     const actor = { id: session.user.id, name: await deps.store.userName(session.user.id) }
     const number = await deps.store.transaction(async (tx) => {
       const locked = await tx.lockSyllabus(syllabus.id)
-      if (locked === null) throw new Missing()
+      if (locked === null) throw new Missing(MODELS.syllabus, syllabus.id)
       const again = await replay(await tx.revisionByKey(locked.id, key))
       if (again !== null) return again.number
       if (locked.version !== expected) conflict(original, locked.version)

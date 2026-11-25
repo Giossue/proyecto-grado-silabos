@@ -1,4 +1,4 @@
-import type { PhpValue } from "../laravel/input"
+import type { PhpValue } from "../http/input"
 import { detectMimeType } from "./mimeType"
 import { imageSize, PNG_SIGNATURE } from "./png"
 import { clientExtension, type UploadedFile } from "./uploads"

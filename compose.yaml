@@ -1,0 +1,98 @@
+name: silabos-ueb
+
+x-app-environment: &app-environment
+  APP_ENV: ${APP_ENV:-production}
+  APP_KEY: ${APP_KEY:?APP_KEY is required}
+  APP_NAME: ${APP_NAME:-Sílabos UEB}
+  DATABASE_URL: postgres://${POSTGRES_USER:-silabos}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-silabos_ueb}
+  REDIS_URL: redis://redis:6379/0
+  GOTENBERG_URL: http://gotenberg:3000
+  STORAGE_PATH: /data/storage
+  SESSION_LIFETIME: ${SESSION_LIFETIME:-240}
+  STATEFUL_DOMAINS: ${STATEFUL_DOMAINS:-localhost:3000}
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+  MAIL_MAILER: ${MAIL_MAILER:-log}
+  MAIL_HOST: ${MAIL_HOST:-}
+  MAIL_PORT: ${MAIL_PORT:-587}
+  MAIL_USERNAME: ${MAIL_USERNAME:-}
+  MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+  MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@example.com}
+  MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Sílabos UEB}
+  AI_DRIVER: ${AI_DRIVER:-}
+  AI_BASE_URL: ${AI_BASE_URL:-}
+  AI_MODEL: ${AI_MODEL:-}
+  AI_API_KEY: ${AI_API_KEY:-}
+  CATALOG_DRIVER: ${CATALOG_DRIVER:-}
+  KOHA_BASE_URL: ${KOHA_BASE_URL:-}
+
+services:
+  web:
+    build:
+      context: .
+      target: web
+    environment: *app-environment
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - storage:/data/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gotenberg:
+        condition: service_started
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      target: worker
+    environment:
+      <<: *app-environment
+      QUEUE_MAX_TIME: "0"
+    volumes:
+      - storage:/data/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gotenberg:
+        condition: service_started
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-silabos_ueb}
+      POSTGRES_USER: ${POSTGRES_USER:-silabos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+
+volumes:
+  storage:
+  postgres:
+  redis:

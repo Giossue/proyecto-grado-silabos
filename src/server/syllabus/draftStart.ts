@@ -1,26 +1,26 @@
 import "server-only"
+import { HttpFailure, Missing, reportedServerError } from "../http/failures"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { isJsonRequest, laravelInput, type PhpArray } from "../laravel/input"
-import { expectsJson } from "../laravel/request"
-import { aborted, forbidden, laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
+import { requestInput, type PhpArray } from "../http/input"
+import { expectsJson } from "../http/request"
+import { aborted, forbidden, apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
 import { createLogoStore, type LogoStore } from "../configuration/institutionalLogos"
 import { phpShape, type PhpRecord } from "../configuration/phpValues"
 import { profileTemplates } from "../configuration/subjectProfileFields"
 import { phpIntCast, toRuntime } from "../configuration/templateDraft"
-import { teacherEditable, type TemplateField } from "../configuration/templatePresentation"
+import { type SyllabusTemplate, teacherEditable, type TemplateField } from "../configuration/templatePresentation"
 import { fieldResponseNormalize } from "../configuration/templateRehearsal"
-import { INSTITUTIONAL, TemplateValidationError } from "../configuration/templateRuntime"
+import { fieldCarried, INSTITUTIONAL, responseWithin, TemplateValidationError } from "../configuration/templateRuntime"
 import type { TemplateStore } from "../configuration/templateStore"
 import { institutionToday } from "../dashboard/dashboardQueries"
 import { mayEdit, mayStart, mayView } from "./policy"
-import { NeedsLaravel } from "./snapshotDocuments"
 import { syllabusPayload, type DetailSyllabus, type SyllabusDetailStore } from "./syllabusDetail"
 import { createDraftStartStore } from "./draftStartStore"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type LockedDraft = { id: string; state: string; version: number; subjectId: string }
 export type TeacherField = { id: string; responsible: string; content: unknown }
@@ -68,9 +68,7 @@ class Rejected extends Error {
   }
 }
 
-class Missing extends Error {}
-
-type Bound = { session: LaravelSession; syllabus: DetailSyllabus; source: DetailSyllabus | null }
+type Bound = { session: AppSession; syllabus: DetailSyllabus; source: DetailSyllabus | null }
 
 async function bound(request: Request, syllabusId: string, sourceId: string | null, deps: DraftStartDeps): Promise<Bound | Response> {
   let syllabus: DetailSyllabus | null = null
@@ -95,9 +93,9 @@ async function bound(request: Request, syllabusId: string, sourceId: string | nu
   return { session, syllabus, source }
 }
 
-async function payloadWithin(tx: DraftStartTx, request: Request, session: LaravelSession, syllabusId: string, deps: DraftStartDeps): Promise<PhpRecord> {
+async function payloadWithin(tx: DraftStartTx, request: Request, session: AppSession, syllabusId: string, deps: DraftStartDeps): Promise<PhpRecord> {
   const current = await tx.detail.syllabus(syllabusId, session.user.id)
-  if (current === null) throw new Missing()
+  if (current === null) throw new Missing(MODELS.syllabus, syllabusId)
   return syllabusPayload(request, session, current, { bridge: deps.bridge, store: tx.detail, templates: tx.templateStore, logos: deps.logos, today: deps.today })
 }
 
@@ -107,23 +105,25 @@ async function run(original: Request, work: () => Promise<Response>): Promise<Re
   } catch (error) {
     if (error instanceof Rejected) return error.response
     if (error instanceof TemplateValidationError) return validationError(error.errors)
-    if (error instanceof NeedsLaravel || error instanceof Missing) throw new Forward(original)
-    throw error
+    if (error instanceof HttpFailure) return error.response
+    return reportedServerError(error)
   }
 }
 
-class Forward extends Error {
-  constructor(readonly request: Request) {
-    super("forward")
-  }
-}
-
-async function forwarding(deps: DraftStartDeps, work: () => Promise<Response>): Promise<Response> {
-  try {
-    return await work()
-  } catch (error) {
-    if (error instanceof Forward) return deps.bridge.forward(error.request)
-    throw error
+async function inheritPreviousPeriod(tx: DraftStartTx, template: SyllabusTemplate, syllabusId: string, subjectId: string, sourceId: string): Promise<void> {
+  const definition = template.definition
+  const setups = await profileTemplates({ template, definition, store: tx.templateStore }, subjectId)
+  const fields = (await tx.teacherFields(template.id)).filter((field) => teacherEditable({ id: field.id, responsible: field.responsible } as TemplateField, setups))
+  const contents = new Map(fields.map((field) => [field.id, field.content]))
+  const previous = await tx.values(sourceId, fields.map((field) => field.id))
+  await tx.deleteValues(syllabusId, previous.map((value) => value.fieldId))
+  for (const value of previous) {
+    const setup = setups[value.fieldId]
+    const document =
+      setup === undefined && !responseWithin(value.value)
+        ? fieldResponseNormalize(contents.get(value.fieldId), value.value, definition)
+        : fieldCarried(setup ?? contents.get(value.fieldId), value.value, definition)
+    await tx.insertValue(syllabusId, value.fieldId, document as PhpRecord)
   }
 }
 
@@ -133,28 +133,27 @@ export async function startDraft(request: Request, syllabusId: string, deps: Dra
   if (auth instanceof Response) return auth
   const { session, syllabus } = auth
   if (!mayStart(session, syllabus, deps.today())) return aborted(403)
-  return forwarding(deps, () =>
-    run(original, async () => {
+  return run(original, async () => {
       const payload = await deps.transaction(async (tx) => {
         const locked = await tx.lockSyllabus(syllabus.id)
-        if (locked === null) throw new Missing()
+        if (locked === null) throw new Missing(MODELS.syllabus, syllabus.id)
         if (locked.state !== "sin_iniciar") throw new Rejected(validationError({ syllabus: ["El borrador ya fue iniciado o no está editable."] }))
         const template = await tx.templateStore.template()
-        if (template === null) throw new NeedsLaravel()
-        if ((await tx.previousPeriodSource(locked.id, locked.subjectId, session.user.id, template.modifiedAt)) !== null) throw new NeedsLaravel()
+        if (template === null) throw new Missing(MODELS.template)
+        const sourceId = await tx.previousPeriodSource(locked.id, locked.subjectId, session.user.id, template.modifiedAt)
+        if (sourceId !== null) await inheritPreviousPeriod(tx, template, locked.id, locked.subjectId, sourceId)
         const now = deps.now()
         await tx.start(locked.id, now)
         return payloadWithin(tx, request, session, locked.id, deps)
       })
-      return laravelJson(phpShape({ message: "Borrador iniciado con la plantilla y los datos maestros fijados.", syllabus: payload }))
-    }),
-  )
+      return apiJson(phpShape({ message: "Borrador iniciado con la plantilla y los datos maestros fijados.", syllabus: payload }))
+    })
 }
 
 function conflict(request: Request, version: number): Response {
   return expectsJson(request)
-    ? laravelJson({ message: CONFLICT, code: "conflicto_version_borrador", version_bloqueo_actual: version }, 409)
-    : laravelJson({ message: CONFLICT }, 409)
+    ? apiJson({ message: CONFLICT, code: "conflicto_version_borrador", version_bloqueo_actual: version }, 409)
+    : apiJson({ message: CONFLICT }, 409)
 }
 
 export async function copySyllabusContent(request: Request, syllabusId: string, sourceId: string, deps: DraftStartDeps = defaultDraftStartDeps()): Promise<Response> {
@@ -166,25 +165,23 @@ export async function copySyllabusContent(request: Request, syllabusId: string, 
   const today = deps.today()
   const allowed = syllabus.state === "sin_iniciar" ? mayStart(session, syllabus, today) : mayEdit(session, syllabus, today)
   if (!allowed || !mayView(session, source)) return forbidden()
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
-  const input = toRuntime(await laravelInput(request)) as PhpArray
+  const input = toRuntime(await requestInput(request)) as PhpArray
   const errors = await validateInput(input, { version_bloqueo: ["required", "integer", { min: 0 }] }, { version_bloqueo: "versión de edición" })
   if (Object.keys(errors).length > 0) return validationError(errors)
   const lockVersion = phpIntCast(input.version_bloqueo)
-  return forwarding(deps, () =>
-    run(original, async () => {
+  return run(original, async () => {
       const payload = await deps.transaction(async (tx) => {
         const locked = await tx.lockSyllabus(syllabus.id)
-        if (locked === null) throw new Missing()
+        if (locked === null) throw new Missing(MODELS.syllabus, syllabus.id)
         const current = await tx.detail.syllabus(locked.id, session.user.id)
-        if (current === null) throw new Missing()
+        if (current === null) throw new Missing(MODELS.syllabus, locked.id)
         const sources = COPYABLE_STATES.includes(locked.state) ? await tx.detail.copySources(current, session.user.id) : []
         if (!sources.some((candidate) => candidate.id === source.id)) {
           throw new Rejected(validationError({ syllabus: ["Solo puede copiar desde otro paralelo suyo de la misma asignatura, y solo hacia un sílabo que aún no ha enviado."] }))
         }
         if (locked.version !== lockVersion) throw new Rejected(conflict(original, locked.version))
         const template = await tx.templateStore.template()
-        if (template === null || template.definition === null) throw new NeedsLaravel()
+        if (template === null) throw new Missing(MODELS.template)
         const definition = template.definition
         const setups = await profileTemplates({ template, definition, store: tx.templateStore }, locked.subjectId)
         const fields = (await tx.teacherFields(template.id)).filter(
@@ -202,7 +199,6 @@ export async function copySyllabusContent(request: Request, syllabusId: string, 
         await tx.copied(locked.id, version, now)
         return payloadWithin(tx, request, session, locked.id, deps)
       })
-      return laravelJson(phpShape({ message: `Contenido copiado desde el paralelo ${source.parallel}.`, syllabus: payload }))
-    }),
-  )
+      return apiJson(phpShape({ message: `Contenido copiado desde el paralelo ${source.parallel}.`, syllabus: payload }))
+    })
 }

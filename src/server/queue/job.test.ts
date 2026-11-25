@@ -35,7 +35,7 @@ describe("job options", () => {
     expect(platformSmokeJob.runsOnce).toBe(true)
     expect(options).toEqual({
       attempts: 3,
-      backoff: { type: "laravel" },
+      backoff: { type: "job-schedule" },
       jobId: "PlatformSmokeJob-smoke%3Aabc",
       removeOnComplete: true,
       removeOnFail: true,
@@ -46,7 +46,7 @@ describe("job options", () => {
   it("gives queued mail the worker defaults: general, 3 tries, no backoff, 60 s, not unique", () => {
     const options = jobOptions(sendMailJob, { mailable: "workflow", to: "a@example.test", data: { name: "a", title: "t", body: "b", url: "u" } })
     expect(sendMailJob.queue).toBe("general")
-    expect(options).toEqual({ attempts: 3, backoff: { type: "laravel" }, removeOnComplete: true, removeOnFail: true })
+    expect(options).toEqual({ attempts: 3, backoff: { type: "job-schedule" }, removeOnComplete: true, removeOnFail: true })
     expect(retryDelay(sendMailJob, 1, new Error("x"), 180)).toBe(0)
   })
 

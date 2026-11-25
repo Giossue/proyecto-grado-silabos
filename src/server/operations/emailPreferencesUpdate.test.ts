@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { createRateLimiter, type RateLimiter } from "../laravel/throttle"
+import { createRateLimiter, type RateLimiter } from "../http/throttle"
 import { updateEmailPreferences } from "./emailPreferences"
 
 const SESSION_ID = golden.sessionId
@@ -12,11 +12,10 @@ const PATH = "/api/v1/notifications/email-preferences"
 let world: FakeWorld
 let saved: [string, unknown][]
 let limiter: RateLimiter
-let forwarded: Request[]
 
 function deps() {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     limiter,
     preferences: {
       async save(userId: string, preferences: Record<string, unknown>) {
@@ -55,7 +54,6 @@ beforeEach(() => {
   }
   saved = []
   limiter = createRateLimiter()
-  forwarded = []
 })
 
 describe("PUT /api/v1/notifications/email-preferences", () => {
@@ -140,15 +138,14 @@ describe("PUT /api/v1/notifications/email-preferences", () => {
     expect(saved).toEqual([[golden.userId, { "silabo.aprobado": false }]])
   })
 
-  it("lets Laravel parse a body that is not JSON", async () => {
+  it("reads a form body like Laravel's request input", async () => {
     const request = new Request(`http://localhost:3000${PATH}`, {
       method: "PUT",
-      headers: { "content-type": "application/x-www-form-urlencoded", cookie, referer: "http://localhost:3000/" },
+      headers: { "content-type": "application/x-www-form-urlencoded", cookie, referer: "http://localhost:3000/", "x-csrf-token": golden.csrfToken },
       body: "preferences[silabo.aprobado]=0",
     })
     const response = await updateEmailPreferences(request, deps())
-    expect(response.status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    expect(response.status).toBe(200)
   })
 })
 

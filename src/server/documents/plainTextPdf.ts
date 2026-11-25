@@ -1,6 +1,7 @@
 import { isPhpArray, list, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
 import { isDocument, plainText, resolveDocument } from "../configuration/templateRuntime"
-import { historicalDocument, NeedsLaravel, snapshotDefinition } from "../syllabus/snapshotDocuments"
+import { historicalDocument, snapshotDefinition } from "../syllabus/snapshotDocuments"
+import { phpScalarString } from "./historicalFieldDocument"
 import { variablesOf, type DocumentRenderInput } from "./docx/syllabusWordDocument"
 
 const WRAP_WIDTH = 92
@@ -84,9 +85,12 @@ function stringOr(value: unknown, fallback: string): string {
 
 function scalarText(value: unknown): string {
   if (typeof value === "boolean") return value ? "1" : ""
-  if (typeof value === "number" && !Number.isInteger(value) && /e/i.test(String(value))) throw new NeedsLaravel()
-  if (typeof value === "number" && Math.abs(value) >= 1e15) throw new NeedsLaravel()
+  if (typeof value === "number") return phpScalarString(value)
   return String(value)
+}
+
+function jsonText(value: unknown): string {
+  return JSON.stringify(value).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029")
 }
 
 function display(value: unknown, emptyText: string, definition: ReturnType<typeof snapshotDefinition>): string {
@@ -97,8 +101,7 @@ function display(value: unknown, emptyText: string, definition: ReturnType<typeo
   if (!isPhpArray(value)) return "Contenido estructurado"
   return Object.entries(value)
     .map(([key, item]) => {
-      if (isPhpArray(item)) throw new NeedsLaravel()
-      const shown = item === null || item === undefined ? "—" : scalarText(item)
+      const shown = isPhpArray(item) ? jsonText(item) : item === null || item === undefined ? "—" : scalarText(item)
       return /^(0|-?[1-9]\d*)$/.test(key) ? shown : `${key.replace(/_/g, " ")}: ${shown}`
     })
     .join(" · ")
@@ -127,8 +130,7 @@ export function syllabusLines(input: DocumentRenderInput): string[] {
     for (const block of arrayList(section.blocks)) {
       lines.push(`  ${stringOr(block.title, "Bloque")}`)
       if (isPhpArray(block.document)) {
-        if (arrayList(block.fields).length > 0) throw new NeedsLaravel()
-        for (const paragraph of paragraphs(resolveDocument(record(block.document), variables, definition))) lines.push(textNodes(paragraph).join(""))
+        for (const paragraph of paragraphs(resolveDocument(record(block.document), variables, definition, arrayList(block.fields)))) lines.push(textNodes(paragraph).join(""))
         continue
       }
       for (const field of arrayList(block.fields)) {

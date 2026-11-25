@@ -1,5 +1,5 @@
-import { laravelJson } from "../laravel/responses"
-import { phpQuery, type PhpArray } from "../laravel/input"
+import { apiJson } from "../http/responses"
+import { requestInput, phpQuery, type PhpArray } from "../http/input"
 
 export type UploadedFile = { originalName: string; clientMimeType: string; bytes: Buffer }
 
@@ -19,13 +19,13 @@ export function phpIniBytes(value: string): number {
 }
 
 export function postMaxSize(env: Record<string, string | undefined> = process.env): number {
-  return phpIniBytes(env.LARAVEL_POST_MAX_SIZE ?? "32M")
+  return phpIniBytes(env.POST_MAX_SIZE ?? "32M")
 }
 
 export function postTooLarge(request: Request, max: number = postMaxSize()): Response | null {
   const length = request.headers.get("content-length")
   if (max <= 0 || length === null || !/^\d+$/.test(length.trim())) return null
-  return Number(length.trim()) > max ? laravelJson({ message: POST_TOO_LARGE_MESSAGE }, 413) : null
+  return Number(length.trim()) > max ? apiJson({ message: POST_TOO_LARGE_MESSAGE }, 413) : null
 }
 
 export function isMultipart(request: Request): boolean {
@@ -48,7 +48,7 @@ function isFile(value: FormDataEntryValue): value is File {
   return typeof value !== "string"
 }
 
-export async function laravelMultipart(request: Request): Promise<MultipartInput> {
+export async function multipartInput(request: Request): Promise<MultipartInput> {
   let form: FormData
   try {
     form = await request.formData()
@@ -71,6 +71,11 @@ export async function laravelMultipart(request: Request): Promise<MultipartInput
   for (const [key, value] of Object.entries(query)) if (!(key in input)) input[key] = value
   for (const name of Object.keys(files)) delete input[name]
   return { input, files }
+}
+
+export async function requestBody(request: Request): Promise<MultipartInput> {
+  if (isMultipart(request) && request.method === "POST") return multipartInput(request)
+  return { input: await requestInput(request), files: {} }
 }
 
 export function fileSizeKilobytes(file: UploadedFile): number {

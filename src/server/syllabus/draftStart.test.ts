@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeTemplateStore, fieldId, goldenFields, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import { fieldResponseNormalize } from "../configuration/templateRehearsal"
@@ -30,7 +30,6 @@ type ResponseBody = { message?: string; syllabus?: Record<string, unknown>; erro
 
 let root: string
 let world: FakeWorld
-let forwarded: Request[]
 let templates: FakeTemplateWorld
 let rows: Map<string, Row>
 let log: string[]
@@ -75,6 +74,7 @@ const detailStore = (): SyllabusDetailStore => ({
   teachers: async () => ["Ana Pérez"],
   values: async (id) => new Map(rows.get(id)?.values ?? []),
   hasArchivedValues: async () => false,
+  archivedFields: async () => null,
   revisions: async () => [],
   revisionSnapshot: async () => null,
   signedFacts: async () => ({ coordination: null, verification: null }),
@@ -136,7 +136,7 @@ function clone(source: Map<string, Row>): Map<string, Row> {
 }
 
 const deps = (): DraftStartDeps => ({
-  bridge: fakeDeps(world, forwarded),
+  bridge: fakeDeps(world),
   store: detailStore(),
   logos: { faculty: async () => null },
   today: () => "2026-11-23",
@@ -174,18 +174,17 @@ const fieldIndex = (key: string) => goldenFields.findIndex((field) => field.key 
 
 beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), "silabos-start-"))
-  process.env.LARAVEL_STORAGE_PATH = path.join(root, "storage", "app")
-  process.env.LARAVEL_PUBLIC_PATH = path.join(root, "public")
+  process.env.STORAGE_PATH = path.join(root, "storage", "app")
+  process.env.PUBLIC_ASSETS_PATH = path.join(root, "public")
 })
 
 afterAll(async () => {
-  delete process.env.LARAVEL_STORAGE_PATH
-  delete process.env.LARAVEL_PUBLIC_PATH
+  delete process.env.STORAGE_PATH
+  delete process.env.PUBLIC_ASSETS_PATH
   await rm(root, { recursive: true, force: true })
 })
 
 beforeEach(() => {
-  forwarded = []
   world = {
     sessions: new Map([[golden.sessionId, { payload: sessionPayload(loggedInAttributes()), lastActivity: NOW }]]),
     users: [makeUser()],
@@ -211,12 +210,18 @@ describe("POST teacher/syllabi/{syllabus}/start", () => {
     expect(modifiedAtSeen).toEqual(["2026-11-23 16:10:54.932237+00"])
   })
 
-  it("leaves the inheritance from the previous period to Laravel without writing anything", async () => {
+  it("inherits the teacher answers of the previous period, like StartDraft::inherit", async () => {
     previousSource = PREVIOUS
-    expect((await start()).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
-    expect(log).toEqual(["begin", `lock:${TARGET}`, "rollback"])
-    expect(rows.get(TARGET)!.state).toBe("sin_iniciar")
+    const techniques = fieldId(fieldIndex("tecnicas_ensenanza"))
+    const answer = goldenFields[fieldIndex("tecnicas_ensenanza")].stored
+    rows.set(PREVIOUS, row({ id: PREVIOUS, state: "aprobado", values: new Map<string, unknown>([[techniques, answer]]) }))
+    const inherited = [techniques]
+    const response = await start()
+    expect(response.status).toBe(200)
+    expect(log).toEqual(["begin", `lock:${TARGET}`, "delete", ...inherited.map((id) => `insert:${id}`), "start", "commit"])
+    expect(rows.get(TARGET)!.state).toBe("borrador")
+    expect([...rows.get(TARGET)!.values.keys()]).toEqual(inherited)
+    expect(rows.get(TARGET)!.values.get(techniques)).toEqual(fieldResponseNormalize(goldenFields[fieldIndex("tecnicas_ensenanza")].content, answer, definition()))
   })
 
   it("refuses a draft that another session already started", async () => {
@@ -250,7 +255,6 @@ describe("POST teacher/syllabi/{syllabus}/start", () => {
   it("leaves unknown syllabi and malformed ids to Laravel", async () => {
     expect(await start("50000000-0000-4000-8000-0000000000ff")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "50000000-0000-4000-8000-0000000000ff") })
     expect(await start("abc")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "abc") })
-    expect(forwarded).toHaveLength(0)
   })
 })
 
@@ -323,12 +327,11 @@ describe("POST teacher/syllabi/{syllabus}/copy-from/{source}", () => {
     expect(rows.get(TARGET)!.values.has(bibliography)).toBe(true)
   })
 
-  it("leaves forms, unknown syllabi and an undefined template to Laravel", async () => {
-    expect((await copy("version_bloqueo=2", TARGET, SOURCE, { "content-type": "application/x-www-form-urlencoded" })).status).toBe(299)
+  it("reads form bodies like JSON, answers Laravel's 404 for unknown syllabi and copies with the official definition when none is stored", async () => {
+    expect((await copy("version_bloqueo=2", TARGET, SOURCE, { "content-type": "application/x-www-form-urlencoded" })).status).toBe(200)
     expect(await copy({ version_bloqueo: 2 }, TARGET, "50000000-0000-4000-8000-0000000000ff")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "50000000-0000-4000-8000-0000000000ff") })
-    templates.template = { ...goldenTemplate(), definition: null }
-    expect((await copy({ version_bloqueo: 2 })).status).toBe(299)
-    expect(forwarded).toHaveLength(2)
+    templates.template = null
+    expect(await copy({ version_bloqueo: 3 })).toMatchObject({ status: 404 })
   })
 })
 

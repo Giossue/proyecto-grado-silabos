@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sílabos UEB
 
-## Getting Started
+Next.js app (App Router, React 19) that serves both the web interface and the `/api/v1` API of the syllabus system. It uses PostgreSQL through Drizzle, Redis for queues (BullMQ), rate limits, locks and the two-factor replay guard, and Gotenberg to turn Word documents into PDF.
 
-First, run the development server:
+## Requirements
+
+- Node.js 24 and npm
+- PostgreSQL 17 with the `silabos_ueb` database
+- Redis 7
+- Gotenberg 8 (optional: without it the PDF is the plain-text version)
+
+## Configuration
+
+Copy `.env.example` to `.env.local` and fill it in. The main variables:
+
+| Variable | Purpose |
+|---|---|
+| `APP_KEY` | Key that encrypts the session cookie and the session payload (`base64:` + 32 bytes). Keep the same value to keep users logged in. |
+| `APP_NAME` | Name shown in mails and 2FA apps; its slug names the session cookie unless `SESSION_COOKIE` is set. |
+| `DATABASE_URL` | PostgreSQL connection string. |
+| `REDIS_URL`, `REDIS_PREFIX` | Redis connection and key prefix. |
+| `GOTENBERG_URL` | Gotenberg address for PDF conversion. |
+| `SESSION_LIFETIME` | Session lifetime in minutes (240 today). |
+| `STATEFUL_DOMAINS` | Hosts (with port) whose requests use the session cookie. |
+| `STORAGE_PATH` | Root of the stored files (`private/` and `public/`). It must point at the same folder the database records refer to. |
+| `PUBLIC_ASSETS_PATH` | Folder with the default logos; `assets/` by default. |
+| `QUEUE_MAX_TIME` | Seconds before the worker exits; `0` keeps it running. |
+| `MAIL_*` | Mail transport (`log` writes mails to the log). |
+| `AI_*`, `CATALOG_DRIVER`, `KOHA_BASE_URL` | Template assistant and library catalog. |
+
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+npm run dev       # http://localhost:3000
+npm run worker    # queues: critica, documentos, ia, general
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Production:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm run start     # or: NEXT_OUTPUT=standalone npx next build && node .next/standalone/server.js
+npm run worker
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Database migrations
 
-## Learn More
+Drizzle owns the schema. `src/db/drizzle/schema.ts` and the baseline `src/db/drizzle/0000_legal_edwin_jarvis.sql` come from `drizzle-kit pull` on the current database; the baseline is commented out, so applying it changes nothing and only records it as applied.
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run db:check      # migration history is consistent
+npm run db:generate   # write a migration after changing schema.ts
+npm run db:migrate    # apply pending migrations (the first run records the baseline in drizzle.__drizzle_migrations)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`src/db/pending/drop_audit_events.sql` drops the `eventos_auditoria` table. It is not part of the migration history on purpose: the original system still writes to that table. When it is safe, remove `eventosAuditoria` from `schema.ts`, run `npx drizzle-kit generate --custom --name drop_audit_events`, paste that SQL into the new file and run `npm run db:migrate`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tests
 
-## Deploy on Vercel
+```bash
+npm run typecheck
+npm run lint
+npm test              # Vitest
+npm run test:e2e      # Playwright against next start on port 3200 and the worker
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The E2E suite needs `E2E_PASSWORD` and `E2E_P12_PASSWORD`, and the `.p12` signatures in `tests/e2e/.firmas` (or `E2E_SIGNATURES_DIR`). Redis-backed unit tests use database 15 of `REDIS_URL` or `REDIS_TEST_URL`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Docker
+
+`compose.yaml` starts the web app, the worker, PostgreSQL, Redis and Gotenberg:
+
+```bash
+cp .env.example .env   # set APP_KEY and POSTGRES_PASSWORD at least
+docker compose up --build
+```
+
+A new PostgreSQL volume starts empty: put a dump of `silabos_ueb` (`*.sql` or `*.sql.gz`) in `docker/postgres-init/` before the first start, then run `npm run db:migrate`. Stored files live in the `storage` volume (`STORAGE_PATH=/data/storage`).

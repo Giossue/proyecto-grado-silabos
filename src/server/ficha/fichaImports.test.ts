@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
 import JSZip from "jszip"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { freeTextFromText } from "../configuration/freeText"
 import type { PhpRecord } from "../configuration/phpValues"
@@ -9,7 +9,7 @@ import { profileTemplates } from "../configuration/subjectProfileFields"
 import { teacherEditable, templateFields } from "../configuration/templatePresentation"
 import { keepOwnOptions, normalizeFieldDocument, plainText, responseTemplate, TemplateValidationError } from "../configuration/templateRuntime"
 import { fakeTemplateStore, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
-import { createRateLimiter } from "../laravel/throttle"
+import { createRateLimiter } from "../http/throttle"
 import { GenerationRejected } from "../syllabus/inProgressWork"
 import { applyFichaImport, fichaTemplate, previewFichaImport, type FichaApplyTx, type FichaImportDeps } from "./fichaImports"
 

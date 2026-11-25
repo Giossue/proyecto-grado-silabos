@@ -1,7 +1,7 @@
-import golden from "../laravel/__fixtures__/laravel-golden.json"
-import { cookiePrefix } from "../laravel/cookies"
-import { decrypt, encrypt, parseAppKey } from "../laravel/encrypter"
-import { hashPasswordForCookie, loginSessionKey } from "../laravel/sessionGuard"
+import golden from "../http/__fixtures__/laravel-golden.json"
+import { cookiePrefix } from "../http/cookies"
+import { decrypt, encrypt, parseAppKey } from "../http/encrypter"
+import { hashPasswordForCookie, loginSessionKey, recallerCookieName } from "../http/sessionGuard"
 import type { BridgeConfig, BridgeDeps, RoleAssignmentRecord, SessionRecord, SessionStore, SessionUser } from "./types"
 
 export const testKey = parseAppKey(golden.appKey)
@@ -17,6 +17,10 @@ export const testConfig: BridgeConfig = {
 
 export function sessionCookie(sessionId: string): string {
   return encrypt(cookiePrefix(golden.cookieName, testKey) + sessionId, testKey, false)
+}
+
+export function recallerCookie(value: string): string {
+  return encrypt(cookiePrefix(recallerCookieName(), testKey) + value, testKey, false)
 }
 
 export function xsrfHeader(token: string): string {
@@ -94,15 +98,11 @@ export function fakeStore(world: FakeWorld): SessionStore {
   }
 }
 
-export function fakeDeps(world: FakeWorld, forwarded: Request[] = []): BridgeDeps {
+export function fakeDeps(world: FakeWorld): BridgeDeps {
   return {
     store: fakeStore(world),
     config: testConfig,
     now: () => NOW,
-    forward: async (request) => {
-      forwarded.push(request)
-      return new Response("from-laravel", { status: 299 })
-    },
   }
 }
 

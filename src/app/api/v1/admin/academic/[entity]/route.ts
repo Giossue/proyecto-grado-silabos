@@ -1,6 +1,6 @@
 import { academicGovernance } from "@/server/academic/governance"
 import { createGovernanceRecord } from "@/server/academic/governanceWrites"
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 
 type Context = { params: Promise<{ entity: string }> }
 
@@ -14,4 +14,4 @@ export async function POST(request: Request, context: Context): Promise<Response
   return createGovernanceRecord(request, entity)
 }
 
-export { laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as PUT, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as DELETE, unmatchedRouteHandler as OPTIONS }

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, makeAssignment, loggedInAttributes, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeTemplateStore, fieldId, goldenFields, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import type { AcademicStructureRepository, CareerLock, CareerRecord } from "./structure"
@@ -19,7 +19,6 @@ const MODALITIES =
 const SHIFTS = '[{"value":"matutina","label":"Matutina"},{"value":"vespertina","label":"Vespertina"},{"value":"nocturna","label":"Nocturna"}]'
 
 let world: FakeWorld
-let forwarded: Request[]
 let careers: Map<string, CareerRecord>
 let lock: CareerLock | null
 let parallels: CareerParallelRecord[]
@@ -44,7 +43,7 @@ const academic = (): AcademicStructureRepository => ({
 })
 
 const deps = (): ScheduledSubjectsDeps => ({
-  bridge: fakeDeps(world, forwarded),
+  bridge: fakeDeps(world),
   academic: academic(),
   templates: fakeTemplateStore(templates),
   scheduled: {
@@ -74,7 +73,6 @@ beforeEach(() => {
     assignments: [],
   }
   asRole("coordinador")
-  forwarded = []
   careers = new Map([[CAREER, { id: CAREER, name: "Software", modality: "Presencial", cycleCount: 4 }]])
   lock = null
   parallels = []
@@ -131,12 +129,11 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
     expect(body.options.activeSubjects[0]).toMatchObject({ profile_complete: true, profile_filled: 0, profile_total: 0 })
   })
 
-  it("a template whose definition is empty is left to Laravel", async () => {
-    templates.template = { ...goldenTemplate(), definition: null }
+  it("lists the subjects without template progress when the institution has no template", async () => {
+    templates.template = null
     subjects = [subject({})]
 
-    expect((await get()).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    expect((await get()).status).toBe(200)
   })
 
   it("only the coordinator of an active career may list it", async () => {

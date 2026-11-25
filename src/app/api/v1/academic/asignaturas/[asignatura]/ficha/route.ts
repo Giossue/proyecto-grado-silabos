@@ -1,6 +1,6 @@
 import { showSubjectProfile } from "@/server/configuration/subjectProfile"
 import { updateSubjectProfile } from "@/server/configuration/subjectProfileWrites"
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 
 type Context = { params: Promise<{ asignatura: string }> }
 
@@ -14,4 +14,4 @@ export async function PUT(request: Request, context: Context): Promise<Response>
   return updateSubjectProfile(request, asignatura)
 }
 
-export { laravelRouterHandler as POST, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as POST, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as DELETE, unmatchedRouteHandler as OPTIONS }

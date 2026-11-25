@@ -8,11 +8,11 @@ export class UnknownDisk extends Error {}
 export class PathTraversal extends Error {}
 
 export function storagePath(): string {
-  return path.resolve(/*turbopackIgnore: true*/ process.env.LARAVEL_STORAGE_PATH ?? path.join(/*turbopackIgnore: true*/ process.cwd(), "..", "backend", "storage", "app"))
+  return path.resolve(/*turbopackIgnore: true*/ process.env.STORAGE_PATH ?? path.join(/*turbopackIgnore: true*/ process.cwd(), "storage"))
 }
 
 export function publicPath(relative: string): string {
-  const root = path.resolve(/*turbopackIgnore: true*/ process.env.LARAVEL_PUBLIC_PATH ?? path.join(/*turbopackIgnore: true*/ storagePath(), "..", "..", "public"))
+  const root = path.resolve(/*turbopackIgnore: true*/ process.env.PUBLIC_ASSETS_PATH ?? path.join(/*turbopackIgnore: true*/ process.cwd(), "assets"))
   return path.join(/*turbopackIgnore: true*/ root, relative)
 }
 

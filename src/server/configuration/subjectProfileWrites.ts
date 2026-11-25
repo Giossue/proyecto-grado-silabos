@@ -1,21 +1,22 @@
 import "server-only"
+import { MODELS } from "../http/models"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { LaravelSession } from "../auth/types"
-import { isJsonRequest, laravelInput, type PhpArray } from "../laravel/input"
-import { laravelHttpError, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
-import { laravelBoolean } from "../syllabus/inProgressWork"
+import type { AppSession } from "../auth/types"
+import { requestInput, type PhpArray } from "../http/input"
+import { jsonError, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
+import { requestBoolean } from "../syllabus/inProgressWork"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { isPhpArray, phpEquals, type PhpRecord } from "./phpValues"
 import { keepsUsedOptions, USED_OPTION_REMOVED, usedOptions } from "./responseConditions"
-import { defaultSubjectProfileDeps, mayManageSubjectProfile, profileContext, subjectProfileResponse, type SubjectProfileDeps } from "./subjectProfile"
+import { defaultSubjectProfileDeps, mayManageSubjectProfile, type SubjectProfileDeps, subjectProfileResponse, writableProfileContext } from "./subjectProfile"
 import { profileFields } from "./subjectProfileFields"
 import { createSubjectProfileWriteDeps } from "./subjectProfileWriteStore"
 import { toRuntime } from "./templateDraft"
 import { templateFields } from "./templatePresentation"
 import { careerResponse, fieldConditions, normalizeFieldDocument, responseTemplate, TemplateValidationError } from "./templateRuntime"
 import type { TemplateStore } from "./templateStore"
-import { laravelRouter, routeAllows } from "../laravel/router"
+import { unmatchedRoute, modelNotFound, routeAllows } from "../http/router"
 
 export interface SubjectProfileTx {
   store: TemplateStore
@@ -41,13 +42,12 @@ function rejectWith(errors: Record<string, string[]>): never {
   throw new Rejected(validationError(errors))
 }
 
-async function saveValues(tx: SubjectProfileTx, session: LaravelSession, subjectId: string, values: PhpArray, deps: SubjectProfileWriteDeps): Promise<void> {
+async function saveValues(tx: SubjectProfileTx, session: AppSession, subjectId: string, values: PhpArray, deps: SubjectProfileWriteDeps): Promise<void> {
   const locked = await tx.lockSubject(subjectId)
-  if (locked === null) throw new Missing()
-  if (!(await mayManageSubjectProfile(session, locked.careerId, deps.careerActive))) throw new Rejected(laravelHttpError(403, ""))
+  if (locked === null) throw new Missing(MODELS.subject)
+  if (!(await mayManageSubjectProfile(session, locked.careerId, deps.careerActive))) throw new Rejected(jsonError(403, ""))
   if (await tx.careerLocked(locked.careerId)) rejectWith({ process: [CONVOCATION_LOCK] })
-  const context = await profileContext(tx.store)
-  if (context === null) throw new Missing()
+  const context = await writableProfileContext(tx.store)
   const allowed = new Map(profileFields(context).map((field) => [field.id, field]))
   const used = usedOptions(
     fieldConditions(context.definition),
@@ -56,7 +56,7 @@ async function saveValues(tx: SubjectProfileTx, session: LaravelSession, subject
   const fieldIds = Object.keys(values)
   for (const fieldId of fieldIds) {
     const field = allowed.get(fieldId)
-    if (field === undefined) throw new Missing()
+    if (field === undefined) throw new Missing(MODELS.field, fieldId)
     const raw = toRuntime(values[fieldId])
     const document = isPhpArray(raw) ? careerResponse(field.content, raw, context.definition, `values.${fieldId}`) : null
     if (document !== null && used.size > 0 && !keepsUsedOptions(document, used)) rejectWith({ [`values.${fieldId}`]: [USED_OPTION_REMOVED] })
@@ -70,8 +70,7 @@ async function saveValues(tx: SubjectProfileTx, session: LaravelSession, subject
 
 export async function updateSubjectProfile(request: Request, subjectId: string, deps: SubjectProfileWriteDeps = defaultSubjectProfileWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (!routeAllows(request)) return laravelRouter(request)
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
+  if (!routeAllows(request)) return unmatchedRoute(request)
   let careerId: string | null = null
   const session = await requireSession(
     request.clone(),
@@ -80,29 +79,28 @@ export async function updateSubjectProfile(request: Request, subjectId: string, 
       activeRole: "required",
       afterAuthentication: async () => {
         careerId = await deps.subjectCareer(subjectId)
-        return careerId === null ? deps.bridge.forward(original.clone()) : null
+        return careerId === null ? modelNotFound(MODELS.subject, subjectId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (careerId === null) return deps.bridge.forward(original)
-  const input = await laravelInput(request)
+  if (careerId === null) return modelNotFound(MODELS.subject, subjectId)
+  const input = await requestInput(request)
   const errors = await validateInput(
     input,
     { values: ["present", "array"], "values.*": ["nullable", "array"] },
     { values: "datos del proyecto de carrera", "values.*": "dato del proyecto de carrera" },
   )
   if (Object.keys(errors).length > 0) return validationError(errors)
-  const context = await profileContext(deps.store)
-  if (context === null) return deps.bridge.forward(original)
+  const context = await writableProfileContext(deps.store)
   const allowed = new Set(profileFields(context).map((field) => field.id))
   const values = input.values as PhpArray
   if (Object.keys(values).some((fieldId) => !allowed.has(fieldId))) return validationError({ values: [FIELD_GONE] })
   const career: string = careerId
   return settle(original, deps, async () => {
     try {
-      await deps.transaction((tx) => tx.keepContent(laravelBoolean(input.confirm_purge), career, [subjectId], () => saveValues(tx, session, subjectId, values, deps)))
+      await deps.transaction((tx) => tx.keepContent(requestBoolean(input.confirm_purge), career, [subjectId], () => saveValues(tx, session, subjectId, values, deps)))
     } catch (error) {
       if (error instanceof TemplateValidationError) return validationError(error.errors)
       throw error

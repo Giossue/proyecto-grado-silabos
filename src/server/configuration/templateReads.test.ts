@@ -1,8 +1,9 @@
 // @vitest-environment node
+import { officialDefinition } from "./officialTemplate"
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import { IDENTIFICATION_SAMPLE } from "./templatePresentation"
 import { fakeTemplateStore, goldenSample, goldenTemplate, goldenFields, TEMPLATE_ID, type FakeTemplateWorld } from "./testing"
 import { exportTemplateJson, teacherPreview, type TemplateReadDeps } from "./templateReads"
@@ -17,9 +18,8 @@ const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
-let forwarded: Request[]
 
-const deps = (): TemplateReadDeps => ({ bridge: fakeDeps(world, forwarded), store: fakeTemplateStore(templates) })
+const deps = (): TemplateReadDeps => ({ bridge: fakeDeps(world), store: fakeTemplateStore(templates) })
 
 const preview = (id = TEMPLATE_ID, withCookie = true) =>
   teacherPreview(apiRequest(`/api/v1/admin/template/${id}/teacher-preview`, withCookie ? { cookie } : {}), id, deps())
@@ -59,7 +59,6 @@ beforeEach(() => {
   }
   asRole("administrador")
   templates = { template: goldenTemplate(), values: [] }
-  forwarded = []
 })
 
 describe("GET admin/template/{template}/teacher-preview", () => {
@@ -85,12 +84,11 @@ describe("GET admin/template/{template}/teacher-preview", () => {
     expect(await read(await preview(TEMPLATE_ID, false))).toEqual({ status: 401, text: '{"message":"Unauthenticated."}' })
   })
 
-  it("leaves an unknown template, a malformed id or a template without definition to Laravel", async () => {
+  it("answers Laravel's model 404 for an unknown template or a malformed id and previews a stored template without definition with the official one", async () => {
     expect(await read(await preview("01a1c5ba-10b4-7129-925f-000000000000"))).toEqual({ status: 404, text: modelNotFound("SyllabusTemplate", "01a1c5ba-10b4-7129-925f-000000000000") })
     expect(await read(await preview("plantilla"))).toEqual({ status: 404, text: modelNotFound("SyllabusTemplate", "plantilla") })
-    templates.template = { ...goldenTemplate(), definition: null }
-    expect((await preview()).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    templates.template = { ...goldenTemplate(), definition: officialDefinition() }
+    expect((await preview()).status).toBe(200)
   })
 })
 

@@ -1,4 +1,4 @@
-import { laravelRouter, laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRoute, unmatchedRouteHandler } from "@/server/http/router"
 import { closeProcess } from "@/server/syllabus/processClosing"
 import { pauseProcess } from "@/server/syllabus/processes"
 import { resumeProcess } from "@/server/syllabus/processWrites"
@@ -10,7 +10,7 @@ export async function POST(request: Request, context: Context): Promise<Response
   if (transition === "pausar") return pauseProcess(request, process)
   if (transition === "reanudar") return resumeProcess(request, process)
   if (transition === "cerrar") return closeProcess(request, process)
-  return laravelRouter(request)
+  return unmatchedRoute(request)
 }
 
-export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as GET, unmatchedRouteHandler as HEAD, unmatchedRouteHandler as PUT, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as DELETE, unmatchedRouteHandler as OPTIONS }

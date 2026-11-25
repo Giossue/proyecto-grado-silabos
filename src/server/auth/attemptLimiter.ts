@@ -70,9 +70,9 @@ export function createMemoryAttemptLimiter(now: () => number): AttemptLimiter {
   }
 }
 
-const globalForAttempts = globalThis as unknown as { laravelAttemptLimiter?: AttemptLimiter }
+const globalForAttempts = globalThis as unknown as { sharedAttempts?: AttemptLimiter }
 
 export function sharedAttemptLimiter(): AttemptLimiter {
-  globalForAttempts.laravelAttemptLimiter ??= createRedisAttemptLimiter(sharedRedis(), `${redisPrefix()}limiter:`, () => Math.floor(Date.now() / 1000))
-  return globalForAttempts.laravelAttemptLimiter
+  globalForAttempts.sharedAttempts ??= createRedisAttemptLimiter(sharedRedis(), `${redisPrefix()}limiter:`, () => Math.floor(Date.now() / 1000))
+  return globalForAttempts.sharedAttempts
 }

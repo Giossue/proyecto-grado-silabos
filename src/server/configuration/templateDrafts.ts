@@ -1,8 +1,8 @@
 import "server-only"
 import { defaultBridgeDeps } from "../auth/requireSession"
-import { isJsonRequest, laravelInput } from "../laravel/input"
-import { laravelJson, validationError } from "../laravel/responses"
-import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
+import { requestInput } from "../http/input"
+import { apiJson, validationError } from "../http/responses"
+import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
 import { phpShape, type PhpRecord } from "./phpValues"
 import { DraftRequest, draftProblems, prepareDraft, toRuntime, validatedSections } from "./templateDraft"
 import { boundTemplate, FORBIDDEN, managesTemplates, type TemplateReadDeps } from "./templateReads"
@@ -10,7 +10,7 @@ import { PREVIEW_UNAVAILABLE, rehearseImpact, rehearsePreview, type RehearsalSto
 import { createRehearsalStore } from "./templateRehearsalStore"
 import { TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import { createTemplateStore } from "./templateStore"
-import type { LaravelSession } from "../auth/types"
+import type { AppSession } from "../auth/types"
 import type { SyllabusTemplate } from "./templatePresentation"
 
 export type TemplateDraftDeps = TemplateReadDeps & { rehearsal: RehearsalStore; limiter: RateLimiter }
@@ -19,7 +19,7 @@ export function defaultTemplateDraftDeps(): TemplateDraftDeps {
   return { bridge: defaultBridgeDeps(), store: createTemplateStore(), rehearsal: createRehearsalStore(), limiter: sharedRateLimiter() }
 }
 
-type Draft = { session: LaravelSession; template: SyllabusTemplate; definition: TemplateDefinition; input: PhpRecord }
+type Draft = { session: AppSession; template: SyllabusTemplate; definition: TemplateDefinition; input: PhpRecord }
 
 async function draftOf(
   request: Request,
@@ -27,14 +27,12 @@ async function draftOf(
   deps: TemplateDraftDeps,
   beforeBinding?: Parameters<typeof boundTemplate>[3],
 ): Promise<Draft | Response> {
-  if (!isJsonRequest(request)) return deps.bridge.forward(request)
   const original = request.clone()
-  const input = toRuntime(await laravelInput(request)) as PhpRecord
+  const input = toRuntime(await requestInput(request)) as PhpRecord
   const bound = await boundTemplate(original, templateId, deps, beforeBinding)
   if (bound instanceof Response) return bound
   const definition = bound.template.definition
-  if (definition === null) return deps.bridge.forward(original)
-  if (!managesTemplates(bound.session)) return laravelJson({ message: FORBIDDEN }, 403)
+  if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
   return { ...bound, definition, input }
 }
 
@@ -46,7 +44,7 @@ export async function checkTemplateDraft(request: Request, templateId: string, d
     return gate.hit()
   })
   if (draft instanceof Response) return finish(draft)
-  return finish(laravelJson({ problems: await draftProblems(draft.input, draft.definition) }))
+  return finish(apiJson({ problems: await draftProblems(draft.input, draft.definition) }))
 }
 
 async function validDraft(request: Request, templateId: string, deps: TemplateDraftDeps): Promise<(Draft & { request: DraftRequest }) | Response> {
@@ -74,7 +72,7 @@ export async function previewTemplateDraft(request: Request, templateId: string,
     const sections = validatedSections(draft.request.input)
     const preview = await rehearsePreview(deps.rehearsal, draft.template.id, sections, draft.request.definition())
     if (preview === null) return validationError({ draft: [PREVIEW_UNAVAILABLE] })
-    return laravelJson(phpShape(preview))
+    return apiJson(phpShape(preview))
   })
 }
 
@@ -83,6 +81,6 @@ export async function templateDraftImpact(request: Request, templateId: string, 
   if (draft instanceof Response) return draft
   return rendered(async () => {
     const sections = validatedSections(draft.request.input)
-    return laravelJson(await rehearseImpact(deps.rehearsal, draft.template.id, sections, draft.request.definition()))
+    return apiJson(await rehearseImpact(deps.rehearsal, draft.template.id, sections, draft.request.definition()))
   })
 }

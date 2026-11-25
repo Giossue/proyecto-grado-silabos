@@ -5,10 +5,10 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import JSZip from "jszip"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { createRateLimiter } from "../laravel/throttle"
-import { createStorageWriter, type StorageWriter } from "../laravel/storageWriter"
+import { createRateLimiter } from "../http/throttle"
+import { createStorageWriter, type StorageWriter } from "../http/storageWriter"
 import { failSupportDocumentView, prepareSupportDocumentView, type SupportDocumentViewDeps, type SupportDocumentViewStore } from "./supportDocumentView"
 import {
   destroySupportDocument,
@@ -300,9 +300,10 @@ describe("POST /api/v1/coordination/support-documents", () => {
     expect(dispatched).toHaveLength(2)
   })
 
-  it("forwards uploads that carry the CSRF token in the body to Laravel", async () => {
+  it("checks the CSRF token carried in the body like VerifyCsrfToken", async () => {
     asRole("coordinador")
-    expect((await storeSupportDocument(upload("Con token", { name: "a.pdf", content: PDF }, { _token: "x" }), deps())).status).toBe(299)
+    expect((await storeSupportDocument(upload("Con token", { name: "a.pdf", content: PDF }, { _token: "x" }), deps())).status).toBe(419)
+    expect((await storeSupportDocument(upload("Con token", { name: "a.pdf", content: PDF }, { _token: golden.csrfToken }), deps())).status).toBe(201)
   })
 })
 
@@ -323,10 +324,13 @@ describe("DELETE /api/v1/coordination/support-documents/{document}", () => {
     expect(await storage.exists("private", path.posix.dirname(paths[0]))).toBe(false)
   })
 
-  it("forwards unknown or malformed documents to Laravel", async () => {
+  it("answers the router 404 for a malformed id and Laravel's model 404 for an unknown document", async () => {
     asRole("coordinador")
     expect((await destroySupportDocument(request("DELETE", "/api/v1/coordination/support-documents/x"), "x", deps())).status).toBe(404)
     const missing = "01a1c5bc-79ca-7331-8f0f-000000000000"
-    expect((await destroySupportDocument(request("DELETE", `/api/v1/coordination/support-documents/${missing}`), missing, deps())).status).toBe(299)
+    expect(await read(await destroySupportDocument(request("DELETE", `/api/v1/coordination/support-documents/${missing}`), missing, deps()))).toEqual({
+      status: 404,
+      text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\SupportDocument] 01a1c5bc-79ca-7331-8f0f-000000000000"\n}',
+    })
   })
 })

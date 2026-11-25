@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import { fakeTemplateStore, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import { createProcess, pauseProcess, processImpact, syllabusProcesses, type ProcessDeps, type ProcessRow } from "./processes"
 
@@ -17,7 +17,6 @@ const PERIOD = "e0000000-0000-4000-8000-000000000002"
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
-let forwarded: Request[]
 let rows: ProcessRow[]
 let lockedState: string | null
 let log: string[]
@@ -45,7 +44,7 @@ const process = (overrides: Partial<ProcessRow> = {}): ProcessRow => ({
 
 function deps(): ProcessDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     templates: fakeTemplateStore(templates),
     today: () => today,
     now: () => NOW,
@@ -108,7 +107,6 @@ beforeEach(() => {
     assignments: [makeAssignment({ role: "administrador", careerId: null })],
   }
   templates = { template: goldenTemplate(), values: [] }
-  forwarded = []
   rows = [process(), process({ id: CLOSED, state: "cerrado", period: "2026-1", startsOn: "2026-04-01", dueOn: "2026-05-01", periodEndsOn: "2026-08-30", extensions: 1, convocationsCount: 0 })]
   lockedState = "abierto"
   log = []
@@ -327,21 +325,25 @@ describe("POST /api/v1/admin/processes", () => {
     expect(log.filter((entry) => entry === "rollback")).toHaveLength(2)
   })
 
-  it("leaves free-form dates, a non-UUID period, forms and an undefined template to Laravel", async () => {
-    expect((await store(payload({ starts_at: "mañana" }))).status).toBe(299)
-    expect((await store(payload({ due_at: "2026-02-30" }))).status).toBe(299)
-    expect((await store(payload({ due_at: 20261130 }))).status).toBe(299)
-    expect((await store(payload({ period_id: "abc" }))).status).toBe(299)
+  it("reads dates like ProcessDates and the date rule, and validates forms and malformed periods natively", async () => {
+    expect(await store(payload({ starts_at: "mañana" }))).toMatchObject({ status: 422, text: expect.stringContaining("El campo fecha de inicio debe ser una fecha v\\u00e1lida.") })
+    expect(await store(payload({ period_id: "abc" }))).toMatchObject({ status: 422, text: expect.stringContaining("periodo acad\\u00e9mico debe ser un UUID") })
     const form = await createProcess(
       new Request(apiRequest("/api/v1/admin/processes", { cookie, method: "POST", headers: { "x-csrf-token": golden.csrfToken, "content-type": "application/x-www-form-urlencoded" } }), {
         body: "period_id=x",
       }),
       deps(),
     )
-    expect(form.status).toBe(299)
-    templates.template = { ...officialTemplate(), definition: null }
-    expect((await store(payload())).status).toBe(299)
-    expect(forwarded).toHaveLength(6)
+    expect(form.status).toBe(422)
     expect(created).toEqual([])
+    expect((await store(payload({ starts_at: "2026/11/24", due_at: "2026-11-30 12:00" }))).status).toBe(201)
+    expect(created.at(-1)).toEqual({ periodId: PERIOD, startsAt: "2026-11-24T05:00:00+00:00", dueAt: "2026-12-01T04:59:59+00:00" })
+  })
+
+  it("rolls an impossible plain day over like Carbon, and refuses without an institutional template", async () => {
+    expect((await store(payload({ due_at: "2026-11-31" }))).status).toBe(201)
+    expect(created.at(-1)?.dueAt).toBe("2026-12-02T04:59:59+00:00")
+    templates.template = null
+    expect(await store(payload())).toMatchObject({ status: 422, text: expect.stringContaining("La plantilla institucional est\\u00e1 vac\\u00eda.") })
   })
 })

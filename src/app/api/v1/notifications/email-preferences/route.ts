@@ -1,4 +1,4 @@
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 import { showEmailPreferences, updateEmailPreferences } from "@/server/operations/emailPreferences"
 
 export function GET(request: Request): Promise<Response> {
@@ -9,4 +9,4 @@ export function PUT(request: Request): Promise<Response> {
   return updateEmailPreferences(request)
 }
 
-export { laravelRouterHandler as POST, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as POST, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as DELETE, unmatchedRouteHandler as OPTIONS }

@@ -1,8 +1,9 @@
 import "server-only"
+import { HttpFailure } from "../http/failures"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { aborted, laravelJson, validationError } from "../laravel/responses"
+import { aborted, apiJson, validationError } from "../http/responses"
 import { createLogoStore, presentationLogos, type LogoStore } from "../configuration/institutionalLogos"
 import { isPhpArray, list, phpShape, record, type PhpRecord } from "../configuration/phpValues"
 import { templatePresentationOf } from "../configuration/templatePresentation"
@@ -12,11 +13,11 @@ import { authorizeListing, type LibraryReviewRepository } from "../library/revie
 import { isoFromSeconds } from "./draftField"
 import { dataGet } from "./identificationCard"
 import { convocationAllowsDecisions, decisionBlock, mayReview } from "./policy"
-import { NeedsLaravel, presentSnapshot, signingStatement, snapshotDefinition, type SignatureRecord } from "./snapshotDocuments"
+import { presentSnapshot, signingStatement, snapshotDefinition, type SignatureRecord } from "./snapshotDocuments"
 import { signatureSummary, type DetailSyllabus, type ReviewComment } from "./syllabusDetail"
 import { createReviewDetailStore } from "./reviewDetailQueries"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type ReviewRevision = { id: string; syllabusId: string; number: number; submittedAt: number; submittedBy: string; fingerprint: string }
 
@@ -68,7 +69,7 @@ function revisionStage(entry: HistoryEntry | undefined): string | null {
   return entry?.library?.verifiedAt ? COORDINATION : LIBRARY
 }
 
-function stageForRole(session: LaravelSession): string | null {
+function stageForRole(session: AppSession): string | null {
   const role = session.activeRole?.role
   return role === "bibliotecario" ? LIBRARY : role === "coordinador" ? COORDINATION : null
 }
@@ -119,9 +120,9 @@ async function bindRevision(request: Request, revisionId: string, deps: ReviewDe
 
 async function respond(request: Request, deps: ReviewDetailDeps, build: () => Promise<PhpRecord>): Promise<Response> {
   try {
-    return laravelJson(phpShape(await build()))
+    return apiJson(phpShape(await build()))
   } catch (error) {
-    if (error instanceof NeedsLaravel) return deps.bridge.forward(request)
+    if (error instanceof HttpFailure) return error.response
     if (error instanceof TemplateValidationError) return validationError(error.errors)
     throw error
   }

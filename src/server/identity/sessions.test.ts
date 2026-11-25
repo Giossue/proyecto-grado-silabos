@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { activeSessions, type SessionRow } from "./sessions"
 
@@ -23,7 +23,7 @@ const store = {
 }
 
 function deps() {
-  const bridge = fakeDeps(world, [])
+  const bridge = fakeDeps(world)
   const touch = bridge.store.touchSession
   bridge.store = {
     ...bridge.store,

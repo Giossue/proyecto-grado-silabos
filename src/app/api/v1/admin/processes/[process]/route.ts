@@ -1,4 +1,4 @@
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 import { deleteProcess } from "@/server/syllabus/processWrites"
 
 type Context = { params: Promise<{ process: string }> }
@@ -8,4 +8,4 @@ export async function DELETE(request: Request, context: Context): Promise<Respon
   return deleteProcess(request, process)
 }
 
-export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as GET, unmatchedRouteHandler as HEAD, unmatchedRouteHandler as POST, unmatchedRouteHandler as PUT, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as OPTIONS }

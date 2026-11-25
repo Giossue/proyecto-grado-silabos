@@ -2,18 +2,18 @@ import "server-only"
 import path from "node:path"
 import { fromController } from "../auth/controllerResponse"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession, SessionUser } from "../auth/types"
+import type { BridgeDeps, AppSession, SessionUser } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { laravelRoot } from "../laravel/request"
-import { laravelJson, validationError } from "../laravel/responses"
+import { requestRoot } from "../http/request"
+import { apiJson, validationError } from "../http/responses"
 import { list, phpCount, phpShape, record, type PhpRecord } from "./phpValues"
 import { documentLines } from "./documentHtml"
 import { fieldConditions, fieldLimits, limitAllowed, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import { IDENTIFICATION_SAMPLE, syllabusSectionPayload, type SyllabusTemplate } from "./templatePresentation"
 import { createTemplateStore, type TemplateStore } from "./templateStore"
 import { binaryFileResponse } from "../files/binaryFileResponse"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export const FORBIDDEN = "No tiene permiso para hacer esto."
 
@@ -23,7 +23,7 @@ export function defaultTemplateReadDeps(): TemplateReadDeps {
   return { bridge: defaultBridgeDeps(), store: createTemplateStore() }
 }
 
-export function managesTemplates(session: LaravelSession): boolean {
+export function managesTemplates(session: AppSession): boolean {
   return session.user.active && session.activeRole?.role === "administrador"
 }
 
@@ -32,7 +32,7 @@ export async function boundTemplate(
   templateId: string,
   deps: TemplateReadDeps,
   beforeBinding: (user: SessionUser) => Promise<Response | null> | Response | null = () => null,
-): Promise<{ session: LaravelSession; template: SyllabusTemplate } | Response> {
+): Promise<{ session: AppSession; template: SyllabusTemplate } | Response> {
   let template: SyllabusTemplate | null = null
   const session = await requireSession(
     request,
@@ -57,12 +57,11 @@ export async function boundTemplate(
 export async function teacherPreview(request: Request, templateId: string, deps: TemplateReadDeps = defaultTemplateReadDeps()): Promise<Response> {
   const bound = await boundTemplate(request, templateId, deps)
   if (bound instanceof Response) return bound
-  if (!managesTemplates(bound.session)) return laravelJson({ message: FORBIDDEN }, 403)
+  if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
   const { template } = bound
-  if (template.definition === null) return deps.bridge.forward(request)
   const definition = template.definition
   try {
-    return laravelJson(
+    return apiJson(
       phpShape({
         sections: template.sections.map((section) =>
           syllabusSectionPayload(section, (field) => field.content, { identification: IDENTIFICATION_SAMPLE }, definition),
@@ -78,7 +77,7 @@ export async function teacherPreview(request: Request, templateId: string, deps:
 const EXPORT_FORMAT_VERSION = 2
 
 function schemaUrl(request: Request): string {
-  return `${laravelRoot(request)}/plantilla.schema.json`
+  return `${requestRoot(request)}/plantilla.schema.json`
 }
 
 export async function templateSchema(request: Request): Promise<Response> {
@@ -100,11 +99,10 @@ function exportedBlock(block: PhpRecord): PhpRecord {
 export async function exportTemplateJson(request: Request, templateId: string, deps: TemplateReadDeps = defaultTemplateReadDeps()): Promise<Response> {
   const bound = await boundTemplate(request, templateId, deps)
   if (bound instanceof Response) return bound
-  if (!managesTemplates(bound.session)) return laravelJson({ message: FORBIDDEN }, 403)
+  if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
   const { template } = bound
   const definition = template.definition
-  if (definition === null) return deps.bridge.forward(request)
-  return laravelJson(phpShape(templateExport(request, template, definition)))
+  return apiJson(phpShape(templateExport(request, template, definition)))
 }
 
 export function templateExport(request: Request, template: SyllabusTemplate, definition: TemplateDefinition): PhpRecord {

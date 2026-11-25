@@ -1,24 +1,27 @@
 import "server-only"
+import { archivedSections } from "../documents/syllabusSnapshot"
+import { failModelNotFound, HttpFailure } from "../http/failures"
+import type { ArchivedField } from "./syllabusDetailQueries"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { aborted, laravelJson, validationError } from "../laravel/responses"
+import { aborted, apiJson, validationError } from "../http/responses"
 import { createLogoStore, presentationLogos, type LogoStore } from "../configuration/institutionalLogos"
 import { isPhpArray, list, phpShape, phpString, record, type PhpRecord } from "../configuration/phpValues"
 import { profileTemplates } from "../configuration/subjectProfileFields"
 import { presentDefinition, resolveVariables, syllabusSectionPayload, templatePresentationOf, type TemplateField } from "../configuration/templatePresentation"
-import { INSTITUTIONAL, responsesEnabled, responseTemplate, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
+import { CAREER, INSTITUTIONAL, responsesEnabled, responseTemplate, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
 import { createTemplateStore, type TemplateStore } from "../configuration/templateStore"
 import { institutionToday } from "../dashboard/dashboardQueries"
 import type { DraftSyllabus } from "./draftField"
 import { isoFromSeconds } from "./draftField"
 import { dataGet, identificationOf, type IdentificationSource } from "./identificationCard"
 import { isRunning, mayEdit, mayStart, mayView } from "./policy"
-import { NeedsLaravel, presentSnapshot, signedDocumentVariables, snapshotDefinition, type SignatureRecord, type SignedFacts } from "./snapshotDocuments"
+import { presentSnapshot, signedDocumentVariables, snapshotDefinition, type SignatureRecord, type SignedFacts } from "./snapshotDocuments"
 import { convocationName } from "./syllabusSql"
 import { createSyllabusDetailStore } from "./syllabusDetailQueries"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type DetailSyllabus = DraftSyllabus & {
   convocationId: string
@@ -53,6 +56,7 @@ export interface SyllabusDetailStore {
   teachers(id: string): Promise<string[]>
   values(id: string): Promise<Map<string, unknown>>
   hasArchivedValues(id: string): Promise<boolean>
+  archivedFields(id: string): Promise<ArchivedField[] | null>
   revisions(id: string): Promise<DetailRevision[]>
   revisionSnapshot(revisionId: string): Promise<unknown>
   signedFacts(syllabusId: string, revision: DetailRevision): Promise<Pick<SignedFacts, "coordination" | "verification">>
@@ -90,7 +94,7 @@ function formationRequired(definition: TemplateDefinition): boolean {
   return Object.values(definition.variables).some((variable) => variable.source === "identification.formation")
 }
 
-function editability(session: LaravelSession, syllabus: DetailSyllabus, today: string) {
+function editability(session: AppSession, syllabus: DetailSyllabus, today: string) {
   const allowed = syllabus.state === "sin_iniciar" ? mayStart(session, syllabus, today) : mayEdit(session, syllabus, today)
   if (allowed) return { allowed, fields: { editable: true, edit_block_reason: null, edit_blocked_by_convocation: false } }
   const editableState = ["sin_iniciar", "borrador", "correccion_solicitada"].includes(syllabus.state)
@@ -132,12 +136,12 @@ async function readOnlyForm(sections: unknown, definition: TemplateDefinition, c
 
 export async function syllabusPayload(
   request: Request,
-  session: LaravelSession,
+  session: AppSession,
   syllabus: DetailSyllabus,
   deps: SyllabusDetailDeps,
 ): Promise<PhpRecord> {
   const template = await deps.templates.template()
-  if (template === null || template.definition === null) throw new NeedsLaravel()
+  if (template === null) failModelNotFound(MODELS.template)
   const current = template.definition
   const revisions = (await deps.store.revisions(syllabus.id)).sort((left, right) => left.number - right.number)
   const latest = latestRevision(revisions)
@@ -154,9 +158,23 @@ export async function syllabusPayload(
   const unsentForm = snapshot !== null && !REVIEWED_STATES.includes(syllabus.state)
   let frozen = snapshot === null ? null : presentSnapshot(snapshot)
   if (unsentForm && frozen !== null) frozen = { ...frozen, sections: await readOnlyForm(frozen.sections, current, (ids) => deps.store.fieldContents(ids)) }
-  if (frozen === null && (await deps.store.hasArchivedValues(syllabus.id))) throw new NeedsLaravel()
+  const archived = frozen === null ? await deps.store.archivedFields(syllabus.id) : null
+  const archivedView =
+    archived === null
+      ? null
+      : presentSnapshot({ sections: archivedSections(archived, current), identification, template_definition: current })
+  if (archivedView !== null) {
+    archivedView.sections = list(archivedView.sections).map((section) => ({
+      ...record(section),
+      fields: list(record(section).fields).map((field) => ({
+        ...record(field),
+        teacher_editable: ["docente", CAREER].includes(String(record(field).quien_llena)),
+        required: record(field).quien_llena !== "institucional",
+      })),
+    }))
+  }
   const definition = snapshot !== null ? snapshotDefinition(snapshot) : current
-  const setups = frozen === null ? await profileTemplates({ template, definition: current, store: deps.templates }, syllabus.subjectId) : {}
+  const setups = frozen === null && archivedView === null ? await profileTemplates({ template, definition: current, store: deps.templates }, syllabus.subjectId) : {}
   const variables = frozen !== null && frozen.template_variables !== undefined && frozen.template_variables !== null ? frozen.template_variables : resolveVariables(current, { identification })
   const editable = editability(session, syllabus, deps.today())
   const values = frozen === null ? await deps.store.values(syllabus.id) : new Map<string, unknown>()
@@ -180,7 +198,12 @@ export async function syllabusPayload(
     presentation: templatePresentationOf(definition, await presentationLogos(request, dataGet(syllabus.context, "career.faculty_id"), deps.logos)),
     template_variables: variables,
     definition: presentDefinition(definition),
-    sections: frozen !== null && frozen.sections !== undefined && frozen.sections !== null ? frozen.sections : template.sections.map((section) => syllabusSectionPayload(section, stored, { identification }, current, setups)),
+    sections:
+      frozen !== null && frozen.sections !== undefined && frozen.sections !== null
+        ? frozen.sections
+        : archivedView !== null && archivedView.sections !== undefined && archivedView.sections !== null
+          ? archivedView.sections
+          : template.sections.map((section) => syllabusSectionPayload(section, stored, { identification }, current, setups)),
     revisions: revisions.map((item) => ({
       id: item.id,
       number: item.number,
@@ -215,9 +238,9 @@ export async function teacherSyllabusDetail(request: Request, syllabusId: string
   if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
   if (!mayView(session, syllabus)) return aborted(403)
   try {
-    return laravelJson(phpShape({ syllabus: await syllabusPayload(request, session, syllabus, deps) }))
+    return apiJson(phpShape({ syllabus: await syllabusPayload(request, session, syllabus, deps) }))
   } catch (error) {
-    if (error instanceof NeedsLaravel) return deps.bridge.forward(request)
+    if (error instanceof HttpFailure) return error.response
     if (error instanceof TemplateValidationError) return validationError(error.errors)
     throw error
   }

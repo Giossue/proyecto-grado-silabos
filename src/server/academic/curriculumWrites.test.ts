@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { GenerationRejected } from "../syllabus/inProgressWork"
 import {
@@ -28,7 +28,6 @@ type Subject = { id: string; code: string; name: string; cycle: number | null; p
 type Requirement = { id: string; subjectId: string; requirementId: string; type: string }
 
 let world: FakeWorld
-let forwarded: Request[]
 let log: string[]
 let subjects: Subject[]
 let requirements: Requirement[]
@@ -37,7 +36,7 @@ let finalized: boolean
 
 function deps(): CurriculumDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     careerActive: async (id) => id === CAREER,
     async transaction(work) {
       log.push("begin")
@@ -119,7 +118,6 @@ beforeEach(() => {
     users: [makeUser()],
     assignments: [makeAssignment({ role: "coordinador", careerId: CAREER })],
   }
-  forwarded = []
   log = []
   locked = false
   finalized = false
@@ -148,11 +146,11 @@ describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/configurat
     expect((await configure({ cycle_count: 31 })).json?.errors).toEqual({ cycle_count: ["El campo cantidad de ciclos no debe ser mayor que 30."] })
   })
 
-  it("refuses while a convocation is open, leaves another curriculum to Laravel and is forbidden for a teacher", async () => {
+  it("refuses while a convocation is open, answers Laravel's model 404 for another curriculum and is forbidden for a teacher", async () => {
     locked = true
     expect((await configure({ cycle_count: 5 })).json?.errors).toEqual({ process: ["Convocatoria activa"] })
     locked = false
-    expect((await configure({ cycle_count: 5 }, "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9")).status).toBe(299)
+    expect(await configure({ cycle_count: 5 }, "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9")).toMatchObject({ status: 404, text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Career] 01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"\n}' })
     expect(await configure({ cycle_count: 5 }, "abc")).toMatchObject({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/curriculum/abc/configuration could not be found."\n}' })
     world.assignments = [makeAssignment({ role: "coordinador", careerId: OTHER_CAREER })]
     expect((await configure({ cycle_count: 5 })).text).toBe(FORBIDDEN)
@@ -221,8 +219,8 @@ describe("DELETE /api/v1/coordination/academic/curriculum/{curriculum}/requireme
     expect(log).toEqual(["begin", `guard:false:${CAREER}`, `delete-requirement:${REQUIREMENT}`, `sync:false:${CAREER}`, "commit"])
   })
 
-  it("leaves an unknown relation to Laravel and reads the confirmation from the query", async () => {
-    expect((await unrelate("01a2cccc-0000-7000-8000-000000000001")).status).toBe(299)
+  it("answers Laravel's model 404 for an unknown relation and reads the confirmation from the query", async () => {
+    expect(await unrelate("01a2cccc-0000-7000-8000-000000000001")).toMatchObject({ status: 404, text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\SubjectRequirement] 01a2cccc-0000-7000-8000-000000000001"\n}' })
     finalized = true
     const confirmed = await deleteSubjectRequirement(
       new Request(apiRequest(`${base(CAREER)}/requirements/${REQUIREMENT}?confirm_purge=1`, { cookie, method: "DELETE", headers: { "x-csrf-token": golden.csrfToken } })),
@@ -250,7 +248,7 @@ describe("DELETE /api/v1/coordination/academic/curriculum/{curriculum}/subjects/
     expect((await removeSubject(OOP)).json?.errors).toEqual({
       subject: ["No se puede eliminar «Programación»: tiene 3 paralelos. Estos son registros de otros procesos, no las relaciones de la malla. Archívela para conservar el historial."],
     })
-    expect((await removeSubject("01a2cccc-0000-7000-8000-000000000001")).status).toBe(299)
+    expect(await removeSubject("01a2cccc-0000-7000-8000-000000000001")).toMatchObject({ status: 404, text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a2cccc-0000-7000-8000-000000000001"\n}' })
   })
 })
 

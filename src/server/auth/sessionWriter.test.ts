@@ -1,12 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import golden from "./__fixtures__/session-golden.json"
-import { decrypt } from "../laravel/encrypter"
-import { cookiePrefix } from "../laravel/cookies"
+import { decrypt } from "../http/encrypter"
+import { cookiePrefix } from "../http/cookies"
 import {
   clientIp,
   invalidateSession,
-  laravelRandom,
+  sessionRandom,
   regenerateSession,
   saveSession,
   sessionCookie,
@@ -103,7 +103,7 @@ describe("session cookies, against Symfony's Cookie", () => {
 
 describe("session lifecycle", () => {
   it("draws 40-character alphanumeric ids like Str::random", () => {
-    for (let i = 0; i < 50; i += 1) expect(laravelRandom(40)).toMatch(/^[A-Za-z0-9]{40}$/)
+    for (let i = 0; i < 50; i += 1) expect(sessionRandom(40)).toMatch(/^[A-Za-z0-9]{40}$/)
   })
 
   it("starts a new session with a token when there is no cookie, and keeps a well-formed unknown id like Laravel", async () => {

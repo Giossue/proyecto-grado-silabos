@@ -1,10 +1,11 @@
 import "server-only"
+import { HttpFailure } from "../http/failures"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
-import { laravelJson } from "../laravel/responses"
+import type { BridgeDeps, AppSession } from "../auth/types"
+import { apiJson } from "../http/responses"
 import { createTemplateStore, type TemplateStore } from "../configuration/templateStore"
 import { createDashboardRepository, institutionToday } from "./dashboardQueries"
-import { administratorMetrics, administratorSetup, coordinatorReadiness, coordinatorSetup, SetupNeedsLaravel, type SetupRepository } from "./setupChecklist"
+import { administratorMetrics, administratorSetup, coordinatorReadiness, coordinatorSetup, type SetupRepository } from "./setupChecklist"
 import { createSetupRepository } from "./setupQueries"
 
 export type ProcessRecord = {
@@ -77,7 +78,7 @@ async function careerDeadline(careerId: string | null, deps: DashboardDeps, toda
   return { ...deadlinePayload(process, convocation, today), career_pending: convocation === null || convocation.state === CONVOCATION_PREPARATION }
 }
 
-async function teacherDeadline(session: LaravelSession, deps: DashboardDeps, today: string): Promise<Deadline | null> {
+async function teacherDeadline(session: AppSession, deps: DashboardDeps, today: string): Promise<Deadline | null> {
   const careerId = session.activeRole?.careerId ?? null
   const syllabi = await deps.dashboard.teacherOpenSyllabi(session.user.id, careerId)
   const [nearest] = [...syllabi].sort((left, right) => left.dueAt - right.dueAt)
@@ -141,7 +142,7 @@ export async function dashboardDeadline(request: Request, deps: DashboardDeps = 
       deadline = await administratorPause(deps, today)
       break
   }
-  return laravelJson({ deadline })
+  return apiJson({ deadline })
 }
 
 async function administratorDashboard(deps: DashboardDeps, today: string): Promise<Record<string, unknown>> {
@@ -188,14 +189,14 @@ export async function dashboardIndex(request: Request, deps: DashboardDeps = def
   const today = deps.today()
   if (role === "administrador" || role === "coordinador") {
     try {
-      return laravelJson(role === "administrador" ? await administratorDashboard(deps, today) : await coordinatorDashboard(session.activeRole?.careerId ?? null, deps, today))
+      return apiJson(role === "administrador" ? await administratorDashboard(deps, today) : await coordinatorDashboard(session.activeRole?.careerId ?? null, deps, today))
     } catch (error) {
-      if (error instanceof SetupNeedsLaravel) return deps.bridge.forward(request)
+      if (error instanceof HttpFailure) return error.response
       throw error
     }
   }
-  if (role !== "docente" && role !== "bibliotecario") return deps.bridge.forward(request)
-  return laravelJson({
+  if (role !== "docente" && role !== "bibliotecario") return apiJson({ metrics: [], setup: null, deadline: null, coordination_convocation: null })
+  return apiJson({
     metrics: role === "bibliotecario" ? await libraryMetrics(deps) : [],
     setup: null,
     deadline: role === "bibliotecario" ? await libraryDeadline(deps, today) : await teacherDeadline(session, deps, today),

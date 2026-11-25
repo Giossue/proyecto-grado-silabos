@@ -1,12 +1,14 @@
 import "server-only"
+import { HttpFailure, Missing } from "../http/failures"
+import { MODELS } from "../http/models"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
-import { laravelJson, validationError } from "../laravel/responses"
+import type { BridgeDeps, AppSession } from "../auth/types"
+import { apiJson, serverError, validationError } from "../http/responses"
 import { forbidden, isUuid } from "./structure"
 import { findActiveCareer } from "./structureQueries"
-import { laravelRouter, routeAllows } from "../laravel/router"
+import { unmatchedRoute, routeAllows } from "../http/router"
 
 export interface DeletionTx {
   lockPeriod(id: string): Promise<{ id: string; code: string } | null>
@@ -27,8 +29,6 @@ export interface AcademicDeletionStore {
 }
 
 export type AcademicDeletionDeps = { bridge: BridgeDeps; store: AcademicDeletionStore }
-
-class RecordNotFound extends Error {}
 
 class Rejected extends Error {
   constructor(readonly response: Response) {
@@ -114,14 +114,14 @@ async function inTransaction(request: Request, deps: AcademicDeletionDeps, work:
   try {
     await deps.store.transaction(work)
   } catch (error) {
-    if (error instanceof RecordNotFound) return deps.bridge.forward(request)
+    if (error instanceof HttpFailure) return error.response
     if (error instanceof Rejected) return error.response
     throw error
   }
-  return laravelJson({ message })
+  return apiJson({ message })
 }
 
-async function careerSession(request: Request, deps: AcademicDeletionDeps): Promise<{ session: LaravelSession; careerId: string } | Response> {
+async function careerSession(request: Request, deps: AcademicDeletionDeps): Promise<{ session: AppSession; careerId: string } | Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   const role = session.activeRole
@@ -138,15 +138,15 @@ export async function deleteGovernanceRecord(
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!session.user.active || session.activeRole?.role !== "administrador") return forbidden()
-  if (entity !== "periodo") return laravelJson({ message: "Este registro no se elimina: desactívelo." }, 403)
-  if (!isUuid(recordId)) return deps.bridge.forward(request)
+  if (entity !== "periodo") return apiJson({ message: "Este registro no se elimina: desactívelo." }, 403)
+  if (!isUuid(recordId)) return serverError()
 
   return inTransaction(
     request,
     deps,
     async (tx) => {
       const period = await tx.lockPeriod(recordId)
-      if (period === null) throw new RecordNotFound()
+      if (period === null) throw new Missing(MODELS.period, recordId)
       if (await tx.periodHasProcess(period.id)) rejectWith("Este período ya tiene una convocatoria con su historial, por eso no se puede eliminar.")
       await tx.deletePeriod(period.id)
     },
@@ -160,7 +160,7 @@ export async function deleteCareerRecord(
   recordId: string,
   deps: AcademicDeletionDeps = defaultDeps(),
 ): Promise<Response> {
-  if (entity !== "asignacion_docente" || !routeAllows(request)) return laravelRouter(request)
+  if (entity !== "asignacion_docente" || !routeAllows(request)) return unmatchedRoute(request)
   const context = await careerSession(request, deps)
   if (context instanceof Response) return context
 
@@ -169,7 +169,7 @@ export async function deleteCareerRecord(
     deps,
     async (tx) => {
       const assignment = await tx.lockTeacherAssignment(recordId, context.careerId)
-      if (assignment === null) throw new RecordNotFound()
+      if (assignment === null) throw new Missing(MODELS.teacherAssignment, recordId)
       await tx.deleteTeacherAssignment(assignment.id)
     },
     "Registro académico eliminado.",
@@ -177,7 +177,7 @@ export async function deleteCareerRecord(
 }
 
 export async function deleteParallel(request: Request, parallelId: string, deps: AcademicDeletionDeps = defaultDeps()): Promise<Response> {
-  if (!routeAllows(request)) return laravelRouter(request)
+  if (!routeAllows(request)) return unmatchedRoute(request)
   const context = await careerSession(request, deps)
   if (context instanceof Response) return context
 
@@ -186,7 +186,7 @@ export async function deleteParallel(request: Request, parallelId: string, deps:
     deps,
     async (tx) => {
       const parallel = await tx.lockParallel(parallelId, context.careerId)
-      if (parallel === null) throw new RecordNotFound()
+      if (parallel === null) throw new Missing(MODELS.parallel)
       if (await tx.parallelHasTeacherAssignment(parallel.id)) rejectWith("El paralelo tiene un docente asignado. Quite primero la asignación docente.")
       if (await tx.parallelHasTouchedSyllabus(parallel.id)) rejectWith("El paralelo ya tiene sílabo y no puede eliminarse.")
       await tx.deleteParallelSyllabi(parallel.id)

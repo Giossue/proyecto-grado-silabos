@@ -1,4 +1,4 @@
-import { laravelRouter } from "./router"
+import { unmatchedRoute } from "./router"
 
 type Handler = (request: Request, context: { params: Promise<Record<string, string>> }) => Promise<Response>
 
@@ -15,5 +15,5 @@ export function nativeMethods(module: Record<string, unknown>, served: string[],
 export async function routerComparison(module: Record<string, unknown>, method: string, path: string, params: Record<string, string> = {}) {
   const request = () => new Request(`http://localhost:3000${path}`, { method, body: BODILESS.includes(method) ? undefined : "{}" })
   const handler = module[method] as Handler
-  return { next: await shape(await handler(request(), { params: Promise.resolve(params) })), laravel: await shape(laravelRouter(request())) }
+  return { next: await shape(await handler(request(), { params: Promise.resolve(params) })), unmatched: await shape(unmatchedRoute(request())) }
 }

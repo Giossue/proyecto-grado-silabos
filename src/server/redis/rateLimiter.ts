@@ -1,6 +1,6 @@
 import "server-only"
 import type { Redis } from "ioredis"
-import type { RateLimitAttempt, RateLimiter } from "../laravel/throttle"
+import type { RateLimitAttempt, RateLimiter } from "../http/throttle"
 
 const ATTEMPT_SCRIPT = `local attempts = tonumber(redis.call("get", KEYS[1]) or "0")
 if attempts >= tonumber(ARGV[1]) then

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import { laravelFullUrl } from "./request"
+import { requestFullUrl } from "./request"
 
 const golden: Record<string, string> = {
   "/logos/institucion": "http://localhost:3000/logos/institucion",
@@ -18,12 +18,21 @@ const golden: Record<string, string> = {
   "/x?a=!'()*": "http://localhost:3000/x?a=%21%27%28%29%2A",
 }
 
-describe("laravelFullUrl", () => {
+describe("requestFullUrl", () => {
   it.each(Object.entries(golden))("writes %s like Request::fullUrl()", (path, expected) => {
-    expect(laravelFullUrl(new Request(`http://localhost:3000${path}`))).toBe(expected)
+    expect(requestFullUrl(new Request(`http://localhost:3000${path}`))).toBe(expected)
   })
 
-  it.each(["/x?a[]=1", "/x?a.b=1", "/x?1=2", "/x?%61=1", "/x?=1"])("gives up on %s, whose keys PHP rewrites", (path) => {
-    expect(laravelFullUrl(new Request(`http://localhost:3000${path}`))).toBeNull()
+  it.each([
+    ["/x?a[]=1", "http://localhost:3000/x?a%5B0%5D=1"],
+    ["/x?a.b=1", "http://localhost:3000/x?a.b=1"],
+    ["/x?1=2", "http://localhost:3000/x?1=2"],
+    ["/x?%61=1", "http://localhost:3000/x?a=1"],
+    ["/x?=1", "http://localhost:3000/x"],
+    ["/x?b[k]=2&a=1&b[]=3", "http://localhost:3000/x?a=1&b%5Bk%5D=2&b%5B0%5D=3"],
+    ["/x?10=a&9=b&c=d", "http://localhost:3000/x?9=b&10=a&c=d"],
+    ["/x?a=1&a[x]=2", "http://localhost:3000/x?a%5Bx%5D=2"],
+  ])("normalizes %s like Symfony's normalizeQueryString", (path, expected) => {
+    expect(requestFullUrl(new Request(`http://localhost:3000${path}`))).toBe(expected)
   })
 })

@@ -1,11 +1,11 @@
-import { laravelFallback } from "@/server/laravel/proxy"
+import { unmatchedRouteHandler } from "@/server/http/router"
 
 export {
-  laravelFallback as GET,
-  laravelFallback as HEAD,
-  laravelFallback as POST,
-  laravelFallback as PUT,
-  laravelFallback as PATCH,
-  laravelFallback as DELETE,
-  laravelFallback as OPTIONS,
+  unmatchedRouteHandler as GET,
+  unmatchedRouteHandler as HEAD,
+  unmatchedRouteHandler as POST,
+  unmatchedRouteHandler as PUT,
+  unmatchedRouteHandler as PATCH,
+  unmatchedRouteHandler as DELETE,
+  unmatchedRouteHandler as OPTIONS,
 }

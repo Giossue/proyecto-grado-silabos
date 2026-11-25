@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { goldenTemplate } from "../configuration/testing"
 import type { LibraryReviewRepository } from "../library/reviews"
@@ -23,7 +23,6 @@ const COORDINATOR = "90000000-0000-4000-8000-000000000001"
 
 let root: string
 let world: FakeWorld
-let forwarded: Request[]
 let syllabus: DetailSyllabus
 let revisions: ReviewRevision[]
 let history: HistoryEntry[]
@@ -64,7 +63,7 @@ const libraryReviews = (): LibraryReviewRepository => ({
   existing: async () => 0,
 })
 
-const deps = () => ({ bridge: fakeDeps(world, forwarded), store: store(), libraryReviews: libraryReviews(), logos: { faculty: async () => null } })
+const deps = () => ({ bridge: fakeDeps(world), store: store(), libraryReviews: libraryReviews(), logos: { faculty: async () => null } })
 
 const entry = (overrides: Partial<HistoryEntry> = {}): HistoryEntry => ({
   id: FIRST,
@@ -99,18 +98,17 @@ const library = (id = FIRST, query = "") => call(libraryReviewDetail, `/api/v1/l
 
 beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), "silabos-reviews-"))
-  process.env.LARAVEL_STORAGE_PATH = path.join(root, "storage", "app")
-  process.env.LARAVEL_PUBLIC_PATH = path.join(root, "public")
+  process.env.STORAGE_PATH = path.join(root, "storage", "app")
+  process.env.PUBLIC_ASSETS_PATH = path.join(root, "public")
 })
 
 afterAll(async () => {
-  delete process.env.LARAVEL_STORAGE_PATH
-  delete process.env.LARAVEL_PUBLIC_PATH
+  delete process.env.STORAGE_PATH
+  delete process.env.PUBLIC_ASSETS_PATH
   await rm(root, { recursive: true, force: true })
 })
 
 beforeEach(() => {
-  forwarded = []
   world = {
     sessions: new Map([[golden.sessionId, { id: golden.sessionId, userId: golden.userId, payload: sessionPayload(loggedInAttributes()), lastActivity: NOW }]]),
     users: [makeUser()],

@@ -1,6 +1,6 @@
 import "server-only"
 import { sql } from "drizzle-orm"
-import { uuid7 } from "../laravel/uuid7"
+import { uuid7 } from "../http/uuid7"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 import type { SignatureTx } from "./signDecision"
 

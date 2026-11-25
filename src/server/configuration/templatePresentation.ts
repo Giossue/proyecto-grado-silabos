@@ -15,7 +15,7 @@ import {
 export type TemplateField = { id: string; blockId: string; key: string; label: string; responsible: string; content: unknown }
 export type TemplateBlock = { id: string; key: string; title: string; position: number; fields: TemplateField[] }
 export type TemplateSection = { id: string; key: string; title: string; orientation: string; position: number; blocks: TemplateBlock[] }
-export type SyllabusTemplate = { id: string; modifiedAt: string | null; definition: TemplateDefinition | null; sections: TemplateSection[] }
+export type SyllabusTemplate = { id: string; modifiedAt: string | null; definition: TemplateDefinition; sections: TemplateSection[] }
 
 const SIGNATURE_LABELS: Record<string, string> = {
   docente: "Firma del docente",

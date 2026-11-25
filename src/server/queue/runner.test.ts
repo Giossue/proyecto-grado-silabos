@@ -5,7 +5,7 @@ import { defineJob, JobTimeoutError } from "./job"
 import { runJob } from "./runner"
 
 const PREFIX = "t11a-test:runner:"
-const OVERLAP_KEY = `${PREFIX}laravel-queue-overlap:Export:e-1`
+const OVERLAP_KEY = `${PREFIX}queue-overlap:Export:e-1`
 const context = { attempt: 1, jobId: "1" }
 
 function gate() {

@@ -1,12 +1,12 @@
 import { createRedis, redisPrefix, redisUrl } from "../redis/connection"
-import { QUEUE_NAMES, queuePrefix, retryAfterSeconds } from "./config"
+import { maxRunSeconds, QUEUE_NAMES, queuePrefix, retryAfterSeconds } from "./config"
 import { registeredJobs } from "./registry"
 import { createWorkers } from "./workers"
 
 const retryAfter = retryAfterSeconds()
 const redis = createRedis({ maxRetriesPerRequest: null })
 const workers = createWorkers({ jobs: registeredJobs, connectionUrl: redisUrl(), prefix: queuePrefix(), lockPrefix: redisPrefix(), redis, retryAfter })
-const maxTime = Number.parseInt(process.env.QUEUE_MAX_TIME ?? "3600", 10)
+const maxTime = maxRunSeconds()
 
 console.info(JSON.stringify({ message: "worker-started", queues: QUEUE_NAMES, jobs: registeredJobs.map((job) => job.name), retryAfter }))
 

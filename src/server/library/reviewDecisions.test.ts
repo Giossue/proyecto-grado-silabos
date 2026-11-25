@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
 import type { SignatureRow } from "../signatures/signDecision"
@@ -25,7 +25,6 @@ const PAUSED = "La convocatoria de la carrera está en pausa: las revisiones se 
 const CLOSED = "La convocatoria está cerrada: la revisión queda solo para consulta y no admite decisiones."
 
 let world: FakeWorld
-let forwarded: Request[]
 let notices: NotificationWorld
 let syllabus: DetailSyllabus
 let revision: ReviewRevision | null
@@ -41,7 +40,7 @@ let stored: SignatureRow[]
 
 function deps(): LibraryDecisionDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     store: {
       revision: async (id) => (revision !== null && revision.id === id ? revision : null),
       syllabus: async () => syllabus,
@@ -111,7 +110,6 @@ const verify = (body: unknown, id?: string) => post(verifyLibraryReview, "verify
 const comment = (body: unknown, id?: string) => post(commentLibraryReview, "comments", body, id)
 
 beforeEach(() => {
-  forwarded = []
   world = {
     sessions: new Map([[golden.sessionId, { id: golden.sessionId, userId: golden.userId, payload: sessionPayload(loggedInAttributes()), lastActivity: NOW }]]),
     users: [makeUser()],

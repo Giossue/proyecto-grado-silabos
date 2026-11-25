@@ -1,4 +1,4 @@
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 import { teacherHistoryCareer } from "@/server/syllabus/teacherSyllabi"
 
 type Context = { params: Promise<{ career: string }> }
@@ -8,4 +8,4 @@ export async function GET(request: Request, context: Context): Promise<Response>
   return teacherHistoryCareer(request, career)
 }
 
-export { laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as POST, unmatchedRouteHandler as PUT, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as DELETE, unmatchedRouteHandler as OPTIONS }

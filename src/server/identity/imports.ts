@@ -1,19 +1,18 @@
 import "server-only"
 import { requireSession } from "../auth/requireSession"
-import type { LaravelSession } from "../auth/types"
+import type { AppSession } from "../auth/types"
 import { importTemplate, type TemplateSelect } from "../excel/importTemplate"
 import { importKey, phpLength, PhpMap } from "../excel/importKeys"
 import { importRows, importSession, spreadsheetUpload, type CheckedRow, type ImportResult } from "../excel/importRequest"
 import type { ImportRow } from "../excel/spreadsheetReader"
 import { xlsxDownload } from "../excel/workbook"
-import type { PhpArray } from "../laravel/input"
-import { forbidden, laravelJson } from "../laravel/responses"
-import { validateInput, type Rule } from "../laravel/validation"
+import type { PhpArray } from "../http/input"
+import { forbidden, apiJson } from "../http/responses"
+import { validateInput, type Rule } from "../http/validation"
 import { systemNow } from "../notifications/queries"
 import {
   collapseName,
   emailRule,
-  emailShape,
   fullName,
   isValidNamePart,
   NAME_MAX_LENGTH,
@@ -65,7 +64,7 @@ export function defaultIdentityImportDeps(): IdentityImportDeps {
   return { ...defaultIdentityWriteDeps(), store: createIdentityImportStore(), now: systemNow }
 }
 
-async function mayAddTeachers(session: LaravelSession, deps: IdentityImportDeps): Promise<boolean> {
+async function mayAddTeachers(session: AppSession, deps: IdentityImportDeps): Promise<boolean> {
   const role = session.activeRole
   return session.user.active && role?.role === ROLE_COORDINATOR && role.careerId !== null && (await deps.accounts.activeCareer(role.careerId))
 }
@@ -124,7 +123,7 @@ export async function userImportTemplate(request: Request, deps: IdentityImportD
   )
 }
 
-type Checked = { checked: CheckedRow[]; payloads: PhpArray[] } | "laravel"
+type Checked = { checked: CheckedRow[]; payloads: PhpArray[] }
 
 async function checkTeachers(rows: ImportRow[], deps: IdentityImportDeps): Promise<Checked> {
   const seen = new PhpMap<number>()
@@ -134,7 +133,6 @@ async function checkTeachers(rows: ImportRow[], deps: IdentityImportDeps): Promi
     const [values, nameErrors] = compose(row.values)
     const email = values.correo.toLowerCase()
     const payload: PhpArray = { nombre: values.nombre, correo_electronico: email }
-    if (emailShape(email) === "unknown") return "laravel"
     const validation = await validateInput(payload, { nombre: ["required", "string", { max: 180 }], correo_electronico: ["required", "string", emailRule(), { max: 255 }] }, ACCOUNT_ATTRIBUTES)
     const blocked = await deps.accounts.direct(async (tx) => teacherBlockedReason(tx, await tx.lockAccountByEmail(email)))
     const errors = [...nameErrors, ...messagesOf(validation), ...(blocked === null ? [] : [blocked])]
@@ -180,7 +178,6 @@ async function checkUsers(rows: ImportRow[], deps: IdentityImportDeps): Promise<
       role_code: roles.get(importKey(values.rol)) ?? values.rol,
       career_id: values.carrera === "" ? null : (careers.get(importKey(values.carrera)) ?? values.carrera),
     }
-    if (emailShape(email) === "unknown") return "laravel"
     const rules: Record<string, Rule[]> = {
       nombre: ["required", "string", { max: 180 }],
       correo_electronico: ["required", "string", emailRule(), { max: 255 }, uniqueEmail(deps, null)],
@@ -211,10 +208,9 @@ export async function importTeachers(request: Request, deps: IdentityImportDeps 
   const rows = importRows(upload.file, TEACHER_COLUMNS)
   if (rows instanceof Response) return finish(rows)
   const result = await checkTeachers(rows, deps)
-  if (result === "laravel") return deps.bridge.forward(original)
   const { checked, payloads } = result
   const valid = checked.every((row) => row.errors.length === 0)
-  if (!upload.confirm || !valid) return finish(laravelJson({ rows: checked, valid, created: 0 } satisfies ImportResult))
+  if (!upload.confirm || !valid) return finish(apiJson({ rows: checked, valid, created: 0 } satisfies ImportResult))
   const careerId = session.activeRole?.careerId as string
   const outcome = await perform(deps, original, session, async (ctx) => {
     let created = 0
@@ -225,7 +221,7 @@ export async function importTeachers(request: Request, deps: IdentityImportDeps 
     return created
   })
   if (outcome instanceof Response) return finish(outcome)
-  return finish(laravelJson({ rows: checked, valid, created: outcome.value } satisfies ImportResult))
+  return finish(apiJson({ rows: checked, valid, created: outcome.value } satisfies ImportResult))
 }
 
 export async function importUsers(request: Request, deps: IdentityImportDeps = defaultIdentityImportDeps()): Promise<Response> {
@@ -238,10 +234,9 @@ export async function importUsers(request: Request, deps: IdentityImportDeps = d
   const rows = importRows(upload.file, USER_COLUMNS)
   if (rows instanceof Response) return finish(rows)
   const result = await checkUsers(rows, deps)
-  if (result === "laravel") return deps.bridge.forward(original)
   const { checked, payloads } = result
   const valid = checked.every((row) => row.errors.length === 0)
-  if (!upload.confirm || !valid) return finish(laravelJson({ rows: checked, valid, created: 0 } satisfies ImportResult))
+  if (!upload.confirm || !valid) return finish(apiJson({ rows: checked, valid, created: 0 } satisfies ImportResult))
   const outcome = await perform(deps, original, session, async (ctx) => {
     let created = 0
     for (const payload of payloads) {
@@ -257,5 +252,5 @@ export async function importUsers(request: Request, deps: IdentityImportDeps = d
     return created
   })
   if (outcome instanceof Response) return finish(outcome)
-  return finish(laravelJson({ rows: checked, valid, created: outcome.value } satisfies ImportResult))
+  return finish(apiJson({ rows: checked, valid, created: outcome.value } satisfies ImportResult))
 }

@@ -1,6 +1,6 @@
 import { ascii } from "../signatures/holderMatcher"
 
-export function laravelSlug(title: string): string {
+export function strSlug(title: string): string {
   return ascii(title)
     .replace(/_+/gu, "-")
     .replaceAll("@", "-at-")

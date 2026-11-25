@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto"
-import type { PhpArray, PhpValue } from "../laravel/input"
-import type { Rule } from "../laravel/validation"
+import type { PhpArray, PhpValue } from "../http/input"
+import type { Rule } from "../http/validation"
 
 export const ROLE_ADMINISTRATOR = "administrador"
 export const ROLE_COORDINATOR = "coordinador"
@@ -72,20 +72,87 @@ export function collapseNameColumns(input: PhpArray): PhpArray {
 
 export const nameColumnRules = (): Rule[] => ["required", "string", { max: NAME_MAX_LENGTH }, { regex: NAME_PART }]
 
-export type EmailShape = "valid" | "invalid" | "unknown"
+export type EmailShape = "valid" | "invalid"
 
-const SIMPLE_LOCAL = /^[A-Za-z0-9_%+-]+(?:\.[A-Za-z0-9_%+-]+)*$/
-const SIMPLE_LABEL = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/
+const ATOM = /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~\-\u0080-\u{10FFFF}]+$/u
+const LABEL = /^[A-Za-z0-9\u0080-\u{10FFFF}](?:[A-Za-z0-9\-\u0080-\u{10FFFF}]*[A-Za-z0-9\u0080-\u{10FFFF}])?$/u
+const IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/
+const IPV6 = /^IPv6:[0-9A-Fa-f:.]+$/
+
+function withoutComments(value: string): string | null {
+  let result = ""
+  let depth = 0
+  let quoted = false
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index]
+    if (character === "\\" && (quoted || depth > 0)) {
+      if (index + 1 >= value.length) return null
+      if (depth === 0) result += character + value[index + 1]
+      index += 1
+      continue
+    }
+    if (depth === 0 && character === '"') quoted = !quoted
+    if (!quoted && character === "(") {
+      depth += 1
+      continue
+    }
+    if (!quoted && character === ")") {
+      if (depth === 0) return null
+      depth -= 1
+      continue
+    }
+    if (depth === 0) result += character
+  }
+  return depth === 0 && !quoted ? result : null
+}
+
+function splitOutsideQuotes(value: string, separator: string): string[] {
+  const parts: string[] = []
+  let current = ""
+  let quoted = false
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index]
+    if (quoted && character === "\\") {
+      current += character + (value[index + 1] ?? "")
+      index += 1
+      continue
+    }
+    if (character === '"') quoted = !quoted
+    if (!quoted && character === separator) {
+      parts.push(current)
+      current = ""
+      continue
+    }
+    current += character
+  }
+  parts.push(current)
+  return parts
+}
+
+function validLocalWord(word: string): boolean {
+  if (ATOM.test(word)) return true
+  return /^"(?:[^"\\\r\n]|\\[^\r\n])*"$/u.test(word)
+}
+
+function validDomain(domain: string): boolean {
+  if (domain.startsWith("[") && domain.endsWith("]")) {
+    const literal = domain.slice(1, -1)
+    return IPV4.test(literal) || IPV6.test(literal)
+  }
+  if (domain.length > 253) return false
+  return domain.split(".").every((label) => [...label].length <= 63 && LABEL.test(label))
+}
 
 export function emailShape(value: PhpValue | undefined): EmailShape {
-  if (typeof value !== "string") return "invalid"
-  const at = value.indexOf("@")
-  if (at === -1 || at === 0 || value.endsWith("@")) return "invalid"
-  if (value.indexOf("@", at + 1) !== -1) return "unknown"
-  const local = value.slice(0, at)
-  const domain = value.slice(at + 1)
-  if (SIMPLE_LOCAL.test(local) && domain.length <= 253 && domain.split(".").every((label) => SIMPLE_LABEL.test(label))) return "valid"
-  return "unknown"
+  if (typeof value !== "string" || value === "") return "invalid"
+  const stripped = withoutComments(value)
+  if (stripped === null) return "invalid"
+  const parts = splitOutsideQuotes(stripped, "@")
+  if (parts.length !== 2) return "invalid"
+  const [local, domain] = parts
+  if (local === "" || domain === "") return "invalid"
+  if (!splitOutsideQuotes(local, ".").every((word) => word !== "" && validLocalWord(word))) return "invalid"
+  return validDomain(domain) ? "valid" : "invalid"
 }
 
 export const EMAIL_MESSAGE = "El campo :attribute debe ser un correo electrónico válido."

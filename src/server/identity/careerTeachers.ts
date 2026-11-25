@@ -1,26 +1,26 @@
 import "server-only"
 import { requireSession } from "../auth/requireSession"
-import type { LaravelSession } from "../auth/types"
-import { laravelInput } from "../laravel/input"
-import { forbidden, laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
-import { collapseNameColumns, emailRule, emailShape, fullName, nameColumnMessages, nameColumnRules, ROLE_ADMINISTRATOR, ROLE_COORDINATOR, ROLE_TEACHER } from "./accountRules"
+import type { AppSession } from "../auth/types"
+import { requestInput } from "../http/input"
+import { forbidden, apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
+import { collapseNameColumns, emailRule, fullName, nameColumnMessages, nameColumnRules, ROLE_ADMINISTRATOR, ROLE_COORDINATOR, ROLE_TEACHER } from "./accountRules"
 import { createCareerTeacher, RESEND, removeCareerTeacher, resendActivation, type Account } from "./accounts"
-import { ACCOUNT_ATTRIBUTES, acceptsBody, bindAccount, defaultIdentityWriteDeps, perform, stringOf, type IdentityWriteDeps } from "./accountWrites"
+import { ACCOUNT_ATTRIBUTES, bindAccount, defaultIdentityWriteDeps, perform, stringOf, type IdentityWriteDeps } from "./accountWrites"
 
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
-async function mayAddTeachers(session: LaravelSession, deps: IdentityWriteDeps): Promise<boolean> {
+async function mayAddTeachers(session: AppSession, deps: IdentityWriteDeps): Promise<boolean> {
   const role = session.activeRole
   return session.user.active && role?.role === ROLE_COORDINATOR && role.careerId !== null && (await deps.accounts.activeCareer(role.careerId))
 }
 
-async function teachesInCareer(session: LaravelSession, target: Account, deps: IdentityWriteDeps): Promise<boolean> {
+async function teachesInCareer(session: AppSession, target: Account, deps: IdentityWriteDeps): Promise<boolean> {
   const careerId = session.activeRole?.careerId ?? null
   return careerId !== null && deps.accounts.hasEffectiveRole(target.id, ROLE_TEACHER, careerId)
 }
 
-async function mayResend(session: LaravelSession, target: Account, deps: IdentityWriteDeps): Promise<boolean> {
+async function mayResend(session: AppSession, target: Account, deps: IdentityWriteDeps): Promise<boolean> {
   if (!session.user.active || session.user.id === target.id || !target.active || target.verified) return false
   if (session.activeRole?.role === ROLE_ADMINISTRATOR) return true
   return session.activeRole?.role === ROLE_COORDINATOR && (await teachesInCareer(session, target, deps))
@@ -31,10 +31,8 @@ export async function storeCareerTeacher(request: Request, deps: IdentityWriteDe
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!(await mayAddTeachers(session, deps))) return forbidden()
-  if (!acceptsBody(request)) return deps.bridge.forward(original)
-  const input = collapseNameColumns(await laravelInput(request))
+  const input = collapseNameColumns(await requestInput(request))
   if (typeof input.correo_electronico === "string") input.correo_electronico = input.correo_electronico.replace(PHP_TRIM, "").toLowerCase()
-  if (emailShape(input.correo_electronico) === "unknown") return deps.bridge.forward(original)
   const errors = await validateInput(
     input,
     {
@@ -64,7 +62,7 @@ export async function storeCareerTeacher(request: Request, deps: IdentityWriteDe
     : attached
       ? "Docente incorporado a su carrera. Conserva su nombre y acceso actuales."
       : "El docente ya está disponible en su carrera. Conserva su nombre y acceso actuales."
-  return laravelJson({ message })
+  return apiJson({ message })
 }
 
 export async function destroyCareerTeacher(request: Request, id: string, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
@@ -82,7 +80,7 @@ export async function destroyCareerTeacher(request: Request, id: string, deps: I
       : count === 1
         ? "Docente retirado de su carrera; su paralelo quedó sin docente."
         : `Docente retirado de su carrera; sus ${count} paralelos quedaron sin docente.`
-  return laravelJson({ message })
+  return apiJson({ message })
 }
 
 export async function resendCareerTeacherActivation(request: Request, id: string, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
@@ -92,5 +90,5 @@ export async function resendCareerTeacherActivation(request: Request, id: string
   if (!(await mayResend(session, target, deps))) return finish(forbidden())
   const outcome = await perform(deps, original, session, (ctx) => resendActivation(ctx, target, RESEND))
   if (outcome instanceof Response) return finish(outcome)
-  return finish(laravelJson({ message: `Invitación de activación enviada a ${target.email}.` }))
+  return finish(apiJson({ message: `Invitación de activación enviada a ${target.email}.` }))
 }

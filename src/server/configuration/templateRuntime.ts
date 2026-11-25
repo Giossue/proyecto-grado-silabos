@@ -3,7 +3,7 @@ import { holds } from "@/lib/blocks/condition"
 import { Scope } from "@/lib/blocks/scope"
 import type { BlockDefinition as LibBlockDefinition, BlockRule, Condition } from "@/lib/blocks/types"
 import { filledText, resolveBlock, toDocument } from "@/lib/blocks/walk"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import {
   isList,
   isPhpArray,
@@ -1018,7 +1018,8 @@ function flattenItems(items: unknown[]): unknown[] {
   return flat
 }
 
-export function resolveDocument(document: PhpRecord, variables: Record<string, string>, definition: TemplateDefinition): PhpRecord {
+export function resolveDocument(document: PhpRecord, variables: Record<string, string>, definition: TemplateDefinition, fields: PhpRecord[] = []): PhpRecord {
+  const byKey = new Map(fields.map((field) => [phpString(field.key), field.hidden === true ? { ...field, value: null } : field]))
   const visit = (node: PhpRecord): PhpRecord[] => {
     const type = node.type
     const attrs = given(node, "attrs") ?? []
@@ -1041,8 +1042,12 @@ export function resolveDocument(document: PhpRecord, variables: Record<string, s
           return [listNode(node, splitLines(value).map((line) => line.replace(/^\p{Nd}+\.\s+/u, "")))]
         }
       } else {
-        if (given(attrs, "kind") === "texto_libre") return []
-        if (given(attrs, "listStyle") !== null) return [listNode(node, splitLines(display(null, definition)))]
+        const field: PhpRecord = byKey.get(phpString(at(attrs, "key"))) ?? {}
+        if ((field.type ?? given(attrs, "kind")) === "texto_libre") {
+          return isDocument(field.value) ? (list(record(field.value).content ?? []).filter(isPhpArray) as PhpRecord[]) : []
+        }
+        if (given(attrs, "listStyle") !== null) return [listNode(node, splitLines(display(field.value ?? null, definition)))]
+        value = display(field.value ?? null, definition)
         if (given(attrs, "choice") !== null) value = value === at(attrs, "choice") ? "X" : ""
       }
       return [{ type: "text", text: value, marks: given(node, "marks") ?? [] }]

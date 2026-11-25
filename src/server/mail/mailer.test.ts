@@ -12,9 +12,9 @@ const env = {
   MAIL_MAILER: "array",
   MAIL_FROM_ADDRESS: golden.from.address,
   MAIL_FROM_NAME: golden.from.name,
-  LARAVEL_APP_NAME: golden.app.name,
+  APP_NAME: golden.app.name,
   FRONTEND_URL: `${golden.app.frontendUrl},http://localhost:5173`,
-  LARAVEL_APP_LOCALE: golden.app.locale,
+  APP_LOCALE: golden.app.locale,
 }
 
 describe("mailer", () => {

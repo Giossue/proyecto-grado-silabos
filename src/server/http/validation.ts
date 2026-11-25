@@ -431,7 +431,7 @@ export async function validateAttributes(
       if (typeof rule === "object" && ("exists" in rule || "unique" in rule) && (errors[attribute]?.length ?? 0) > 0) continue
       const outcome = await passes(rule, value, context)
       if (outcome === true) continue
-      if (Array.isArray(outcome)) for (const text of outcome) add(attribute, text)
+      if (Array.isArray(outcome)) for (const text of outcome) add(attribute, text.replace(":attribute", label(attribute)))
       else add(attribute, message(rule, context, label, options))
     }
   }

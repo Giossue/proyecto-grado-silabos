@@ -1,12 +1,14 @@
 import "server-only"
+import { fromController } from "../auth/controllerResponse"
+import { HttpFailure, Missing, modelNotFoundResponse } from "../http/failures"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { isJsonRequest, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
-import { expectsJson } from "../laravel/request"
-import { forbidden, laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
-import { uuid7 } from "../laravel/uuid7"
+import { requestInput, type PhpArray, type PhpValue } from "../http/input"
+import { expectsJson } from "../http/request"
+import { forbidden, apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
+import { uuid7 } from "../http/uuid7"
 import { phpIntCast, toRuntime } from "../configuration/templateDraft"
 import { profileTemplates } from "../configuration/subjectProfileFields"
 import { fieldResponseNormalize, sameStructure } from "../configuration/templateRehearsal"
@@ -28,8 +30,8 @@ import { institutionToday } from "../dashboard/dashboardQueries"
 import { identificationOf, type IdentificationSource } from "./identificationCard"
 import { mayEdit, type SyllabusFacts } from "./policy"
 import { createDraftFieldStore } from "./draftFieldStore"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type DraftSyllabus = SyllabusFacts & { subjectId: string }
 export type DraftFieldRecord = { id: string; templateId: string; responsible: string; content: unknown; key: string; live: boolean }
@@ -81,8 +83,6 @@ class Rejected extends Error {
   }
 }
 
-class Missing extends Error {}
-
 function reject(attribute: string, message: string): never {
   throw new Rejected(validationError({ [attribute]: [message] }))
 }
@@ -91,7 +91,7 @@ export function isoFromSeconds(seconds: number): string {
   return new Date(seconds * 1000).toISOString().replace(/\.\d{3}Z$/, "+00:00")
 }
 
-type Bound = { session: LaravelSession; syllabus: DraftSyllabus; field: DraftFieldRecord }
+type Bound = { session: AppSession; syllabus: DraftSyllabus; field: DraftFieldRecord }
 
 async function bound(request: Request, syllabusId: string, fieldId: string, deps: DraftFieldDeps): Promise<Bound | Response> {
   let syllabus: DraftSyllabus | null = null
@@ -118,17 +118,17 @@ async function bound(request: Request, syllabusId: string, fieldId: string, deps
 
 function conflict(request: Request, version: number): Response {
   return expectsJson(request)
-    ? laravelJson({ message: CONFLICT, code: "conflicto_version_borrador", version_bloqueo_actual: version }, 409)
-    : laravelJson({ message: CONFLICT }, 409)
+    ? apiJson({ message: CONFLICT, code: "conflicto_version_borrador", version_bloqueo_actual: version }, 409)
+    : apiJson({ message: CONFLICT }, 409)
 }
 
 async function save(input: PhpArray, auth: Bound, deps: DraftFieldDeps, tx: DraftFieldTx, original: Request): Promise<{ version: number; savedAt: number; definition: TemplateDefinition }> {
   const locked = await tx.lockSyllabus(auth.syllabus.id)
-  if (locked === null) throw new Missing()
+  if (locked === null) throw new Missing(MODELS.syllabus, auth.syllabus.id)
   if (locked.version !== phpIntCast(input.version_bloqueo)) throw new Rejected(conflict(original, locked.version))
   if (!["borrador", "correccion_solicitada"].includes(locked.state)) reject("syllabus", "El expediente no está en estado editable.")
   const template = await tx.templateStore.template()
-  if (template === null || template.definition === null) throw new Missing()
+  if (template === null) throw new Missing(MODELS.template)
   const definition = template.definition
   const { field } = auth
   if (field.templateId !== template.id || (!field.live && !(await tx.valueExists(locked.id, field.id)))) reject("field", "El campo no pertenece a la plantilla vigente.")
@@ -160,11 +160,10 @@ export async function updateDraftField(request: Request, syllabusId: string, fie
   const auth = await bound(original, syllabusId, fieldId, deps)
   if (auth instanceof Response) return auth
   if (!mayEdit(auth.session, auth.syllabus, deps.today())) return forbidden()
-  if (!isJsonRequest(request)) return deps.bridge.forward(original)
   const current = await deps.templates.template()
-  if (current === null || current.definition === null) return deps.bridge.forward(original)
+  if (current === null) return fromController(modelNotFoundResponse(MODELS.template))
   const definition = current.definition
-  const input = toRuntime(await laravelInput(request)) as PhpArray
+  const input = toRuntime(await requestInput(request)) as PhpArray
   const errors = await validateInput(
     input,
     {
@@ -194,13 +193,13 @@ export async function updateDraftField(request: Request, syllabusId: string, fie
     saved = await deps.store.transaction((tx) => save(input, auth, deps, tx, original))
   } catch (error) {
     if (error instanceof Rejected) return error.response
-    if (error instanceof Missing) return deps.bridge.forward(original)
+    if (error instanceof HttpFailure) return error.response
     if (error instanceof TemplateValidationError) return validationError(error.errors)
     throw error
   }
   const stored = await deps.store.storedValue(auth.syllabus.id, auth.field.id)
   const variables = resolveVariables(saved.definition, { identification: identificationOf(await deps.store.identification(auth.syllabus.id)) })
-  return laravelJson({
+  return apiJson({
     message: "Borrador guardado.",
     version_bloqueo: saved.version,
     guardado_en: isoFromSeconds(saved.savedAt),

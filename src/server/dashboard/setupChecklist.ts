@@ -1,3 +1,5 @@
+import { failModelNotFound } from "../http/failures"
+import { MODELS } from "../http/models"
 import { facultyIsConfigured, type StoredFaculty } from "../configuration/institutionalLogos"
 import { profileComplete } from "../configuration/subjectProfileFields"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
@@ -45,7 +47,6 @@ export interface SetupRepository {
   careerHasActiveTeacher(careerId: string): Promise<boolean>
 }
 
-export class SetupNeedsLaravel extends Error {}
 
 const TEMPLATE_HINT = "Secciones y campos con un responsable: Docente, Coordinación o Institucional. El mismo editor permite texto, listas y tablas."
 const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
@@ -69,7 +70,6 @@ export async function templateHasStructure(template: SyllabusTemplate, setup: Se
 
 async function templateStepProblem(template: SyllabusTemplate | null): Promise<string | null> {
   if (template === null) return "La plantilla institucional no existe."
-  if (template.definition === null) throw new SetupNeedsLaravel()
   return templateProblem(template, template.definition)
 }
 
@@ -133,14 +133,15 @@ export async function coordinatorReadiness(
   today: string,
 ): Promise<CoordinatorReadiness> {
   const facts = await setup.careerReadiness(careerId)
-  if (facts === null) throw new SetupNeedsLaravel()
+  if (facts === null) failModelNotFound(MODELS.career, careerId)
   const template = await templates.template()
-  const definition = template?.definition ?? null
-  if (template === null || definition === null) throw new SetupNeedsLaravel()
-  const complete = await profileComplete({ template, definition, store: templates }, facts.scheduledSubjectIds)
+  const complete =
+    template === null
+      ? new Map(facts.scheduledSubjectIds.map((id) => [id, true]))
+      : await profileComplete({ template, definition: template.definition, store: templates }, facts.scheduledSubjectIds)
   const subjectsWithoutProfile = [...complete.values()].filter((done) => !done).length
   const found = process === null ? null : await convocation(careerId, process.id)
-  const templateReady = process !== null && (await templateHasStructure(template, setup))
+  const templateReady = process !== null && template !== null && (await templateHasStructure(template, setup))
   const facultyLogoReady = await facultyIsConfigured(facts.faculty)
   const deadlineOpen = process !== null && today <= process.dueOn
   const scheduledTotal = facts.scheduledSubjectIds.length

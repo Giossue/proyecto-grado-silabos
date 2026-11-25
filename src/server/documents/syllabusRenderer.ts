@@ -1,8 +1,6 @@
 import { createHash } from "node:crypto"
 import { DOMParser } from "@xmldom/xmldom"
 import JSZip from "jszip"
-import type { PhpRecord } from "../configuration/phpValues"
-import { NeedsLaravel } from "../syllabus/snapshotDocuments"
 import { buildSyllabusWord, type DocumentRenderInput, type LogoSource } from "./docx/syllabusWordDocument"
 import { packageWord } from "./docx/wordPackage"
 import { plainTextPdf, syllabusLines } from "./plainTextPdf"
@@ -36,17 +34,6 @@ export async function renderSyllabusDocuments(input: DocumentRenderInput, logos:
   return {
     docx: { format: "docx", mime: DOCX_MIME, extension: "docx", bytes: docx, reproducible: true },
     pdf: { format: "pdf", mime: "application/pdf", extension: "pdf", bytes: pdf, reproducible: convert === null },
-  }
-}
-
-export async function rendersInNext(snapshot: PhpRecord, converterEnabled: boolean): Promise<boolean> {
-  const input: DocumentRenderInput = { subject: "", subjectCode: "", academicPeriod: "", revisionNumber: 0, revisionFingerprint: "", generatedAt: "", locale: "es-EC", snapshot }
-  try {
-    await buildSyllabusWord(input, async () => null)
-    if (!converterEnabled) syllabusLines(input)
-    return true
-  } catch (error) {
-    return !(error instanceof NeedsLaravel)
   }
 }
 

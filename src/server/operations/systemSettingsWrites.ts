@@ -4,13 +4,13 @@ import { db } from "@/db"
 import { bcryptVerify } from "../auth/bcrypt"
 import { fromController } from "../auth/controllerResponse"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { LaravelSession, SessionUser } from "../auth/types"
+import type { AppSession, SessionUser } from "../auth/types"
 import { phpBoolean } from "../identity/accountRules"
-import { encrypt } from "../laravel/encrypter"
-import { isPhpArray, laravelRequestInput, type PhpArray, type PhpValue } from "../laravel/input"
-import { forbidden, laravelJson, serverError, validationError } from "../laravel/responses"
-import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
-import { validateInput, type Rule } from "../laravel/validation"
+import { encrypt } from "../http/encrypter"
+import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
+import { forbidden, apiJson, serverError, validationError } from "../http/responses"
+import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
+import { validateInput, type Rule } from "../http/validation"
 import { catalogSettings } from "../library/catalogHandlers"
 import { createCatalog } from "../library/catalog"
 import { kohaFetch } from "../library/kohaHttp"
@@ -116,7 +116,7 @@ async function passwordMatches(section: string, input: PhpArray, user: SessionUs
   return deps.verifyPassword(phpString(given), user.passwordHash)
 }
 
-async function administrator(request: Request, deps: SystemSettingsWriteDeps): Promise<{ session: LaravelSession; finish: (response: Response) => Response } | Response> {
+async function administrator(request: Request, deps: SystemSettingsWriteDeps): Promise<{ session: AppSession; finish: (response: Response) => Response } | Response> {
   let gate: Throttle | null = null
   const finish = (response: Response) => (gate as Throttle | null)?.decorate(response) ?? response
   const session = await requireSession(
@@ -140,7 +140,7 @@ export async function updateSystemSettings(request: Request, section: string, de
   const authorized = await administrator(request, deps)
   if (authorized instanceof Response) return authorized
   const { session, finish } = authorized
-  const input = await laravelRequestInput(request)
+  const input = await requestInput(request)
   const matches = await passwordMatches(section, input, session.user, deps)
   if (matches === null) return finish(fromController(serverError()))
   const errors = await validateInput(input, rulesFor(section, matches), ATTRIBUTES, { messages: MESSAGES })
@@ -152,7 +152,7 @@ export async function updateSystemSettings(request: Request, section: string, de
     session.user.id,
     deps.bridge.now(),
   )
-  return finish(laravelJson(describeSettings(await deps.stored(), deps.environment(), key)))
+  return finish(apiJson(describeSettings(await deps.stored(), deps.environment(), key)))
 }
 
 async function aiConnection(settings: Record<string, unknown>, deps: SystemSettingsWriteDeps): Promise<{ ok: boolean; message: string }> {
@@ -195,7 +195,7 @@ export async function testSystemSettings(request: Request, section: string, deps
   if (authorized instanceof Response) return authorized
   const settings = effectiveSettings(await deps.stored(), deps.environment(), deps.bridge.config.key)
   const result = section === "ia" ? await aiConnection(settings, deps) : await libraryConnection(settings, deps)
-  return authorized.finish(laravelJson(result))
+  return authorized.finish(apiJson(result))
 }
 
 export function saveSettingsOn(executor: { execute(query: SQL): Promise<unknown> }): SystemSettingsWriteDeps["save"] {

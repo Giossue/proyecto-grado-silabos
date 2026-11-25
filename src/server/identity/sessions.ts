@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { authenticateAndTrack, commitTracking, defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
-import { laravelJson } from "../laravel/responses"
+import { apiJson } from "../http/responses"
 import { isoFromSeconds } from "../syllabus/draftField"
 
 export type SessionRow = { id: string; ip: string | null; agent: string | null; lastActivity: number }
@@ -60,7 +60,6 @@ export function deviceLabel(agent: string): string {
 export async function activeSessions(request: Request, deps: ActiveSessionDeps = defaultActiveSessionDeps()): Promise<Response> {
   const authentication = await authenticateAndTrack(request, {}, deps.bridge)
   const { outcome, touch } = authentication
-  if ("deferred" in outcome) return deps.bridge.forward(request)
   const refresh = () => commitTracking(authentication, request, deps.bridge)
   if (outcome instanceof Response) {
     await refresh()
@@ -68,7 +67,7 @@ export async function activeSessions(request: Request, deps: ActiveSessionDeps =
   }
   const rows = await deps.store.sessions(outcome.user.id)
   await refresh()
-  return laravelJson({
+  return apiJson({
     sessions: rows.map((row) => ({
       id: row.id,
       ip_address: row.ip,

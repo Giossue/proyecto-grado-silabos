@@ -1,16 +1,16 @@
 import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
-import { phpQuery, type PhpArray } from "../laravel/input"
-import { strnatcasecmp } from "../laravel/naturalSort"
-import { lengthAwarePaginator, resolveCurrentPage } from "../laravel/pagination"
-import { laravelQuery, laravelRequestUrl } from "../laravel/request"
-import { aborted, forbidden, laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
+import type { BridgeDeps, AppSession } from "../auth/types"
+import { phpQuery, type PhpArray } from "../http/input"
+import { strnatcasecmp } from "../http/naturalSort"
+import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
+import { queryParams, requestUrl } from "../http/request"
+import { aborted, forbidden, apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
 import { hasRole, ROLE_TEACHER } from "./policy"
 import { convocationName } from "./syllabusSql"
 import { createTeacherSyllabusRepository } from "./teacherSyllabusQueries"
-import { laravelRouter, routeAllows } from "../laravel/router"
+import { unmatchedRoute, routeAllows } from "../http/router"
 
 export type TeacherPageFilters = { userId: string; careerId: string | null; search: string | null; state: string | null }
 
@@ -58,7 +58,7 @@ export function phpFalsy(value: string | null): boolean {
   return value === null || value === "" || value === "0"
 }
 
-async function authorizedTeacher(request: Request, deps: TeacherSyllabusDeps): Promise<{ session: LaravelSession; input: PhpArray } | Response> {
+async function authorizedTeacher(request: Request, deps: TeacherSyllabusDeps): Promise<{ session: AppSession; input: PhpArray } | Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!hasRole(session, ROLE_TEACHER)) return forbidden()
@@ -83,7 +83,7 @@ export async function teacherSyllabi(request: Request, deps: TeacherSyllabusDeps
   const search = typeof input.q === "string" ? input.q.replace(PHP_TRIM, "") : null
   const state = typeof input.state === "string" && SYLLABUS_STATES.includes(input.state) ? input.state : null
   const careerId = session.activeRole?.careerId ?? null
-  const query = laravelQuery(new URL(request.url))
+  const query = queryParams(new URL(request.url))
   const currentPage = resolveCurrentPage(query.get("page") ?? null)
   const filters = { userId: session.user.id, careerId, search: phpFalsy(search) ? null : search, state }
   const { total, items } = await deps.syllabi.page(filters, currentPage, PER_PAGE)
@@ -98,9 +98,9 @@ export async function teacherSyllabi(request: Request, deps: TeacherSyllabusDeps
     parallels: [item.parallel],
     guardado_en: item.savedAt,
   }))
-  return laravelJson({
+  return apiJson({
     filters: { q: phpFalsy(search) ? null : search, state },
-    syllabi: lengthAwarePaginator({ items: data, total, perPage: PER_PAGE, currentPage, path: laravelRequestUrl(request), query }),
+    syllabi: lengthAwarePaginator({ items: data, total, perPage: PER_PAGE, currentPage, path: requestUrl(request), query }),
     convocation_open: await deps.syllabi.convocationOpen(careerId),
   })
 }
@@ -114,16 +114,16 @@ export async function teacherHistory(request: Request, deps: TeacherSyllabusDeps
     if (group) group.syllabi_count++
     else groups.set(item.careerId, { id: item.careerId, name: item.career, syllabi_count: 1 })
   }
-  return laravelJson({ careers: [...groups.values()].sort((left, right) => strnatcasecmp(left.name, right.name)) })
+  return apiJson({ careers: [...groups.values()].sort((left, right) => strnatcasecmp(left.name, right.name)) })
 }
 
 export async function teacherHistoryCareer(request: Request, career: string, deps: TeacherSyllabusDeps = defaultTeacherSyllabusDeps()): Promise<Response> {
-  if (!routeAllows(request)) return laravelRouter(request)
+  if (!routeAllows(request)) return unmatchedRoute(request)
   const authorized = await authorizedTeacher(request, deps)
   if (authorized instanceof Response) return authorized
   const syllabi = (await deps.syllabi.past(authorized.session.user.id, career)).sort((left, right) => (left.periodEndsOn === right.periodEndsOn ? 0 : left.periodEndsOn < right.periodEndsOn ? 1 : -1))
   if (syllabi.length === 0) return aborted(404)
-  return laravelJson({
+  return apiJson({
     career: { id: career, name: syllabi[0].career },
     syllabi: syllabi.map((item) => ({ id: item.id, subject: item.subject, period: item.period, state: item.state, parallels: [item.parallel], guardado_en: item.savedAt })),
   })

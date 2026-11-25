@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
 import { createConvocation, resumeConvocation, type ConvocationWriteDeps, type LockedConvocation, type LockedProcess } from "./convocationWrites"
 import type { ConvocationRecord } from "./convocations"
@@ -21,7 +21,6 @@ const OTHER_TEACHER = "a0000000-0000-4000-8000-0000000000bb"
 const DUE_AT = Date.UTC(2026, 11, 11, 4, 59, 59) / 1000
 
 let world: FakeWorld
-let forwarded: Request[]
 let notices: NotificationWorld
 let record: ConvocationRecord | null
 let openProcesses: Set<string>
@@ -36,7 +35,7 @@ let log: string[]
 
 function deps(): ConvocationWriteDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     convocation: async (id) => (record !== null && record.id === id.toLowerCase() ? record : null),
     openProcessExists: async (id) => openProcesses.has(id),
     nowMs: () => NOW * 1000 + 123,
@@ -102,7 +101,6 @@ beforeEach(() => {
     users: [makeUser()],
     assignments: [makeAssignment({ role: "coordinador", careerId: CAREER })],
   }
-  forwarded = []
   notices = notificationWorld({
     users: [recipient(TEACHER, { name: "Ana Pérez", email: "ana@ueb.edu.ec" }), recipient(OTHER_TEACHER, { name: "Luis Mora", email: "luis@ueb.edu.ec" })],
     periods: new Map([[`convocatoria:${CONVOCATION}`, PERIOD]]),

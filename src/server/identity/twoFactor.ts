@@ -1,19 +1,20 @@
 import "server-only"
+import { sharedRedis } from "../redis/connection"
+import { phpString } from "../configuration/phpValues"
 import { sql, type SQL } from "drizzle-orm"
 import { timingSafeEqual } from "node:crypto"
 import { db } from "@/db"
 import { sharedAttemptLimiter, type AttemptLimiter } from "../auth/attemptLimiter"
 import { bcryptVerify } from "../auth/bcrypt"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import { clientIp, laravelRandom, regenerateSession, writerDepsOf, type SessionWriterDeps } from "../auth/sessionWriter"
-import { controllerJson, FORWARD, fromController, statefulRequest, type Outcome } from "../auth/statefulRequest"
-import { databaseReplayCache, generateTotpSecret, laravelCachePrefix, verifyTotp, type TotpReplayCache } from "../auth/totp"
-import { decrypt, encrypt } from "../laravel/encrypter"
-import { isPhpArray, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
-import { aborted, laravelHttpError, laravelJson, validationError } from "../laravel/responses"
-import { sharedRateLimiter, throttle, type RateLimiter } from "../laravel/throttle"
-import { mergeErrors, validateInput, type Rule } from "../laravel/validation"
-import { acceptsBody } from "./accountWrites"
+import { clientIp, sessionRandom, regenerateSession, writerDepsOf, type SessionWriterDeps } from "../auth/sessionWriter"
+import { controllerJson, fromController, statefulRequest, type Outcome } from "../auth/statefulRequest"
+import { generateTotpSecret, redisReplayCache, verifyTotp, type TotpReplayCache } from "../auth/totp"
+import { decrypt, encrypt } from "../http/encrypter"
+import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
+import { aborted, jsonError, apiJson, serverError, unauthenticated, validationError } from "../http/responses"
+import { sharedRateLimiter, throttle, type RateLimiter } from "../http/throttle"
+import { mergeErrors, validateInput, type Rule } from "../http/validation"
 import { twoFactorQrCodeSvg } from "./twoFactorQr"
 
 export type TwoFactorAccount = { id: string; email: string; secret: string | null; recoveryCodes: string | null; confirmed: boolean }
@@ -90,11 +91,11 @@ export function defaultTwoFactorDeps(): TwoFactorDeps {
   return {
     writer,
     store: twoFactorStoreOn(executor),
-    replay: databaseReplayCache(executor, laravelCachePrefix(), writer.now),
+    replay: redisReplayCache(sharedRedis),
     throttles: lazyRateLimiter(),
     attempts: lazyAttemptLimiter(),
     verifyPassword: bcryptVerify,
-    appName: () => process.env.LARAVEL_APP_NAME ?? "Laravel",
+    appName: () => process.env.APP_NAME ?? "Sílabos UEB",
     production: () => process.env.APP_ENV === "production",
   }
 }
@@ -128,7 +129,7 @@ function statusPayload(account: TwoFactorAccount) {
 }
 
 function recoveryCode(): string {
-  return `${laravelRandom(10)}-${laravelRandom(10)}`
+  return `${sessionRandom(10)}-${sessionRandom(10)}`
 }
 
 function freshRecoveryCodes(deps: TwoFactorDeps): string {
@@ -179,18 +180,17 @@ export function twoFactorChallenge(request: Request, deps: TwoFactorDeps = defau
     deps.writer,
     { group: "api" },
     async (context): Promise<Outcome> => {
-      if (!acceptsBody(request)) return FORWARD
       const pending = context.attributes.login
       const loginId = typeof pending === "object" && pending !== null && !Array.isArray(pending) ? (pending as Record<string, unknown>).id : undefined
-      if (typeof loginId === "string" && !UUID.test(loginId)) return FORWARD
       const key = typeof loginId === "string" ? `two-factor:${loginId}` : `two-factor-ip:${clientIp(request) ?? ""}`
       const gate = throttle(deps.throttles, { key, maxAttempts: 10, decaySeconds: 60 }, deps.writer.now)
       const limited = await gate.hit()
       if (limited) return limited
-      const input = await laravelInput(request)
+      const input = await requestInput(request)
       const errors = await validateInput(input, { code: ["nullable", "string", { max: 32 }], recovery_code: ["nullable", "string", { max: 128 }] }, ATTRIBUTES)
       if (!filled(input.code) && !filled(input.recovery_code)) mergeErrors(errors, "code", [MISSING_CODE])
       if (Object.keys(errors).length > 0) return gate.decorate(fromController(validationError(errors)))
+      if (typeof loginId === "string" && !UUID.test(loginId)) return gate.decorate(fromController(serverError()))
       const account = typeof loginId === "string" ? await deps.store.account(loginId, true) : null
       if (account === null || !hasEnabled(account)) return gate.decorate(controllerJson({ message: INVALID_SESSION }, 422))
       const startedAt = phpInt((pending as Record<string, unknown>).at)
@@ -212,35 +212,34 @@ export function twoFactorChallenge(request: Request, deps: TwoFactorDeps = defau
       await regenerateSession(context.state, deps.writer)
       return gate.decorate(controllerJson({ message: "Segundo factor verificado." }))
     },
-    () => laravelJson({ message: "Inicie sesión desde la aplicación web." }, 400),
+    () => apiJson({ message: "Inicie sesión desde la aplicación web." }, 400),
   )
 }
 
 type Authenticated = { input: PhpArray; account: TwoFactorAccount; passwordHash: string }
 
-async function authenticated(request: Request, deps: TwoFactorDeps, fields: string[]): Promise<Authenticated | Response> {
+async function authenticated(request: Request, deps: TwoFactorDeps): Promise<Authenticated | Response> {
   const session = await requireSession(request, {}, deps.writer)
   if (session instanceof Response) return session
-  if (!acceptsBody(request)) return deps.writer.forward(request)
-  const input = await laravelInput(request)
-  if (fields.some((name) => input[name] !== undefined && input[name] !== null && typeof input[name] !== "string")) return deps.writer.forward(request)
+  const input = await requestInput(request)
   const account = await deps.store.account(session.user.id, false)
-  if (account === null) return deps.writer.forward(request)
+  if (account === null) return unauthenticated()
   return { input, account, passwordHash: session.user.passwordHash }
 }
 
 async function passwordRule(input: PhpArray, passwordHash: string, deps: TwoFactorDeps): Promise<Rule[] | null> {
   const given = input.current_password
-  const matches = typeof given === "string" ? await deps.verifyPassword(given, passwordHash) : false
+  if (isPhpArray(given ?? null)) return null
+  const matches = given === undefined || given === null ? false : await deps.verifyPassword(phpString(given), passwordHash)
   if (matches === null) return null
   return ["required", "string", { check: () => matches, message: WRONG_PASSWORD }]
 }
 
-async function confirmedPassword(request: Request, deps: TwoFactorDeps, fields: string[] = ["current_password"]): Promise<Authenticated | Response> {
-  const context = await authenticated(request, deps, fields)
+async function confirmedPassword(request: Request, deps: TwoFactorDeps): Promise<Authenticated | Response> {
+  const context = await authenticated(request, deps)
   if (context instanceof Response) return context
   const rule = await passwordRule(context.input, context.passwordHash, deps)
-  if (rule === null) return deps.writer.forward(request)
+  if (rule === null) return fromController(serverError())
   const errors = await validateInput(context.input, { current_password: rule }, ATTRIBUTES)
   if (Object.keys(errors).length > 0) return fromController(validationError(errors))
   return context
@@ -253,11 +252,11 @@ export async function enableTwoFactor(request: Request, deps: TwoFactorDeps = de
   if (phpEmpty(account.secret)) await deps.store.update(account.id, { secret: sealed(generateTotpSecret(), deps), recoveryCodes: freshRecoveryCodes(deps) })
   const fresh = await deps.store.account(account.id, false)
   if (fresh === null || fresh.secret === null) return fromController(aborted(404))
-  return laravelJson({ ...statusPayload(fresh), qr_code_svg: twoFactorQrCodeSvg(deps.appName(), fresh.email, opened(fresh.secret, deps)) })
+  return apiJson({ ...statusPayload(fresh), qr_code_svg: twoFactorQrCodeSvg(deps.appName(), fresh.email, opened(fresh.secret, deps)) })
 }
 
 export async function confirmTwoFactor(request: Request, deps: TwoFactorDeps = defaultTwoFactorDeps()): Promise<Response> {
-  const context = await authenticated(request, deps, ["code"])
+  const context = await authenticated(request, deps)
   if (context instanceof Response) return context
   const { input, account } = context
   const errors = await validateInput(input, { code: ["required", "string", { max: 32 }] }, ATTRIBUTES)
@@ -267,24 +266,24 @@ export async function confirmTwoFactor(request: Request, deps: TwoFactorDeps = d
   if (!valid) return fromController(validationError({ code: [INVALID_CODE] }))
   await deps.store.update(account.id, { confirmedAt: deps.writer.now() })
   const fresh = (await deps.store.account(account.id, false)) ?? account
-  return laravelJson({ ...statusPayload(fresh), recovery_codes: recoveryCodesOf(fresh, deps) })
+  return apiJson({ ...statusPayload(fresh), recovery_codes: recoveryCodesOf(fresh, deps) })
 }
 
 export async function regenerateRecoveryCodes(request: Request, deps: TwoFactorDeps = defaultTwoFactorDeps()): Promise<Response> {
   const context = await confirmedPassword(request, deps)
   if (context instanceof Response) return context
-  if (!hasEnabled(context.account)) return fromController(laravelHttpError(422, NOT_ACTIVE))
+  if (!hasEnabled(context.account)) return fromController(jsonError(422, NOT_ACTIVE))
   await deps.store.update(context.account.id, { recoveryCodes: freshRecoveryCodes(deps) })
   const fresh = (await deps.store.account(context.account.id, false)) ?? context.account
-  return laravelJson({ ...statusPayload(fresh), recovery_codes: recoveryCodesOf(fresh, deps) })
+  return apiJson({ ...statusPayload(fresh), recovery_codes: recoveryCodesOf(fresh, deps) })
 }
 
 export async function disableTwoFactor(request: Request, deps: TwoFactorDeps = defaultTwoFactorDeps()): Promise<Response> {
-  const context = await authenticated(request, deps, ["current_password", "code", "recovery_code"])
+  const context = await authenticated(request, deps)
   if (context instanceof Response) return context
   const { input, account } = context
   const rule = await passwordRule(input, context.passwordHash, deps)
-  if (rule === null) return deps.writer.forward(request)
+  if (rule === null) return fromController(serverError())
   const errors = await validateInput(
     input,
     { current_password: rule, code: ["nullable", "string", { max: 32 }], recovery_code: ["nullable", "string", { max: 128 }] },
@@ -305,5 +304,5 @@ export async function disableTwoFactor(request: Request, deps: TwoFactorDeps = d
     await deps.store.update(account.id, { secret: null, recoveryCodes: null, confirmedAt: null })
   }
   const fresh = (await deps.store.account(account.id, false)) ?? account
-  return laravelJson(statusPayload(fresh))
+  return apiJson(statusPayload(fresh))
 }

@@ -1,7 +1,7 @@
 import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import { phpJsonDecode } from "./phpValues"
 import type { DocumentSection, FieldRecord, StructureStore, StructureTx } from "./templateStructure"
 import { loadTemplate } from "./templateStore"

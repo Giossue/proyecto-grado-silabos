@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import { fakeTemplateStore, fieldId, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "../configuration/testing"
 import type { PhpRecord } from "../configuration/phpValues"
 import { updateDraftField, type DraftFieldDeps, type DraftFieldRecord, type DraftSyllabus } from "./draftField"
@@ -23,7 +23,6 @@ const SAVED_AT = "2027-01-15T10:00:00+00:00"
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
-let forwarded: Request[]
 let facts: DraftSyllabus | null
 let locked: { id: string; state: string; version: number; subjectId: string } | null
 let fields: Map<string, DraftFieldRecord>
@@ -44,7 +43,7 @@ function liveField(index: number): DraftFieldRecord {
 
 function deps(): DraftFieldDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     templates: fakeTemplateStore(templates),
     today: () => today,
     now: () => Date.parse(SAVED_AT) / 1000,
@@ -120,7 +119,6 @@ beforeEach(() => {
     assignments: [makeAssignment({ role: "docente", careerId: CAREER })],
   }
   templates = { template: goldenTemplate(), values: [] }
-  forwarded = []
   facts = {
     id: SYLLABUS,
     state: "borrador",
@@ -276,12 +274,11 @@ describe("PATCH /api/v1/teacher/syllabi/{syllabus}/fields/{field}", () => {
     expect(saved).toEqual([])
   })
 
-  it("leaves unknown records and non JSON bodies to Laravel", async () => {
+  it("answers Laravel's 404 for unknown records and reads form bodies natively", async () => {
     expect(await patch({ version_bloqueo: 3, value: doc("x") }, { syllabus: "50000000-0000-4000-8000-00000000ffff" })).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "50000000-0000-4000-8000-00000000ffff") })
     expect((await patch({ version_bloqueo: 3, value: doc("x") }, { field: "01a1c5ba-0000-7000-8000-00000000ffff" })).status).toBe(404)
     expect(await patch({ version_bloqueo: 3, value: doc("x") }, { syllabus: "no-es-uuid" })).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "no-es-uuid") })
-    expect((await patch("version_bloqueo=3", { headers: { "content-type": "application/x-www-form-urlencoded" } })).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    expect((await patch("version_bloqueo=3", { headers: { "content-type": "application/x-www-form-urlencoded" } })).status).toBe(422)
     expect(saved).toEqual([])
     expect(committed).toBe(false)
   })

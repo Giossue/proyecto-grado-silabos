@@ -1,10 +1,12 @@
 import "server-only"
+import { carbonInstant, institutionDateOfValue, passesDateRule } from "../http/phpDates"
+import { HttpFailure, Missing } from "../http/failures"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { isJsonRequest, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
-import { forbidden, laravelJson, validationError } from "../laravel/responses"
-import { mergeErrors, validateInput } from "../laravel/validation"
+import { requestInput, type PhpArray, type PhpValue } from "../http/input"
+import { forbidden, apiJson, validationError } from "../http/responses"
+import { mergeErrors, type Rule, validateInput } from "../http/validation"
 import { list, phpString } from "../configuration/phpValues"
 import { normalizeFieldDocument, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
@@ -13,9 +15,8 @@ import { institutionToday } from "../dashboard/dashboardQueries"
 import { hasRole, PROCESS_OPEN, PROCESS_PAUSED, ROLE_ADMINISTRATOR } from "./policy"
 import { TEMPLATE_NAME } from "./convocations"
 import { createProcessRepository } from "./processQueries"
-import { NeedsLaravel } from "./snapshotDocuments"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type ProcessRow = {
   id: string
@@ -102,13 +103,12 @@ function blockReason(process: ProcessRow, all: ProcessRow[], template: SyllabusT
   if (process.state === "cerrado" && all.some((other) => other.id !== process.id && IN_PROGRESS.includes(other.state))) return ANOTHER_IN_PROGRESS
   if (process.state === "cerrado") {
     if (template === null) return TEMPLATE_NOT_READY
-    if (template.definition === null) throw new NeedsLaravel()
     if (!templateUsable(template, template.definition)) return TEMPLATE_NOT_READY
   }
   return null
 }
 
-async function administrator(request: Request, deps: ProcessDeps): Promise<LaravelSession | Response> {
+async function administrator(request: Request, deps: ProcessDeps): Promise<AppSession | Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   return hasRole(session, ROLE_ADMINISTRATOR) ? session : forbidden()
@@ -140,12 +140,12 @@ export async function syllabusProcesses(request: Request, deps: ProcessDeps = de
       extension_block_reason: blockReason(process, rows, template, today),
     }))
   } catch (error) {
-    if (error instanceof NeedsLaravel) return deps.bridge.forward(request)
+    if (error instanceof HttpFailure) return error.response
     throw error
   }
   const structured = template !== null && template.sections.length > 0 && template.sections.some((section) => section.blocks.length > 0) && (await deps.processes.templateHasFields(template.id))
   const active = rows.find((process) => IN_PROGRESS.includes(process.state)) ?? null
-  return laravelJson({
+  return apiJson({
     processes,
     template: structured ? TEMPLATE_NAME : null,
     periods: await deps.processes.periods(),
@@ -153,7 +153,7 @@ export async function syllabusProcesses(request: Request, deps: ProcessDeps = de
   })
 }
 
-async function boundProcess(request: Request, id: string, deps: ProcessDeps): Promise<{ session: LaravelSession; process: ProcessRow } | Response> {
+async function boundProcess(request: Request, id: string, deps: ProcessDeps): Promise<{ session: AppSession; process: ProcessRow } | Response> {
   let process: ProcessRow | null = null
   const session = await requireSession(
     request,
@@ -178,12 +178,10 @@ export async function processImpact(request: Request, id: string, deps: ProcessD
   if (!hasRole(bound.session, ROLE_ADMINISTRATOR)) return forbidden()
   const syllabi: Record<string, number> = Object.fromEntries(EMPTY_COUNTS.map((state) => [state, 0]))
   for (const row of await deps.processes.counts(bound.process.id)) syllabi[row.state] = row.total
-  return laravelJson({ syllabi, total: Object.values(syllabi).reduce((sum, value) => sum + value, 0) })
+  return apiJson({ syllabi, total: Object.values(syllabi).reduce((sum, value) => sum + value, 0) })
 }
 
 class StateChanged extends Error {}
-
-class Missing extends Error {}
 
 export async function pauseProcess(request: Request, id: string, deps: ProcessDeps = defaultProcessDeps()): Promise<Response> {
   const original = request.clone()
@@ -191,26 +189,24 @@ export async function pauseProcess(request: Request, id: string, deps: ProcessDe
   if (bound instanceof Response) return bound
   const { session, process } = bound
   if (!hasRole(session, ROLE_ADMINISTRATOR) || process.state !== PROCESS_OPEN) return forbidden()
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
-  const errors = await validateInput(await laravelInput(request), { confirmar_rehacer: ["sometimes", "boolean"] }, { confirmar_rehacer: "confirmación para rehacer los sílabos" })
+  const errors = await validateInput(await requestInput(request), { confirmar_rehacer: ["sometimes", "boolean"] }, { confirmar_rehacer: "confirmación para rehacer los sílabos" })
   if (Object.keys(errors).length > 0) return validationError(errors)
   try {
     await deps.processes.transaction(async (tx) => {
       const state = await tx.lockProcess(process.id)
-      if (state === null) throw new Missing()
+      if (state === null) throw new Missing(MODELS.process, process.id)
       if (state !== PROCESS_OPEN) throw new StateChanged()
       await tx.pause(process.id)
     })
   } catch (error) {
     if (error instanceof StateChanged) return validationError({ process: ["El proceso no está en un estado que admita esta acción."] })
-    if (error instanceof Missing) return deps.bridge.forward(original)
+    if (error instanceof HttpFailure) return error.response
     throw error
   }
-  return laravelJson({ message: "Proceso en pausa. Los envíos se detienen y la plantilla queda editable." })
+  return apiJson({ message: "Proceso en pausa. Los envíos se detienen y la plantilla queda editable." })
 }
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
-const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/
 const CREATE_ATTRIBUTES = { period_id: "periodo académico", starts_at: "fecha de inicio", due_at: "fecha límite" }
 const DUE_MESSAGE = "La fecha de entrega debe ser posterior al inicio y a hoy."
 
@@ -228,11 +224,6 @@ function localParts(time: number): { day: string; offset: number } {
   return { day: `${parts.year}-${parts.month}-${parts.day}`, offset: local - Math.floor(time / 1000) * 1000 }
 }
 
-function validDay(day: string): boolean {
-  const [year, month, date] = day.split("-").map(Number)
-  const time = Date.UTC(year, month - 1, date)
-  return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === day
-}
 
 function localMoment(day: string, seconds: number): string {
   const [year, month, date] = day.split("-").map(Number)
@@ -243,23 +234,26 @@ function localMoment(day: string, seconds: number): string {
 }
 
 export function processDay(value: PhpValue | undefined, start: boolean): PhpValue | undefined {
-  if (value === undefined || value === null) return value
-  if (typeof value !== "string") throw new NeedsLaravel()
-  let day: string
-  if (DATE_ONLY.test(value)) {
-    if (!validDay(value)) throw new NeedsLaravel()
-    day = value
-  } else if (ISO_INSTANT.test(value) && validDay(value.slice(0, 10)) && !Number.isNaN(Date.parse(value))) {
-    day = localParts(Date.parse(value)).day
-  } else {
-    throw new NeedsLaravel()
-  }
+  if (typeof value !== "string" || value.trim() === "") return value
+  const day = DATE_ONLY.test(value) ? value : institutionDateOfValue(value)
+  if (day === null) return value
   return localMoment(day, start ? 0 : 86_399)
 }
 
 function dayOf(value: PhpValue | undefined): string | null {
-  return typeof value === "string" ? localParts(Date.parse(value)).day : null
+  return institutionDateOfValue(value)
 }
+
+export function processInstant(value: PhpValue | undefined): number {
+  return Math.floor((carbonInstant(String(value)) ?? Number.NaN) / 1000)
+}
+
+function eloquentMoment(value: PhpValue | undefined): string {
+  if (typeof value === "number") return `${new Date(value * 1000).toISOString().slice(0, 19)}+00:00`
+  return value as string
+}
+
+const DATE_RULE: Rule = { check: (value) => passesDateRule(value), message: "El campo :attribute debe ser una fecha válida." }
 
 class CreateRejected extends Error {
   constructor(readonly errors: Record<string, string[]>) {
@@ -272,8 +266,8 @@ async function createValidation(input: PhpArray, deps: ProcessDeps): Promise<Rec
     input,
     {
       period_id: ["required", "uuid", { exists: async (value) => typeof value === "string" && (await deps.processes.periodEndsOn(value)) !== null }],
-      starts_at: ["required"],
-      due_at: ["required"],
+      starts_at: ["required", DATE_RULE],
+      due_at: ["required", DATE_RULE],
     },
     CREATE_ATTRIBUTES,
   )
@@ -303,7 +297,6 @@ async function assertInstitutionReady(deps: ProcessDeps): Promise<SyllabusTempla
   if (template === null || !structured) {
     throw new CreateRejected({ process: ["La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir la convocatoria."] })
   }
-  if (template.definition === null) throw new NeedsLaravel()
   const problem = templateProblem(template, template.definition, "process")
   if (problem !== null) throw new CreateRejected({ process: [problem] })
   if ((await deps.processes.activeCareerCount()) === 0) throw new CreateRejected({ process: ["No existen carreras activas en la estructura institucional."] })
@@ -315,25 +308,17 @@ async function assertInstitutionReady(deps: ProcessDeps): Promise<SyllabusTempla
 }
 
 export async function createProcess(request: Request, deps: ProcessDeps = defaultProcessDeps()): Promise<Response> {
-  const original = request.clone()
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
-  const input = await laravelInput(request)
-  if (typeof input.period_id === "string" && !isUuid(input.period_id)) return deps.bridge.forward(original)
-  try {
-    input.starts_at = processDay(input.starts_at, true) as PhpValue
-    input.due_at = processDay(input.due_at, false) as PhpValue
-  } catch (error) {
-    if (error instanceof NeedsLaravel) return deps.bridge.forward(original)
-    throw error
-  }
+  const input = await requestInput(request)
+  input.starts_at = processDay(input.starts_at, true) as PhpValue
+  input.due_at = processDay(input.due_at, false) as PhpValue
   if (!hasRole(session, ROLE_ADMINISTRATOR)) return forbidden()
   const errors = await createValidation(input, deps)
   if (Object.keys(errors).length > 0) return validationError(errors)
   const periodId = input.period_id as string
-  const startsAt = input.starts_at as string
-  const dueAt = input.due_at as string
+  const startsAt = eloquentMoment(input.starts_at)
+  const dueAt = eloquentMoment(input.due_at)
   try {
     await assertInstitutionReady(deps)
     await deps.processes.transaction(async (tx) => {
@@ -348,8 +333,8 @@ export async function createProcess(request: Request, deps: ProcessDeps = defaul
     })
   } catch (error) {
     if (error instanceof CreateRejected) return validationError(error.errors)
-    if (error instanceof NeedsLaravel) return deps.bridge.forward(original)
+    if (error instanceof HttpFailure) return error.response
     throw error
   }
-  return laravelJson({ message: "Convocatoria institucional abierta. Las coordinaciones ya pueden iniciar sus convocatorias." }, 201)
+  return apiJson({ message: "Convocatoria institucional abierta. Las coordinaciones ya pueden iniciar sus convocatorias." }, 201)
 }

@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import { fakeTemplateStore, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "./testing"
 import type { SyllabusTemplate } from "./templatePresentation"
 import {
@@ -29,7 +29,6 @@ const NEW_FIELD = "01a1c5ba-ffff-7000-8000-000000000001"
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
-let forwarded: Request[]
 let openProcess: boolean
 let log: string[]
 let syncs: DocumentSection[][]
@@ -127,7 +126,7 @@ const structure = (): StructureStore => ({
 })
 
 const deps = (): StructureDeps => ({
-  bridge: fakeDeps(world, forwarded),
+  bridge: fakeDeps(world),
   store: fakeTemplateStore(templates),
   structure: structure(),
   newId: () => ids.shift() ?? "0b1c5ba0-aaaa-4000-8000-0000000000ff",
@@ -168,7 +167,6 @@ beforeEach(() => {
     assignments: [makeAssignment({ role: "administrador", careerId: null })],
   }
   templates = { template: goldenTemplate(), values: [] }
-  forwarded = []
   openProcess = false
   log = []
   syncs = []
@@ -235,15 +233,16 @@ describe("PATCH admin/template/{template}/structure/sections/{section}", () => {
     expect(syncs[0][1]).toEqual({ ...documentOf(goldenTemplate())[1], title: "Descripción nueva" })
   })
 
-  it("leaves an unknown section to Laravel after validating the input", async () => {
+  it("answers Laravel's sectionOrFail 404 for an unknown section after validating the input", async () => {
     const missing = "01a1c5ba-2222-7000-8000-999999999999"
     expect(await read(updateSection(request("PATCH", `sections/${missing}`, {}), TEMPLATE_ID, missing, deps()))).toEqual({
       status: 422,
       text: invalid({ title: ["El campo título es obligatorio."] }),
     })
-    expect((await read(updateSection(request("PATCH", `sections/${missing}`, { title: "X" }), TEMPLATE_ID, missing, deps()))).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
-    expect(await forwarded[0].text()).toBe('{"title":"X"}')
+    expect(await read(updateSection(request("PATCH", `sections/${missing}`, { title: "X" }), TEMPLATE_ID, missing, deps()))).toEqual({
+      status: 404,
+      text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\SyllabusTemplate] 01a1c5ba-2222-7000-8000-999999999999"\n}',
+    })
   })
 })
 
@@ -352,10 +351,12 @@ describe("PATCH admin/template/{template}/structure/fields/{field}", () => {
     expect(syncs).toHaveLength(1)
   })
 
-  it("leaves fields of another template or unknown fields to Laravel", async () => {
-    expect((await read(updateField(request("PATCH", "fields/x", { label: "A" }), TEMPLATE_ID, "01a1c5ba-9999-7000-8000-000000000001", deps()))).status).toBe(299)
-    expect((await read(updateField(request("PATCH", "fields/x", { label: "A" }), TEMPLATE_ID, "01a1c5ba-9999-7000-8000-000000000003", deps()))).status).toBe(299)
-    expect(forwarded).toHaveLength(2)
+  it("aborts fields of another template with 404 and answers Laravel's model 404 for unknown fields", async () => {
+    expect(await read(updateField(request("PATCH", "fields/x", { label: "A" }), TEMPLATE_ID, "01a1c5ba-9999-7000-8000-000000000001", deps()))).toEqual({ status: 404, text: '{\n    "message": ""\n}' })
+    expect(await read(updateField(request("PATCH", "fields/x", { label: "A" }), TEMPLATE_ID, "01a1c5ba-9999-7000-8000-000000000003", deps()))).toEqual({
+      status: 404,
+      text: '{\n    "message": "No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\FieldDefinition] 01a1c5ba-9999-7000-8000-000000000003"\n}',
+    })
     expect(log).toEqual([])
   })
 })

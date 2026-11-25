@@ -1,6 +1,6 @@
 import { importTemplateJsonHandler } from "@/server/configuration/templateProvisionerHandlers"
 import { exportTemplateJson } from "@/server/configuration/templateReads"
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 
 type Context = { params: Promise<{ template: string }> }
 
@@ -14,4 +14,4 @@ export async function PUT(request: Request, context: Context): Promise<Response>
   return importTemplateJsonHandler(request, template)
 }
 
-export { laravelRouterHandler as POST, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as POST, unmatchedRouteHandler as PATCH, unmatchedRouteHandler as DELETE, unmatchedRouteHandler as OPTIONS }

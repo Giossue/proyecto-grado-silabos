@@ -1,12 +1,12 @@
 import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { canonicalHash } from "../documents/canonicalJson"
-import { ExportForbidden, ExportMissing, ExportRejected, existingExport, requestExport, type ExportRequestTx } from "../documents/syllabusExport"
-import { isJsonRequest, laravelInput, type PhpArray } from "../laravel/input"
-import { aborted, forbidden, laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
+import { ExportForbidden, ExportRejected, existingExport, requestExport, type ExportRequestTx } from "../documents/syllabusExport"
+import { requestInput, type PhpArray } from "../http/input"
+import { aborted, forbidden, apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
 import { SignatureRejected, signatureSettings, type SignatureSettings } from "../signatures/cmsVerifier"
 import { decisionSignatureFrom } from "../signatures/decisionSignature"
 import { signDecision, type SignatureTx, type Verifier } from "../signatures/signDecision"
@@ -15,8 +15,8 @@ import { blockedDecision, Missing, Rejected, settle, type DecisionSyllabus } fro
 import type { ReviewDetailStore, ReviewRevision } from "./reviewDetails"
 import { createReviewApprovalDeps } from "./reviewApprovalStore"
 import type { DetailSyllabus } from "./syllabusDetail"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export interface ReviewApprovalTx extends SignatureTx {
   exports: ExportRequestTx
@@ -36,7 +36,6 @@ export type ReviewApprovalDeps = {
   store: Pick<ReviewDetailStore, "revision" | "syllabus" | "userName">
   settings: () => SignatureSettings & { requireHolderMatch: boolean }
   verify?: Verifier
-  renderable: (revisionId: string) => Promise<boolean>
   now: () => number
   newId: () => string
   newKey: () => string
@@ -51,7 +50,7 @@ const COORDINATION = "coordinacion"
 const NOT_CURRENT = "Solo puede aprobarse la revisión vigente."
 const NOT_WAITING = "La revisión ya no espera la decisión de coordinación."
 
-type Bound = { session: LaravelSession; revision: ReviewRevision; syllabus: DetailSyllabus }
+type Bound = { session: AppSession; revision: ReviewRevision; syllabus: DetailSyllabus }
 
 async function bindRevision(request: Request, revisionId: string, deps: ReviewApprovalDeps): Promise<Bound | Response> {
   let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
@@ -86,7 +85,6 @@ export async function settleExport(original: Request, deps: { bridge: BridgeDeps
       if (error instanceof SignatureRejected) return validationError({ signature: [error.message] })
       if (error instanceof ExportForbidden) return aborted(403)
       if (error instanceof ExportRejected) return validationError(error.errors)
-      if (error instanceof ExportMissing) throw new Missing()
       throw error
     }
   })
@@ -98,17 +96,15 @@ function iso8601(seconds: number): string {
 
 export async function approveReview(request: Request, revisionId: string, deps: ReviewApprovalDeps = defaultReviewApprovalDeps()): Promise<Response> {
   const original = request.clone()
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
   const bound = await bindRevision(original, revisionId, deps)
   if (bound instanceof Response) return bound
   const { session, revision, syllabus } = bound
   if (!hasRole(session, ROLE_COORDINATOR) || !mayReview(session, syllabus)) return forbidden()
   const block = decisionBlock(syllabus)
   if (block !== null) return blockedDecision(block)
-  const input: PhpArray = await laravelInput(request)
+  const input: PhpArray = await requestInput(request)
   const errors = await validateInput(input, { signature: ["nullable", "array"] }, { signature: "firma electrónica" })
   if (Object.keys(errors).length > 0) return validationError(errors)
-  if (!(await deps.renderable(revision.id))) return deps.bridge.forward(original)
   return settleExport(original, deps, async () => {
     const signature = decisionSignatureFrom(input.signature)
     const settings = deps.settings()
@@ -116,10 +112,10 @@ export async function approveReview(request: Request, revisionId: string, deps: 
     await deps.transaction(async (tx) => {
       const lockedBlock = await tx.lockedDecisionBlock(revision.syllabusId)
       const locked = await tx.lockSyllabus(revision.syllabusId)
-      if (locked === null) throw new Missing()
+      if (locked === null) throw new Missing(MODELS.syllabus, revision.syllabusId)
       if (await tx.approvalExists(revision.id)) return
       const latest = await tx.latestRevisionId(locked.id)
-      if (latest === null) throw new Missing()
+      if (latest === null) throw new Missing(MODELS.revision)
       if (locked.state !== "en_revision" || latest !== revision.id) rejectRevision(NOT_CURRENT)
       if ((await tx.revisionStage(revision.id)) !== COORDINATION) rejectRevision(NOT_WAITING)
       if (lockedBlock !== null) rejectRevision(lockedBlock)
@@ -143,6 +139,6 @@ export async function approveReview(request: Request, revisionId: string, deps: 
       if ((await existingExport(tx.exports, revision.id, approvalId, actor.id)) !== null) return
       await requestExport(tx.exports, { revisionId: revision.id, syllabusId: revision.syllabusId, key: approvalId, actor: { id: actor.id }, now: deps.now(), newId: deps.newId })
     })
-    return laravelJson({ message: "Sílabo firmado y aprobado." })
+    return apiJson({ message: "Sílabo firmado y aprobado." })
   })
 }

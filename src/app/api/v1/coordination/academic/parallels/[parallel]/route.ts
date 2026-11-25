@@ -1,6 +1,6 @@
 import { updateParallel } from "@/server/academic/careerWrites"
 import { deleteParallel } from "@/server/academic/deletions"
-import { laravelRouterHandler } from "@/server/laravel/router"
+import { unmatchedRouteHandler } from "@/server/http/router"
 
 type Context = { params: Promise<{ parallel: string }> }
 
@@ -14,4 +14,4 @@ export async function PATCH(request: Request, context: Context): Promise<Respons
   return updateParallel(request, parallel)
 }
 
-export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as OPTIONS }
+export { unmatchedRouteHandler as GET, unmatchedRouteHandler as HEAD, unmatchedRouteHandler as POST, unmatchedRouteHandler as PUT, unmatchedRouteHandler as OPTIONS }

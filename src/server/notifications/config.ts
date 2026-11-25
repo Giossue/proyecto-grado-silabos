@@ -1,4 +1,4 @@
-import { laravelEnv } from "../mail/config"
+import { envValue } from "../mail/config"
 
 type Env = Record<string, string | undefined>
 
@@ -33,9 +33,9 @@ function phpBool(value: string | null | undefined, fallback: boolean): boolean {
 }
 
 export function notificationEmailConfig(env: Env = process.env): NotificationEmailConfig {
-  const events = String(laravelEnv(env, "NOTIFICATION_EMAIL_EVENTS") ?? "")
+  const events = String(envValue(env, "NOTIFICATION_EMAIL_EVENTS") ?? "")
     .split(",")
     .map((event) => event.replace(PHP_TRIM, ""))
     .filter((event) => /^[a-z]+\.[a-z_]+$/.test(event))
-  return { enabled: phpBool(laravelEnv(env, "NOTIFICATION_EMAILS"), true), events: events.length === 0 ? DEFAULT_EMAIL_EVENTS : events }
+  return { enabled: phpBool(envValue(env, "NOTIFICATION_EMAILS"), true), events: events.length === 0 ? DEFAULT_EMAIL_EVENTS : events }
 }

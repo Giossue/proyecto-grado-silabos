@@ -1,7 +1,8 @@
 import { isPhpArray, isRecord, list, record, type PhpRecord } from "../../configuration/phpValues"
 import { documentAppearance } from "../../configuration/templatePresentation"
-import { fieldDocumentIsEmpty, isDocument, resolveDocument, type TemplateDefinition } from "../../configuration/templateRuntime"
-import { NeedsLaravel, snapshotDefinition } from "../../syllabus/snapshotDocuments"
+import { fieldDocumentIsEmpty, resolveDocument, type TemplateDefinition } from "../../configuration/templateRuntime"
+import { historicalDocument, snapshotDefinition } from "../../syllabus/snapshotDocuments"
+import { wordDisplay } from "../historicalFieldDocument"
 import { imageInfo } from "./imageInfo"
 import { TemplateDocumentWord } from "./templateDocumentWord"
 import { WordDocument, type WordContainer, type WordSection } from "./wordDocument"
@@ -119,11 +120,41 @@ class RenderContext {
   }
 }
 
-function historicalDocument(field: PhpRecord): PhpRecord {
-  if (isPhpArray(field.document)) return record(field.document)
-  const value = field.value ?? null
-  if (isDocument(value)) return record(value)
-  throw new NeedsLaravel()
+function hasTitle(container: PhpRecord): boolean {
+  return phpTrim(stringOr(container.title, "")) !== ""
+}
+
+function writeValueText(context: RenderContext, section: WordSection, value: unknown): void {
+  const shown = wordDisplay(value)
+  if (shown === "") {
+    if (context.emptyText !== "") section.addText(context.emptyText, { italic: true, color: context.emptyColor })
+    return
+  }
+  for (const line of shown.split(/\r\n|\n|\r|\v|\f|\u0085|\u2028|\u2029/u)) {
+    const trimmed = phpTrim(line)
+    if (trimmed === "") continue
+    const bullet = /^[-*•]\s+(.*)$/u.exec(trimmed)
+    if (bullet !== null) {
+      section.addText(bullet[1], {}, { numStyle: "silabo-bullets", numLevel: 0, spaceAfter: 60 })
+      continue
+    }
+    section.addText(trimmed)
+  }
+}
+
+function renderContainer(context: RenderContext, section: WordSection, container: PhpRecord, titled: boolean): void {
+  const fields = arrayList(container.fields)
+  const field = fields[0] ?? {}
+  const label = stringOr(field.label, stringOr(container.title, "Campo"))
+  if (titled && hasTitle(container)) {
+    section.addText(label, { bold: true, size: numeric(context.appearance.field_font_size), color: context.color("text_color") }, { spaceBefore: 160, spaceAfter: 80, keepNext: true })
+  }
+  if (isPhpArray(container.document)) {
+    context.documentWriter().append(section, resolveDocument(record(container.document), context.templateVariables, context.definition, fields), context.contentWidth)
+    return
+  }
+  if (field.hidden === true) return
+  writeValueText(context, section, field.value ?? null)
 }
 
 function renderDocuments(context: RenderContext, section: WordSection, snapshotSection: PhpRecord): void {
@@ -225,7 +256,8 @@ export async function buildSyllabusWord(input: DocumentRenderInput, logoSource: 
       renderDocuments(activeContext, section, block)
       continue
     }
-    if (arrayList(block.blocks).length > 0) throw new NeedsLaravel()
+    const containers = arrayList(block.blocks)
+    for (const container of containers) renderContainer(activeContext, section, container, containers.length > 1 && hasTitle(container))
   }
   return word
 }

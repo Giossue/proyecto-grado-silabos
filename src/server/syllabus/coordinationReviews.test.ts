@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import type { SyllabusFacts } from "./policy"
 import {
   compareRevisions,
@@ -28,7 +28,6 @@ const FOREIGN_REVISION = "70000000-0000-4000-8000-000000000003"
 const PERIOD = "e0000000-0000-4000-8000-000000000001"
 
 let world: FakeWorld
-let forwarded: Request[]
 let reviewCalls: unknown[]
 let historyCalls: HistoryFilters[]
 let reviewRows: ReviewListRow[]
@@ -95,7 +94,7 @@ const repository = (): CoordinationReviewRepository => ({
   },
 })
 
-const deps = () => ({ bridge: fakeDeps(world, forwarded), reviews: repository() })
+const deps = () => ({ bridge: fakeDeps(world), reviews: repository() })
 
 async function call(handler: (request: Request) => Promise<Response>, path: string) {
   const response = await handler(apiRequest(path, { cookie }))
@@ -122,7 +121,6 @@ beforeEach(() => {
     users: [makeUser()],
     assignments: [makeAssignment({ role: "coordinador", careerId: CAREER })],
   }
-  forwarded = []
   reviewCalls = []
   historyCalls = []
   reviewRows = [reviewRow()]
@@ -263,6 +261,5 @@ describe("GET /api/v1/coordination/reviews/{before}/compare/{after}", () => {
     expect((await compare(REVISION_1, REVISION_2)).status).toBe(200)
     expect(await compare(REVISION_1, "70000000-0000-4000-8000-00000000ffff")).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", "70000000-0000-4000-8000-00000000ffff") })
     expect(await compare("x", REVISION_2)).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", "x") })
-    expect(forwarded).toHaveLength(0)
   })
 })

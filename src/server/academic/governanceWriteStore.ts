@@ -1,7 +1,8 @@
 import "server-only"
+import { sessionRandom } from "../auth/sessionWriter"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
-import { uuid7 } from "../laravel/uuid7"
+import { uuid7 } from "../http/uuid7"
 import { notificationScope, systemNow, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { FinalizedChangeNotice } from "../syllabus/finalizedChangeNotice"
@@ -109,7 +110,23 @@ export function governanceWriteTx(executor: Executor, afterCommit: AfterCommit, 
             and proceso.estado_convocatoria_universidad != 'cerrado')
           and ${PROCESS_ALIVE})`,
       ),
-    careerHasActiveRoles: (id) => exists(executor, sql`select 1 from asignaciones_rol where carrera_id = ${id}::uuid and asignacion_rol_activa = true`),
+    async retireCareerUsers(id) {
+      const assignments = (
+        await executor.execute(sql`select asignacion_rol_id::text as id, usuario_id::text as user_id from asignaciones_rol
+          where carrera_id = ${id}::uuid and asignacion_rol_activa = true for update`)
+      ).rows as { id: string; user_id: string }[]
+      for (const assignment of assignments) {
+        await executor.execute(sql`delete from asignaciones_paralelo where asignacion_rol_id = ${assignment.id}::uuid and asignacion_paralelo_activa = true`)
+        await executor.execute(sql`update asignaciones_rol set asignacion_rol_activa = false where asignacion_rol_id = ${assignment.id}::uuid`)
+        await executor.execute(sql`update usuarios set codigo_recordarme = ${sessionRandom(60)} where usuario_id = ${assignment.user_id}::uuid`)
+        await executor.execute(sql`delete from sesiones where user_id = ${assignment.user_id}::uuid`)
+        if (!(await exists(executor, sql`select 1 from asignaciones_rol where usuario_id = ${assignment.user_id}::uuid and asignacion_rol_activa = true`))) {
+          await executor.execute(sql`update invitaciones_activacion set invalidada_en = now()
+            where usuario_id = ${assignment.user_id}::uuid and usada_en is null and invalidada_en is null`)
+        }
+      }
+      return assignments.length
+    },
     async setActive(entity, id, active) {
       if (entity === "facultad") await executor.execute(sql`update facultades set facultad_activa = ${active} where facultad_id = ${id}::uuid`)
       else await executor.execute(sql`update carreras set carrera_activa = ${active} where carrera_id = ${id}::uuid`)

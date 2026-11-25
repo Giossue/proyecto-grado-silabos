@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
 import ExcelJS from "exceljs"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { editPart, readBook, xlsx } from "../excel/testing"
-import { createRateLimiter } from "../laravel/throttle"
+import { createRateLimiter } from "../http/throttle"
 import type { CareerWriteTx } from "./careerWrites"
 import type { CurriculumTx } from "./curriculumWrites"
 import type { GovernanceWriteTx } from "./governanceWrites"

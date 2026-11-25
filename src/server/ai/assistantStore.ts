@@ -4,8 +4,8 @@ import { db } from "@/db"
 import { phpJsonDecode, phpShape, record, type PhpRecord } from "../configuration/phpValues"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
 import { loadTemplate } from "../configuration/templateStore"
-import { phpJsonEncode } from "../laravel/phpJson"
-import { iso8601, uuidList } from "../laravel/sql"
+import { phpJsonEncode } from "../http/phpJson"
+import { iso8601, uuidList } from "../http/sql"
 
 export type StoredMessage = { id: string; templateId: string; userId: string; content: PhpRecord; sentAt: string; hiddenAt: string | null }
 

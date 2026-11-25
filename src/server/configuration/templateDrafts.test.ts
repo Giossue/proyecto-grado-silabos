@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import draftGolden from "./__fixtures__/draft-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { createRateLimiter, type RateLimiter } from "../laravel/throttle"
+import { createRateLimiter, type RateLimiter } from "../http/throttle"
 import { fakeTemplateStore, fieldId, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "./testing"
 import { checkTemplateDraft, previewTemplateDraft, templateDraftImpact, type TemplateDraftDeps } from "./templateDrafts"
 import type { RehearsalReads, RehearsalStore } from "./templateRehearsal"
@@ -17,7 +17,6 @@ const cases = draftGolden as Record<string, { payload: unknown; problems: string
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
-let forwarded: Request[]
 let limiter: RateLimiter
 let rehearsals: string[]
 let paused: string | null
@@ -43,7 +42,7 @@ const rehearsal = (): RehearsalStore => ({
   },
 })
 
-const deps = (): TemplateDraftDeps => ({ bridge: fakeDeps(world, forwarded), store: fakeTemplateStore(templates), rehearsal: rehearsal(), limiter })
+const deps = (): TemplateDraftDeps => ({ bridge: fakeDeps(world), store: fakeTemplateStore(templates), rehearsal: rehearsal(), limiter })
 
 function post(action: string, body: unknown, { id = TEMPLATE_ID, headers = {} }: { id?: string; headers?: Record<string, string> } = {}): Request {
   return new Request(`http://localhost:3000/api/v1/admin/template/${id}/draft/${action}`, {
@@ -86,7 +85,6 @@ beforeEach(() => {
     assignments: [makeAssignment({ role: "administrador", careerId: null })],
   }
   templates = { template: goldenTemplate(), values: [] }
-  forwarded = []
   limiter = createRateLimiter()
   rehearsals = []
   paused = null
@@ -202,13 +200,12 @@ describe("POST admin/template/{template}/draft/impact", () => {
 })
 
 describe("draft routes that stay in Laravel", () => {
-  it("forwards when the template does not exist or the request is not JSON", async () => {
+  it("answers Laravel's model 404 without a template and reads a form body natively", async () => {
     templates.template = null
     expect(await send("preview", { version: 1, sections: [] })).toMatchObject({ status: 404, text: modelNotFound("SyllabusTemplate", TEMPLATE_ID) })
     templates.template = goldenTemplate()
     const response = await previewTemplateDraft(post("preview", "version=1", { headers: { "content-type": "application/x-www-form-urlencoded" } }), TEMPLATE_ID, deps())
-    expect(response.status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    expect(response.status).toBe(422)
   })
 
   it("checks the CSRF token and the session before anything else", async () => {
@@ -216,6 +213,5 @@ describe("draft routes that stay in Laravel", () => {
     expect(await send("preview", { version: 1, sections: [] })).toMatchObject({ status: 419, text: '{\n    "message": "CSRF token mismatch."\n}' })
     const response = await send("preview", { version: 1, sections: [] }, { headers: { "sec-fetch-site": "same-origin" } })
     expect(response).toMatchObject({ status: 401, text: '{"message":"Unauthenticated."}' })
-    expect(forwarded).toEqual([])
   })
 })

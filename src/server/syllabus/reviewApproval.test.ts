@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { canonicalHash } from "../documents/canonicalJson"
 import { SignatureRejected } from "../signatures/cmsVerifier"
@@ -22,10 +22,8 @@ const PAUSED = "La convocatoria de la carrera está en pausa: las revisiones se 
 const ISO_NOW = new Date(NOW * 1000).toISOString().slice(0, 19) + "+00:00"
 
 let world: FakeWorld
-let forwarded: Request[]
 let syllabus: DetailSyllabus
 let revision: ReviewRevision
-let renderable: boolean
 let lockedBlock: string | null
 let locked: { id: string; state: string; version: number; convocationId: string; parallelId: string } | null
 let latest: string | null
@@ -43,7 +41,7 @@ let ids: number
 
 function deps(): ReviewApprovalDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     store: {
       revision: async (id) => (id === revision.id ? revision : null),
       syllabus: async () => syllabus,
@@ -55,7 +53,6 @@ function deps(): ReviewApprovalDeps {
       log.push(`verify:${content}`)
       return { holder: "MARIA JOSE PEREZ LOPEZ", serial: "0C", issuer: "C=EC, CN=AUTORIDAD", validTo: NOW + 1000 }
     },
-    renderable: async () => renderable,
     now: () => NOW,
     newId: () => `0a000000-0000-7000-8000-${String(++ids).padStart(12, "0")}`,
     newKey: () => KEY,
@@ -116,7 +113,6 @@ async function approve(body: unknown, headers: Record<string, string> = { "conte
 const signature = (statement = STATEMENT, cms = "firma-valida") => ({ signature: { statement, cms } })
 
 beforeEach(() => {
-  forwarded = []
   world = {
     sessions: new Map([[golden.sessionId, { id: golden.sessionId, userId: golden.userId, payload: sessionPayload(loggedInAttributes()), lastActivity: NOW }]]),
     users: [makeUser()],
@@ -145,7 +141,6 @@ beforeEach(() => {
     context: [],
   }
   revision = { id: REVISION, syllabusId: SYLLABUS, number: 2, submittedAt: NOW - 100, submittedBy: "Ana", fingerprint: FINGERPRINT }
-  renderable = true
   lockedBlock = null
   locked = { id: SYLLABUS, state: "en_revision", version: 7, convocationId: syllabus.convocationId, parallelId: "d0000000-0000-4000-8000-000000000001" }
   latest = REVISION
@@ -242,14 +237,12 @@ describe("POST coordination/reviews/{revision}/approve", () => {
     expect(approvals).toEqual([])
   })
 
-  it("leaves to Laravel what Next cannot render or read", async () => {
-    renderable = false
-    expect(await approve(signature())).toEqual({ status: 299, text: "from-laravel" })
-    renderable = true
-    expect(await approve("signature=x", { "content-type": "application/x-www-form-urlencoded" })).toEqual({ status: 299, text: "from-laravel" })
+  it("reads form bodies like JSON and answers Laravel's model 404 when the syllabus disappears under the lock", async () => {
+    expect((await approve("signature=x", { "content-type": "application/x-www-form-urlencoded" })).status).toBe(422)
     locked = null
-    expect(await approve(signature())).toEqual({ status: 299, text: "from-laravel" })
-    expect(forwarded).toHaveLength(3)
+    const missing = await approve(signature())
+    expect(missing.status).toBe(404)
+    expect(missing.text).toContain("No query results for model [App\\\\Modules\\\\Syllabus\\\\Infrastructure\\\\Persistence\\\\Models\\\\Syllabus]")
     expect(approvals).toEqual([])
   })
 })

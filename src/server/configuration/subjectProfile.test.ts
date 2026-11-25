@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import { fakeTemplateStore, fieldId, goldenCatalog, goldenFields, goldenPresentation, goldenTemplate, type FakeTemplateWorld } from "./testing"
 import { showSubjectProfile, type SubjectProfileDeps } from "./subjectProfile"
 
@@ -15,12 +15,11 @@ const EMPTY_FORBIDDEN = '{\n    "message": ""\n}'
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
-let forwarded: Request[]
 let subjects: Map<string, string>
 let activeCareers: Set<string>
 
 const deps = (): SubjectProfileDeps => ({
-  bridge: fakeDeps(world, forwarded),
+  bridge: fakeDeps(world),
   store: fakeTemplateStore(templates),
   subjectCareer: async (id) => subjects.get(id) ?? null,
   careerActive: async (id) => activeCareers.has(id),
@@ -58,7 +57,6 @@ beforeEach(() => {
     assignments: [],
   }
   templates = { template: goldenTemplate(), values: [] }
-  forwarded = []
   subjects = new Map([[SUBJECT, CAREER]])
   activeCareers = new Set([CAREER, OTHER_CAREER])
 })
@@ -71,7 +69,6 @@ describe("GET academic/asignaturas/{asignatura}/ficha", () => {
 
     expect(response.status).toBe(200)
     expect(response.text).toBe(expectedBody("{}", false))
-    expect(forwarded).toHaveLength(0)
   })
 
   it("the administrator sees the profile of any career with the stored values following the template", async () => {
@@ -113,7 +110,6 @@ describe("GET academic/asignaturas/{asignatura}/ficha", () => {
     asRole("coordinador", CAREER)
     activeCareers.delete(CAREER)
     expect(await read(await get())).toEqual({ status: 403, text: EMPTY_FORBIDDEN })
-    expect(forwarded).toHaveLength(0)
   })
 
   it("without a session answers 401 like Laravel", async () => {
@@ -121,12 +117,13 @@ describe("GET academic/asignaturas/{asignatura}/ficha", () => {
     expect(await read(response)).toEqual({ status: 401, text: '{"message":"Unauthenticated."}' })
   })
 
-  it("leaves a missing subject, a non-UUID id and a missing template to Laravel", async () => {
+  it("answers Laravel's model 404 for a missing subject and a missing template, and the router 404 for a non-UUID id", async () => {
     asRole("coordinador", CAREER)
-    expect((await get("01a1c5bc-7a00-7000-8000-0000000000ff")).status).toBe(299)
+    const unknown = await get("01a1c5bc-7a00-7000-8000-0000000000ff")
+    expect([unknown.status, await unknown.text()]).toEqual([404, '{\n    "message": "No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a1c5bc-7a00-7000-8000-0000000000ff"\n}'])
     expect((await get("no-es-uuid")).status).toBe(404)
     templates.template = null
-    expect((await get()).status).toBe(299)
-    expect(forwarded).toHaveLength(2)
+    const missing = await get()
+    expect([missing.status, await missing.text()]).toEqual([404, '{\n    "message": "No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\SyllabusTemplate]."\n}'])
   })
 })

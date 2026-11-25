@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import golden from "./__fixtures__/laravel-golden.json"
 import { lengthAwarePaginator, resolveCurrentPage } from "./pagination"
 import { phpJsonEncode } from "./phpJson"
-import { laravelQuery } from "./request"
+import { queryParams } from "./request"
 
 describe("LengthAwarePaginator", () => {
   it.each(golden.paginators)("matches PHP for $total items on page $page", ({ total, page, query, json }) => {
@@ -32,7 +32,7 @@ describe("LengthAwarePaginator", () => {
 describe("Laravel request query", () => {
   it("keeps the first position, the last value, trims and drops empty strings", () => {
     const url = new URL("http://localhost:3000/x?status=+unread+&page=2&status=all&empty=&b=%C3%B1")
-    expect([...laravelQuery(url)]).toEqual([
+    expect([...queryParams(url)]).toEqual([
       ["status", "all"],
       ["page", "2"],
       ["empty", null],

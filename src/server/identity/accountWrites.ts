@@ -1,21 +1,22 @@
 import "server-only"
+import { HttpFailure } from "../http/failures"
+import { requestBoolean } from "../syllabus/inProgressWork"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import { bcryptHash, bcryptVerify } from "../auth/bcrypt"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import type { SessionWriterDeps } from "../auth/sessionWriter"
 import { isUuid } from "../academic/structure"
 import { institutionToday } from "../dashboard/dashboardQueries"
-import { isJsonRequest, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
-import { aborted, forbidden, laravelJson, validationError } from "../laravel/responses"
-import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
-import { validateInput, type Rule } from "../laravel/validation"
+import { isJsonRequest, requestInput, type PhpArray, type PhpValue } from "../http/input"
+import { aborted, forbidden, apiJson, validationError } from "../http/responses"
+import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
+import { validateInput, type Rule } from "../http/validation"
 import { frontendUrl } from "../mail/config"
 import { queueMail } from "../mail/sendMailJob"
 import { withAfterCommit } from "../queue/dispatch"
 import {
   collapseNameColumns,
   emailRule,
-  emailShape,
   fullName,
   isValidFullName,
   nameColumnMessages,
@@ -33,7 +34,6 @@ import {
   assignRole,
   createManagedUser,
   deleteManagedUser,
-  NeedsLaravel,
   removeUserRole,
   RESEND,
   resendActivation,
@@ -47,8 +47,8 @@ import {
 } from "./accounts"
 import { createAccountRepository } from "./accountStore"
 import { createProfileRepository, type SessionDeps } from "./session"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type IdentityWriteDeps = {
   bridge: BridgeDeps
@@ -90,7 +90,7 @@ export const ACCOUNT_ATTRIBUTES: Record<string, string> = {
   current_password: "contraseña actual",
 }
 
-export function isAdministrator(session: LaravelSession): boolean {
+export function isAdministrator(session: AppSession): boolean {
   return session.user.active && session.activeRole?.role === ROLE_ADMINISTRATOR
 }
 
@@ -111,7 +111,7 @@ export type Performed<T> = { value: T } | Response
 export async function perform<T>(
   deps: IdentityWriteDeps,
   original: Request,
-  session: LaravelSession,
+  session: AppSession,
   work: (ctx: ActionContext) => Promise<T>,
   actorId: string = session.user.id,
 ): Promise<Performed<T>> {
@@ -124,7 +124,7 @@ export async function perform<T>(
     return { value }
   } catch (error) {
     if (error instanceof AccountValidation) return validationError(error.errors)
-    if (error instanceof NeedsLaravel) return deps.bridge.forward(original)
+    if (error instanceof HttpFailure) return error.response
     throw error
   }
 }
@@ -138,18 +138,17 @@ export function passwordRecoveryThrottle(deps: IdentityWriteDeps, request: Reque
   return throttle(deps.limiter, { key: `password-recovery:${email}|${clientIp(request)}`, maxAttempts: 3, decaySeconds: 60 }, deps.bridge.now)
 }
 
-export type BoundAccount = { session: LaravelSession; target: Account; original: Request; finish: (response: Response) => Response }
+export type BoundAccount = { session: AppSession; target: Account; original: Request; finish: (response: Response) => Response }
 
 export async function bindAccount(
   request: Request,
   id: string,
   deps: IdentityWriteDeps,
-  options: { throttled?: boolean; extra?: () => Promise<boolean | Response> } = {},
+  options: { throttled?: boolean; extra?: () => Promise<true | Response> } = {},
 ): Promise<BoundAccount | Response> {
   const original = request.clone()
   let target: Account | null = null
   let gate: Throttle | null = null
-  let forwarded = false
   const session = await requireSession(
     request,
     {
@@ -157,24 +156,19 @@ export async function bindAccount(
       activeRole: "required",
       afterAuthentication: async () => {
         if (options.throttled) {
-          gate = passwordRecoveryThrottle(deps, request, await laravelInput(request.clone()))
+          gate = passwordRecoveryThrottle(deps, request, await requestInput(request.clone()))
           const limited = await gate.hit()
           if (limited) return limited
         }
         target = isUuid(id) ? await deps.accounts.findAccount(id) : null
         if (target === null) return modelNotFound(MODELS.user, id)
         const extra = options.extra ? await options.extra() : true
-        if (extra instanceof Response) return extra
-        if (!extra) {
-          forwarded = true
-          return deps.bridge.forward(original)
-        }
-        return null
+        return extra instanceof Response ? extra : null
       },
     },
     deps.bridge,
   )
-  const finish = (response: Response) => (forwarded ? response : ((gate as Throttle | null)?.decorate(response) ?? response))
+  const finish = (response: Response) => (gate as Throttle | null)?.decorate(response) ?? response
   if (session instanceof Response) return finish(session)
   return { session, target: target as unknown as Account, original, finish }
 }
@@ -192,9 +186,7 @@ export async function storeManagedUser(request: Request, deps: IdentityWriteDeps
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!isAdministrator(session)) return forbidden()
-  if (!acceptsBody(request)) return deps.bridge.forward(original)
-  const input = collapseNameColumns(await laravelInput(request))
-  if (emailShape(input.correo_electronico) === "unknown") return deps.bridge.forward(original)
+  const input = collapseNameColumns(await requestInput(request))
   const errors = await validateInput(
     input,
     {
@@ -225,22 +217,21 @@ export async function storeManagedUser(request: Request, deps: IdentityWriteDeps
       roleCode: stringOf(input.role_code),
       careerId: blank(input.career_id) ? null : stringOf(input.career_id),
       replaceCoordinator: phpBoolean(input.replace_coordinator),
+      confirmed: requestBoolean(input.confirm_purge),
     }),
   )
   if (outcome instanceof Response) return outcome
   const created = outcome.value
-  return laravelJson({ message: "Cuenta creada con su rol inicial.", user: { id: created.id, nombre: created.name, correo_electronico: created.email } }, 201)
+  return apiJson({ message: "Cuenta creada con su rol inicial.", user: { id: created.id, nombre: created.name, correo_electronico: created.email } }, 201)
 }
 
 export async function updateManagedUser(request: Request, id: string, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
   const bound = await bindAccount(request, id, deps)
   if (bound instanceof Response) return bound
   const { session, target, original } = bound
-  if (!acceptsBody(request)) return deps.bridge.forward(original)
-  const input = await laravelInput(request)
+  const input = await requestInput(request)
   const governance = "active" in input || "role_code" in input
   if (!isAdministrator(session) || (governance && session.user.id === target.id)) return forbidden()
-  if (emailShape(input.correo_electronico) === "unknown") return deps.bridge.forward(original)
   const errors = await validateInput(
     input,
     {
@@ -276,15 +267,16 @@ export async function updateManagedUser(request: Request, id: string, deps: Iden
         roleCode: stringOf(input.role_code),
         careerId: blank(input.career_id) ? null : stringOf(input.career_id),
         replaceCoordinator: phpCastBool(input.replace_coordinator ?? false),
+        confirmed: requestBoolean(input.confirm_purge),
       })
     }
     if ("active" in input && phpCastBool(input.active) !== target.active) await setUserStatus(ctx, target, phpCastBool(input.active))
   })
   if (outcome instanceof Response) return outcome
-  return laravelJson({ message: "Cuenta actualizada." })
+  return apiJson({ message: "Cuenta actualizada." })
 }
 
-export function managesPending(session: LaravelSession, target: Account): boolean {
+export function managesPending(session: AppSession, target: Account): boolean {
   return session.user.active && session.user.id !== target.id && target.active && !target.verified && session.activeRole?.role === ROLE_ADMINISTRATOR
 }
 
@@ -295,7 +287,7 @@ export async function resendManagedUserActivation(request: Request, id: string, 
   if (!managesPending(session, target)) return finish(forbidden())
   const outcome = await perform(deps, original, session, (ctx) => resendActivation(ctx, target, RESEND))
   if (outcome instanceof Response) return finish(outcome)
-  return finish(laravelJson({ message: `Invitación de activación enviada a ${target.email}.` }))
+  return finish(apiJson({ message: `Invitación de activación enviada a ${target.email}.` }))
 }
 
 export async function destroyManagedUser(request: Request, id: string, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
@@ -305,7 +297,7 @@ export async function destroyManagedUser(request: Request, id: string, deps: Ide
   if (!managesPending(session, target)) return forbidden()
   const outcome = await perform(deps, original, session, (ctx) => deleteManagedUser(ctx, target))
   if (outcome instanceof Response) return outcome
-  return laravelJson({ message: "Cuenta eliminada." })
+  return apiJson({ message: "Cuenta eliminada." })
 }
 
 export async function removeManagedUserRole(
@@ -328,5 +320,5 @@ export async function removeManagedUserRole(
   if (grant.userId !== target.id) return aborted(404)
   const outcome = await perform(deps, original, session, (ctx) => removeUserRole(ctx, target, grant))
   if (outcome instanceof Response) return outcome
-  return laravelJson({ message: "Rol retirado." })
+  return apiJson({ message: "Rol retirado." })
 }

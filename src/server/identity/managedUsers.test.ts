@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { managedUsers, type ManagedUserFilters, type ManagedUserRepository, type ManagedUserRow } from "./managedUsers"
 
@@ -35,7 +35,7 @@ const user = (overrides: Partial<ManagedUserRow> = {}): ManagedUserRow => ({
 })
 
 async function list(query = "") {
-  const response = await managedUsers(apiRequest(`/api/v1/admin/users${query}`, { cookie }), { bridge: fakeDeps(world, []), users: repository() })
+  const response = await managedUsers(apiRequest(`/api/v1/admin/users${query}`, { cookie }), { bridge: fakeDeps(world), users: repository() })
   const text = await response.text()
   return { status: response.status, text, json: text.startsWith("{") ? (JSON.parse(text) as Record<string, ReturnType<typeof JSON.parse>>) : null }
 }

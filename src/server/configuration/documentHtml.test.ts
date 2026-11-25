@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import golden from "./__fixtures__/html-golden.json"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import { documentFromHtml, documentLines } from "./documentHtml"
 
 describe("documentFromHtml", () => {

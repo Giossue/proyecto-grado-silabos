@@ -1,9 +1,12 @@
 import "server-only"
+import { modelNotFoundResponse } from "../http/failures"
+import { fromController } from "../auth/controllerResponse"
+import { MODELS } from "../http/models"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { requireSession } from "../auth/requireSession"
 import { CURRICULAR_UNITS } from "../academic/structure"
-import { laravelHttpError, laravelJson, validationError } from "../laravel/responses"
+import { jsonError, apiJson, validationError } from "../http/responses"
 import { buildIdentification, dataGet } from "../syllabus/identificationCard"
 import { phpCompareStrings } from "../syllabus/syllabusDetailQueries"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
@@ -13,7 +16,7 @@ import { profileTemplates } from "./subjectProfileFields"
 import { defaultSubjectProfileDeps, mayManageSubjectProfile, profileContext, type SubjectProfileDeps } from "./subjectProfile"
 import { syllabusSectionPayload, templatePresentationOf, type TemplateField } from "./templatePresentation"
 import { TemplateValidationError } from "./templateRuntime"
-import { laravelRouter, routeAllows } from "../laravel/router"
+import { unmatchedRoute, modelNotFound, routeAllows } from "../http/router"
 
 export type SubjectContextRow = {
   id: string
@@ -116,7 +119,7 @@ export function defaultSubjectPreviewDeps(): SubjectPreviewDeps {
 }
 
 export async function previewSubjectProfile(request: Request, subjectId: string, deps: SubjectPreviewDeps = defaultSubjectPreviewDeps()): Promise<Response> {
-  if (!routeAllows(request)) return laravelRouter(request)
+  if (!routeAllows(request)) return unmatchedRoute(request)
   let careerId: string | null = null
   const session = await requireSession(
     request,
@@ -125,22 +128,23 @@ export async function previewSubjectProfile(request: Request, subjectId: string,
       activeRole: "required",
       afterAuthentication: async () => {
         careerId = await deps.subjectCareer(subjectId)
-        return careerId === null ? deps.bridge.forward(request) : null
+        return careerId === null ? modelNotFound(MODELS.subject, subjectId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (careerId === null || !(await mayManageSubjectProfile(session, careerId, deps.careerActive))) return laravelHttpError(403, "")
+  if (careerId === null || !(await mayManageSubjectProfile(session, careerId, deps.careerActive))) return jsonError(403, "")
   const context = await profileContext(deps.store)
   const academic = await deps.subjectContext(subjectId)
-  if (context === null || academic === null) return deps.bridge.forward(request)
+  if (context === null) return fromController(modelNotFoundResponse(MODELS.template))
+  if (academic === null) return modelNotFound(MODELS.subject, subjectId)
   const { template, definition } = context
   try {
     const identification = buildIdentification(academic, [], [], [])
     const templates = await profileTemplates(context, subjectId)
     const stored = (field: TemplateField) => templates[field.id] ?? field.content
-    return laravelJson(
+    return apiJson(
       phpShape({
         presentation: templatePresentationOf(definition, await presentationLogos(request, dataGet(academic, "career.faculty_id"), deps.logos)),
         sections: template.sections.map((section) => syllabusSectionPayload(section, stored, { identification }, definition, templates)),

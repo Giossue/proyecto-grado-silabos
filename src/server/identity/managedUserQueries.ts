@@ -2,7 +2,7 @@ import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { careerLabelSql } from "../academic/careerLabel"
-import { accentMatches, uuidList } from "../laravel/sql"
+import { accentMatches, uuidList } from "../http/sql"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 import type { ManagedUserFilters, ManagedUserRepository, ManagedUserRow } from "./managedUsers"
 

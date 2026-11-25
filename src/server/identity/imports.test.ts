@@ -93,7 +93,7 @@ describe("POST /api/v1/admin/users/import", () => {
     expect(body.created).toBe(0)
   })
 
-  it("rolls everything back when a row cannot be created and leaves unusual emails to Laravel", async () => {
+  it("rolls everything back when a row cannot be created and accepts addresses with a domain literal", async () => {
     const test = harness()
     test.identity.accounts.push(account({ id: "01a1c5bc-3333-7000-8000-000000000001", name: "COORDINADORA ACTUAL", email: "actual@silabos.test" }))
     test.identity.grants.push(grant({ id: "01a1c5bc-3333-7000-8000-0000000000a1", userId: "01a1c5bc-3333-7000-8000-000000000001", role: "coordinador", careerId: CAREER }))
@@ -103,8 +103,7 @@ describe("POST /api/v1/admin/users/import", () => {
     expect(emails(test)).not.toContain("luis.dos@silabos.test")
     expect(test.identity.mails).toEqual([])
     const unusual = await xlsx([USERS, ["Ana", "Uno", "ana+uno@[127.0.0.1]", "Bibliotecario", ""]])
-    expect((await users(test, unusual)).status).toBe(299)
-    expect(test.forwarded).toHaveLength(1)
+    expect((await users(test, unusual)).status).toBe(200)
   })
 
   it("is only for administrators, after validating the upload", async () => {

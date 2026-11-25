@@ -1,12 +1,13 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import signatures from "../signatures/__fixtures__/laravel-signatures-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
 import { canonicalHash } from "../documents/canonicalJson"
 import type { SignatureRow } from "../signatures/signDecision"
-import { NeedsLaravel } from "./snapshotDocuments"
+import { Missing } from "../http/failures"
+import { MODELS } from "../http/models"
 import type { DetailSyllabus } from "./syllabusDetail"
 import { submissionStatement, submitSyllabus, type LibrarySubmissionRow, type RevisionRow, type SubmissionDeps, type SubmissionSchedule } from "./submission"
 
@@ -23,14 +24,13 @@ const SNAPSHOT = { schema_version: 9, template_definition: { library_sections: [
 const FINGERPRINT = canonicalHash(SNAPSHOT)
 
 let world: FakeWorld
-let forwarded: Request[]
 let notices: NotificationWorld
 let syllabus: DetailSyllabus | null
 let schedule: SubmissionSchedule
 let keyed: { id: string; number: number; submittedBy: string } | null
 let signedRoles: string[]
 let snapshot: () => Record<string, unknown>
-let blocking: number | null
+let blocking: number | Response
 let locked: { id: string; state: string; version: number } | null
 let latest: { id: string; number: number; correctionStage: string | null } | null
 let verification: { verifiedBy: string; verifiedAt: number; snapshot: unknown } | null
@@ -42,7 +42,7 @@ let stored: SignatureRow[]
 
 function deps(): SubmissionDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     store: {
       syllabus: async (id) => (syllabus !== null && syllabus.id === id ? syllabus : null),
       schedule: async () => schedule,
@@ -133,7 +133,6 @@ const submit = (body: unknown) => call(submitSyllabus, "submit", body)
 const teacherStatement = `silabos-ueb|silabo:${SYLLABUS}|accion:envio_docente|huella:${FINGERPRINT}`
 
 beforeEach(() => {
-  forwarded = []
   world = {
     sessions: new Map([[golden.sessionId, { id: golden.sessionId, userId: golden.userId, payload: sessionPayload(loggedInAttributes()), lastActivity: NOW }]]),
     users: [makeUser()],
@@ -190,12 +189,11 @@ describe("POST teacher/syllabi/{s}/signing-statement", () => {
     expect(conflict.json).toEqual({ message: "El borrador cambió en otra sesión. Recarga antes de continuar.", code: "conflicto_version_borrador", version_bloqueo_actual: 7 })
   })
 
-  it("hands the request to Laravel when the snapshot cannot be built here", async () => {
+  it("answers Laravel's model 404 when the snapshot cannot be built because the template is gone", async () => {
     snapshot = () => {
-      throw new NeedsLaravel()
+      throw new Missing(MODELS.template)
     }
-    expect((await statementOf({ version_bloqueo: 7 })).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    expect(await statementOf({ version_bloqueo: 7 })).toMatchObject({ status: 404 })
   })
 })
 

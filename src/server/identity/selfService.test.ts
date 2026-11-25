@@ -1,11 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import { loginSessionKey, recallerCookieName } from "../laravel/sessionGuard"
+import { loginSessionKey, recallerCookieName } from "../http/sessionGuard"
 import { destroyOtherSessions, destroySession, resendOwnActivation, updateAccessibility, updateFormation, updateProfile } from "./selfService"
 import { account, ACTOR, ACTOR_ROLE, CAREER, COOKIE, FORBIDDEN, harness, jsonRequest, NOW, SESSION_ID } from "./testing"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { storedJson, testKey } from "../auth/testing"
-import { decrypt } from "../laravel/encrypter"
+import { decrypt } from "../http/encrypter"
 
 const ISSUER = "01a1c5bc-3333-7000-8000-000000000001"
 
@@ -165,11 +165,11 @@ describe("DELETE /api/v1/authentication/sessions/others", () => {
     expect(test.identity.sessions.map((row) => row.id)).toEqual([SESSION_ID])
   })
 
-  it("leaves to Laravel a device that is only known by its remember cookie", async () => {
+  it("answers 401 to a device that only has a remember cookie Laravel would not accept", async () => {
     const test = harness()
     test.bridge.sessions.clear()
     const response = await remove(test, { current_password: "secreto-actual" }, `${COOKIE}; ${recallerCookieName()}=valor`)
-    expect(response.status).toBe(299)
+    expect(response.status).toBe(401)
     expect(test.identity.sessions.map((row) => row.userId)).toEqual([ACTOR])
   })
 })

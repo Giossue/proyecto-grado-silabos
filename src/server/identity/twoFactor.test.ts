@@ -1,14 +1,14 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { createMemoryAttemptLimiter } from "../auth/attemptLimiter"
 import { fakeDeps, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, storedJson, testKey, xsrfHeader, type FakeWorld } from "../auth/testing"
 import type { SessionWriterDeps } from "../auth/sessionWriter"
 import { totpCode, totpCounter, type TotpReplayCache } from "../auth/totp"
 import type { OutgoingCookie } from "../auth/types"
-import { decrypt, encrypt } from "../laravel/encrypter"
-import { hashPasswordForCookie, loginSessionKey } from "../laravel/sessionGuard"
-import { createRateLimiter } from "../laravel/throttle"
+import { decrypt, encrypt } from "../http/encrypter"
+import { hashPasswordForCookie, loginSessionKey } from "../http/sessionGuard"
+import { createRateLimiter } from "../http/throttle"
 import {
   confirmTwoFactor,
   disableTwoFactor,

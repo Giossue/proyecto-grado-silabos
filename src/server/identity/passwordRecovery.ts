@@ -1,4 +1,5 @@
 import "server-only"
+import { passwordRules as policyRules, storedPassword } from "./passwordPolicy"
 import { createHash, createHmac } from "node:crypto"
 import { setTimeout as sleep } from "node:timers/promises"
 import { sql, type SQL } from "drizzle-orm"
@@ -6,14 +7,14 @@ import { db } from "@/db"
 import { bcryptHash, bcryptVerify } from "../auth/bcrypt"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import { clientIp, writerDepsOf, type SessionWriterDeps } from "../auth/sessionWriter"
-import { controllerJson, FORWARD, fromController, statefulRequest, type Outcome } from "../auth/statefulRequest"
-import { isPhpArray, laravelInput, laravelRequestInput, type PhpArray } from "../laravel/input"
-import { serverError, validationError } from "../laravel/responses"
-import { throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
-import { validateInput, type Rule } from "../laravel/validation"
+import { controllerJson, fromController, statefulRequest, type Outcome } from "../auth/statefulRequest"
+import { isPhpArray, requestInput, type PhpArray } from "../http/input"
+import { serverError, validationError } from "../http/responses"
+import { throttle, type RateLimiter, type Throttle } from "../http/throttle"
+import { validateInput, type Rule } from "../http/validation"
 import type { QueuedMail } from "../mail/mailables"
 import { sharedMailer } from "../mail/mailer"
-import { acceptsBody, stringOf } from "./accountWrites"
+import { stringOf } from "./accountWrites"
 import { filterEmailShape, transliterate } from "./authentication"
 import { lazyRateLimiter } from "./twoFactor"
 
@@ -49,6 +50,7 @@ export type RecoveryDeps = {
   hashPassword: (plain: string) => Promise<string>
   timebox: Timebox
   production: () => boolean
+  pwned?: (prefix: string) => Promise<string>
   sendMail: (mail: QueuedMail) => Promise<unknown>
 }
 
@@ -115,7 +117,7 @@ export function recoveryStoreOn(executor: Executor): RecoveryStore {
   }
 }
 
-export function laravelTimebox(milliseconds: number): Timebox {
+export function timebox(milliseconds: number): Timebox {
   return async (work) => {
     const start = performance.now()
     let early = false
@@ -142,7 +144,7 @@ export function defaultRecoveryDeps(): RecoveryDeps {
     throttles: lazyRateLimiter(),
     verifyHash: bcryptVerify,
     hashPassword: (plain) => bcryptHash(plain, cost),
-    timebox: laravelTimebox(200),
+    timebox: timebox(200),
     production: () => process.env.APP_ENV === "production",
     sendMail: (mail) => sharedMailer().send(mail),
   }
@@ -156,7 +158,6 @@ const INVALID_LINK = "El enlace para restablecer la contraseña no es válido o 
 const EXPIRED_INVITATION = "El enlace de activación no es válido o ya venció."
 const USED_INVITATION = "El enlace de activación no es válido o ya fue utilizado."
 const ATTRIBUTES = { email: "correo electrónico", token: "enlace de activación", password: "contraseña" }
-const CONFIRMATION = "La confirmación de contraseña no coincide."
 
 class Refused extends Error {
   constructor(readonly errors: Record<string, string[]>) {
@@ -164,14 +165,13 @@ class Refused extends Error {
   }
 }
 
-function passwordRules(input: PhpArray): Rule[] {
-  return ["required", "string", { min: 8 }, { check: (value) => input.password_confirmation === value, message: CONFIRMATION }]
+function passwordRules(input: PhpArray, deps: RecoveryDeps): Rule[] {
+  return policyRules(input, { production: deps.production(), pwned: deps.pwned })
 }
 
-async function guarded(request: Request, deps: RecoveryDeps, fields: string[]): Promise<{ input: PhpArray; gate: Throttle } | Outcome> {
-  if (deps.production() || !acceptsBody(request)) return FORWARD
-  const input = await laravelInput(request)
-  if (fields.some((name) => input[name] !== undefined && input[name] !== null && typeof input[name] !== "string")) return FORWARD
+async function guarded(request: Request, deps: RecoveryDeps): Promise<{ input: PhpArray; gate: Throttle } | Outcome> {
+  const input = await requestInput(request)
+  if (isPhpArray(input.email ?? null)) return serverError()
   const key = `password-recovery:${transliterate(`${stringOf(input.email).toLowerCase()}|${clientIp(request) ?? ""}`)}`
   const gate = throttle(deps.throttles, { key, maxAttempts: 3, decaySeconds: 60 }, deps.writer.now)
   const limited = await gate.hit()
@@ -180,16 +180,12 @@ async function guarded(request: Request, deps: RecoveryDeps, fields: string[]): 
 }
 
 function served(request: Request, deps: RecoveryDeps, outcome: () => Promise<Outcome>): Promise<Response> {
-  return statefulRequest(request, deps.writer, { group: "api" }, outcome, async () => {
-    const original = request.clone()
-    const result = await outcome()
-    return result === FORWARD ? deps.writer.forward(original) : result
-  })
+  return statefulRequest(request, deps.writer, { group: "api" }, outcome, outcome)
 }
 
 async function resetOutcome(request: Request, deps: RecoveryDeps): Promise<Outcome> {
-  const guard = await guarded(request, deps, ["email", "token", "password", "password_confirmation"])
-  if (guard === FORWARD || guard instanceof Response) return guard
+  const guard = await guarded(request, deps)
+  if (guard instanceof Response) return guard
   const { input, gate } = guard
   const shape = filterEmailShape(input.email)
   const errors = await validateInput(
@@ -197,7 +193,7 @@ async function resetOutcome(request: Request, deps: RecoveryDeps): Promise<Outco
     {
       email: ["required", { check: () => shape === "valid", message: "El campo correo electrónico debe ser un correo electrónico válido." }],
       token: ["required", "string"],
-      password: passwordRules(input),
+      password: passwordRules(input, deps),
     },
     ATTRIBUTES,
   )
@@ -210,9 +206,10 @@ async function resetOutcome(request: Request, deps: RecoveryDeps): Promise<Outco
     const createdAt = record?.createdAt ?? deps.writer.now()
     if (record === null || createdAt + RESET_SECONDS < deps.writer.now()) return "invalid"
     const matches = await deps.verifyHash(stringOf(input.token), record.token)
-    if (matches === null) return "forward"
+    if (matches === null) return "failed"
     if (!matches) return "invalid"
-    const hash = await deps.hashPassword(stringOf(input.password))
+    const hash = await storedPassword(stringOf(input.password), deps.hashPassword)
+    if (hash === null) return "failed"
     await deps.store.direct(async (store) => {
       await store.setPassword(user.id, hash)
       await store.setRememberToken(user.id, deps.writer.random(REMEMBER_LENGTH))
@@ -223,19 +220,20 @@ async function resetOutcome(request: Request, deps: RecoveryDeps): Promise<Outco
     returnEarly()
     return "reset"
   })
-  if (status === "forward") return FORWARD
+  if (status === "failed") return gate.decorate(fromController(serverError()))
   if (status === "invalid") return gate.decorate(controllerJson({ message: INVALID_LINK, errors: { email: [INVALID_LINK] } }, 422))
   return gate.decorate(controllerJson({ message: "Contraseña restablecida. Ya puede iniciar sesión." }))
 }
 
 async function activationOutcome(request: Request, deps: RecoveryDeps): Promise<Outcome> {
-  const guard = await guarded(request, deps, ["email", "token", "password", "password_confirmation"])
-  if (guard === FORWARD || guard instanceof Response) return guard
+  const guard = await guarded(request, deps)
+  if (guard instanceof Response) return guard
   const { input, gate } = guard
-  const errors = await validateInput(input, { token: ["required", "string", { max: 128 }], password: passwordRules(input) }, ATTRIBUTES)
+  const errors = await validateInput(input, { token: ["required", "string", { max: 128 }], password: passwordRules(input, deps) }, ATTRIBUTES)
   if (Object.keys(errors).length > 0) return gate.decorate(fromController(validationError(errors)))
   const now = deps.writer.now()
-  const hash = await deps.hashPassword(stringOf(input.password))
+  const hash = await storedPassword(stringOf(input.password), deps.hashPassword)
+  if (hash === null) return gate.decorate(fromController(serverError()))
   try {
     await deps.store.transaction(async (store) => {
       const invitation = await store.lockInvitation(createHash("sha256").update(stringOf(input.token)).digest("hex"))
@@ -260,7 +258,7 @@ async function activationOutcome(request: Request, deps: RecoveryDeps): Promise<
 const phpStringCast = (value: PhpArray[string] | undefined): string => (value === undefined || value === null || value === false ? "" : value === true ? "1" : String(value))
 
 async function linkOutcome(request: Request, deps: RecoveryDeps): Promise<Outcome> {
-  const input = await laravelRequestInput(request)
+  const input = await requestInput(request)
   if (isPhpArray(input.email ?? null)) return serverError()
   const email = transliterate(phpStringCast(input.email).toLowerCase())
   const now = deps.writer.now

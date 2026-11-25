@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, storedJson, type FakeWorld } from "../auth/testing"
 import { showSession, twoFactorStatus, type UserProfile } from "./session"
 
@@ -10,11 +10,10 @@ const SECOND_ROLE = "a0000000-0000-4000-8000-000000000002"
 
 let world: FakeWorld
 let profile: UserProfile
-let forwarded: Request[]
 
 async function call(handler: typeof showSession, path: string) {
   const response = await handler(apiRequest(path, { cookie }), {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     profiles: { find: async (id) => (id === golden.userId ? profile : null) },
     today: () => "2026-10-21",
     timezone: () => "America/Guayaquil",
@@ -36,7 +35,6 @@ beforeEach(() => {
     twoFactorSecret: false,
     twoFactorConfirmed: false,
   }
-  forwarded = []
 })
 
 describe("session", () => {
@@ -75,7 +73,6 @@ describe("session", () => {
     const { status, text } = await call(showSession, "/api/v1/session")
     expect(status).toBe(200)
     expect(JSON.parse(text).active_role.id).toBe(golden.roleId)
-    expect(forwarded).toHaveLength(0)
     expect(JSON.parse(storedJson(world, SESSION_ID) ?? "{}").active_role_assignment_id).toBe(golden.roleId)
   })
 })

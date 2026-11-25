@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
-import { phpJsonEncode } from "../laravel/phpJson"
+import { phpJsonEncode } from "../http/phpJson"
 import { requestCorrection, resetSyllabus, type DecisionRevision, type DecisionSyllabus, type ReviewDecisionDeps } from "./reviewDecisions"
 import type { ReviewRevision } from "./reviewDetails"
 import type { DetailSyllabus } from "./syllabusDetail"
@@ -23,7 +23,6 @@ const REASON = "El docente cambió de materia y debe empezar otra vez."
 const JUSTIFICATION = "Se requiere precisión académica antes de aprobar la revisión."
 
 let world: FakeWorld
-let forwarded: Request[]
 let notices: NotificationWorld
 let syllabus: DetailSyllabus
 let revision: ReviewRevision | null
@@ -37,7 +36,7 @@ let log: string[]
 
 function deps(): ReviewDecisionDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     store: {
       revision: async (id) => (revision !== null && revision.id === id.toLowerCase() ? revision : null),
       syllabus: async () => syllabus,
@@ -107,7 +106,6 @@ beforeEach(() => {
     users: [makeUser()],
     assignments: [makeAssignment({ role: "coordinador", careerId: CAREER })],
   }
-  forwarded = []
   notices = notificationWorld({ users: [recipient(TEACHER, { name: "Ana Pérez", email: "ana@ueb.edu.ec" })], subjects: new Map([[SYLLABUS, "Biología"]]) })
   syllabus = {
     id: SYLLABUS,
@@ -243,7 +241,6 @@ describe("POST /api/v1/coordination/reviews/{revision}/request-correction", () =
     revision = null
     expect(await post({ justification: JUSTIFICATION })).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", REVISION) })
     expect(await post({ justification: JUSTIFICATION }, "abc")).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", "abc") })
-    expect(forwarded).toHaveLength(0)
   })
 })
 
@@ -320,6 +317,5 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
 
   it("answers Laravel's model 404 for unknown or non-UUID syllabi", async () => {
     expect(await reset({ reason: REASON }, "abc")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "abc") })
-    expect(forwarded).toHaveLength(0)
   })
 })

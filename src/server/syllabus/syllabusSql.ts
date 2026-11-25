@@ -1,6 +1,6 @@
 import { sql, type SQL } from "drizzle-orm"
 import { careerLabelSql } from "../academic/careerLabel"
-import { iso8601 } from "../laravel/sql"
+import { iso8601 } from "../http/sql"
 
 export const CURRENT_PROCESS = sql`(select actual.convocatoria_universidad_id from convocatorias_universidad actual
   order by actual.fecha_inicio desc, actual.convocatoria_universidad_id desc limit 1)`

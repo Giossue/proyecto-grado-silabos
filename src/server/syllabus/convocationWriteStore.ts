@@ -4,9 +4,9 @@ import { db } from "@/db"
 import { careerLabelSql } from "../academic/careerLabel"
 import { createTemplateStore } from "../configuration/templateStore"
 import { createDashboardRepository } from "../dashboard/dashboardQueries"
-import { coordinatorReadiness, SetupNeedsLaravel, type CoordinatorReadiness } from "../dashboard/setupChecklist"
+import { coordinatorReadiness, type CoordinatorReadiness } from "../dashboard/setupChecklist"
 import { setupRepositoryOn } from "../dashboard/setupQueries"
-import { uuid7 } from "../laravel/uuid7"
+import { uuid7 } from "../http/uuid7"
 import { notificationScope, recipientsOn, systemNow, type Mail, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { convocationRepositoryOn } from "./convocationQueries"
@@ -14,8 +14,8 @@ import type { ConvocationWriteDeps, ConvocationWriteTx } from "./convocationWrit
 import { InProgressWork } from "./inProgressWork"
 import { templateProblem } from "./processes"
 import { dbTransaction, type TransactionRunner } from "./reviewDecisionStore"
-import { Missing } from "./reviewDecisions"
-import { NeedsLaravel } from "./snapshotDocuments"
+import { failModelNotFound } from "../http/failures"
+import { MODELS } from "../http/models"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export function institutionDay(seconds: number): string {
@@ -43,8 +43,7 @@ export function convocationBlockers(readiness: CoordinatorReadiness): string[] {
 
 export async function institutionalTemplateProblem(executor: Executor, errorKey: string): Promise<string | null> {
   const template = await createTemplateStore(executor).template()
-  if (template === null) throw new Missing()
-  if (template.definition === null) throw new NeedsLaravel()
+  if (template === null) failModelNotFound(MODELS.template)
   return templateProblem(template, template.definition, errorKey)
 }
 
@@ -95,20 +94,15 @@ export function convocationWriteTx(executor: Executor, afterCommit: AfterCommit,
     },
     async readinessBlockers(careerId) {
       const dashboard = createDashboardRepository(executor)
-      try {
-        const readiness = await coordinatorReadiness(
-          careerId,
-          await dashboard.inProgressProcess(),
-          (career, processId) => dashboard.convocation(career, processId),
-          setupRepositoryOn(executor),
-          work.templates,
-          institutionDay(now),
-        )
-        return convocationBlockers(readiness)
-      } catch (error) {
-        if (error instanceof SetupNeedsLaravel) throw new NeedsLaravel()
-        throw error
-      }
+      const readiness = await coordinatorReadiness(
+        careerId,
+        await dashboard.inProgressProcess(),
+        (career, processId) => dashboard.convocation(career, processId),
+        setupRepositoryOn(executor),
+        work.templates,
+        institutionDay(now),
+      )
+      return convocationBlockers(readiness)
     },
     templateProblem: (errorKey) => institutionalTemplateProblem(executor, errorKey),
     async updateState(id, state) {

@@ -1,22 +1,22 @@
 import "server-only"
 import { readFile } from "node:fs/promises"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { diskExists, diskPath } from "../laravel/storage"
-import { isJsonRequest, laravelInput, type PhpArray } from "../laravel/input"
-import { aborted, forbidden, laravelJson, validationError } from "../laravel/responses"
-import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
-import { validateInput } from "../laravel/validation"
-import { Missing, settle } from "../syllabus/reviewDecisions"
-import { ExportForbidden, ExportMissing, ExportRejected, existingExport, requestExport, type ExportArtifactRow, type ExportRequestTx } from "./syllabusExport"
+import { diskExists, diskPath } from "../http/storage"
+import { requestInput, type PhpArray } from "../http/input"
+import { aborted, forbidden, apiJson, validationError } from "../http/responses"
+import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
+import { validateInput } from "../http/validation"
+import { settle } from "../syllabus/reviewDecisions"
+import { ExportForbidden, ExportRejected, existingExport, requestExport, type ExportArtifactRow, type ExportRequestTx } from "./syllabusExport"
 import { mayView } from "../syllabus/policy"
 import type { ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
 import { createDocumentRequestParts, createDocumentStore } from "./revisionDocumentsStore"
-import { laravelSlug } from "./slug"
-import { modelNotFound } from "../laravel/router"
-import { MODELS } from "../laravel/models"
+import { strSlug } from "./slug"
+import { modelNotFound } from "../http/router"
+import { MODELS } from "../http/models"
 
 export type ArtifactRow = { id: string; state: string; requestedAt: string; completedAt: string | null; pdfSize: number | null }
 export type StoredObject = { id: string; disk: string; path: string }
@@ -46,7 +46,7 @@ const DOWNLOAD_HEADERS: Record<string, string> = {
   "Cross-Origin-Resource-Policy": "same-origin",
 }
 
-type Bound = { session: LaravelSession; revision: ReviewRevision; syllabus: DetailSyllabus }
+type Bound = { session: AppSession; revision: ReviewRevision; syllabus: DetailSyllabus }
 
 async function bindRevision(
   request: Request,
@@ -64,13 +64,13 @@ async function bindRevision(
         const loadedRevision = await load(user.id)
         if (loadedRevision instanceof Response) return loadedRevision
         bound = loadedRevision
-        return bound === null ? deps.bridge.forward(request) : null
+        return bound === null ? modelNotFound(MODELS.revision, revisionId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (bound === null) return deps.bridge.forward(request)
+  if (bound === null) return modelNotFound(MODELS.revision, revisionId)
   void revisionId
   return { session, ...(bound as { revision: ReviewRevision; syllabus: DetailSyllabus }) }
 }
@@ -89,7 +89,7 @@ export async function revisionDocuments(request: Request, revisionId: string, de
   const approval = await deps.store.approval(revision.id)
   if (approval === null) return aborted(404)
   const artifacts = await deps.store.artifacts(revision.id)
-  return laravelJson({
+  return apiJson({
     syllabus: { id: syllabus.id, subject: syllabus.subject, code: syllabus.code, period: syllabus.period },
     revision: { id: revision.id, number: revision.number, approved_at: approval.approvedAt, approved_by: approval.approvedBy },
     artifacts: artifacts.map((artifact) => ({
@@ -121,13 +121,13 @@ export async function downloadExport(request: Request, artifactId: string, deps:
   })
   if (bound instanceof Response) return bound
   const found = artifact as StoredArtifact | null
-  if (found === null) return deps.bridge.forward(request)
+  if (found === null) return modelNotFound(MODELS.artifact, artifactId)
   const { session, revision, syllabus } = bound
   if (!mayView(session, syllabus) || found.state !== COMPLETED) return forbidden()
   const file = await storedFile(found.object)
   if (file === null || found.object === null) return aborted(404)
   const bytes = await readFile(/*turbopackIgnore: true*/ file)
-  const code = laravelSlug(syllabus.code) || "asignatura"
+  const code = strSlug(syllabus.code) || "asignatura"
   return new Response(new Uint8Array(bytes), {
     status: 200,
     headers: {
@@ -142,7 +142,6 @@ export async function downloadExport(request: Request, artifactId: string, deps:
 
 export type DocumentRequestDeps = DocumentDeps & {
   limiter: RateLimiter
-  renderable(revisionId: string): Promise<boolean>
   existing(revisionId: string, key: string): Promise<ExportArtifactRow | null>
   transaction<T>(work: (tx: ExportRequestTx) => Promise<T>): Promise<T>
   newId(): string
@@ -159,7 +158,6 @@ async function settleRequest(original: Request, deps: DocumentRequestDeps, work:
     } catch (error) {
       if (error instanceof ExportForbidden) return aborted(403)
       if (error instanceof ExportRejected) return validationError(error.errors)
-      if (error instanceof ExportMissing) throw new Missing()
       throw error
     }
   })
@@ -167,7 +165,6 @@ async function settleRequest(original: Request, deps: DocumentRequestDeps, work:
 
 export async function requestRevisionDocuments(request: Request, revisionId: string, deps: DocumentRequestDeps = defaultDocumentRequestDeps()): Promise<Response> {
   const original = request.clone()
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
   let gate: Throttle | null = null
   const finish = (response: Response) => (gate as Throttle | null)?.decorate(response) ?? response
   let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
@@ -191,10 +188,9 @@ export async function requestRevisionDocuments(request: Request, revisionId: str
   if (found === null) return finish(modelNotFound(MODELS.revision, revisionId))
   const { revision, syllabus } = found
   if (!mayView(session, syllabus)) return finish(forbidden())
-  const input: PhpArray = await laravelInput(request)
+  const input: PhpArray = await requestInput(request)
   const errors = await validateInput(input, { idempotency_key: ["required", "uuid"] }, { idempotency_key: "identificador de la solicitud" })
   if (Object.keys(errors).length > 0) return finish(validationError(errors))
-  if (!(await deps.renderable(revision.id))) return finish(await deps.bridge.forward(original))
   const key = input.idempotency_key as string
   const actor = { id: session.user.id }
   return finish(
@@ -202,7 +198,7 @@ export async function requestRevisionDocuments(request: Request, revisionId: str
       const artifact =
         (await existingExport({ existingArtifact: deps.existing }, revision.id, key, actor.id)) ??
         (await deps.transaction((tx) => requestExport(tx, { revisionId: revision.id, syllabusId: revision.syllabusId, key, actor, now: deps.now(), newId: deps.newId })))
-      return laravelJson({ message: artifact.state === COMPLETED ? "El PDF ya estaba disponible." : "El PDF se está generando.", artifact_id: artifact.id }, 202)
+      return apiJson({ message: artifact.state === COMPLETED ? "El PDF ya estaba disponible." : "El PDF se está generando.", artifact_id: artifact.id }, 202)
     }),
   )
 }

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import {
   curriculumBuilder,
@@ -25,7 +25,6 @@ const MODALITIES =
 const BASE_OPTIONS = `"faculties":[],"careers":[],"periods":[],"campusOptions":[],"modalityOptions":${MODALITIES},${SHIFTS},"currentCurricula":[],"activeSubjects":[],"scheduledSubjects":[]`
 
 let world: FakeWorld
-let forwarded: Request[]
 let careers: Map<string, CareerRecord>
 let lock: CareerLock | null
 let subjects: SubjectRecord[]
@@ -70,7 +69,7 @@ const repository = (): AcademicStructureRepository => ({
 })
 
 function deps() {
-  return { bridge: fakeDeps(world, forwarded), academic: repository() }
+  return { bridge: fakeDeps(world), academic: repository() }
 }
 
 function get(path: string): Request {
@@ -92,7 +91,6 @@ beforeEach(() => {
     assignments: [],
   }
   asRole("coordinador")
-  forwarded = []
   careers = new Map([[CAREER, { id: CAREER, name: "Software", modality: "Presencial", cycleCount: 4 }]])
   lock = null
   subjects = [subject()]
@@ -186,12 +184,9 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
     expect(await read(await curriculumBuilder(get(path), CAREER, deps()))).toEqual({ status: 403, text: FORBIDDEN })
   })
 
-  it("lets Laravel answer the 404 of another career's curriculum and of a non-UUID path", async () => {
-    expect((await curriculumBuilder(get(`/api/v1/coordination/academic/curriculum/${OTHER}`), OTHER, deps())).status).toBe(299)
+  it("aborts another career's curriculum with 404 and answers the router 404 for a non-UUID path", async () => {
+    expect(await read(await curriculumBuilder(get(`/api/v1/coordination/academic/curriculum/${OTHER}`), OTHER, deps()))).toEqual({ status: 404, text: '{\n    "message": ""\n}' })
     expect(await read(await curriculumBuilder(get("/api/v1/coordination/academic/curriculum/abc"), "abc", deps()))).toEqual({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/curriculum/abc could not be found."\n}' })
-    expect(forwarded.map((request) => new URL(request.url).pathname)).toEqual([
-      `/api/v1/coordination/academic/curriculum/${OTHER}`,
-    ])
   })
 
   it("answers 401 without a session and 409 when the stale session role leaves no single eligible role", async () => {

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { uuid7 } from "../laravel/uuid7"
+import { uuid7 } from "../http/uuid7"
 import { isPhpArray, isRecord, phpEquals, phpIdentical, phpTrim, list, record, type PhpRecord } from "./phpValues"
 import {
   adopt,
@@ -236,7 +236,7 @@ export async function rehearseImpact(
     const syllabi = await reads.syllabi(processId)
     if (syllabi.length === 0) return NO_IMPACT
     const current = await reads.currentTemplate()
-    if (current === null || current.definition === null) throw new Error("template disappeared during the rehearsal")
+    if (current === null) throw new Error("template disappeared during the rehearsal")
     const currentContext: ProfileContext = { template: current, definition: current.definition, store: reads.store }
     const written = new Map<string, Map<string, unknown>>()
     for (const syllabus of syllabi) written.set(syllabus.id, await writtenText(syllabus, currentContext, reads))

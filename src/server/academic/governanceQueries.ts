@@ -1,7 +1,7 @@
 import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
-import { uuidList } from "../laravel/sql"
+import { uuidList } from "../http/sql"
 import { phpJsonDecode } from "../configuration/phpValues"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 import type { GovernanceCareer, GovernanceFaculty, GovernancePeriod, GovernanceProcess, GovernanceRepository } from "./governance"

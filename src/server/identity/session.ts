@@ -3,9 +3,9 @@ import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import { phpArrayCast } from "../auth/sessionWriter"
-import type { BridgeDeps, LaravelSession, RoleAssignmentRecord } from "../auth/types"
+import type { BridgeDeps, AppSession, RoleAssignmentRecord } from "../auth/types"
 import { institutionToday } from "../dashboard/dashboardQueries"
-import { laravelJson } from "../laravel/responses"
+import { apiJson, unauthenticated } from "../http/responses"
 
 export type UserProfile = {
   name: string
@@ -70,7 +70,7 @@ function rolePayload(assignment: RoleAssignmentRecord) {
   return { id: assignment.id, code: assignment.role, career_id: assignment.careerId, career_name: assignment.careerLabel }
 }
 
-export function sessionPayload(session: LaravelSession, profile: UserProfile, deps: Pick<SessionDeps, "today" | "timezone">) {
+export function sessionPayload(session: AppSession, profile: UserProfile, deps: Pick<SessionDeps, "today" | "timezone">) {
   return {
     user: {
       id: session.user.id,
@@ -91,16 +91,16 @@ export async function showSession(request: Request, deps: SessionDeps = defaultD
   const session = await requireSession(request, { activeRole: "optional" }, deps.bridge)
   if (session instanceof Response) return session
   const profile = await deps.profiles.find(session.user.id)
-  if (profile === null) return deps.bridge.forward(request)
-  return laravelJson(sessionPayload(session, profile, deps))
+  if (profile === null) return unauthenticated()
+  return apiJson(sessionPayload(session, profile, deps))
 }
 
 export async function twoFactorStatus(request: Request, deps: SessionDeps = defaultDeps()): Promise<Response> {
   const session = await requireSession(request, {}, deps.bridge)
   if (session instanceof Response) return session
   const profile = await deps.profiles.find(session.user.id)
-  if (profile === null) return deps.bridge.forward(request)
-  return laravelJson({
+  if (profile === null) return unauthenticated()
+  return apiJson({
     enabled: profile.twoFactorSecret && profile.twoFactorConfirmed,
     confirmation_required: profile.twoFactorSecret && !profile.twoFactorConfirmed,
   })

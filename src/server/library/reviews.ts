@@ -1,11 +1,11 @@
 import "server-only"
 import { requireSession, defaultBridgeDeps } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession, SessionRequirements } from "../auth/types"
-import { isPhpArray, phpQuery, type PhpArray, type PhpValue } from "../laravel/input"
-import { lengthAwarePaginator, resolveCurrentPage } from "../laravel/pagination"
-import { laravelQuery, laravelRequestUrl } from "../laravel/request"
-import { laravelHttpError, laravelJson, validationError } from "../laravel/responses"
-import { validateInput } from "../laravel/validation"
+import type { BridgeDeps, AppSession, SessionRequirements } from "../auth/types"
+import { isPhpArray, phpQuery, type PhpArray, type PhpValue } from "../http/input"
+import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
+import { queryParams, requestUrl } from "../http/request"
+import { jsonError, apiJson, validationError } from "../http/responses"
+import { validateInput } from "../http/validation"
 import { createLibraryReviewRepository } from "./reviewQueries"
 
 export const REVIEW_STATES = ["pendiente", "atendido"]
@@ -74,12 +74,12 @@ function exists(deps: LibraryReviewDeps, table: "facultades" | "periodos_academi
   }
 }
 
-type Listing = { session: LaravelSession; input: PhpArray }
+type Listing = { session: AppSession; input: PhpArray }
 
 export async function authorizeListing(request: Request, deps: LibraryReviewDeps, afterAuthentication?: SessionRequirements["afterAuthentication"]): Promise<Listing | Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required", afterAuthentication }, deps.bridge)
   if (session instanceof Response) return session
-  if (session.activeRole?.role !== "bibliotecario") return laravelJson({ message: "No tiene permiso para hacer esto." }, 403)
+  if (session.activeRole?.role !== "bibliotecario") return apiJson({ message: "No tiene permiso para hacer esto." }, 403)
   const input = phpQuery(new URL(request.url))
   let errors: Record<string, string[]>
   try {
@@ -95,7 +95,7 @@ export async function authorizeListing(request: Request, deps: LibraryReviewDeps
       { faculty: "facultad", period: "período", mine: "solo los míos", state: "estado", q: "búsqueda" },
     )
   } catch (error) {
-    if (error instanceof QueryFailed) return laravelHttpError(500, "Server Error")
+    if (error instanceof QueryFailed) return jsonError(500, "Server Error")
     throw error
   }
   if (Object.keys(errors).length > 0) return validationError(errors)
@@ -112,7 +112,7 @@ async function listing(request: Request, deps: LibraryReviewDeps, input: PhpArra
   const search = q === null ? null : q.replace(PHP_TRIM, "")
   const facultyId = optionalString(input.faculty)
   const url = new URL(request.url)
-  const query = laravelQuery(url)
+  const query = queryParams(url)
   const currentPage = resolveCurrentPage(query.get("page") ?? null)
   const { total, items } = await deps.reviews.page({ state, search, facultyId, period, periodId, handledBy }, currentPage, PER_PAGE)
   const syllabi = await deps.reviews.summaries([...new Set(items.map((item) => item.syllabusId))])
@@ -141,14 +141,14 @@ async function listing(request: Request, deps: LibraryReviewDeps, input: PhpArra
   return {
     filters: { q: search === null || search === "" || search === "0" ? null : search, state, faculty: facultyId, period: periodId, mine: handledBy !== null },
     faculties: await deps.reviews.faculties(),
-    reviews: lengthAwarePaginator({ items: data, total, perPage: PER_PAGE, currentPage, path: laravelRequestUrl(request), query }),
+    reviews: lengthAwarePaginator({ items: data, total, perPage: PER_PAGE, currentPage, path: requestUrl(request), query }),
   }
 }
 
 export async function libraryReviews(request: Request, deps: LibraryReviewDeps = defaultLibraryReviewDeps()): Promise<Response> {
   const authorized = await authorizeListing(request, deps)
   if (authorized instanceof Response) return authorized
-  return laravelJson(await listing(request, deps, authorized.input, "actual", null, null))
+  return apiJson(await listing(request, deps, authorized.input, "actual", null, null))
 }
 
 export async function libraryHistory(request: Request, deps: LibraryReviewDeps = defaultLibraryReviewDeps()): Promise<Response> {
@@ -157,5 +157,5 @@ export async function libraryHistory(request: Request, deps: LibraryReviewDeps =
   const { session, input } = authorized
   const mine = input.mine === "1" || input.mine === 1 || input.mine === true
   const result = await listing(request, deps, input, "terminado", optionalString(input.period), mine ? session.user.id : null)
-  return laravelJson({ ...result, periods: await deps.reviews.pastPeriods() })
+  return apiJson({ ...result, periods: await deps.reviews.pastPeriods() })
 }

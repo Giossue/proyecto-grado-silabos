@@ -3,10 +3,10 @@ import { readFile, mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promise
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, storedJson, type FakeWorld } from "../auth/testing"
 import type { SessionWriterDeps } from "../auth/sessionWriter"
-import { NOT_FOUND_PAGE } from "../laravel/errorPages"
+import { NOT_FOUND_PAGE } from "../http/errorPages"
 import { facultyLogo, institutionLogo, publicSyllabusImage } from "./logoRoutes"
 import { templateSchema } from "./templateReads"
 import type { LogoStore, StoredFaculty } from "./institutionalLogos"
@@ -27,7 +27,6 @@ const SECURITY = {
 
 let root: string
 let world: FakeWorld
-let forwarded: Request[]
 let faculties: Map<string, StoredFaculty>
 let sequence: number
 
@@ -35,7 +34,7 @@ const store: LogoStore = { faculty: async (id) => faculties.get(id) ?? null }
 
 function writer(): SessionWriterDeps {
   return {
-    ...fakeDeps(world, forwarded),
+    ...fakeDeps(world),
     cookie: { path: "/", domain: null, secure: false, sameSite: "lax" },
     random: (length) => String.fromCharCode(65 + (sequence++ % 26)).repeat(length),
     lottery: () => false,
@@ -61,22 +60,21 @@ const cookieNames = (response: Response) => response.headers.getSetCookie().map(
 
 beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), "silabos-logo-routes-"))
-  process.env.LARAVEL_STORAGE_PATH = path.join(root, "storage", "app")
-  process.env.LARAVEL_PUBLIC_PATH = path.join(root, "public")
+  process.env.STORAGE_PATH = path.join(root, "storage", "app")
+  process.env.PUBLIC_ASSETS_PATH = path.join(root, "public")
   await file("public/images/silabo/facultad.jpeg", JPEG, 1789530560)
   await file("public/images/silabo/logo-universidad.png", PNG, 1789530561)
   await file(`storage/app/private/logos/facultades/${FACULTY}/logo.png`, PNG, 1794318825)
 })
 
 afterAll(async () => {
-  delete process.env.LARAVEL_STORAGE_PATH
-  delete process.env.LARAVEL_PUBLIC_PATH
+  delete process.env.STORAGE_PATH
+  delete process.env.PUBLIC_ASSETS_PATH
   await rm(root, { recursive: true, force: true })
 })
 
 beforeEach(() => {
   world = { sessions: new Map(), users: [], assignments: [] }
-  forwarded = []
   sequence = 0
   faculties = new Map([
     [FACULTY, { id: FACULTY, logo: { disk: "private", path: `logos/facultades/${FACULTY}/logo.png`, classification: "logo_facultad" } }],
@@ -100,7 +98,6 @@ describe("GET /logos/institucion", () => {
     })
     expect(cookieNames(response)).toEqual(["XSRF-TOKEN", golden.cookieName])
     expect(JSON.parse(storedJson(world, "A".repeat(40)) ?? "{}")._previous).toEqual({ url: "http://localhost:3000/logos/institucion?v=1789530561", route: "logos.institution" })
-    expect(forwarded).toEqual([])
   })
 
   it("answers HEAD with the same headers and no body, and a byte range with 206 like Symfony", async () => {

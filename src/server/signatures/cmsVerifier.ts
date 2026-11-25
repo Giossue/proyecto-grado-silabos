@@ -12,7 +12,7 @@ export type SignatureSettings = { trustedBundle: string | null; production: bool
 
 type Env = Record<string, string | undefined>
 
-function laravelEnvBoolean(raw: string | undefined, fallback: boolean): boolean {
+function envFlag(raw: string | undefined, fallback: boolean): boolean {
   if (raw === undefined) return fallback
   const value = raw.toLowerCase()
   if (value === "true" || value === "(true)") return true
@@ -26,7 +26,7 @@ export function signatureSettings(env: Env = process.env): SignatureSettings & {
     trustedBundle: bundle === undefined || bundle === "" ? null : bundle,
     production: (env.APP_ENV ?? "production") === "production",
     now: () => Date.now() / 1000,
-    requireHolderMatch: laravelEnvBoolean(env.SIGNATURE_REQUIRE_HOLDER_MATCH, true),
+    requireHolderMatch: envFlag(env.SIGNATURE_REQUIRE_HOLDER_MATCH, true),
   }
 }
 

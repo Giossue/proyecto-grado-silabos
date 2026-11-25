@@ -1,7 +1,9 @@
 import "server-only"
+import { aborted } from "../http/responses"
+import { fromController } from "../auth/controllerResponse"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
-import { laravelJson } from "../laravel/responses"
+import { apiJson } from "../http/responses"
 import { configuredFacultyUrl, type StoredLogo } from "../configuration/institutionalLogos"
 import { institutionToday } from "../dashboard/dashboardQueries"
 import { baseOptions, CONVOCATION_LOCK_REASON, forbidden } from "./structure"
@@ -145,6 +147,6 @@ export async function academicGovernance(request: Request, section: string | nul
   if (session instanceof Response) return session
   if (!session.user.active || session.activeRole?.role !== "administrador") return forbidden()
   const resolved = section === null ? "faculties" : SECTIONS[section]
-  if (resolved === undefined) return deps.bridge.forward(request)
-  return laravelJson({ ...(await governancePayload(request, deps)), section: resolved })
+  if (resolved === undefined) return fromController(aborted(404))
+  return apiJson({ ...(await governancePayload(request, deps)), section: resolved })
 }

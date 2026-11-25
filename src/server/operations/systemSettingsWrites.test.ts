@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import settingsGolden from "./__fixtures__/system-settings-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, testKey, type FakeWorld } from "../auth/testing"
-import { decrypt, encrypt } from "../laravel/encrypter"
-import { createRateLimiter, type RateLimiter } from "../laravel/throttle"
+import { decrypt, encrypt } from "../http/encrypter"
+import { createRateLimiter, type RateLimiter } from "../http/throttle"
 import type { SettingsEnvironment } from "./systemSettings"
 import { testSystemSettings, updateSystemSettings, type SystemSettingsWriteDeps } from "./systemSettingsWrites"
 

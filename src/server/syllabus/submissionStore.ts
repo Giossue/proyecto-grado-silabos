@@ -7,24 +7,22 @@ import { createLogoStore } from "../configuration/institutionalLogos"
 import { createTemplateStore } from "../configuration/templateStore"
 import { phpJsonDecode, type PhpRecord } from "../configuration/phpValues"
 import { institutionToday } from "../dashboard/dashboardQueries"
-import { canonicalJson, hasAmbiguousNumbers } from "../documents/canonicalJson"
+import { canonicalJson } from "../documents/canonicalJson"
 import { buildSyllabusSnapshot } from "../documents/syllabusSnapshot"
 import { snapshotSourceOn } from "../documents/syllabusSnapshotStore"
-import { institutionDateSql } from "../laravel/sql"
-import { uuid7 } from "../laravel/uuid7"
+import { institutionDateSql } from "../http/sql"
+import { uuid7 } from "../http/uuid7"
 import { notificationScope, recipientsOn, systemNow, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit } from "../queue/dispatch"
 import { signatureTxOn } from "../signatures/signatureStore"
 import { validateDraft } from "./draftValidation"
 import { draftValidationStoreOn, validationTx } from "./draftValidationQueries"
 import { dbTransaction, type TransactionRunner } from "./reviewDecisionStore"
-import { NeedsLaravel } from "./snapshotDocuments"
 import type { SubmissionDeps, SubmissionStore, SubmissionTx } from "./submission"
 import { syllabusPayload } from "./syllabusDetail"
 import { syllabusDetailStoreOn } from "./syllabusDetailQueries"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
-const FORWARDED = 599
 
 async function revisionByKey(executor: Executor, syllabusId: string, key: string) {
   const [row] = await rowsOf<{ id: string; number: number; submitted_by: string }>(
@@ -74,7 +72,6 @@ function submissionTx(executor: Executor, notifications: SubmissionTx["notificat
           where revision.silabo_id = ${syllabusId}::uuid and envio.verificado_en is not null order by revision.numero_revision desc limit 1`,
       )
       if (!row) return null
-      if (hasAmbiguousNumbers(row.snapshot)) throw new NeedsLaravel()
       return { verifiedBy: row.verified_by ?? "", verifiedAt: Number(row.verified_at), snapshot: phpJsonDecode(row.snapshot) }
     },
     async createLibrarySubmission(row) {
@@ -122,10 +119,10 @@ export function submissionDepsOn(
   return {
     store,
     async validate(request, syllabusId) {
-      const bridge = { ...(options.bridge ?? defaultBridgeDeps()), forward: async () => new Response(null, { status: FORWARDED }) }
+      const bridge = options.bridge ?? defaultBridgeDeps()
       const validation = draftValidationStoreOn(executor, (work) => transaction((inner) => work(validationTx(inner))))
       const response = await validateDraft(request.clone(), syllabusId, { bridge, store: validation, today: institutionToday })
-      if (response.status !== 200) return null
+      if (response.status !== 200) return response
       const body = (await response.json()) as { validation: { blocking_errors: number } }
       return body.validation.blocking_errors
     },

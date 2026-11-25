@@ -19,7 +19,7 @@ export type AiConfig = {
 
 type Env = Record<string, string | undefined>
 
-function laravelEnv(env: Env, name: string): string | boolean | null | undefined {
+function envValue(env: Env, name: string): string | boolean | null | undefined {
   const raw = env[name]
   if (raw === undefined) return undefined
   const lowered = raw.toLowerCase()
@@ -62,15 +62,15 @@ function temperature(value: string | boolean | null | undefined): number | null 
 
 export function aiConfig(env: Env = process.env): AiConfig {
   return {
-    driver: text(laravelEnv(env, "AI_DRIVER") ?? "disabled"),
-    baseUrl: text(laravelEnv(env, "AI_BASE_URL")),
-    model: text(laravelEnv(env, "AI_MODEL")),
-    apiKey: text(laravelEnv(env, "AI_API_KEY")),
-    connectTimeoutSeconds: integer(laravelEnv(env, "AI_CONNECT_TIMEOUT"), 2),
-    timeoutSeconds: integer(laravelEnv(env, "AI_TIMEOUT"), 20),
-    templateModel: text(laravelEnv(env, "AI_TEMPLATE_MODEL")),
-    strictTools: phpBool(laravelEnv(env, "AI_TOOLS_STRICT"), true),
-    temperature: temperature(laravelEnv(env, "AI_TEMPERATURE")),
+    driver: text(envValue(env, "AI_DRIVER") ?? "disabled"),
+    baseUrl: text(envValue(env, "AI_BASE_URL")),
+    model: text(envValue(env, "AI_MODEL")),
+    apiKey: text(envValue(env, "AI_API_KEY")),
+    connectTimeoutSeconds: integer(envValue(env, "AI_CONNECT_TIMEOUT"), 2),
+    timeoutSeconds: integer(envValue(env, "AI_TIMEOUT"), 20),
+    templateModel: text(envValue(env, "AI_TEMPLATE_MODEL")),
+    strictTools: phpBool(envValue(env, "AI_TOOLS_STRICT"), true),
+    temperature: temperature(envValue(env, "AI_TEMPERATURE")),
     maxOutputTokens: 8192,
     maxSteps: 8,
     maxSeconds: 120,

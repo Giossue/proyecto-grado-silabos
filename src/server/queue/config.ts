@@ -15,3 +15,8 @@ export function retryAfterSeconds(env: Record<string, string | undefined> = proc
 export function queuePrefix(): string {
   return `${process.env.REDIS_PREFIX ?? "silabos-ueb:"}queue`
 }
+
+export function maxRunSeconds(env: Record<string, string | undefined> = process.env): number {
+  const seconds = Number.parseInt(env.QUEUE_MAX_TIME ?? "0", 10)
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : 0
+}

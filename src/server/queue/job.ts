@@ -44,7 +44,7 @@ export function jobOptions<T>(definition: JobDefinition<T>, data: T): JobsOption
   const jobId = uniqueJobId(definition, data)
   return {
     attempts: jobTries(definition),
-    backoff: { type: "laravel" },
+    backoff: { type: "job-schedule" },
     ...(jobId ? { jobId } : {}),
     removeOnComplete: true,
     removeOnFail: true,

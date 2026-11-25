@@ -21,16 +21,16 @@ async function file(relative: string, content: string, mtime: number) {
 
 beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), "silabos-logos-"))
-  process.env.LARAVEL_STORAGE_PATH = path.join(root, "storage", "app")
-  process.env.LARAVEL_PUBLIC_PATH = path.join(root, "public")
+  process.env.STORAGE_PATH = path.join(root, "storage", "app")
+  process.env.PUBLIC_ASSETS_PATH = path.join(root, "public")
   await file("public/images/silabo/facultad.jpeg", "jpeg", 1789530560)
   await file("public/images/silabo/logo-universidad.png", "default", 1789530561)
   await file(`storage/app/private/logos/facultades/${FACULTY}/logo.png`, "faculty", 1794318825)
 })
 
 afterAll(async () => {
-  delete process.env.LARAVEL_STORAGE_PATH
-  delete process.env.LARAVEL_PUBLIC_PATH
+  delete process.env.STORAGE_PATH
+  delete process.env.PUBLIC_ASSETS_PATH
   await rm(root, { recursive: true, force: true })
 })
 

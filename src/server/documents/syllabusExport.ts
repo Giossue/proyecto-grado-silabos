@@ -1,3 +1,5 @@
+import { MODELS } from "../http/models"
+import { Missing } from "../http/failures"
 import type { PhpRecord } from "../configuration/phpValues"
 import { scheduleWorkflowNotification, type NotificationScope } from "../notifications/store"
 import { signedDocumentVariables, type SignatureRecord, type SignedFacts } from "../syllabus/snapshotDocuments"
@@ -15,7 +17,6 @@ export class ExportRejected extends Error {
     super("rejected")
   }
 }
-export class ExportMissing extends Error {}
 
 export type ExportArtifactRow = { id: string; state: string; requestedBy: string }
 export type ExportActor = { id: string }
@@ -38,9 +39,9 @@ export async function existingExport(lookup: Pick<ExportRequestTx, "existingArti
 }
 
 export async function requestExport(tx: ExportRequestTx, request: ExportRequest): Promise<ExportArtifactRow> {
-  if (!(await tx.lockSyllabus(request.syllabusId))) throw new ExportMissing()
+  if (!(await tx.lockSyllabus(request.syllabusId))) throw new Missing(MODELS.syllabus, request.syllabusId)
   const revision = await tx.lockRevision(request.revisionId)
-  if (revision === null) throw new ExportMissing()
+  if (revision === null) throw new Missing(MODELS.revision, request.revisionId)
   if (revision.syllabusId !== request.syllabusId) throw new ExportRejected({ revision: [FOREIGN_REVISION] })
   const existing = await existingExport(tx, request.revisionId, request.key, request.actor.id)
   if (existing !== null) return existing

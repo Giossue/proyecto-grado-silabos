@@ -1,17 +1,17 @@
 import { requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, AppSession } from "../auth/types"
 import { detectMimeType, guessExtension } from "../files/mimeType"
-import { clientExtension, isMultipart, laravelMultipart, postMaxSize, postTooLarge, type UploadedFile } from "../files/uploads"
-import { isJsonRequest, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
-import { validationError } from "../laravel/responses"
-import { throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
-import { mergeErrors, validateInput, type Rule } from "../laravel/validation"
-import { laravelBoolean } from "../syllabus/inProgressWork"
+import { clientExtension, isMultipart, multipartInput, postMaxSize, postTooLarge, type UploadedFile } from "../files/uploads"
+import { isJsonRequest, requestInput, type PhpArray, type PhpValue } from "../http/input"
+import { validationError } from "../http/responses"
+import { throttle, type RateLimiter, type Throttle } from "../http/throttle"
+import { mergeErrors, validateInput, type Rule } from "../http/validation"
+import { requestBoolean } from "../syllabus/inProgressWork"
 import { readImportRows, SpreadsheetRejected, type ImportColumns, type ImportRow } from "./spreadsheetReader"
 
 export type ImportDeps = { bridge: BridgeDeps; limiter: RateLimiter; maxPostSize?: number }
 
-export type ImportSession = { session: LaravelSession; original: Request; finish: (response: Response) => Response }
+export type ImportSession = { session: AppSession; original: Request; finish: (response: Response) => Response }
 
 export type ImportUpload = { file: UploadedFile; confirm: boolean; input: PhpArray }
 
@@ -33,7 +33,6 @@ export async function importSession(request: Request, deps: ImportDeps, limit: n
   const tooLarge = postTooLarge(request, deps.maxPostSize ?? postMaxSize())
   if (tooLarge !== null) return tooLarge
   const original = request.clone()
-  if (!acceptsUpload(request)) return deps.bridge.forward(original)
   let gate: Throttle | null = null
   const session = await requireSession(
     request,
@@ -89,11 +88,11 @@ export async function readUpload(
   let input: PhpArray
   let value: PhpValue | UploadedFile | undefined
   if (isMultipart(request)) {
-    const body = await laravelMultipart(request)
+    const body = await multipartInput(request)
     input = body.input
     value = body.files.file !== undefined ? body.files.file : input.file
   } else {
-    input = await laravelInput(request)
+    input = await requestInput(request)
     value = input.file
   }
   const errors: Record<string, string[]> = {}
@@ -102,7 +101,7 @@ export async function readUpload(
   const others = await validateInput(input, extra, labels)
   for (const [attribute, messages] of Object.entries(others)) mergeErrors(errors, attribute, messages)
   if (Object.keys(errors).length > 0) return { errors }
-  return { upload: { file: value as UploadedFile, confirm: laravelBoolean(input.confirm), input } }
+  return { upload: { file: value as UploadedFile, confirm: requestBoolean(input.confirm), input } }
 }
 
 export async function spreadsheetUpload(request: Request): Promise<ImportUpload | Response> {

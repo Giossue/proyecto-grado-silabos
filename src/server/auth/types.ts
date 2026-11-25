@@ -8,6 +8,7 @@ export type SessionUser = {
   active: boolean
   emailVerifiedAt: string | null
   emailPreferences: unknown
+  rememberToken?: string | null
 }
 
 export type RoleAssignmentRecord = {
@@ -54,11 +55,10 @@ export type BridgeDeps = {
   store: SessionStore
   config: BridgeConfig
   now: () => number
-  forward: (request: Request) => Promise<Response>
   queueCookies?: (cookies: OutgoingCookie[]) => Promise<void>
 }
 
-export type LaravelSession = {
+export type AppSession = {
   user: SessionUser
   activeRole: RoleAssignmentRecord | null
   eligibleRoles: RoleAssignmentRecord[]

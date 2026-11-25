@@ -37,7 +37,7 @@ export const scratchDir = process.env.E2E_SCRATCH_DIR ?? path.join(os.tmpdir(), 
 export const storageStateOf = (key: AccountKey): string => path.join(scratchDir, ".auth", `${key}.json`)
 
 export const signaturesDir =
-  process.env.E2E_SIGNATURES_DIR ?? path.resolve(__dirname, "../../../../backend/firmas")
+  process.env.E2E_SIGNATURES_DIR ?? path.resolve(__dirname, "../.firmas")
 
 export const mailLogPaths = (process.env.E2E_MAIL_LOG ?? [path.join(scratchDir, "server.log"), path.join(scratchDir, "worker.log")].join(","))
   .split(",")

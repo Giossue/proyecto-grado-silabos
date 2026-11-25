@@ -1,16 +1,17 @@
 import "server-only"
+import { MODELS } from "../http/models"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
-import { laravelInput, type PhpArray } from "../laravel/input"
-import { laravelJson, validationError } from "../laravel/responses"
-import { validateInput, type Rule } from "../laravel/validation"
-import { laravelBoolean } from "../syllabus/inProgressWork"
+import { requestInput, type PhpArray } from "../http/input"
+import { apiJson, validationError } from "../http/responses"
+import { validateInput, type Rule } from "../http/validation"
+import { requestBoolean } from "../syllabus/inProgressWork"
 import { Missing, settle } from "../syllabus/reviewDecisions"
-import { careerSession, invalid, notJson, type CareerContext } from "./careerWrites"
+import { careerSession, invalid, type CareerContext } from "./careerWrites"
 import { createCurriculumDeps } from "./careerWriteStore"
 import { phpIntCast } from "./governanceWrites"
 import { CONVOCATION_LOCK_REASON } from "./structure"
-import { laravelRouter, routeAllows } from "../laravel/router"
+import { unmatchedRoute, routeAllows } from "../http/router"
 
 type CurriculumCareer = { id: string; cycleCount: number }
 type CurriculumSubject = { id: string; code: string; name: string; cycle: number | null; position: number }
@@ -56,21 +57,20 @@ async function curriculumChange(
   mutate: Mutation,
 ): Promise<Response> {
   const original = request.clone()
-  if (!routeAllows(request)) return laravelRouter(request)
-  if (notJson(request)) return deps.bridge.forward(original)
+  if (!routeAllows(request)) return unmatchedRoute(request)
   const context = await careerSession(request.clone(), deps.bridge, deps.careerActive)
   if (context instanceof Response) return context
-  const input = await laravelInput(request)
+  const input = await requestInput(request)
   const errors = await validateInput(input, rules(input), labels)
   if (Object.keys(errors).length > 0) return validationError(errors)
   return settle(original, deps, async () => {
     const message = await deps.transaction((tx) => curriculumMutation(tx, context, ids[0], input, mutate))
-    return laravelJson({ message })
+    return apiJson({ message })
   })
 }
 
 function confirmedSync(tx: CurriculumTx, context: CareerContext, input: PhpArray): Promise<void> {
-  return tx.sync(laravelBoolean(input.confirm_purge), context.careerId)
+  return tx.sync(requestBoolean(input.confirm_purge), context.careerId)
 }
 
 export function updateCurriculumConfiguration(request: Request, curriculumId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
@@ -127,10 +127,10 @@ export async function addRequirement(tx: CurriculumTx, career: CurriculumCareer,
 }
 
 export async function curriculumMutation(tx: CurriculumTx, context: CareerContext, curriculumId: string, input: PhpArray, mutate: Mutation): Promise<string> {
-  return tx.guard(laravelBoolean(input.confirm_purge), context.careerId, async () => {
+  return tx.guard(requestBoolean(input.confirm_purge), context.careerId, async () => {
     if (await tx.careerLocked(context.careerId)) throw invalid("process", CONVOCATION_LOCK_REASON)
     const career = await tx.lockCareer(context.careerId, curriculumId)
-    if (career === null) throw new Missing()
+    if (career === null) throw new Missing(MODELS.career, curriculumId)
     return mutate(tx, career, context, input)
   })
 }
@@ -157,7 +157,7 @@ export function createSubjectRequirement(request: Request, curriculumId: string,
 export function deleteSubjectRequirement(request: Request, curriculumId: string, requirementId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
   return curriculumChange(request, [curriculumId, requirementId], deps, () => ({}), {}, async (tx, career, context, input) => {
     const requirement = await tx.lockRequirement(requirementId, career.id)
-    if (requirement === null) throw new Missing()
+    if (requirement === null) throw new Missing(MODELS.requirement, requirementId)
     await tx.deleteRequirement(requirement.id)
     await confirmedSync(tx, context, input)
     return "Relación académica eliminada."
@@ -167,7 +167,7 @@ export function deleteSubjectRequirement(request: Request, curriculumId: string,
 export function deleteCurriculumSubject(request: Request, curriculumId: string, subjectId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
   return curriculumChange(request, [curriculumId, subjectId], deps, () => ({}), {}, async (tx, career, context, input) => {
     const subject = await tx.lockSubject(subjectId, career.id)
-    if (subject === null) throw new Missing()
+    if (subject === null) throw new Missing(MODELS.subject, subjectId)
     const { parallels, syllabi } = await tx.subjectUsage(subject.id)
     if (parallels > 0 || syllabi > 0) {
       const blockers: string[] = []
@@ -199,7 +199,7 @@ export function updateSubjectLayout(request: Request, curriculumId: string, deps
       const cycle = phpIntCast(input.cycle)
       if (cycle > career.cycleCount) throw invalid("cycle", "El ciclo excede la configuración de la malla.")
       const subject = await tx.lockSubject(input.subject_id as string, career.id)
-      if (subject === null) throw new Missing()
+      if (subject === null) throw new Missing(MODELS.subject)
       if (cycle !== subject.cycle) throw invalid("cycle", "Una materia solo puede reordenarse dentro de su ciclo.")
       const ordered = (await tx.lockCycleSubjects(career.id, cycle)).filter((item) => item.id !== subject.id)
       const position = Math.min(phpIntCast(input.position), ordered.length)

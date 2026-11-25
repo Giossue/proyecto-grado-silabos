@@ -1,15 +1,16 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
-import { recallerCookieName } from "../laravel/sessionGuard"
+import golden from "../http/__fixtures__/laravel-golden.json"
+import { recallerCookieName } from "../http/sessionGuard"
 import { requireSession } from "./requireSession"
 import { serializeCookie } from "./sessionWriter"
 import type { BridgeDeps, OutgoingCookie } from "./types"
-import { cookiePrefix } from "../laravel/cookies"
-import { decrypt } from "../laravel/encrypter"
+import { cookiePrefix } from "../http/cookies"
+import { decrypt } from "../http/encrypter"
 import {
   NOW,
   apiRequest,
+  recallerCookie,
   fakeDeps,
   loggedInAttributes,
   makeAssignment,
@@ -21,13 +22,12 @@ import {
   xsrfHeader,
   type FakeWorld,
 } from "./testing"
-import { hashPasswordForCookie, loginSessionKey } from "../laravel/sessionGuard"
+import { hashPasswordForCookie, loginSessionKey } from "../http/sessionGuard"
 
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
 
 let world: FakeWorld
-let forwarded: Request[]
 
 function withSession(attributes: Record<string, unknown>, lastActivity = NOW): void {
   world.sessions.set(SESSION_ID, { payload: sessionPayload(attributes), lastActivity })
@@ -43,7 +43,6 @@ async function expectError(result: unknown, status: number, body: string): Promi
 
 beforeEach(() => {
   world = { sessions: new Map(), users: [makeUser()], assignments: [makeAssignment()] }
-  forwarded = []
 })
 
 describe("requireSession", () => {
@@ -53,7 +52,7 @@ describe("requireSession", () => {
     const result = await requireSession(
       apiRequest("/api/v1/notifications", { cookie: `${golden.cookieName}=${encodeURIComponent(golden.sessionCookie)}` }),
       { verified: true, activeRole: "required" },
-      fakeDeps(world, forwarded),
+      fakeDeps(world),
     )
     expect(result).not.toBeInstanceOf(Response)
     if (result instanceof Response) return
@@ -133,9 +132,8 @@ describe("requireSession", () => {
   it("forgets a stale session role and writes the session in place, like Laravel's ActiveRole", async () => {
     withSession(loggedInAttributes({ active_role_assignment_id: "00000000-0000-0000-0000-000000000000" }), NOW - 60)
     world.assignments = [makeAssignment({ id: "r-1" }), makeAssignment({ id: "r-2", role: "bibliotecario", careerId: null })]
-    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { activeRole: "required" }, fakeDeps(world, forwarded))
+    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { activeRole: "required" }, fakeDeps(world))
     await expectError(result, 409, golden.errors.noActiveRole.body)
-    expect(forwarded).toHaveLength(0)
     expect(storedJson(world, SESSION_ID)).toBe(
       JSON.stringify({ _token: golden.csrfToken, [loginSessionKey()]: golden.userId, password_hash_web: golden.passwordHashForCookie, _flash: { old: [], new: [] } }),
     )
@@ -145,7 +143,7 @@ describe("requireSession", () => {
   it("moves a stale role to the sole eligible one at the end of the session, like forget then put", async () => {
     withSession(loggedInAttributes({ active_role_assignment_id: "00000000-0000-0000-0000-000000000000" }))
     world.assignments = [makeAssignment({ id: "r-1" })]
-    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { activeRole: "required" }, fakeDeps(world, forwarded))
+    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { activeRole: "required" }, fakeDeps(world))
     expect((result as { activeRole: { id: string } }).activeRole.id).toBe("r-1")
     expect(storedJson(world, SESSION_ID)).toBe(
       JSON.stringify({
@@ -171,16 +169,14 @@ describe("requireSession", () => {
   it("does not count a coordinator assignment without a career as eligible", async () => {
     withSession(loggedInAttributes({ active_role_assignment_id: "r-1" }))
     world.assignments = [makeAssignment({ id: "r-1", role: "coordinador", careerId: null })]
-    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { activeRole: "required" }, fakeDeps(world, forwarded))
+    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { activeRole: "required" }, fakeDeps(world))
     await expectError(result, 409, golden.errors.noActiveRole.body)
-    expect(forwarded).toHaveLength(0)
     expect(JSON.parse(storedJson(world, SESSION_ID) ?? "{}")).not.toHaveProperty("active_role_assignment_id")
   })
 
   it("picks the sole eligible role and stores it in the session, like Laravel", async () => {
     withSession(loggedInAttributes({ active_role_assignment_id: undefined }))
-    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { activeRole: "optional" }, fakeDeps(world, forwarded))
-    expect(forwarded).toHaveLength(0)
+    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { activeRole: "optional" }, fakeDeps(world))
     expect((result as { activeRole: { id: string } }).activeRole.id).toBe(golden.roleId)
     expect(storedJson(world, SESSION_ID)).toBe(
       JSON.stringify({
@@ -193,18 +189,31 @@ describe("requireSession", () => {
     )
   })
 
-  it("lets Laravel answer when only a remember-me cookie identifies the user", async () => {
+  it("logs the user in from a valid remember-me cookie and migrates the session, like SessionGuard::userFromRecaller", async () => {
     withSession({ _token: golden.csrfToken })
-    const request = apiRequest("/api/v1/notifications", { cookie: `${cookie}; ${recallerCookieName()}=x` })
-    expect(((await requireSession(request, {}, fakeDeps(world, forwarded))) as Response).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    world.users = [makeUser({ rememberToken: "recordar" })]
+    const remembered = `${recallerCookieName()}=${encodeURIComponent(recallerCookie(`${golden.userId}|recordar|hash`))}`
+    const session = await requireSession(apiRequest("/api/v1/notifications", { cookie: `${cookie}; ${remembered}` }), {}, fakeDeps(world))
+    expect(session).not.toBeInstanceOf(Response)
+    expect(world.sessions.has(SESSION_ID)).toBe(false)
+    const [id] = [...world.sessions.keys()]
+    expect(JSON.parse(storedJson(world, id) ?? "{}")[loginSessionKey()]).toBe(golden.userId)
+  })
+
+  it("stays a guest with a remember-me cookie whose token does not match and answers 500 for a malformed user id", async () => {
+    withSession({ _token: golden.csrfToken })
+    world.users = [makeUser({ rememberToken: "recordar" })]
+    const wrong = `${recallerCookieName()}=${encodeURIComponent(recallerCookie(`${golden.userId}|otro|hash`))}`
+    await expectError(await requireSession(apiRequest("/api/v1/notifications", { cookie: `${cookie}; ${wrong}` }), {}, fakeDeps(world)), 401, '{"message":"Unauthenticated."}')
+    const malformed = `${recallerCookieName()}=${encodeURIComponent(recallerCookie("abc|recordar|hash"))}`
+    await expectError(await requireSession(apiRequest("/api/v1/notifications", { cookie: `${cookie}; ${malformed}` }), {}, fakeDeps(world)), 500, '{\n    "message": "Server Error"\n}')
+    await expectError(await requireSession(apiRequest("/api/v1/notifications", { cookie: `${cookie}; ${recallerCookieName()}=x` }), {}, fakeDeps(world)), 401, '{"message":"Unauthenticated."}')
   })
 
   it("stores the password hash when the session has none yet, like Sanctum's AuthenticateSession", async () => {
     withSession(loggedInAttributes({ password_hash_web: undefined }))
-    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), {}, fakeDeps(world, forwarded))
+    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), {}, fakeDeps(world))
     expect(result).not.toBeInstanceOf(Response)
-    expect(forwarded).toHaveLength(0)
     expect(storedJson(world, SESSION_ID)).toBe(
       JSON.stringify({
         _token: golden.csrfToken,
@@ -231,11 +240,11 @@ describe("requireSession", () => {
     expect(JSON.parse(storedJson(world, id) ?? "{}")).not.toHaveProperty("password_hash_web")
   })
 
-  it("lets Laravel answer an unverified user that does not expect JSON", async () => {
+  it("answers Laravel's 500 to an unverified user that does not expect JSON, since there is no verification page", async () => {
     withSession(loggedInAttributes())
     world.users = [makeUser({ emailVerifiedAt: null })]
     const request = apiRequest("/api/v1/notifications", { cookie, headers: { accept: "text/html" } })
-    expect(((await requireSession(request, { verified: true }, fakeDeps(world, forwarded))) as Response).status).toBe(299)
+    await expectError(await requireSession(request, { verified: true }, fakeDeps(world)), 500, '{\n    "message": "Server Error"\n}')
   })
 
   describe("CSRF", () => {
@@ -273,7 +282,7 @@ describe("session keep-alive", () => {
   it("refreshes only last_activity when Next serves the request, like Laravel's database handler", async () => {
     withSession(loggedInAttributes(), NOW - 600)
     const before = world.sessions.get(SESSION_ID)?.payload
-    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { verified: true }, fakeDeps(world, forwarded))
+    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { verified: true }, fakeDeps(world))
     expect(result).not.toBeInstanceOf(Response)
     expect(world.sessions.get(SESSION_ID)).toEqual({ payload: before, lastActivity: NOW })
   })
@@ -289,7 +298,7 @@ describe("session keep-alive", () => {
     expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW)
   })
 
-  it("keeps the session alive on a CSRF mismatch, rewrites an expired one, and leaves it alone when Laravel answers", async () => {
+  it("keeps the session alive on a CSRF mismatch, rewrites an expired one, and keeps it alive on the 500 of an unverified page", async () => {
     withSession(loggedInAttributes(), NOW - 600)
     await requireSession(post({ "x-xsrf-token": xsrfHeader("other") }), {}, fakeDeps(world))
     expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW)
@@ -301,9 +310,8 @@ describe("session keep-alive", () => {
 
     withSession(loggedInAttributes(), NOW - 600)
     world.users = [makeUser({ emailVerifiedAt: null })]
-    await requireSession(apiRequest("/api/v1/dashboard", { cookie, headers: { accept: "text/html" } }), { verified: true }, fakeDeps(world, forwarded))
-    expect(forwarded).toHaveLength(1)
-    expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW - 600)
+    await requireSession(apiRequest("/api/v1/dashboard", { cookie, headers: { accept: "text/html" } }), { verified: true }, fakeDeps(world))
+    expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW)
   })
 
   it("does not touch anything without a stateful Referer", async () => {
@@ -317,7 +325,7 @@ describe("session keep-alive", () => {
 describe("session cookies on every answer, like StartSession and VerifyCsrfToken", () => {
   let queued: OutgoingCookie[]
 
-  const tracked = (): BridgeDeps => ({ ...fakeDeps(world, forwarded), queueCookies: async (cookies) => void queued.push(...cookies) })
+  const tracked = (): BridgeDeps => ({ ...fakeDeps(world), queueCookies: async (cookies) => void queued.push(...cookies) })
   const plainOf = (cookie: OutgoingCookie) => decrypt(cookie.value, testKey, false).slice(41)
   const named = (name: string) => queued.filter((cookie) => cookie.name === name)
   const post = (headers: Record<string, string>) => apiRequest("/api/v1/notifications/read-all", { method: "POST", cookie, headers })
@@ -359,11 +367,21 @@ describe("session cookies on every answer, like StartSession and VerifyCsrfToken
     expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW - 600)
   })
 
-  it("sends no cookie when Laravel answers the request", async () => {
+  it("sends both cookies after a remember-me login and forgets the remember cookie of an inactive account", async () => {
     withSession({ _token: golden.csrfToken })
-    await requireSession(apiRequest("/api/v1/notifications", { cookie: `${cookie}; ${recallerCookieName()}=x` }), {}, tracked())
-    expect(forwarded).toHaveLength(1)
-    expect(queued).toEqual([])
+    world.users = [makeUser({ rememberToken: "recordar" })]
+    const remembered = `${recallerCookieName()}=${encodeURIComponent(recallerCookie(`${golden.userId}|recordar|hash`))}`
+    await requireSession(apiRequest("/api/v1/notifications", { cookie: `${cookie}; ${remembered}` }), {}, tracked())
+    expect(queued.map((item) => item.name)).toEqual(["XSRF-TOKEN", golden.cookieName])
+    queued = []
+    withSession(loggedInAttributes())
+    world.users = [makeUser({ active: false })]
+    await requireSession(apiRequest("/api/v1/notifications", { cookie: `${cookie}; ${remembered}` }), {}, tracked())
+    expect(queued.map((item) => [item.name, item.maxAge])).toEqual([
+      ["XSRF-TOKEN", 7200],
+      [golden.cookieName, 7200],
+      [recallerCookieName(), 0],
+    ])
   })
 
   it("starts and stores a new guest session for a stateful request without one", async () => {

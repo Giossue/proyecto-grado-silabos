@@ -4,18 +4,19 @@ import golden from "./__fixtures__/email-golden.json"
 import { collapseName, emailShape, isValidFullName, isValidNamePart, normalizeName, randomString } from "./accountRules"
 
 describe("emailShape", () => {
-  it("only decides what egulias RFCValidation decides the same way", () => {
-    for (const { email, valid } of golden) {
-      const shape = emailShape(email)
-      if (shape !== "unknown") expect([email, shape]).toEqual([email, valid ? "valid" : "invalid"])
-    }
+  it("decides every address like egulias RFCValidation", () => {
+    expect(golden.map(({ email }) => [email, emailShape(email)])).toEqual(golden.map(({ email, valid }) => [email, valid ? "valid" : "invalid"]))
   })
 
-  it("decides the common addresses without asking Laravel", () => {
+  it("decides quoted local parts, comments and domain literals natively", () => {
     expect(emailShape("nueva.docente@silabos.test")).toBe("valid")
     expect(emailShape("sin-arroba")).toBe("invalid")
     expect(emailShape("docente@")).toBe("invalid")
-    expect(emailShape('"doc ente"@ueb.edu.ec')).toBe("unknown")
+    expect(emailShape('"doc ente"@ueb.edu.ec')).toBe("valid")
+    expect(emailShape('"doc@ente"@ueb.edu.ec')).toBe("valid")
+    expect(emailShape("doc(nota)@ueb.edu.ec")).toBe("valid")
+    expect(emailShape("docente@[IPv6:2001:db8::1]")).toBe("valid")
+    expect(emailShape(5)).toBe("invalid")
   })
 })
 

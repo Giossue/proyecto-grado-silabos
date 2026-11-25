@@ -1,10 +1,11 @@
 // @vitest-environment node
+import { MODELS } from "../http/models"
+import { Missing } from "../http/failures"
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../laravel/__fixtures__/laravel-golden.json"
+import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { closeProcess, type ClosingDeps } from "./processClosing"
 import type { ProcessRow } from "./processes"
-import { NeedsLaravel } from "./snapshotDocuments"
 
 const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
 
@@ -15,7 +16,6 @@ const DRAFT = "50000000-0000-4000-8000-000000000001"
 const UNSTARTED = "50000000-0000-4000-8000-000000000002"
 
 let world: FakeWorld
-let forwarded: Request[]
 let process: ProcessRow | null
 let lockedState: string | null
 let syllabi: { id: string; context: unknown }[]
@@ -24,7 +24,7 @@ let log: string[]
 
 function deps(): ClosingDeps {
   return {
-    bridge: fakeDeps(world, forwarded),
+    bridge: fakeDeps(world),
     processes: { find: async (id) => (process !== null && process.id === id ? process : null) },
     now: () => NOW,
     async transaction(work) {
@@ -40,7 +40,7 @@ function deps(): ClosingDeps {
           return syllabi
         },
         snapshot: async (id) => snapshot(id),
-        storeContext: async (id, context) => void log.push(`context:${id}:${JSON.stringify(context)}`),
+        storeClosedDocument: async (id, document) => void log.push(`closed:${id}:${JSON.stringify(document)}`),
         closeConvocations: async (id) => void log.push(`convocations:${id}`),
       })
       log.push("commit")
@@ -60,7 +60,6 @@ async function close(body: unknown = {}, id = PROCESS) {
 }
 
 beforeEach(() => {
-  forwarded = []
   world = {
     sessions: new Map([[golden.sessionId, { id: golden.sessionId, userId: golden.userId, payload: sessionPayload(loggedInAttributes()), lastActivity: NOW }]]),
     users: [makeUser()],
@@ -84,8 +83,8 @@ describe("POST admin/processes/{p}/cerrar", () => {
       `lock:process:${PROCESS}`,
       `close:${PROCESS}:false`,
       `lock:syllabi:${PROCESS}`,
-      `context:${DRAFT}:${JSON.stringify({ career: { name: "Software" }, closed_document: { schema_version: 9, syllabus: DRAFT } })}`,
-      `context:${UNSTARTED}:${JSON.stringify({ closed_document: { schema_version: 9, syllabus: UNSTARTED } })}`,
+      `closed:${DRAFT}:${JSON.stringify({ schema_version: 9, syllabus: DRAFT })}`,
+      `closed:${UNSTARTED}:${JSON.stringify({ schema_version: 9, syllabus: UNSTARTED })}`,
       `convocations:${PROCESS}`,
       "commit",
     ])
@@ -121,10 +120,11 @@ describe("POST admin/processes/{p}/cerrar", () => {
     expect(await close({}, "abc")).toMatchObject({ status: 404, text: modelNotFound("SyllabusProcess", "abc") })
   })
 
-  it("hands the whole closing to Laravel when a snapshot cannot be built here", async () => {
+  it("rolls the whole closing back and answers Laravel's model 404 when the institutional template is gone", async () => {
     snapshot = () => {
-      throw new NeedsLaravel()
+      throw new Missing(MODELS.template)
     }
-    expect((await close()).status).toBe(299)
+    expect(await close()).toMatchObject({ status: 404, json: { message: "No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate]." } })
+    expect(log).not.toContain("commit")
   })
 })

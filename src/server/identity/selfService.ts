@@ -1,19 +1,18 @@
 import "server-only"
 import { authenticateAndTrack, commitTracking, requireSession } from "../auth/requireSession"
 import { withWriter } from "../auth/sessionWriter"
-import { controllerJson, FORWARD, fromController, statefulRequest, type Outcome } from "../auth/statefulRequest"
-import type { LaravelSession, SessionUser } from "../auth/types"
-import { parseCookieHeader } from "../laravel/cookies"
-import { isPhpArray, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
-import { forbidden, laravelHttpError, laravelJson, unauthenticated, validationError } from "../laravel/responses"
-import { recallerCookieName } from "../laravel/sessionGuard"
-import type { Throttle } from "../laravel/throttle"
-import { validateInput } from "../laravel/validation"
-import { emailRule, emailShape, phpBoolean } from "./accountRules"
+import { controllerJson, fromController, statefulRequest, type Outcome } from "../auth/statefulRequest"
+import type { AppSession, SessionUser } from "../auth/types"
+import { parseCookieHeader } from "../http/cookies"
+import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
+import { forbidden, jsonError, apiJson, serverError, unauthenticated, validationError } from "../http/responses"
+import { recallerCookieName } from "../http/sessionGuard"
+import type { Throttle } from "../http/throttle"
+import { validateInput } from "../http/validation"
+import { emailRule, phpBoolean } from "./accountRules"
 import { issueInvitation, revokeSessions, updateManagedUserProfile, updateTeacherFormation, type Accessibility, type Account } from "./accounts"
 import {
   ACCOUNT_ATTRIBUTES,
-  acceptsBody,
   defaultIdentityWriteDeps,
   isAdministrator,
   passwordRecoveryThrottle,
@@ -24,12 +23,12 @@ import {
 } from "./accountWrites"
 import { sessionPayload } from "./session"
 
-async function answerSession(deps: IdentityWriteDeps, session: LaravelSession, original: Request, accessibility?: Accessibility): Promise<Response> {
+async function answerSession(deps: IdentityWriteDeps, session: AppSession, original: Request, accessibility?: Accessibility): Promise<Response> {
   const profile = await deps.session.profiles.find(session.user.id)
-  if (profile === null) return deps.bridge.forward(original)
+  if (profile === null) return unauthenticated()
   const payload = sessionPayload(session, profile, deps.session)
   if (accessibility !== undefined) payload.user.accessibility = accessibility
-  return laravelJson(payload)
+  return apiJson(payload)
 }
 
 export async function updateProfile(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
@@ -37,9 +36,7 @@ export async function updateProfile(request: Request, deps: IdentityWriteDeps = 
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!isAdministrator(session)) return forbidden()
-  if (!acceptsBody(request)) return deps.bridge.forward(original)
-  const input = await laravelInput(request)
-  if (emailShape(input.correo_electronico) === "unknown") return deps.bridge.forward(original)
+  const input = await requestInput(request)
   const errors = await validateInput(
     input,
     {
@@ -68,8 +65,7 @@ export async function updateAccessibility(request: Request, deps: IdentityWriteD
   const session = await requireSession(request, { verified: true, activeRole: "optional" }, deps.bridge)
   if (session instanceof Response) return session
   if (!session.user.active) return forbidden()
-  if (!acceptsBody(request)) return deps.bridge.forward(original)
-  const input = await laravelInput(request)
+  const input = await requestInput(request)
   const errors = await validateInput(
     input,
     {
@@ -96,8 +92,7 @@ export async function updateFormation(request: Request, deps: IdentityWriteDeps 
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!session.user.active) return forbidden()
-  if (!acceptsBody(request)) return deps.bridge.forward(original)
-  const input = await laravelInput(request)
+  const input = await requestInput(request)
   const errors = await validateInput(input, { formacion_experiencia: ["required", "string"] }, { formacion_experiencia: "formación y experiencia" })
   if (Object.keys(errors).length > 0) return validationError(errors)
   const outcome = await perform(deps, original, session, (ctx) => updateTeacherFormation(ctx, session.user.id, stringOf(input.formacion_experiencia)))
@@ -115,7 +110,7 @@ export async function resendOwnActivation(request: Request, deps: IdentityWriteD
     {
       activeRole: "optional",
       afterAuthentication: async () => {
-        gate = passwordRecoveryThrottle(deps, request, await laravelInput(request.clone()))
+        gate = passwordRecoveryThrottle(deps, request, await requestInput(request.clone()))
         return gate.hit()
       },
     },
@@ -129,15 +124,14 @@ export async function resendOwnActivation(request: Request, deps: IdentityWriteD
     const outcome = await perform(deps, original, session, (ctx) => issueInvitation(ctx, target), issuer?.id ?? session.user.id)
     if (outcome instanceof Response) return finish(outcome)
   }
-  return finish(laravelJson({ message: RESEND_MESSAGE }, 202))
+  return finish(apiJson({ message: RESEND_MESSAGE }, 202))
 }
 
-type Tracked = { session: LaravelSession; touch: string | null; refresh: () => Promise<void> }
+type Tracked = { session: AppSession; touch: string | null; refresh: () => Promise<void> }
 
 async function track(request: Request, original: Request, deps: IdentityWriteDeps): Promise<Tracked | Response> {
   const authentication = await authenticateAndTrack(request, {}, deps.bridge)
   const { outcome, touch } = authentication
-  if ("deferred" in outcome) return deps.bridge.forward(original)
   const refresh = () => commitTracking(authentication, original, deps.bridge)
   if (outcome instanceof Response) {
     await refresh()
@@ -152,14 +146,14 @@ export async function destroySession(request: Request, id: string, deps: Identit
   const { session, touch, refresh } = tracked
   if (touch !== null && touch === id) {
     await refresh()
-    return laravelHttpError(422, "La sesión actual se cierra desde la opción Cerrar sesión.")
+    return jsonError(422, "La sesión actual se cierra desde la opción Cerrar sesión.")
   }
   const userId = session.user.id
   await deps.accounts.direct(async (tx) => {
     await tx.deleteSession(id, userId)
   })
   await refresh()
-  return laravelJson({ message: "La sesión seleccionada fue cerrada." })
+  return apiJson({ message: "La sesión seleccionada fue cerrada." })
 }
 
 const scalarPassword = (value: PhpValue | undefined): string | null => {
@@ -198,9 +192,8 @@ function destroyRememberedOtherSessions(request: Request, deps: IdentityWriteDep
   return statefulRequest(request, writer, { group: "api", authenticates: true }, async (context): Promise<Outcome> => {
     const user = context.user
     if (user === null) return unauthenticated()
-    if (!acceptsBody(request)) return FORWARD
-    const errors = await confirmCurrentPassword(await laravelInput(request), user, deps)
-    if (errors === null) return FORWARD
+    const errors = await confirmCurrentPassword(await requestInput(request), user, deps)
+    if (errors === null) return serverError()
     if (Object.keys(errors).length > 0) return fromController(validationError(errors))
     let token = ""
     const closed = await closeOtherSessions(deps, user.id, context.state.id, (length) => (token = deps.services.random(length)))
@@ -216,14 +209,16 @@ export async function destroyOtherSessions(request: Request, deps: IdentityWrite
   const tracked = await track(request, original, deps)
   if (tracked instanceof Response) return tracked
   const { session, touch, refresh } = tracked
-  if (!acceptsBody(request)) return deps.bridge.forward(original)
-  const errors = await confirmCurrentPassword(await laravelInput(request), session.user, deps)
-  if (errors === null) return deps.bridge.forward(original)
+  const errors = await confirmCurrentPassword(await requestInput(request), session.user, deps)
+  if (errors === null) {
+    await refresh()
+    return serverError()
+  }
   if (Object.keys(errors).length > 0) {
     await refresh()
     return validationError(errors)
   }
   const closed = await closeOtherSessions(deps, session.user.id, touch)
   await refresh()
-  return laravelJson(closedMessage(closed))
+  return apiJson(closedMessage(closed))
 }
