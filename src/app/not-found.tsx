@@ -11,7 +11,6 @@ export default function NotFound() {
         <section className="flex w-full max-w-md flex-col gap-4 text-center">
           <p className="text-sm font-medium text-muted-foreground">Error 404</p>
           <h1 className="text-2xl font-semibold tracking-tight">Página no encontrada</h1>
-          <p className="text-sm text-muted-foreground">La dirección solicitada no corresponde a una pantalla disponible</p>
           <Button asChild>
             <Link href={paths.dashboard}><House data-icon="inline-start" aria-hidden="true" />Volver a Inicio</Link>
           </Button>
