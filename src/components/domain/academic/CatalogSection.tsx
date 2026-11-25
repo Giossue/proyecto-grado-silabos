@@ -1,21 +1,16 @@
 "use client"
 
-import { Eye } from "lucide-react"
 import { useState } from "react"
 import { CatalogActions } from "@/components/domain/academic/CatalogActions"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
-import { IconTooltip } from "@/components/domain/IconTooltip"
 import { StatusBadge } from "@/components/domain/StatusBadge"
 import { TableCardLine } from "@/components/domain/TableCardLine"
 import { TablePagination } from "@/components/domain/TablePagination"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { useClientPagination } from "@/composables/useClientPagination"
-import { useFocusReturn } from "@/lib/focusReturn"
 import { activateRow, rowButtonClass } from "@/lib/rowActivation"
 import type { AcademicStructureProps, CatalogRecord, GovernanceSection } from "@/types/academic"
 
@@ -40,9 +35,6 @@ const NO_LIBRARIES: string[] = []
 
 export function CatalogSection({ section, catalogs, options, onChanged }: CatalogSectionProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [logoPreview, setLogoPreview] = useState<{ name: string; url: string } | null>(null)
-  const [logoPreviewOpen, setLogoPreviewOpen] = useState(false)
-  useFocusReturn(logoPreviewOpen)
 
   const facultyFilter = useClientFilter(catalogs.faculties, facultySearch, facultyFilters)
   const facultyPage = useClientPagination(facultyFilter.items, 20, facultyFilter.criteria)
@@ -54,10 +46,6 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
   const editRecord = (id: string): void => setEditingId(id)
   const editOpenChange = (id: string) => (open: boolean) => setEditingId((current) => (open ? id : current === id ? null : current))
 
-  const openLogoPreview = (name: string, url: string): void => {
-    setLogoPreview({ name, url })
-    setLogoPreviewOpen(true)
-  }
 
   const campusFilter = (id: string, filter: { values: Record<string, string>; setValue: (key: string, value: string) => void }) => (
     <Field>
@@ -98,12 +86,11 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
               <TableRow>
                 <TableHead>Facultad</TableHead>
                 <TableHead>Campus</TableHead>
-                <TableHead className="w-20 text-center">Logo</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {facultyPage.items.length === 0 ? (
-                <TableEmpty colSpan={3}>{facultyFilter.active ? "Ninguna facultad coincide con los filtros" : "No existen facultades registradas"}</TableEmpty>
+                <TableEmpty colSpan={2}>{facultyFilter.active ? "Ninguna facultad coincide con los filtros" : "No existen facultades registradas"}</TableEmpty>
               ) : (
                 facultyPage.items.map((faculty) => (
                   <TableRow
@@ -137,17 +124,6 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                       />
                     </TableCell>
                     <TableCell>{faculty.campus ?? "Sin campus"}</TableCell>
-                    <TableCell className="text-center">
-                      {faculty.logo_url ? (
-                        <IconTooltip label="Ver logo">
-                          <Button type="button" variant="ghost" size="icon-sm" aria-label={`Ver logo de ${faculty.nombre}`} onClick={() => openLogoPreview(faculty.nombre, faculty.logo_url!)}>
-                            <Eye aria-hidden="true" />
-                          </Button>
-                        </IconTooltip>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">Sin logo</span>
-                      )}
-                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -248,25 +224,6 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
         </div>
       )}
 
-      <Dialog open={logoPreviewOpen} onOpenChange={setLogoPreviewOpen}>
-        <DialogContent className="sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Logo de {logoPreview?.name}</DialogTitle>
-            <DialogDescription>Así se verá en los sílabos</DialogDescription>
-          </DialogHeader>
-          {logoPreview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoPreview.url} alt={`Logo de ${logoPreview.name}`} className="max-h-160 w-full object-contain" />
-          ) : null}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                Cerrar
-              </Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }

@@ -114,6 +114,16 @@ describe("CatalogEditDialog · logo de la facultad", () => {
     expect(document.body.textContent).toContain("Arrastre su imagen aquí")
   })
 
+  it("en la ficha, el logo actual se abre en grande", async () => {
+    await mountDialog()
+
+    fireEvent.click(buttonNamed("Ver el logo en grande")!)
+    await flush()
+    const preview = screen.getByRole("dialog", { name: "Logo de Facultad de Ciencias" })
+    expect(preview.querySelector<HTMLImageElement>('img[alt="Logo de Facultad de Ciencias"]')?.src).toBe("https://api.example.test/logos/faculty-1.png")
+    expect(preview.textContent).toContain("Así se verá en los sílabos")
+  })
+
   it("quitar el logo sin subir otro no deja guardar, y cancelar vuelve a mostrar el logo", async () => {
     await editingDialog()
     fireEvent.click(buttonNamed("Quitar logo")!)

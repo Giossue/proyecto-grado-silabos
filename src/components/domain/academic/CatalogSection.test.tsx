@@ -24,7 +24,6 @@ describe("CatalogSection", () => {
     renderWithProviders(<CatalogSection section="faculties" catalogs={catalogs} options={options} onChanged={vi.fn()} />)
 
     expect(screen.getByText("Inactiva")).toBeInTheDocument()
-    expect(screen.getByText("Sin logo")).toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: "Ciencias" }).closest("tr")!)
     await flush()
     expect(screen.getByRole("dialog").textContent).toContain("Datos registrados")
@@ -47,12 +46,11 @@ describe("CatalogSection", () => {
     expect(document.body.querySelector<HTMLInputElement>("#edit-code-c1")!.value).toBe("SW")
   })
 
-  it("el ojo muestra el logo de la facultad", async () => {
+  it("la tabla de facultades no tiene columna de logo", () => {
     renderWithProviders(<CatalogSection section="faculties" catalogs={catalogs} options={options} onChanged={vi.fn()} />)
 
-    fireEvent.click(screen.getByRole("button", { name: "Ver logo de Ciencias" }))
-    await flush()
-    expect(screen.getByRole("dialog").textContent).toContain("Logo de Ciencias")
-    expect(screen.getByRole("img", { name: "Logo de Ciencias" })).toHaveAttribute("src", "/logos/f1.png")
+    expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual(["Facultad", "Campus"])
+    expect(screen.queryByText("Sin logo")).toBeNull()
+    expect(screen.queryByRole("button", { name: /^Ver logo/ })).toBeNull()
   })
 })

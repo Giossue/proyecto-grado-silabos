@@ -7,6 +7,7 @@ import type { CatalogLibrary } from "@/api/libraryCatalog"
 import { DatePicker } from "@/components/DatePicker"
 import { FacultyLibraryChecks } from "@/components/domain/academic/FacultyLibraryChecks"
 import { FacultyLogoField } from "@/components/domain/academic/FacultyLogoField"
+import { FacultyLogoPreview } from "@/components/domain/academic/FacultyLogoPreview"
 import { DialogActions, type DialogAction } from "@/components/domain/DialogActions"
 import { FormDialogActions, FormDialogFooter } from "@/components/domain/FormDialogActions"
 import { FormModal } from "@/components/domain/FormModal"
@@ -282,8 +283,7 @@ export function CatalogEditDialog({
                     </FieldLabel>
                     {currentLogo ? (
                       <div className="flex items-center gap-3">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={logoUrl ?? ""} alt="Logo actual de la facultad" className="h-24 min-w-0 flex-1 rounded-md border bg-background object-contain p-2" />
+                        <FacultyLogoPreview url={logoUrl ?? ""} name={recordName} />
                         <IconTooltip label="Quitar logo">
                           <Button type="button" variant="outline" size="icon-sm" aria-label="Quitar logo" disabled={processing || readOnly} onClick={() => setRemoveLogo(true)}>
                             <X aria-hidden="true" />
