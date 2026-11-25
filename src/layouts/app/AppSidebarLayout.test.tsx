@@ -46,7 +46,7 @@ const mountShell = async () => {
   return view
 }
 
-const userMenuButton = (): HTMLElement => document.querySelector<HTMLElement>('header [aria-label="Menú de usuario"]')!
+const userMenuButton = (): HTMLElement => document.querySelector<HTMLElement>('header [data-user-menu]')!
 
 const openUserMenu = async (user: ReturnType<typeof userEvent.setup>): Promise<void> => {
   await user.click(userMenuButton())
@@ -103,7 +103,7 @@ describe("AppSidebarLayout", () => {
     expect(current.getAttribute("aria-current")).toBe("page")
     expect(sidebar.textContent).not.toContain("Configuración")
     expect(sidebar.querySelector('[aria-label="Rol y carrera activos"]')).toBeNull()
-    expect(sidebar.querySelector('[aria-label="Menú de usuario"]')).toBeNull()
+    expect(sidebar.querySelector('[data-user-menu]')).toBeNull()
     expect(userMenuButton().textContent).toContain("Ada Admin")
     expect(document.body.textContent).not.toContain("Mis sílabos")
     expect(document.querySelector('[aria-label="Asistente curricular"]')).toBeNull()
@@ -134,15 +134,6 @@ describe("AppSidebarLayout", () => {
     expect(document.querySelector("header [data-app-logo]")!.closest("a")).toBeNull()
     expect(document.querySelector('header [aria-label="Ir al inicio"]')).toBeNull()
     expect(userMenuButton().textContent).not.toContain("Bibliotecario")
-  })
-
-  it("sin menú lateral ofrece instalar la aplicación desde el menú de usuario en móvil", async () => {
-    sessionState.replace({ ...administratorSession, active_role: { id: "role-docente", code: "docente", career_id: "career-1", career_name: "Software" } })
-    const user = userEvent.setup()
-    await mountShell()
-    await openUserMenu(user)
-
-    expect(document.body.querySelector('[data-test="install-app"]')?.textContent?.trim()).toBe("Instalar aplicación")
   })
 
   it("al docente no le muestra menú lateral y le deja cambiar de rol desde el menú de usuario", async () => {

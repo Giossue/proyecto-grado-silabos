@@ -16,13 +16,10 @@ function Form({ required = true, day }: { required?: boolean; day: string }) {
 const submit = (): HTMLButtonElement => screen.getByRole("button", { name: "Guardar" })
 
 describe("DatePicker obligatorio", () => {
-  it("mantiene deshabilitado el botón de enviar hasta que haya una fecha", async () => {
-    const view = renderWithProviders(<Form day="" />)
+  it("no deshabilita el botón de enviar aunque falte la fecha", async () => {
+    renderWithProviders(<Form day="" />)
     await flush()
 
-    expect(submit().disabled).toBe(true)
-    view.rerender(<Form day="2026-12-01" />)
-    await flush()
     expect(submit().disabled).toBe(false)
   })
 

@@ -20,10 +20,10 @@ export function NavUser() {
           type="button"
           variant="ghost"
           className="h-11 rounded-md px-2 max-sm:h-12 max-sm:min-w-16 max-sm:flex-col max-sm:gap-0.5 max-sm:order-2"
-          aria-label="Menú de usuario"
+          data-user-menu=""
         >
           <CircleUser className="sm:hidden size-5" aria-hidden="true" />
-          <span className="text-xs font-medium sm:hidden" aria-hidden="true">Perfil</span>
+          <span className="text-xs font-medium sm:hidden">Perfil</span>
           <div className="flex min-w-0 flex-1 items-center gap-2 max-sm:hidden">
             <UserInfo user={user} showFullName />
             <ChevronDown className="hidden sm:block" data-icon="inline-end" aria-hidden="true" />

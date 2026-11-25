@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { type ManagedUser } from "@/api/admin-users"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
 import { ImportSpreadsheetDialog } from "@/components/domain/ImportSpreadsheetDialog"
@@ -22,7 +22,7 @@ import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableR
 import { managedUserStatus } from "@/lib/managedUserStatus"
 import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowButtonClass } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
 import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
 import { cn } from "@/lib/utils"
@@ -111,12 +111,6 @@ export default function AdminUsersPage() {
   const openUser = (user: ManagedUser): void => {
     setViewing(user)
     setViewOpen(true)
-  }
-
-  const openFromKeyboard = (event: KeyboardEvent<HTMLTableRowElement>, user: ManagedUser): void => {
-    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-    event.preventDefault()
-    openUser(user)
   }
 
   const closeDialog = (open: boolean): void => {
@@ -248,14 +242,13 @@ export default function AdminUsersPage() {
                     <TableRow
                       key={user.id}
                       className="cursor-pointer"
-                      tabIndex={0}
-                      aria-label={`Ver ${user.nombre}`}
                       onClick={(event) => activateRow(event.nativeEvent, () => openUser(user))}
-                      onKeyDown={(event) => openFromKeyboard(event, user)}
                     >
                       <TableCell>
                         <div className="flex flex-col">
-                          <span>{user.nombre}</span>
+                          <span>
+                            <button type="button" className={rowButtonClass} onClick={() => openUser(user)}>{user.nombre}</button>
+                          </span>
                           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             <span className="text-sm text-muted-foreground">{user.correo_electronico}</span>
                             <span className="sm:hidden">

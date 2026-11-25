@@ -112,8 +112,7 @@
 
 @layer base {
     * {
-        scrollbar-color: color-mix(in oklab, var(--muted-foreground) 45%, transparent) transparent;
-        scrollbar-width: thin;
+        scrollbar-color: color-mix(in oklab, var(--muted-foreground) 80%, transparent) transparent;
     }
 }
 
@@ -133,12 +132,12 @@
 
 :root {
     --notifications-width: min(24rem, calc(100vw - 1rem));
-    --notifications-max-height: min(26rem, 60vh);
-    --curriculum-canvas-height: 76vh;
+    --notifications-max-height: min(26rem, 60dvh);
+    --curriculum-canvas-height: 76dvh;
     --curriculum-canvas-full-height: calc(100dvh - 3.5rem - 1px);
     --document-table-border: #333333;
     --overlay-max-height: calc(100dvh - 2rem);
-    --filter-sheet-max-height: 85vh;
+    --filter-sheet-max-height: 85dvh;
     --app-header-height: calc(4rem + env(safe-area-inset-top));
     --app-header-compact-height: calc(3rem + env(safe-area-inset-top));
     --safe-footer-inset: calc(1rem + env(safe-area-inset-bottom));
@@ -169,6 +168,7 @@
 :root,
 .theme-light,
 .template-sheet {
+    color-scheme: light;
     --background: #f5f6f8;
     --field: #f6f8fb;
     --foreground: #121c28;
@@ -260,6 +260,7 @@
 }
 
 .dark {
+    color-scheme: dark;
     --background: #17191c;
     --field: #1e2125;
     --foreground: #f1f2f3;
@@ -1138,11 +1139,35 @@ html[data-text-size='150'] { font-size: 150%; }
 html[data-motion='none'] *,
 html[data-motion='none'] *::before,
 html[data-motion='none'] *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    transition-delay: 0s !important;
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-enter-scale: 1 !important;
+    --tw-enter-rotate: 0 !important;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
+    --tw-exit-scale: 1 !important;
+    --tw-exit-rotate: 0 !important;
     scroll-behavior: auto !important;
+}
+
+html[data-motion='none'] :is(.transition, [class*='transition-all'], [class*='transition-[']:not([class*='transition-[color'])) {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow !important;
+}
+
+html[data-motion='none'] :is([class*='transition-transform'], .curriculum-canvas :is(.vue-flow__node-subject, .react-flow__node-subject, .vue-flow__handle, .react-flow__handle)) {
+    transition-duration: 0s !important;
+}
+
+html[data-motion='none'] .driver-checklist.setup-checklist .driver-checklist-launcher {
+    transition-property: opacity !important;
+}
+
+html[data-motion='none'] :is([class*='animate-accordion'], [class*='animate-collapsible'], [class*='animate-bounce'], [class*='animate-ping'], .skeleton-shimmer, [data-slot='skeleton'], .setup-checklist.setup-pending .driver-checklist-launcher) {
+    animation: none !important;
+}
+
+html[data-motion='none'] [class*='animate-spin'] {
+    animation-duration: 3s !important;
 }
 
 html[data-spacing='wide'] :where(p, li, td, th, dd, dt, label) {

@@ -2,17 +2,16 @@
 
 import { KeyRound } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useRef } from "react"
 import { Controller } from "react-hook-form"
 import { resetForgottenPassword } from "@/api/session"
 import { InputError } from "@/components/InputError"
 import { PasswordInput } from "@/components/PasswordInput"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { Button } from "@/components/ui/button"
+import { Field } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
-import { useFormIncomplete } from "@/composables/useFormIncomplete"
 import { AuthSplitLayout } from "@/layouts/auth/AuthSplitLayout"
 import { applyApiErrors, fieldMessage, SERVER_ERROR, serverMessage, useSchemaForm } from "@/lib/forms"
 import { paths } from "@/lib/routes"
@@ -28,8 +27,6 @@ export default function ResetPasswordPage() {
   const token = singleValue(searchParams.getAll("token"))
   const form = useSchemaForm(newPasswordFormSchema, { defaultValues: { password: "", password_confirmation: "" } })
   const { errors, isSubmitting: pending } = form.formState
-  const submitButton = useRef<HTMLButtonElement | null>(null)
-  const incomplete = useFormIncomplete(submitButton)
 
   const submit = async ({ password, password_confirmation }: NewPasswordFormValues): Promise<void> => {
     if (!email || !token) {
@@ -52,12 +49,12 @@ export default function ResetPasswordPage() {
     <AuthSplitLayout title="Restablecer contraseña" description="Ingrese su nueva contraseña">
       <form onSubmit={form.handleSubmit(submit)}>
         <div className="grid gap-6">
-          <div className="grid gap-2">
+          <Field data-invalid={Boolean(fieldMessage(errors, "email"))} className="gap-2">
             <Label htmlFor="reset-email" required>Correo electrónico</Label>
-            <Input id="reset-email" type="email" value={email} autoComplete="email" className="mt-1 block w-full" placeholder="Ej. nombre@ueb.edu.ec" readOnly aria-required="true" />
+            <Input id="reset-email" type="email" value={email} autoComplete="username" spellCheck={false} className="mt-1 block w-full" placeholder="Ej. nombre@ueb.edu.ec" readOnly aria-required="true" />
             <InputError message={fieldMessage(errors, "email")} className="mt-2" />
-          </div>
-          <div className="grid gap-2">
+          </Field>
+          <Field data-invalid={Boolean(fieldMessage(errors, "password"))} className="gap-2">
             <Label htmlFor="new-password" required>Contraseña nueva</Label>
             <Controller
               name="password"
@@ -67,8 +64,8 @@ export default function ResetPasswordPage() {
               )}
             />
             <InputError message={fieldMessage(errors, "password")} />
-          </div>
-          <div className="grid gap-2">
+          </Field>
+          <Field data-invalid={Boolean(fieldMessage(errors, "password_confirmation"))} className="gap-2">
             <Label htmlFor="new-password-confirmation" required>Confirmar contraseña</Label>
             <Controller
               name="password_confirmation"
@@ -78,9 +75,9 @@ export default function ResetPasswordPage() {
               )}
             />
             <InputError message={fieldMessage(errors, "password_confirmation")} />
-          </div>
+          </Field>
           {error ? <FeedbackAlert message={error} /> : null}
-          <Button ref={submitButton} type="submit" className="mt-4 w-full" disabled={pending || !email || !token || incomplete} data-test="reset-password-button">
+          <Button type="submit" className="mt-4 w-full" disabled={pending || !email || !token} data-test="reset-password-button">
             {pending ? <Spinner data-icon="inline-start" /> : <KeyRound data-icon="inline-start" aria-hidden="true" />}
             Restablecer contraseña
           </Button>

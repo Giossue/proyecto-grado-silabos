@@ -135,7 +135,7 @@ export function FichaImportDialog({ disabled, onApplied }: FichaImportDialogProp
           Importar desde Excel
         </Button>
       </DialogTrigger>
-      <DialogContent className={cn("flex max-h-screen flex-col gap-0 overflow-hidden p-0", ready ? "sm:max-w-3xl" : "sm:max-w-md")}>
+      <DialogContent className={cn("flex max-h-(--overlay-max-height) flex-col gap-0 overflow-hidden p-0", ready ? "sm:max-w-3xl" : "sm:max-w-md")}>
         <ScrollArea className="min-h-0 flex-1 [&>[data-slot=scroll-area-viewport]]:max-h-[calc(100dvh-2rem)]">
           <div className="grid gap-4 p-6">
             <DialogHeader>

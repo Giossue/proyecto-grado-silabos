@@ -64,13 +64,17 @@ export function applyApiErrors<T extends FieldValues>(setError: UseFormSetError<
     return {}
   }
   const entries = Object.entries(reason.errors).filter(([, list]) => list.length > 0)
-  for (const [field, list] of entries) {
-    setError((aliases[field] ?? field) as FieldPath<T>, {
-      type: "server",
-      message: list[0],
-      types: Object.fromEntries(list.map((text, index) => [`server${index}`, text])),
-    })
-  }
+  entries.forEach(([field, list], index) => {
+    setError(
+      (aliases[field] ?? field) as FieldPath<T>,
+      {
+        type: "server",
+        message: list[0],
+        types: Object.fromEntries(list.map((text, position) => [`server${position}`, text])),
+      },
+      { shouldFocus: index === 0 },
+    )
+  })
   if (entries.length === 0) setError(SERVER_ERROR, { type: "server", message: reason.message })
   return reason.errors
 }

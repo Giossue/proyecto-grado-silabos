@@ -2,16 +2,15 @@
 
 import { UserCheck } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useRef } from "react"
 import { Controller } from "react-hook-form"
 import { activateAccount, logout } from "@/api/session"
 import { InputError } from "@/components/InputError"
 import { PasswordInput } from "@/components/PasswordInput"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { Button } from "@/components/ui/button"
+import { Field } from "@/components/ui/field"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
-import { useFormIncomplete } from "@/composables/useFormIncomplete"
 import { AuthSplitLayout } from "@/layouts/auth/AuthSplitLayout"
 import { clearIntendedRoute } from "@/lib/intended-route"
 import { applyApiErrors, fieldMessage, SERVER_ERROR, serverMessage, useSchemaForm } from "@/lib/forms"
@@ -25,8 +24,6 @@ export default function ActivateAccountPage() {
   const token = tokens.length === 1 ? tokens[0] ?? "" : ""
   const form = useSchemaForm(newPasswordFormSchema, { defaultValues: { password: "", password_confirmation: "" } })
   const { errors, isSubmitting: pending } = form.formState
-  const submitButton = useRef<HTMLButtonElement | null>(null)
-  const incomplete = useFormIncomplete(submitButton)
 
   const submit = async ({ password, password_confirmation }: NewPasswordFormValues): Promise<void> => {
     if (!token) {
@@ -51,7 +48,7 @@ export default function ActivateAccountPage() {
   return (
     <AuthSplitLayout title="Activar cuenta" description="Verifique su correo y defina una contraseña para ingresar al sistema">
       <form className="flex flex-col gap-6" onSubmit={form.handleSubmit(submit)}>
-        <div className="grid gap-2">
+        <Field data-invalid={Boolean(fieldMessage(errors, "password"))} className="gap-2">
           <Label htmlFor="activation-password" required>Contraseña</Label>
           <Controller
             name="password"
@@ -61,8 +58,8 @@ export default function ActivateAccountPage() {
             )}
           />
           <InputError message={fieldMessage(errors, "password")} />
-        </div>
-        <div className="grid gap-2">
+        </Field>
+        <Field data-invalid={Boolean(fieldMessage(errors, "password_confirmation"))} className="gap-2">
           <Label htmlFor="activation-password-confirmation" required>Confirmar contraseña</Label>
           <Controller
             name="password_confirmation"
@@ -72,10 +69,10 @@ export default function ActivateAccountPage() {
             )}
           />
           <InputError message={fieldMessage(errors, "password_confirmation")} />
-        </div>
+        </Field>
         {error ? <FeedbackAlert message={error} /> : null}
         <InputError message={fieldMessage(errors, "token")} />
-        <Button ref={submitButton} type="submit" className="w-full" disabled={pending || !token || incomplete}>
+        <Button type="submit" className="w-full" disabled={pending || !token}>
           {pending ? <Spinner data-icon="inline-start" /> : <UserCheck data-icon="inline-start" aria-hidden="true" />}
           Activar cuenta
         </Button>

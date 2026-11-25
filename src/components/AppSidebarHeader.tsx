@@ -24,7 +24,7 @@ export function AppSidebarHeader({ sidebar = true }: AppSidebarHeaderProps) {
       <div className="flex min-w-0 flex-1 items-center gap-2 max-sm:contents">
         {!sidebar ? (
           <div className="flex items-center max-sm:hidden" data-app-logo>
-            <Image src="/logo-ueb-horizontal-claro.webp" width={600} height={164} unoptimized decoding="async" alt="Universidad Estatal de Bolívar" className="h-12 w-auto dark:hidden" />
+            <Image src="/logo-ueb-horizontal-claro.webp" width={600} height={164} unoptimized loading="eager" decoding="async" alt="Universidad Estatal de Bolívar" className="h-12 w-auto dark:hidden" />
             <Image src="/logo-ueb-horizontal.webp" width={600} height={164} unoptimized decoding="async" alt="" aria-hidden="true" className="hidden h-12 w-auto dark:block" />
           </div>
         ) : null}

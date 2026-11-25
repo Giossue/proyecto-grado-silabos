@@ -1,7 +1,7 @@
 "use client"
 
 import { Eye } from "lucide-react"
-import { useState, type KeyboardEvent } from "react"
+import { useState } from "react"
 import { CatalogActions } from "@/components/domain/academic/CatalogActions"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { IconTooltip } from "@/components/domain/IconTooltip"
@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableR
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { useClientPagination } from "@/composables/useClientPagination"
 import { useFocusReturn } from "@/lib/focusReturn"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowButtonClass } from "@/lib/rowActivation"
 import type { AcademicStructureProps, CatalogRecord, GovernanceSection } from "@/types/academic"
 
 type Career = AcademicStructureProps["catalogs"]["careers"][number]
@@ -53,11 +53,6 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
 
   const editRecord = (id: string): void => setEditingId(id)
   const editOpenChange = (id: string) => (open: boolean) => setEditingId((current) => (open ? id : current === id ? null : current))
-  const editFromKeyboard = (event: KeyboardEvent<HTMLTableRowElement>, id: string): void => {
-    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-    event.preventDefault()
-    editRecord(id)
-  }
 
   const openLogoPreview = (name: string, url: string): void => {
     setLogoPreview({ name, url })
@@ -114,13 +109,10 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                   <TableRow
                     key={faculty.id}
                     className="cursor-pointer"
-                    tabIndex={0}
-                    aria-label={`Editar ${faculty.nombre}`}
                     onClick={(event) => activateRow(event.nativeEvent, () => editRecord(faculty.id))}
-                    onKeyDown={(event) => editFromKeyboard(event, faculty.id)}
                   >
                     <TableCell>
-                      {faculty.nombre}
+                      <button type="button" className={rowButtonClass} onClick={() => editRecord(faculty.id)}>{faculty.nombre}</button>
                       {!faculty.activo ? (
                         <span className="ml-2 inline-flex">
                           <StatusBadge label="Inactiva" tone="neutral" />
@@ -213,13 +205,10 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                   <TableRow
                     key={career.id}
                     className="cursor-pointer"
-                    tabIndex={0}
-                    aria-label={`Editar ${career.name}`}
                     onClick={(event) => activateRow(event.nativeEvent, () => editRecord(career.id))}
-                    onKeyDown={(event) => editFromKeyboard(event, career.id)}
                   >
                     <TableCell>
-                      {career.name}
+                      <button type="button" className={rowButtonClass} onClick={() => editRecord(career.id)}>{career.name}</button>
                       {!career.active ? (
                         <span className="ml-2 inline-flex">
                           <StatusBadge label="Inactiva" tone="neutral" />

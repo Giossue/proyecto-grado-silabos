@@ -2,7 +2,7 @@
 
 import { LogIn } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useRef } from "react"
+import { useEffect} from "react"
 import { Controller } from "react-hook-form"
 import { login } from "@/api/session"
 import { PasswordInput } from "@/components/PasswordInput"
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
-import { useFormIncomplete } from "@/composables/useFormIncomplete"
 import { AuthSplitLayout } from "@/layouts/auth/AuthSplitLayout"
 import { consumeIntendedRoute } from "@/lib/intended-route"
 import { paths, roleEntry } from "@/lib/routes"
@@ -27,8 +26,6 @@ export default function LoginPage() {
   const status = statusValues.length === 1 ? statusValues[0] : null
   const form = useSchemaForm(loginSchema, { defaultValues: { email: "", password: "" } })
   const { errors, isSubmitting: processing } = form.formState
-  const submitButton = useRef<HTMLButtonElement | null>(null)
-  const incomplete = useFormIncomplete(submitButton)
 
   useEffect(() => {
     if (status) toast.success(status)
@@ -61,7 +58,7 @@ export default function LoginPage() {
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="email" required>Correo institucional</FieldLabel>
-                <Input {...field} id="email" type="email" aria-required="true" autoComplete="email" placeholder="Ej. nombre@ueb.edu.ec" aria-invalid={fieldState.invalid} />
+                <Input {...field} id="email" type="email" aria-required="true" autoComplete="username" spellCheck={false} placeholder="Ej. nombre@ueb.edu.ec" aria-invalid={fieldState.invalid} />
                 <FieldError errors={errorMessages(fieldState.error)} />
               </Field>
             )}
@@ -80,7 +77,7 @@ export default function LoginPage() {
               </Field>
             )}
           />
-          <Button ref={submitButton} type="submit" className="mt-4 w-full" disabled={processing || incomplete} data-test="login-button">
+          <Button type="submit" className="mt-4 w-full" disabled={processing} data-test="login-button">
             {processing ? <Spinner data-icon="inline-start" /> : <LogIn data-icon="inline-start" aria-hidden="true" />}
             Ingresar
           </Button>

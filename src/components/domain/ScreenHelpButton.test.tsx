@@ -15,6 +15,13 @@ const signIn = (): void => act(() => sessionState.replace({ user: { id: "u1" }, 
 const visible = (element: Element) => Object.defineProperty(element, "getClientRects", { value: () => [{}] })
 const button = (): HTMLElement => screen.getByRole("button", { name: "Ayuda de esta pantalla" })
 
+const openedPopover = (): Promise<Element> => vi.waitFor(() => {
+  const popover = document.body.querySelector(".driver-popover")
+  if (!popover) throw new Error("La guía aún no se abre")
+
+  return popover
+})
+
 describe("ScreenHelpButton", () => {
   beforeEach(() => {
     localStorage.clear()
@@ -33,7 +40,7 @@ describe("ScreenHelpButton", () => {
 
     expect(listAvailableScreenHelp).toHaveBeenCalledTimes(1)
     await user.click(button())
-    const popover = document.body.querySelector(".driver-popover")!
+    const popover = await openedPopover()
     expect(popover.textContent).toContain("Usuarios y roles")
     expect(popover.textContent).toContain("Segundo párrafo.")
   })
@@ -48,7 +55,7 @@ describe("ScreenHelpButton", () => {
     await flush()
 
     await user.click(button())
-    let popover = document.body.querySelector(".driver-popover")!
+    let popover = await openedPopover()
     expect(popover.textContent).toContain("Primer párrafo.")
     expect(popover.textContent).not.toContain("Segundo párrafo.")
     ;(popover.querySelector(".driver-popover-next-btn") as HTMLElement).click()

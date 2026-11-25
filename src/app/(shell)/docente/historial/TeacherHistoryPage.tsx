@@ -1,9 +1,10 @@
 "use client"
 
 import { ArrowLeft } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, type KeyboardEvent } from "react"
+import { useEffect } from "react"
 import { ApiError } from "@/api/client"
 import { type HistoryCareer } from "@/api/syllabi"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
@@ -17,15 +18,9 @@ import { goBack } from "@/lib/goBack"
 import { failedQuery, queryErrorMessage } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
 import { teacherHistoryQuery } from "@/queries/teacher"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowLinkClass } from "@/lib/rowActivation"
 
 const NO_CAREERS: HistoryCareer[] = []
-
-const activateWithKey = (event: KeyboardEvent<HTMLTableRowElement>, action: () => void): void => {
-  if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-  event.preventDefault()
-  action()
-}
 
 export default function TeacherHistoryPage() {
   const router = useRouter()
@@ -81,12 +76,11 @@ export default function TeacherHistoryPage() {
                   <TableRow
                     key={career.id}
                     className="cursor-pointer"
-                    tabIndex={0}
-                    aria-label={`Ver el historial de ${career.name}`}
                     onClick={(event) => activateRow(event.nativeEvent, () => open(career))}
-                    onKeyDown={(event) => activateWithKey(event, () => open(career))}
                   >
-                    <TableCell>{career.name}</TableCell>
+                    <TableCell>
+                      <Link href={paths.teacher.historyCareer(career.id)} className={rowLinkClass}>{career.name}</Link>
+                    </TableCell>
                     <TableCell className="text-center">{career.syllabi_count}</TableCell>
                   </TableRow>
                 ))

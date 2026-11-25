@@ -35,3 +35,8 @@ export async function dragBetween(page: Page, from: Locator, to: Locator): Promi
 export const uniqueSuffix = (): string => Date.now().toString(36).slice(-5).toUpperCase()
 
 export const lettersOnly = (value: string): string => value.replace(/\d/g, (digit) => "ABCDEFGHIJ"[Number(digit)] ?? "A")
+
+const pageOf = (scope: Page | Locator): Page => ("goto" in scope ? scope : scope.page())
+
+export const rowNamed = (scope: Page | Locator, name: string | RegExp, role: "link" | "button" = "link"): Locator =>
+  scope.getByRole("row").filter({ has: pageOf(scope).getByRole(role, { name, exact: typeof name === "string" }) })

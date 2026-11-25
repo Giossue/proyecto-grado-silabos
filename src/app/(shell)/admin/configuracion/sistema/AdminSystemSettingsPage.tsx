@@ -271,7 +271,7 @@ export default function AdminSystemSettingsPage() {
                         value={ai.api_key}
                         onChange={(event) => setAi((previous) => ({ ...previous, api_key: event.target.value }))}
                         type="password"
-                        autoComplete="new-password"
+                        autoComplete="off"
                         disabled={ai.clear_api_key}
                         placeholder={keyPlaceholder}
                         className={cn(settings.ai.api_key.configured && "pr-10")}

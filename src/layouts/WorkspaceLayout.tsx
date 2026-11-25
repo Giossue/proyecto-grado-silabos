@@ -25,7 +25,7 @@ export function WorkspaceLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-svh w-full flex-col bg-background">
         <header className="sticky top-0 z-30 flex h-(--app-header-height) shrink-0 items-center gap-3 border-b border-sidebar-border/70 bg-background px-4 pt-[env(safe-area-inset-top)] md:px-6">
           <div className="flex items-center gap-2">
-            <Image src="/logo-ueb-horizontal-claro.webp" width={600} height={164} unoptimized decoding="async" alt="Universidad Estatal de Bolívar" className="h-12 w-auto dark:hidden" />
+            <Image src="/logo-ueb-horizontal-claro.webp" width={600} height={164} unoptimized loading="eager" decoding="async" alt="Universidad Estatal de Bolívar" className="h-12 w-auto dark:hidden" />
             <Image src="/logo-ueb-horizontal.webp" width={600} height={164} unoptimized decoding="async" alt="" aria-hidden="true" className="hidden h-12 w-auto dark:block" />
           </div>
           <div className="ml-auto flex items-center gap-2">

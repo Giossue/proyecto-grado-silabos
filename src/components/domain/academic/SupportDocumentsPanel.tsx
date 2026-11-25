@@ -2,7 +2,7 @@
 
 import { Trash2, Upload } from "lucide-react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useEffectEvent, useState, type KeyboardEvent } from "react"
+import { useEffect, useEffectEvent, useState } from "react"
 import { ApiError } from "@/api/client"
 import { deleteSupportDocument, uploadSupportDocument, type SupportDocument } from "@/api/support-documents"
 import { openSupportDocument, supportDocumentSize } from "@/components/domain/academic/supportDocumentViewer"
@@ -25,7 +25,7 @@ import { useClientPagination } from "@/composables/useClientPagination"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { useShownWhileClosing } from "@/lib/dialogExit"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowButtonClass } from "@/lib/rowActivation"
 import { SERVER_ERROR, fieldMessage, serverMessage, useSchemaForm } from "@/lib/forms"
 import { errorMessage, failedQuery } from "@/lib/queryClient"
 import { toast } from "@/lib/toast"
@@ -96,12 +96,6 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
     } finally {
       setBusyId(null)
     }
-  }
-
-  const viewFromKeyboard = (event: KeyboardEvent<HTMLTableRowElement>, document: SupportDocument): void => {
-    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-    event.preventDefault()
-    void view(document)
   }
 
   const pickFile = (picked: File | null): void => {
@@ -177,13 +171,14 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
                   <TableRow
                     key={document.id}
                     className={document.view === "lista" ? "cursor-pointer" : undefined}
-                    tabIndex={document.view === "lista" ? 0 : undefined}
-                    aria-label={document.view === "lista" ? `Ver ${document.title}` : undefined}
                     onClick={(event) => activateRow(event.nativeEvent, () => void view(document))}
-                    onKeyDown={(event) => viewFromKeyboard(event, document)}
                   >
                     <TableCell>
-                      <span>{document.title}</span>
+                      {document.view === "lista" ? (
+                        <button type="button" className={rowButtonClass} onClick={() => void view(document)}>{document.title}</button>
+                      ) : (
+                        <span>{document.title}</span>
+                      )}
                       {document.view === "pendiente" ? (
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Spinner aria-hidden="true" />

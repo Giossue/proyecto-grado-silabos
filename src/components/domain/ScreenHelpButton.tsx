@@ -1,6 +1,6 @@
 "use client"
 
-import { driver, type Driver, type DriveStep } from "driver.js"
+import type { Driver, DriveStep } from "driver.js"
 import { CircleHelp } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useEffect, useRef } from "react"
@@ -9,11 +9,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useCurrentFullPath } from "@/composables/useCurrentUrl"
 import { useScrollDirection } from "@/composables/useScrollDirection"
 import { helpScreens } from "@/lib/helpScreens"
+import { scrollBehavior } from "@/lib/motion"
 import { matchRoute } from "@/lib/routeTable"
 import { screenTours } from "@/lib/screenTours"
 import { cn } from "@/lib/utils"
 import { useScreenHelp } from "@/state/screenHelp"
-import "driver.js/dist/driver.css"
+
+const loadDriver = async (): Promise<typeof import("driver.js").driver> => {
+  const [module] = await Promise.all([import("driver.js"), import("driver.js/dist/driver.css")])
+
+  return module.driver
+}
 
 const escape = (text: string): string => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
@@ -46,7 +52,8 @@ export function ScreenHelpButton({ editorMode = false, corner = "right" }: { edi
     }
   }, [fullPath])
 
-  const start = (): void => {
+  const start = async (): Promise<void> => {
+    const driver = await loadDriver()
     stop()
     const found = (screenTours[screen] ?? [])
       .map((item) => ({ item, element: visible(item.selector) }))
@@ -66,7 +73,7 @@ export function ScreenHelpButton({ editorMode = false, corner = "right" }: { edi
       doneBtnText: "Listo",
       showButtons: found.length > 0 ? ["next", "previous", "close"] : ["close"],
       disableActiveInteraction: true,
-      smoothScroll: true,
+      smoothScroll: scrollBehavior() === "smooth",
       stagePadding: 6,
       stageRadius: 8,
       overlayOpacity: 0.55,
@@ -97,7 +104,7 @@ export function ScreenHelpButton({ editorMode = false, corner = "right" }: { edi
               hidden && "max-sm:pointer-events-none max-sm:translate-y-24 max-sm:opacity-0",
             )}
             aria-label="Ayuda de esta pantalla"
-            onClick={start}
+            onClick={() => void start()}
           >
             <CircleHelp aria-hidden="true" />
           </Button>

@@ -3,6 +3,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { accounts, mailLogPaths } from "./support/accounts"
 import { userName } from "./support/db"
+import { rowNamed } from "./support/ui"
 import { expect, test, watchPage } from "./support/fixtures"
 import { addTeacherParallel, fillBibliography, fillIdentification, fillOutcomes, fillPlanning, fillRichText, openCoordinationReview, openSection, approvedRevisionOf, openTrackedReview, stampCount, openTeacherSyllabus, restartFromReview, settleAutosave, teacherListItem, signWith, submitSyllabus, trackAutosave } from "./support/syllabus"
 
@@ -54,7 +55,7 @@ test.describe.serial("syllabus lifecycle", () => {
     const page = await actor("librarian")
     const health = watchPage(page)
     await page.goto("/biblioteca/revisiones")
-    await page.getByRole("row", { name: `Abrir revisión de ${subject}` }).click()
+    await page.getByRole("link", { name: subject, exact: true }).click()
     await expect(page.getByRole("heading", { level: 1, name: subject })).toBeVisible()
     await expect(page.getByRole("article", { name: "Bibliografía" })).toContainText("Ecuaciones diferenciales")
     await page.getByRole("button", { name: "Devolver al docente" }).click()
@@ -86,7 +87,7 @@ test.describe.serial("syllabus lifecycle", () => {
     const page = await actor("librarian")
     const health = watchPage(page)
     await page.goto("/biblioteca/revisiones")
-    await page.getByRole("row", { name: `Abrir revisión de ${subject}` }).click()
+    await page.getByRole("link", { name: subject, exact: true }).click()
     await expect(page.getByRole("article", { name: "Bibliografía" })).toContainText("2.ª edición")
     await page.getByRole("button", { name: "Firmar y enviar a coordinación" }).click()
     await signWith(page, "Firmar y enviar a coordinación", accounts.librarian, "Firmar y enviar")
@@ -129,9 +130,9 @@ test.describe.serial("syllabus lifecycle", () => {
   test("coordinator approves with a signature", async ({ actor }) => {
     const librarian = await actor("librarian")
     await librarian.goto("/biblioteca/revisiones")
-    const pending = librarian.getByRole("row", { name: `Abrir revisión de ${subject}` })
+    const pending = rowNamed(librarian, subject)
     if (await pending.filter({ hasText: "En revisión" }).isVisible()) {
-      await pending.click()
+      await pending.getByRole("link", { name: subject, exact: true }).click()
       await librarian.getByRole("button", { name: "Firmar y enviar a coordinación" }).click()
       await signWith(librarian, "Firmar y enviar a coordinación", accounts.librarian, "Firmar y enviar")
     }
@@ -217,7 +218,7 @@ test.describe.serial("syllabus lifecycle", () => {
     await librarian.goto("/biblioteca/revisiones")
     await librarian.getByRole("combobox", { name: "Estado" }).click()
     await librarian.getByRole("option", { name: "Aprobados" }).click()
-    await librarian.getByRole("row", { name: `Abrir revisión de ${subject}` }).click()
+    await librarian.getByRole("link", { name: subject, exact: true }).click()
     await expect(librarian.getByRole("heading", { level: 1, name: subject })).toBeVisible()
     await librarian.goto(`/revisiones/${revision}/documentos`)
     await expect(librarian).toHaveURL(new RegExp(`/biblioteca/revisiones/${revision}$`))
@@ -268,9 +269,9 @@ test.describe.serial("syllabus lifecycle", () => {
     const librarian = await actor("librarian")
     await librarian.goto("/biblioteca/revisiones")
     await expect(librarian.getByRole("table", { name: "Revisiones de biblioteca" })).toBeVisible()
-    const libraryRow = librarian.getByRole("row", { name: `Abrir revisión de ${subject}` }).filter({ hasText: "En revisión" }).first()
+    const libraryRow = rowNamed(librarian, subject).filter({ hasText: "En revisión" }).first()
     if (await libraryRow.isVisible()) {
-      await libraryRow.click()
+      await libraryRow.getByRole("link", { name: subject, exact: true }).click()
       await librarian.getByRole("button", { name: "Firmar y enviar a coordinación" }).click()
       await signWith(librarian, "Firmar y enviar a coordinación", accounts.librarian, "Firmar y enviar")
     }
@@ -280,20 +281,19 @@ test.describe.serial("syllabus lifecycle", () => {
     await page.goto("/coordinacion/revisiones")
     const queue = page.getByRole("table", { name: "Revisiones de coordinación" })
     await expect(queue).toBeVisible()
-    const queued = queue.getByRole("row", { name: `Abrir revisión de ${subject}` }).first()
+    const queued = rowNamed(queue, subject).first()
     if (await queued.isVisible()) {
-      await queued.click()
+      await queued.getByRole("link", { name: subject, exact: true }).click()
       await page.getByRole("button", { name: "Firmar y aprobar" }).click()
       await signWith(page, "Firmar y aprobar", accounts.coordinator, "Firmar y aprobar")
     }
 
     await page.goto("/coordinacion/revisiones?tab=seguimiento")
-    await page
-      .getByRole("table", { name: "Seguimiento de la convocatoria" })
-      .getByRole("row", { name: `Abrir revisión de ${subject}` })
+    await rowNamed(page.getByRole("table", { name: "Seguimiento de la convocatoria" }), subject)
       .filter({ hasNot: page.getByText("Paralelo A", { exact: true }) })
       .filter({ hasText: "Aprobado" })
       .first()
+      .getByRole("link", { name: subject, exact: true })
       .click()
     await expect(page.getByRole("heading", { level: 1, name: subject })).toBeVisible()
     await page.getByRole("button", { name: "Más" }).click()

@@ -52,3 +52,34 @@ describe("accesibilidad en la cuenta", () => {
     vi.useRealTimers()
   })
 })
+
+describe("movimiento del sistema", () => {
+  it("sigue el cambio del sistema mientras no haya preferencias guardadas", async () => {
+    const listeners: Array<(event: MediaQueryListEvent) => void> = []
+    const matchMedia = vi.spyOn(window, "matchMedia").mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn((type: string, listener: (event: MediaQueryListEvent) => void) => {
+        if (type === "change" && query === "(prefers-reduced-motion: reduce)") listeners.push(listener)
+      }),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }) as unknown as MediaQueryList)
+    localStorage.clear()
+    vi.resetModules()
+    const fresh = await import("@/composables/useAccessibility")
+    fresh.initializeAccessibility()
+
+    listeners.forEach((listener) => listener({ matches: true } as MediaQueryListEvent))
+    expect(document.documentElement.dataset.motion).toBe("none")
+    expect(localStorage.getItem("silabos:accesibilidad")).toBeNull()
+
+    fresh.accessibilitySettings.update({ noMotion: false })
+    listeners.forEach((listener) => listener({ matches: true } as MediaQueryListEvent))
+    expect(document.documentElement.dataset.motion).toBe("normal")
+    matchMedia.mockRestore()
+  })
+})

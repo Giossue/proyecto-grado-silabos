@@ -38,10 +38,9 @@ describe("LoadingSkeleton", () => {
   it.each(variants)("renderiza una superficie accesible para %s", (variant) => {
     const { container } = render(<LoadingSkeleton variant={variant} rows={2} columns={3} mode="schedule" />)
 
-    const status = one(container, '[role="status"]')
+    const status = one(container, '[aria-busy="true"]')
 
-    expect(status.getAttribute("aria-live")).toBe("polite")
-    expect(status.getAttribute("aria-busy")).toBe("true")
+    expect(container.querySelector('[role="status"], [aria-live]')).toBeNull()
     expect(status.textContent).toContain("Cargando contenido")
     expect(all(container, '[data-slot="skeleton"]').length).toBeGreaterThan(0)
     expect(all(container, "button")).toHaveLength(0)
@@ -66,7 +65,7 @@ describe("LoadingSkeleton", () => {
     rerender(<LoadingSkeleton variant="table-body" search filters={1} />)
 
     expect(container.querySelector('[data-skeleton="table-toolbar"]')).not.toBeNull()
-    expect(all(container, '[role="status"]')).toHaveLength(1)
+    expect(all(container, '[aria-busy="true"]')).toHaveLength(1)
     expect(container.querySelector("button, input, select, [tabindex]")).toBeNull()
   })
 

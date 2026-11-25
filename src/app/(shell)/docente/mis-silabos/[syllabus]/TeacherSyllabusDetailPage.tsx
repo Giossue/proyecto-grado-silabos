@@ -54,6 +54,7 @@ import { handleUnauthorized } from "@/lib/unauthorized"
 import { withoutFinalPeriod } from "@/lib/utils"
 import { teacherSyllabusQuery } from "@/queries/teacher"
 import { sessionState } from "@/state/session"
+import { scrollBehavior } from "@/lib/motion"
 
 type ValidationResult = { field_id: string | null; code: string; severity: string; message: string }
 type CopySource = { id: string; parallel: string }
@@ -397,7 +398,7 @@ export default function TeacherSyllabusDetailPage() {
     if (owner && canEditNow()) flushSync(() => setChosenSectionId(owner.id))
     const target = fieldId ? document.getElementById(`field-${fieldId}`) : null
     if (!target) return
-    target.scrollIntoView({ behavior: "smooth", block: "center" })
+    target.scrollIntoView({ behavior: scrollBehavior(), block: "center" })
     target.querySelector<HTMLElement>("input, textarea, button, [contenteditable='true']")?.focus({ preventScroll: true })
   }
 

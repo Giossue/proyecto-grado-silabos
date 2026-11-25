@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { useSchemaForm } from "@/lib/forms"
 import { passwordConfirmationSchema, type PasswordConfirmationValues } from "@/schemas/twoFactor"
+import { scrollBehavior } from "@/lib/motion"
 
 const schema = passwordConfirmationSchema()
 
@@ -22,7 +23,7 @@ export function TwoFactorRecoveryCodes({ codes, processing, onRegenerate }: TwoF
   const ToggleIcon = visible ? EyeOff : Eye
 
   useEffect(() => {
-    if (visible) section.current?.scrollIntoView({ behavior: "smooth" })
+    if (visible) section.current?.scrollIntoView({ behavior: scrollBehavior() })
   }, [visible])
 
   const regenerate = ({ current_password }: PasswordConfirmationValues): void => {

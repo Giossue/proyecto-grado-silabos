@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type KeyboardEvent } from "react"
+import { useState } from "react"
 import type { ScheduledSubjects, TeacherAssignments } from "@/api/career-academics"
 import { ParallelBulkActions } from "@/components/domain/academic/ParallelBulkActions"
 import { ParallelCreationDialog } from "@/components/domain/academic/ParallelCreationDialog"
@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableR
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { useClientPagination } from "@/composables/useClientPagination"
 import { shiftLabel } from "@/lib/parallelShifts"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowButtonClass } from "@/lib/rowActivation"
 import { cn } from "@/lib/utils"
 
 type ScheduledRow = ScheduledSubjects["scheduledSubjects"][number]
@@ -103,11 +103,6 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
     setPlanningId(item.subject_id)
     setPlanningOpen(true)
   }
-  const planFromKeyboard = (event: KeyboardEvent<HTMLTableRowElement>, item: ScheduledRow): void => {
-    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-    event.preventDefault()
-    if (canPlan(item)) openPlanning(item)
-  }
 
   const filterSelect = (key: string, id: string, label: string, placeholder: string, allLabel: string, options: { value: string; label: string }[]) => (
     <Field>
@@ -189,12 +184,9 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
               <TableRow
                 key={item.subject_id}
                 className={canPlan(item) ? "cursor-pointer" : ""}
-                tabIndex={canPlan(item) ? 0 : undefined}
-                aria-label={canPlan(item) ? `Paralelos y docentes de ${item.label}` : undefined}
                 onClick={(event) => {
                   if (canPlan(item)) activateRow(event.nativeEvent, () => openPlanning(item))
                 }}
-                onKeyDown={(event) => planFromKeyboard(event, item)}
               >
                 <TableCell>
                   {canPlan(item) ? (
@@ -203,7 +195,11 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
                 </TableCell>
                 <TableCell>
                   <span className="flex flex-wrap items-center gap-2">
-                    {item.subject_name}
+                    {canPlan(item) ? (
+                      <button type="button" className={rowButtonClass} aria-haspopup="dialog" onClick={() => openPlanning(item)}>{item.subject_name}</button>
+                    ) : (
+                      item.subject_name
+                    )}
                     {item.generates_syllabus === false ? <StatusBadge label="Sin sílabo" tone="info" /> : null}
                   </span>
                 </TableCell>
@@ -212,16 +208,17 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
                   {item.parallels.length ? (
                     <ul className="-mx-2 flex min-h-11 flex-col">
                       {item.parallels.map((parallel) => (
-                        <li key={parallel.id} className="relative flex min-h-9 flex-1 items-center justify-center border-border px-2 not-first:border-t">
+                        <li key={parallel.id} className="flex min-h-9 flex-1 items-center justify-center gap-2 border-border px-2 not-first:border-t">
                           {canPlan(item) && parallel.editable !== false ? (
                             <Checkbox
-                              className="absolute left-[calc(50%-1.75rem)]"
                               checked={selectedParallels.includes(parallel.id)}
                               aria-label={parallelSelectLabel(item, parallel.code)}
                               onCheckedChange={(checked) => toggleParallel(parallel.id, checked)}
                             />
+                          ) : canPlan(item) ? (
+                            <span className="size-4 shrink-0" aria-hidden="true" />
                           ) : null}
-                          {parallel.code}
+                          <span className="min-w-0 break-all">{parallel.code}</span>
                         </li>
                       ))}
                     </ul>

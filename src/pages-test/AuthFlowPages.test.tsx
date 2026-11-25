@@ -51,16 +51,17 @@ describe("authentication pages", () => {
     expect(sessionState.current.value).toEqual(authenticatedSession)
   })
 
-  it("keeps «Ingresar» disabled until the form is complete", async () => {
+  it("lets «Ingresar» be pressed with empty fields and points to the first missing one", async () => {
     const user = userEvent.setup()
     const { container } = render(<LoginPage />)
     const submit = screen.getByRole("button", { name: "Ingresar" })
 
-    expect(submit).toBeDisabled()
-    await user.type(container.querySelector<HTMLInputElement>('input[type="email"]')!, "docente@example.test")
-    expect(submit).toBeDisabled()
-    await user.type(container.querySelector<HTMLInputElement>('input[type="password"]')!, "secret")
     expect(submit).toBeEnabled()
+    await user.click(submit)
+    expect(await screen.findByText("Ingrese su correo electrónico")).toBeTruthy()
+    expect(screen.getByText("Ingrese su contraseña")).toBeTruthy()
+    expect(document.activeElement).toBe(container.querySelector('input[type="email"]'))
+    expect(vi.mocked(login)).not.toHaveBeenCalled()
     expect(container.querySelector("[required]")).toBeNull()
   })
 

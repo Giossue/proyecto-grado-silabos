@@ -2,16 +2,16 @@
 
 import { Send } from "lucide-react"
 import Link from "next/link"
-import { useRef, useState } from "react"
+import { useState } from "react"
 import { Controller } from "react-hook-form"
 import { requestPasswordRecovery } from "@/api/session"
 import { InputError } from "@/components/InputError"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { Button } from "@/components/ui/button"
+import { Field } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
-import { useFormIncomplete } from "@/composables/useFormIncomplete"
 import { AuthSplitLayout } from "@/layouts/auth/AuthSplitLayout"
 import { applyApiErrors, fieldMessage, serverMessage, useSchemaForm } from "@/lib/forms"
 import { paths } from "@/lib/routes"
@@ -21,8 +21,6 @@ export default function PasswordRecoveryPage() {
   const form = useSchemaForm(recoveryLinkSchema, { defaultValues: { email: "" } })
   const { errors, isSubmitting: pending } = form.formState
   const [sentMessage, setSentMessage] = useState<string | null>(null)
-  const submitButton = useRef<HTMLButtonElement | null>(null)
-  const incomplete = useFormIncomplete(submitButton)
 
   const submit = async ({ email }: RecoveryLinkValues): Promise<void> => {
     try {
@@ -44,20 +42,20 @@ export default function PasswordRecoveryPage() {
           </div>
         ) : (
           <form onSubmit={form.handleSubmit(submit)}>
-            <div className="grid gap-2">
+            <Field data-invalid={Boolean(fieldMessage(errors, "email"))} className="gap-2">
               <Label htmlFor="recovery-email" required>Correo electrónico</Label>
               <Controller
                 name="email"
                 control={form.control}
                 render={({ field, fieldState }) => (
-                  <Input {...field} id="recovery-email" type="email" autoComplete="off" maxLength={254} aria-required="true" placeholder="Ej. nombre@ueb.edu.ec" aria-invalid={fieldState.invalid} />
+                  <Input {...field} id="recovery-email" type="email" autoComplete="username" spellCheck={false} maxLength={254} aria-required="true" placeholder="Ej. nombre@ueb.edu.ec" aria-invalid={fieldState.invalid} />
                 )}
               />
               <InputError message={fieldMessage(errors, "email")} />
-            </div>
+            </Field>
             {error ? <FeedbackAlert message={error} /> : null}
             <div className="my-6 flex items-center justify-start">
-              <Button ref={submitButton} className="w-full" disabled={pending || incomplete} type="submit" data-test="email-password-reset-link-button">
+              <Button className="w-full" disabled={pending} type="submit" data-test="email-password-reset-link-button">
                 {pending ? <Spinner data-icon="inline-start" /> : <Send data-icon="inline-start" aria-hidden="true" />}
                 Enviar enlace de restablecimiento
               </Button>

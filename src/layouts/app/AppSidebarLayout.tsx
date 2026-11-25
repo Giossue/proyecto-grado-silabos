@@ -6,7 +6,6 @@ import { AppContent } from "@/components/AppContent"
 import { AppShell } from "@/components/AppShell"
 import { AppSidebar } from "@/components/AppSidebar"
 import { AppSidebarHeader } from "@/components/AppSidebarHeader"
-import { InstallAppDialog } from "@/components/InstallAppDialog"
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog"
 import { RoleDeadlineBanner } from "@/components/domain/RoleDeadlineBanner"
 import { ScreenHelpButton } from "@/components/domain/ScreenHelpButton"
@@ -17,7 +16,6 @@ import { BreadcrumbsContext, PageTitleContext } from "@/composables/usePageBread
 import { useShowsSidebar } from "@/composables/useShowsSidebar"
 import { useSignal } from "@/lib/signal"
 import { curriculumEditorState } from "@/state/curriculumEditor"
-import { installAppOpen } from "@/state/shellDialogs"
 import { templateEditorState } from "@/state/templateEditor"
 import type { BreadcrumbItem } from "@/types"
 
@@ -27,7 +25,6 @@ export function AppSidebarLayout({ breadcrumbs = [], children }: { breadcrumbs?:
   const showsSidebar = useShowsSidebar()
   const templateEditorOpen = useSignal(templateEditorState.open)
   const curriculumEditorOpen = useSignal(curriculumEditorState.open)
-  const installOpen = useSignal(installAppOpen)
   const editorOpen = templateEditorOpen
   const sidebarVisible = showsSidebar && !curriculumEditorOpen
 
@@ -52,7 +49,6 @@ export function AppSidebarLayout({ breadcrumbs = [], children }: { breadcrumbs?:
             {!editorOpen ? <AccessibilityDialog floating /> : null}
           </AppContent>
         </AppShell>
-        {!showsSidebar ? <InstallAppDialog open={installOpen} onOpenChange={(value) => { installAppOpen.value = value }} /> : null}
         <LogoutConfirmDialog />
       </PageTitleContext.Provider>
     </BreadcrumbsContext.Provider>

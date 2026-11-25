@@ -4,7 +4,7 @@ import { storageStateOf } from "./support/accounts"
 import { expireInvitation, query, snapshotDatabase } from "./support/db"
 import { appendWorkbookRow, describeWorkbook } from "./support/files"
 import { expect, test } from "./support/fixtures"
-import { chooseOption, lettersOnly, toast, uniqueSuffix } from "./support/ui"
+import { chooseOption, lettersOnly, rowNamed, toast, uniqueSuffix } from "./support/ui"
 
 test.use({ storageState: storageStateOf("admin") })
 
@@ -33,21 +33,21 @@ test.describe.serial("administration: faculties and careers", () => {
     if (await library.isVisible({ timeout: 10_000 }).catch(() => false)) await library.check()
     await dialog.getByRole("button", { name: "Crear facultad" }).click()
     await expect(dialog).toBeHidden()
-    const row = page.getByRole("row", { name: `Editar ${faculty}` })
+    const row = rowNamed(page, faculty, "button")
     await expect(row).toBeVisible()
     expect(await query("select 1 from facultades f join archivos a on a.archivo_id = f.logo_archivo_id where f.nombre_facultad = $1", [faculty])).toHaveLength(1)
 
-    await row.click()
+    await row.getByRole("button", { name: faculty, exact: true }).click()
     await page.getByRole("dialog", { name: "Facultad" }).getByRole("button", { name: "Editar" }).click()
     const edit = page.getByRole("dialog", { name: "Editar facultad" })
     await edit.getByRole("textbox", { name: "Nombre (obligatorio)" }).fill(`${faculty} Norte`)
     await edit.getByRole("button", { name: "Guardar cambios" }).click()
     await expect(edit).toBeHidden()
-    const renamed = page.getByRole("row", { name: `Editar ${faculty} Norte` })
+    const renamed = rowNamed(page, `${faculty} Norte`, "button")
     await expect(renamed).toBeVisible()
 
     for (const action of ["Desactivar", "Reactivar"]) {
-      await renamed.click()
+      await renamed.getByRole("button", { name: `${faculty} Norte`, exact: true }).click()
       await page.getByRole("dialog", { name: "Facultad" }).getByRole("button", { name: "Editar" }).click()
       const dialog = page.getByRole("dialog", { name: "Editar facultad" })
       await dialog.getByRole("button", { name: `${action} facultad` }).click()
@@ -92,13 +92,13 @@ test.describe.serial("administration: faculties and careers", () => {
     await dialog.getByRole("button", { name: "Crear cuenta" }).click()
     await expect(dialog).toBeHidden()
     await page.getByRole("searchbox", { name: "Buscar por nombre o correo" }).fill(surname)
-    await expect(page.getByRole("row", { name: `Ver PRUEBA ${surname}` })).toBeVisible()
+    await expect(page.getByRole("button", { name: `PRUEBA ${surname}`, exact: true })).toBeVisible()
     await page.getByRole("searchbox", { name: "Buscar por nombre o correo" }).fill("")
   }
 
   async function openAccount(page: Page, surname: string) {
     await page.getByRole("searchbox", { name: "Buscar por nombre o correo" }).fill(surname)
-    await page.getByRole("row", { name: `Ver PRUEBA ${surname}` }).click()
+    await page.getByRole("button", { name: `PRUEBA ${surname}`, exact: true }).click()
     return page.getByRole("dialog", { name: "Datos de la cuenta" })
   }
 
@@ -132,7 +132,7 @@ test.describe.serial("administration: faculties and careers", () => {
     await page.goto("/admin/usuarios")
     for (const label of ["Deshabilitar acceso", "Habilitar acceso"]) {
       await page.getByRole("searchbox", { name: "Buscar por nombre o correo" }).fill("docente2@email.com")
-      await page.getByRole("row", { name: "Ver ANA LUCÍA CHÁVEZ TORRES" }).click()
+      await page.getByRole("button", { name: "ANA LUCÍA CHÁVEZ TORRES", exact: true }).click()
       const detail = page.getByRole("dialog", { name: "Datos de la cuenta" })
       await detail.getByRole("button", { name: label }).click()
       const confirm = page.getByRole("dialog", { name: label })
@@ -158,7 +158,7 @@ test.describe.serial("administration: faculties and careers", () => {
     await again.getByRole("button", { name: "Eliminar cuenta pendiente" }).click()
     const confirm = page.getByRole("dialog").filter({ hasText: /Eliminar/ }).last()
     await confirm.getByRole("button", { name: /Eliminar/ }).last().click()
-    await expect(page.getByRole("row", { name: `Ver PRUEBA ${people.coordinator}` })).toHaveCount(0)
+    await expect(page.getByRole("button", { name: `PRUEBA ${people.coordinator}`, exact: true })).toHaveCount(0)
     issues.expectClean()
   })
 
@@ -181,7 +181,7 @@ test.describe.serial("administration: faculties and careers", () => {
     await expect(toast(page)).toBeVisible()
     await page.keyboard.press("Escape")
     await page.getByRole("searchbox", { name: "Buscar por nombre o correo" }).fill(surname)
-    await expect(page.getByRole("row", { name: `Ver PRUEBA ${surname}` })).toBeVisible()
+    await expect(page.getByRole("button", { name: `PRUEBA ${surname}`, exact: true })).toBeVisible()
     issues.expectClean()
   })
 })
@@ -228,10 +228,10 @@ test.describe("administration: careers import", () => {
 test.describe.serial("administration: convocations, settings and template", () => {
   test("admin opens the impact view, pauses and resumes the convocation", async ({ page, issues }) => {
     await page.goto("/admin/convocatorias")
-    const row = page.getByRole("row", { name: /^Opciones de / }).first()
+    const row = rowNamed(page, /\S/, "button").first()
     const options = page.getByRole("dialog", { name: /^Convocatoria / })
 
-    await row.click()
+    await row.getByRole("button").click()
     await options.getByRole("button", { name: /^Finalizar/ }).click()
     const finalize = page.getByRole("dialog", { name: "Finalizar la convocatoria" })
     await expect(finalize.getByRole("table").first()).toBeVisible()
@@ -239,7 +239,7 @@ test.describe.serial("administration: convocations, settings and template", () =
     await expect(finalize).toBeHidden()
 
     for (const [action, state] of [["Pausar", /Pausad/], ["Reanudar", /Abiert/]] as const) {
-      if (!(await options.isVisible())) await row.click()
+      if (!(await options.isVisible())) await row.getByRole("button").click()
       await options.getByRole("button", { name: new RegExp(`^${action}`) }).click()
       const dialog = page.getByRole("dialog", { name: `${action} la convocatoria` })
       await dialog.getByRole("button", { name: action, exact: true }).click()
@@ -257,7 +257,7 @@ test.describe.serial("administration: convocations, settings and template", () =
       await query("update convocatorias_universidad set cantidad_prorrogas = 0 where finalizada_en is null")
       const [before] = await query<{ due: Date }>("select fecha_entrega as due from convocatorias_universidad where finalizada_en is null order by fecha_inicio desc limit 1")
       await page.goto("/admin/convocatorias")
-      await page.getByRole("row", { name: /^Opciones de / }).first().click()
+      await rowNamed(page, /\S/, "button").first().getByRole("button").click()
       await page.getByRole("dialog", { name: /^Convocatoria / }).getByRole("button", { name: /^Prorrogar plazo/ }).click()
       const dialog = page.getByRole("dialog", { name: "Prorrogar el plazo de entrega" })
       await dialog.locator("#extension-due").click()

@@ -1,9 +1,10 @@
 "use client"
 
 import { ArrowLeft, FileText } from "lucide-react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from "react"
+import { useEffect, useMemo, useState, type FormEvent } from "react"
 import { ApiError } from "@/api/client"
 import { type CoordinationHistoryItem } from "@/api/reviews"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
@@ -24,7 +25,7 @@ import { goBack } from "@/lib/goBack"
 import { openRevisionPdf } from "@/lib/openPdf"
 import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowLinkClass } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
 import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
 import { coordinationHistoryQuery } from "@/queries/reviews"
@@ -34,12 +35,6 @@ type Filters = { q: string; period: string }
 const NO_FILTERS: Filters = { q: "", period: "all" }
 
 const formatApprovedAt = (value: string | null): string => (value ? formatDateDisplay(value, { dateStyle: "medium" }) : "—")
-
-const activateWithKey = (event: KeyboardEvent<HTMLTableRowElement>, action: () => void): void => {
-  if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-  event.preventDefault()
-  action()
-}
 
 export default function CoordinationHistoryPage() {
   const router = useRouter()
@@ -192,13 +187,10 @@ export default function CoordinationHistoryPage() {
                     <TableRow
                       key={item.revision_id}
                       className="cursor-pointer"
-                      tabIndex={0}
-                      aria-label={`Abrir sílabo de ${item.subject}`}
                       onClick={(event) => activateRow(event.nativeEvent, () => open(item))}
-                      onKeyDown={(event) => activateWithKey(event, () => open(item))}
                     >
                       <TableCell>
-                        {item.subject}
+                        <Link href={paths.coordination.review(item.revision_id)} className={rowLinkClass}>{item.subject}</Link>
                         <TableCardLine>
                           {item.code} · {item.parallels.length === 1 ? "Paralelo" : "Paralelos"} {item.parallels.join(", ")}
                         </TableCardLine>

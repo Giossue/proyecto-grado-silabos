@@ -1,8 +1,13 @@
+"use client"
+
 import Image from "next/image"
 import type { ReactNode } from "react"
 import { AppearanceToggle } from "@/components/AppearanceToggle"
+import { usePageHeading } from "@/lib/pageAnnouncement"
 
 export function AuthSplitLayout({ title, description, children }: { title?: string; description?: string; children: ReactNode }) {
+  usePageHeading(title ?? "")
+
   return (
     <div className="grid min-h-svh bg-background lg:grid-cols-2">
       <div className="relative flex flex-col gap-4 p-6 md:p-10">
@@ -12,7 +17,7 @@ export function AuthSplitLayout({ title, description, children }: { title?: stri
         <main id="contenido" tabIndex={-1} className="flex flex-1 items-center justify-center outline-hidden">
           <div className="flex w-full max-w-sm flex-col gap-6">
             <div className="flex flex-col gap-2 text-center">
-              {title ? <h1 className="text-2xl font-semibold tracking-tight">{title}</h1> : null}
+              {title ? <h1 className="text-2xl font-semibold tracking-tight text-balance">{title}</h1> : null}
               {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
             </div>
             {children}
@@ -26,7 +31,7 @@ export function AuthSplitLayout({ title, description, children }: { title?: stri
           width={1672}
           height={941}
           unoptimized
-          preload
+          fetchPriority="high"
           decoding="async"
           className="absolute inset-0 size-full object-cover"
         />

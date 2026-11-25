@@ -22,7 +22,7 @@ export async function loginAs(page: Page, account: Account, secret: string = pas
 }
 
 export async function logout(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Menú de usuario" }).click()
+  await page.locator("[data-user-menu]").click()
   await page.getByRole("menuitem", { name: "Cerrar sesión" }).click()
   const dialog = page.getByRole("alertdialog").or(page.getByRole("dialog"))
   await dialog.getByRole("button", { name: "Cerrar sesión" }).click()

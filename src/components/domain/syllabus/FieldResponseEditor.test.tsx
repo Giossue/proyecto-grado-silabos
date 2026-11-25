@@ -44,7 +44,7 @@ describe("FieldResponseEditor", () => {
     const { container } = mountEditor({ type: "doc", content: [{ type: "paragraph" }] }, null)
     await flush()
 
-    expect(container.querySelector('[aria-label="Lista con viñetas"]')).not.toBeNull()
+    await vi.waitFor(() => expect(container.querySelector('[aria-label="Lista con viñetas"]')).not.toBeNull())
     expect(container.querySelector('[aria-label="Insertar tabla"]')).toBeNull()
   })
 

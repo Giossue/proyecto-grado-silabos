@@ -19,6 +19,7 @@ import { fieldTitle, isTeacherField } from "@/lib/syllabusForm"
 import type { DocumentNode } from "@/lib/templateDocument"
 import { cn } from "@/lib/utils"
 import { responsibleLabel } from "@/types/configuration"
+import { scrollBehavior } from "@/lib/motion"
 
 type Section = SyllabusDetail["sections"][number]
 
@@ -73,7 +74,7 @@ export function SyllabusTeacherForm({
 
   const goToSection = (id: string): void => {
     flushSync(() => setActive(id))
-    document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+    document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: scrollBehavior(), block: "start" })
   }
   const openFields = (section: Section): string[] => section.fields.map((field) => field.id).filter((id) => !closed.has(id))
   const setOpenFields = (section: Section, open: string[]): void => {

@@ -1,12 +1,12 @@
 "use client"
 
 import { ArrowLeft, Pencil, UserPlus } from "lucide-react"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { type Curriculum } from "@/api/career-academics"
 import { CurriculumActions } from "@/components/domain/academic/CurriculumActions"
-import { CurriculumCanvas } from "@/components/domain/academic/curriculum/CurriculumCanvas"
 import { CurriculumConfigurationDialog } from "@/components/domain/academic/curriculum/CurriculumConfigurationDialog"
 import { ScheduledSubjectsTab } from "@/components/domain/academic/ScheduledSubjectsTab"
 import { TeacherAssignmentsPanel } from "@/components/domain/academic/TeacherAssignmentsPanel"
@@ -23,6 +23,10 @@ import { paths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
 import { curriculumEditorState } from "@/state/curriculumEditor"
 import { errorMessage, failedQuery } from "@/lib/queryClient"
+
+const CurriculumCanvas = dynamic(() => import("@/components/domain/academic/curriculum/CurriculumCanvas").then((module) => module.CurriculumCanvas), {
+  loading: () => <LoadingSkeleton variant="academic-structure" mode="curriculum" />,
+})
 import { coordinatorCareerQuery, curriculumQuery, scheduledSubjectsQuery, teacherAssignmentsQuery } from "@/queries/careerAcademics"
 
 export type AcademicStructureMode = "curriculum" | "schedule" | "teachers"

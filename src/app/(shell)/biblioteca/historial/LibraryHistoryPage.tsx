@@ -1,9 +1,10 @@
 "use client"
 
 import { ArrowLeft } from "lucide-react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { ApiError } from "@/api/client"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
@@ -21,18 +22,12 @@ import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { libraryHistoryQuery } from "@/queries/library"
 import { rememberLibraryFaculty, savedLibraryFaculty } from "@/lib/libraryFaculty"
 import { paths } from "@/lib/routes"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowLinkClass } from "@/lib/rowActivation"
 import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
 
 type Filters = { q: string; faculty: string; period: string; who: string }
 
 const NO_FILTERS: Filters = { q: "", faculty: "all", period: "all", who: "all" }
-
-const activateWithKey = (event: KeyboardEvent<HTMLTableRowElement>, action: () => void): void => {
-  if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-  event.preventDefault()
-  action()
-}
 
 export default function LibraryHistoryPage() {
   const router = useRouter()
@@ -205,13 +200,13 @@ export default function LibraryHistoryPage() {
                 <TableRow
                   key={item.revision_id}
                   className="cursor-pointer"
-                  tabIndex={0}
-                  aria-label={`Abrir revisión de ${item.subject}`}
                   onClick={(event) => activateRow(event.nativeEvent, () => open(item.revision_id))}
-                  onKeyDown={(event) => activateWithKey(event, () => open(item.revision_id))}
                 >
                   <TableCell>
-                    {item.period}
+                    <Link href={paths.library.review(item.revision_id)} className={rowLinkClass}>
+                      {item.period}
+                      <span className="sr-only"> · {item.subject}</span>
+                    </Link>
                     <TableCardLine>
                       {item.career} · {item.teachers.join(", ")}
                     </TableCardLine>

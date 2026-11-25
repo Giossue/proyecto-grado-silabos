@@ -58,15 +58,14 @@ describe("Proyecto de carrera", () => {
     expect(document.body.textContent).not.toContain("Materia sin sílabo")
   })
 
-  it("al pulsar una tarjeta, con el mouse o con el teclado, abre la página del proyecto de carrera de esa materia", async () => {
+  it("cada tarjeta es un enlace con el nombre de la materia hacia la página de su proyecto de carrera", async () => {
     await mountPage()
     await openCycles()
 
-    fireEvent.click(document.querySelector('[aria-label="Abrir el proyecto de carrera de Matemática Discreta"]')!)
-    expect(navigation.push).toHaveBeenLastCalledWith("/coordinacion/proyecto-carrera/m2")
-
-    fireEvent.keyDown(document.querySelector('[aria-label="Abrir el proyecto de carrera de Estructuras de Datos"]')!, { key: "Enter" })
-    expect(navigation.push).toHaveBeenLastCalledWith("/coordinacion/proyecto-carrera/m3")
+    const link = (name: string) => [...document.querySelectorAll<HTMLAnchorElement>('[data-slot="card-title"] a')].find((anchor) => anchor.textContent === name)
+    expect(link("Matemática Discreta")?.getAttribute("href")).toBe("/coordinacion/proyecto-carrera/m2")
+    expect(link("Estructuras de Datos")?.getAttribute("href")).toBe("/coordinacion/proyecto-carrera/m3")
+    expect(document.querySelector('[data-slot="card"][tabindex]')).toBeNull()
   })
 
   it("los documentos de apoyo son una pestaña con su propio botón para subir y sin el aviso de edición bloqueada", async () => {

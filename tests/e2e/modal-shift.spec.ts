@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test"
 import { storageStateOf } from "./support/accounts"
 import { expect, test } from "./support/fixtures"
+import { rowNamed } from "./support/ui"
 
 type ModalCase = {
   name: string
@@ -36,7 +37,7 @@ const cases: ModalCase[] = [
     path: "/admin/usuarios",
     open: async (page) => {
       if (isNarrow(page)) {
-        await page.getByRole("button", { name: "Menú de usuario" }).click()
+        await page.locator("[data-user-menu]").click()
         await page.getByRole("menuitem", { name: "Accesibilidad" }).click()
       } else await page.getByRole("button", { name: "Accesibilidad" }).click()
       return page.getByRole("dialog", { name: "Accesibilidad" })
@@ -68,7 +69,7 @@ const cases: ModalCase[] = [
     name: "options dialog",
     path: "/admin/convocatorias",
     open: async (page) => {
-      await page.getByRole("row", { name: /^Opciones de / }).first().click()
+      await rowNamed(page, /\S/, "button").first().getByRole("button").click()
       return page.getByRole("dialog", { name: /^Convocatoria / })
     },
     close: escape,
@@ -87,7 +88,7 @@ const cases: ModalCase[] = [
     name: "user menu",
     path: "/admin/usuarios",
     open: async (page) => {
-      await page.getByRole("button", { name: "Menú de usuario" }).click()
+      await page.locator("[data-user-menu]").click()
       return page.getByRole("menu")
     },
     close: escape,
@@ -96,7 +97,7 @@ const cases: ModalCase[] = [
     name: "logout confirmation",
     path: "/admin/usuarios",
     open: async (page) => {
-      await page.getByRole("button", { name: "Menú de usuario" }).click()
+      await page.locator("[data-user-menu]").click()
       await page.getByRole("menuitem", { name: "Cerrar sesión" }).click()
       return page.getByRole("dialog", { name: "¿Cerrar sesión?" })
     },

@@ -1,5 +1,5 @@
 import Image from "next/image"
 
 export function AppLogoIcon({ className }: { className?: string }) {
-  return <Image src="/logo.png" alt="Sílabos UEB" width={512} height={512} unoptimized className={className} />
+  return <Image src="/logo-128.png" alt="Sílabos UEB" width={128} height={128} unoptimized className={className} />
 }

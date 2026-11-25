@@ -37,18 +37,15 @@ const field = () => screen.getByLabelText("Campo")
 describe("Button de enviar de un formulario", () => {
   afterEach(cleanup)
 
-  it("queda deshabilitado mientras falte un campo obligatorio y se habilita al completarlo", () => {
+  it("se puede presionar aunque falte un campo obligatorio", () => {
     render(<Modal />)
-    expect(submit().disabled).toBe(true)
+    expect(submit().disabled).toBe(false)
 
     fireEvent.change(field(), { target: { value: "Revise la unidad 2" } })
     expect(submit().disabled).toBe(false)
-
-    fireEvent.change(field(), { target: { value: "" } })
-    expect(submit().disabled).toBe(true)
   })
 
-  it("respeta su propio disabled aunque el formulario esté completo", () => {
+  it("respeta su propio disabled", () => {
     render(<Modal locked />)
     fireEvent.change(field(), { target: { value: "texto" } })
     expect(submit().disabled).toBe(true)
@@ -56,8 +53,6 @@ describe("Button de enviar de un formulario", () => {
 
   it("también fuera de un modal", () => {
     render(<Modal inDialog={false} />)
-    expect(submit().disabled).toBe(true)
-    fireEvent.change(field(), { target: { value: "texto" } })
     expect(submit().disabled).toBe(false)
   })
 })

@@ -20,7 +20,7 @@ test.describe("login", () => {
       await expect(page.getByRole("checkbox")).toHaveCount(0)
       health.reset()
       await loginAs(page, accounts[key])
-      await expect(page.getByRole("button", { name: "Menú de usuario" })).toBeVisible()
+      await expect(page.locator("[data-user-menu]")).toBeVisible()
       health.expectClean([guestSessionProbe, guestSessionConsole])
     })
   }
@@ -55,7 +55,7 @@ test.describe("login", () => {
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Hola,")
     await chooseScope(page, "Software · SW-9", "Coordinación")
     await expect(page).toHaveURL(/\/coordinacion\/revisiones$/)
-    await page.getByRole("button", { name: "Menú de usuario" }).click()
+    await page.locator("[data-user-menu]").click()
     await page.getByRole("menuitem", { name: "Cambiar carrera o rol" }).click()
     await chooseScope(page, "Software · SW-8", "Docencia")
     await expect(page).toHaveURL(/\/docente\/mis-silabos$/)

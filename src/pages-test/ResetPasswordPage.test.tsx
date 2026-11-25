@@ -25,7 +25,7 @@ describe("Restablecer contraseña", () => {
     const user = userEvent.setup()
     renderWithProviders(<ResetPasswordPage />)
 
-    expect(screen.getByRole("button", { name: "Restablecer contraseña" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Restablecer contraseña" })).toBeEnabled()
     await user.type(document.querySelector<HTMLInputElement>("#new-password")!, "NuevaClave-2026!")
     await user.type(document.querySelector<HTMLInputElement>("#new-password-confirmation")!, "NuevaClave-2026!")
     await user.click(screen.getByRole("button", { name: "Restablecer contraseña" }))

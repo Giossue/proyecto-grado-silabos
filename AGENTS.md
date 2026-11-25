@@ -11,3 +11,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Web platform
 
 This project's Baseline target is Baseline 2024. Use the `modern-web-guidance` skill before building UI that relies on web platform features (dialogs, popovers, animations, forms, layout).
+
+Submit buttons are never disabled to block validation: they stay enabled while fields are missing, and submitting marks each invalid field with its message and moves focus to the first one (react-hook-form + Zod). Only typed-phrase confirmations of destructive actions and in-flight requests disable a button.

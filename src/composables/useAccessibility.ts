@@ -81,9 +81,12 @@ const setSettings = (value: AccessibilitySettings): void => {
     settings.value = value;
 };
 
+let fromSystem = false;
+
 settings.subscribe(() => {
     const value = settings.value;
     applyAccessibility(value);
+    if (fromSystem) return;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch { return; }
     saveToAccount();
 });
@@ -113,10 +116,33 @@ sessionState.current.subscribe(() => {
     saveToAccount();
 });
 
+const hasSavedSettings = (): boolean => {
+    try {
+        return localStorage.getItem(STORAGE_KEY) !== null;
+    } catch {
+        return false;
+    }
+};
+
+const followSystemMotion = (event: MediaQueryListEvent): void => {
+    if (hasSavedSettings()) return;
+    fromSystem = true;
+    try {
+        setSettings({ ...settings.value, noMotion: event.matches });
+    } finally {
+        fromSystem = false;
+    }
+};
+
+let followingSystem = false;
+
 export function initializeAccessibility(): void {
     if (typeof window === 'undefined') return;
     setSettings(read());
     applyAccessibility(settings.value);
+    if (followingSystem) return;
+    followingSystem = true;
+    window.matchMedia?.('(prefers-reduced-motion: reduce)')?.addEventListener?.('change', followSystemMotion);
 }
 
 const update = (patch: Partial<AccessibilitySettings>): void => {

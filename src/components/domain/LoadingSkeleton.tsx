@@ -305,7 +305,7 @@ function LoadingBody({
 
 export function LoadingSkeleton(props: LoadingSkeletonProps) {
   return (
-    <div className="flex w-full min-w-0 flex-col gap-6" role="status" aria-live="polite" aria-busy="true" aria-label="Cargando contenido">
+    <div className="flex w-full min-w-0 flex-col gap-6" aria-busy="true">
       <span className="sr-only">Cargando contenido…</span>
       <div aria-hidden="true" className="contents">
         {props.chip ? <Skeleton data-skeleton="table-chip" className="h-5 w-28 rounded-full" /> : null}

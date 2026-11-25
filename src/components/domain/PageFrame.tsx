@@ -8,6 +8,7 @@ import { useCurrentFullPath } from "@/composables/useCurrentUrl"
 import { useActiveNavItem } from "@/composables/useMainNavItems"
 import { usePageTitle } from "@/composables/usePageBreadcrumbs"
 import { useScrollDirection } from "@/composables/useScrollDirection"
+import { usePageHeading } from "@/lib/pageAnnouncement"
 import { withoutEndPeriod } from "@/lib/text"
 import { cn } from "@/lib/utils"
 
@@ -74,6 +75,8 @@ export function PageFrame({
     return () => setTitle((current) => (current === title ? "" : current))
   }, [setTitle, title])
 
+  usePageHeading(title)
+
   const actionCount = loading ? 0 : countActions(actions)
   const needsTrigger = actionCount > 1
 
@@ -125,11 +128,11 @@ export function PageFrame({
                 <div className="flex min-w-0 flex-col gap-1">
                   {title && titleBadge ? (
                     <div className="flex flex-wrap items-center gap-3">
-                      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+                      <h1 className="text-2xl font-semibold tracking-tight text-balance">{title}</h1>
                       {titleBadge}
                     </div>
                   ) : title ? (
-                    <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight text-balance">{title}</h1>
                   ) : null}
                   {description ? <p className="max-w-3xl text-muted-foreground">{withoutEndPeriod(description)}</p> : null}
                 </div>

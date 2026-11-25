@@ -126,7 +126,7 @@ test.describe("screens reached from data", () => {
       await page.goto("/coordinacion/revisiones?tab=seguimiento")
       await expect(page.getByRole("table", { name: "Seguimiento de la convocatoria" })).toBeVisible()
       await page.waitForLoadState("networkidle")
-      const reviewed = page.getByRole("table", { name: "Seguimiento de la convocatoria" }).getByRole("row", { name: /^Abrir revisión de / })
+      const reviewed = page.getByRole("table", { name: "Seguimiento de la convocatoria" }).getByRole("row").getByRole("link")
       if ((await reviewed.count()) > 0) {
         await reviewed.first().click()
       } else {
@@ -155,7 +155,7 @@ test.describe("screens reached from data", () => {
       await page.goto("/biblioteca/revisiones")
       await expect(page.getByRole("table", { name: "Revisiones de biblioteca" })).toBeVisible()
       await page.waitForLoadState("networkidle")
-      const rows = page.getByRole("table", { name: "Revisiones de biblioteca" }).getByRole("row", { name: /^Abrir revisión de / })
+      const rows = page.getByRole("table", { name: "Revisiones de biblioteca" }).getByRole("row").getByRole("link")
       if ((await rows.count()) > 0) {
         await rows.first().click()
       } else {

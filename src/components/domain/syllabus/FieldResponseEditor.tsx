@@ -1,11 +1,11 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { Plus, Trash2, X } from "lucide-react"
 import { Fragment, type ReactNode } from "react"
 import { TemplateResponseTool } from "@/components/domain/configuration/TemplateResponseTool"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { BlockForm } from "@/components/domain/syllabus/BlockForm"
-import { FreeTextEditor } from "@/components/domain/syllabus/FreeTextEditor"
 import { ResponseAnswer } from "@/components/domain/syllabus/ResponseAnswer"
 import { ResponseOptionsEditor } from "@/components/domain/syllabus/ResponseOptionsEditor"
 import { renderFreeText } from "@/components/domain/syllabus/freeTextRender"
@@ -32,6 +32,11 @@ import {
   type ResponseOption,
 } from "@/lib/responseKinds"
 import { nodesOfType, type DocumentNode } from "@/lib/templateDocument"
+import { Skeleton } from "@/components/ui/skeleton"
+
+const FreeTextEditor = dynamic(() => import("@/components/domain/syllabus/FreeTextEditor").then((module) => module.FreeTextEditor), {
+  loading: () => <Skeleton className="h-24 w-full" />,
+})
 
 type FieldResponseEditorProps = {
   id: string

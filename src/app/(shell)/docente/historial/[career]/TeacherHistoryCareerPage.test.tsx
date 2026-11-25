@@ -41,7 +41,9 @@ describe("TeacherHistoryCareerPage", () => {
     expect([...container.querySelectorAll("h2")].map((heading) => heading.textContent)).toEqual(["Período 2025-2026", "Período 2024-2025"])
     expect(container.querySelector('[aria-label="Sílabos del período 2024-2025"]')!.textContent).toContain("Sin guardados")
 
-    fireEvent.click(container.querySelector('[aria-label="Abrir sílabo de Redes"]')!)
+    const link = [...container.querySelectorAll("a")].find((anchor) => anchor.textContent === "Redes")!
+    expect(link.getAttribute("href")).toBe("/docente/mis-silabos/s2")
+    fireEvent.click(link.closest("tr")!)
     expect(navigation.push).toHaveBeenCalledWith("/docente/mis-silabos/s2")
     expect(sessionStorage.getItem(SYLLABUS_PREVIEW_KEY)).toBe("s2")
   })

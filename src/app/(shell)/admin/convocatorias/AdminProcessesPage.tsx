@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
@@ -24,7 +24,7 @@ import { useClientFilter, type ClientFilterDefinition } from "@/composables/useC
 import { useClientPagination } from "@/composables/useClientPagination"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { paths } from "@/lib/routes"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowButtonClass } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
 import { setupChecklistState } from "@/state/setupChecklist"
 import { queryErrorMessage } from "@/lib/queryClient"
@@ -89,12 +89,6 @@ export default function AdminProcessesPage() {
   const select = (row: ConvocationRow): void => {
     setSelectedId(row.id)
     setSheetOpen(true)
-  }
-
-  const selectFromKeyboard = (event: KeyboardEvent<HTMLTableRowElement>, row: ConvocationRow): void => {
-    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-    event.preventDefault()
-    select(row)
   }
 
   const runAction = (key: string): void => {
@@ -181,13 +175,10 @@ export default function AdminProcessesPage() {
                   <TableRow
                     key={row.id}
                     className="cursor-pointer"
-                    tabIndex={0}
-                    aria-label={`Opciones de ${row.code}`}
                     onClick={(event) => activateRow(event.nativeEvent, () => select(row))}
-                    onKeyDown={(event) => selectFromKeyboard(event, row)}
                   >
                     <TableCell>
-                      {row.code}
+                      <button type="button" className={rowButtonClass} aria-haspopup="dialog" onClick={() => select(row)}>{row.code}</button>
                       <TableCardLine>
                         <StatusBadge label={stateLabel(row)} tone={stateTone(row)} />
                       </TableCardLine>

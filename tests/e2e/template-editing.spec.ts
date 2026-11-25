@@ -3,7 +3,7 @@ import type { Locator, Page, Route } from "@playwright/test"
 import { storageStateOf } from "./support/accounts"
 import { query, snapshotDatabase } from "./support/db"
 import { expect, test } from "./support/fixtures"
-import { toast } from "./support/ui"
+import { rowNamed, toast } from "./support/ui"
 
 test.use({ storageState: storageStateOf("admin") })
 
@@ -35,7 +35,7 @@ async function convocationState(): Promise<string | undefined> {
 
 async function convocationOption(page: Page, action: RegExp): Promise<void> {
   await page.goto("/admin/convocatorias")
-  await page.getByRole("row", { name: /^Opciones de / }).first().click()
+  await rowNamed(page, /\S/, "button").first().getByRole("button").click()
   await page.getByRole("dialog", { name: /^Convocatoria / }).getByRole("button", { name: action }).click()
 }
 
@@ -154,7 +154,7 @@ test.describe.serial("template editing during a paused convocation", () => {
     const dialog = page.getByRole("dialog", { name: "Pausar la convocatoria" })
     await dialog.getByRole("button", { name: "Pausar", exact: true }).click()
     await expect(dialog).toBeHidden()
-    await expect(page.getByRole("row", { name: /^Opciones de / }).first()).toContainText(/Pausad/)
+    await expect(rowNamed(page, /\S/, "button").first()).toContainText(/Pausad/)
     expect(await convocationState()).toBe("pausado")
 
     await page.goto("/admin/plantilla")
@@ -354,7 +354,7 @@ test.describe.serial("template editing during a paused convocation", () => {
     await dialog.getByRole("textbox", { name: /Escriba «adaptar sílabos»/ }).fill("adaptar sílabos")
     await confirm.click()
     await expect(dialog).toBeHidden()
-    await expect(page.getByRole("row", { name: /^Opciones de / }).first()).toContainText(/Abiert/)
+    await expect(rowNamed(page, /\S/, "button").first()).toContainText(/Abiert/)
     expect(await convocationState()).toBe("abierto")
 
     await page.goto("/admin/plantilla")
@@ -374,7 +374,7 @@ test.describe.serial("template editing during a paused convocation", () => {
       await finalize.getByRole("textbox", { name: /Escriba «finalizar convocatoria»/ }).fill("finalizar convocatoria")
       await finalize.getByRole("button", { name: "Finalizar", exact: true }).click()
       await expect(finalize).toBeHidden()
-      await expect(page.getByRole("row", { name: /^Opciones de / }).first()).toContainText(/Finalizad/)
+      await expect(rowNamed(page, /\S/, "button").first()).toContainText(/Finalizad/)
       expect(await convocationState()).toBeUndefined()
 
       const periodsBefore = await query<{ code: string }>("select codigo_periodo_academico as code from periodos_academicos")
@@ -400,7 +400,7 @@ test.describe.serial("template editing during a paused convocation", () => {
       expect(periods).toHaveLength(1)
       expect(periods[0]).toMatchObject({ starts: "2027-04-05", ends: "2027-08-27", state: "abierto" })
       expect(periodsBefore.map((period) => period.code)).not.toContain(periods[0]!.code)
-      await expect(page.getByRole("row", { name: `Opciones de ${periods[0]!.code}` })).toBeVisible()
+      await expect(rowNamed(page, periods[0]!.code, "button")).toBeVisible()
       expect(await templateState()).toEqual(before)
       issues.expectClean()
     } finally {

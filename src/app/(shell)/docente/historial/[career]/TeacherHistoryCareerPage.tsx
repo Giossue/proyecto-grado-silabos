@@ -1,9 +1,10 @@
 "use client"
 
 import { ArrowLeft } from "lucide-react"
+import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useMemo, type KeyboardEvent } from "react"
+import { useEffect, useMemo } from "react"
 import { ApiError } from "@/api/client"
 import { type HistorySyllabus } from "@/api/syllabi"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
@@ -22,17 +23,11 @@ import { goBack } from "@/lib/goBack"
 import { failedQuery, queryErrorMessage } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
 import { teacherHistoryCareerQuery } from "@/queries/teacher"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowLinkClass } from "@/lib/rowActivation"
 
 const NO_SYLLABI: HistorySyllabus[] = []
 
 const formatSavedAt = (value: string | null): string => (value ? formatDateDisplay(value, { dateStyle: "medium", timeStyle: "short" }) : "Sin guardados")
-
-const activateWithKey = (event: KeyboardEvent<HTMLTableRowElement>, action: () => void): void => {
-  if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-  event.preventDefault()
-  action()
-}
 
 function HistoryHeader() {
   return (
@@ -110,13 +105,12 @@ export default function TeacherHistoryCareerPage() {
                     <TableRow
                       key={syllabus.id}
                       className="cursor-pointer"
-                      tabIndex={0}
-                      aria-label={`Abrir sílabo de ${syllabus.subject}`}
                       onClick={(event) => activateRow(event.nativeEvent, () => open(syllabus.id))}
-                      onKeyDown={(event) => activateWithKey(event, () => open(syllabus.id))}
                     >
                       <TableCell>
-                        {syllabus.subject}
+                        <Link href={paths.teacher.syllabus(syllabus.id)} className={rowLinkClass} onClick={() => rememberSyllabusPreview(syllabus.id, true)}>
+                          {syllabus.subject}
+                        </Link>
                         <TableCardLine>
                           {syllabus.parallels.length === 1 ? "Paralelo" : "Paralelos"} {syllabus.parallels.join(", ")} · {formatSavedAt(syllabus.guardado_en)}
                         </TableCardLine>

@@ -14,6 +14,7 @@ import { TwoFactorRecoveryCodes } from "@/components/TwoFactorRecoveryCodes"
 import { TwoFactorSetupModal } from "@/components/TwoFactorSetupModal"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Field } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -181,7 +182,7 @@ export function ManageTwoFactor({ onLoadingChange }: { onLoadingChange?: (loadin
               <DialogTitle>Desactivar la verificación en dos pasos</DialogTitle>
               <DialogDescription>Por seguridad, confirme su contraseña actual y un código de su aplicación de autenticación</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-2">
+            <Field data-invalid={Boolean(fieldMessage(disableErrors, "current_password"))} className="gap-2">
               <Label htmlFor="disable-current-password" required>
                 Contraseña actual
               </Label>
@@ -193,30 +194,34 @@ export function ManageTwoFactor({ onLoadingChange }: { onLoadingChange?: (loadin
                 )}
               />
               <InputError message={fieldMessage(disableErrors, "current_password")} />
-            </div>
+            </Field>
             <div className="grid gap-2">
-              <Label htmlFor="disable-code" required>
-                {useRecoveryCode ? "Código de recuperación" : "Código de autenticación"}
-              </Label>
-              <Controller
-                key={useRecoveryCode ? "recovery_code" : "code"}
-                name={useRecoveryCode ? "recovery_code" : "code"}
-                control={disableForm.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    value={field.value ?? ""}
-                    id="disable-code"
-                    type="text"
-                    autoComplete="one-time-code"
-                    inputMode={useRecoveryCode ? "text" : "numeric"}
-                    maxLength={useRecoveryCode ? 128 : 6}
-                    placeholder={useRecoveryCode ? "Ej. ABCD-EFGH" : "Código de 6 dígitos"}
-                    aria-required="true"
-                  />
-                )}
-              />
-              <InputError message={fieldMessage(disableErrors, "code") ?? fieldMessage(disableErrors, "recovery_code")} />
+              <Field data-invalid={Boolean(fieldMessage(disableErrors, "code") ?? fieldMessage(disableErrors, "recovery_code"))} className="gap-2">
+                <Label htmlFor="disable-code" required>
+                  {useRecoveryCode ? "Código de recuperación" : "Código de autenticación"}
+                </Label>
+                <Controller
+                  key={useRecoveryCode ? "recovery_code" : "code"}
+                  name={useRecoveryCode ? "recovery_code" : "code"}
+                  control={disableForm.control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      id="disable-code"
+                      type="text"
+                      autoComplete={useRecoveryCode ? "off" : "one-time-code"}
+                      autoCapitalize={useRecoveryCode ? "characters" : undefined}
+                      spellCheck={useRecoveryCode ? false : undefined}
+                      inputMode={useRecoveryCode ? "text" : "numeric"}
+                      maxLength={useRecoveryCode ? 128 : 6}
+                      placeholder={useRecoveryCode ? "Ej. ABCD-EFGH" : "Código de 6 dígitos"}
+                      aria-required="true"
+                    />
+                  )}
+                />
+                <InputError message={fieldMessage(disableErrors, "code") ?? fieldMessage(disableErrors, "recovery_code")} />
+              </Field>
               <Button type="button" variant="link" className="h-auto justify-start p-0 text-sm" onClick={toggleRecoveryCode}>
                 {useRecoveryCode ? "Usar un código de autenticación" : "Usar un código de recuperación"}
               </Button>

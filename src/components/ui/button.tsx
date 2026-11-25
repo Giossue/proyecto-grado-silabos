@@ -5,7 +5,6 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 import { Slot } from "radix-ui"
 
-import { useFormIncomplete } from "@/components/ui/use-form-incomplete"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-hidden focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 aria-invalid:ring-destructive/30 aria-invalid:border-destructive",
@@ -62,25 +61,15 @@ function Button({
   ButtonVariants & {
     asChild?: boolean
   }) {
-  const [element, setElement] = React.useState<HTMLElement | null>(null)
-  const incomplete = useFormIncomplete(element)
-  const composedRef = React.useCallback(
-    (node: HTMLButtonElement | null) => {
-      setElement(node)
-      if (typeof ref === "function") ref(node)
-      else if (ref) ref.current = node
-    },
-    [ref]
-  )
   const Comp = asChild ? Slot.Root : "button"
 
   return (
     <Comp
-      ref={composedRef}
+      ref={ref}
       data-slot="button"
       data-variant={variant ?? undefined}
       data-size={size ?? undefined}
-      disabled={disabled || incomplete || undefined}
+      disabled={disabled || undefined}
       className={cn(buttonVariants({ variant, size }), className)}
       {...props}
     />

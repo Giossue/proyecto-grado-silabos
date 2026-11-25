@@ -4,7 +4,7 @@ import { ChartNoAxesColumn, History, Inbox } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { paths, reviewAreaPaths } from "@/lib/routes"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowLinkClass } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
 import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
 import { dashboardSummaryQuery } from "@/queries/dashboard"
@@ -104,11 +104,6 @@ export default function CoordinationReviewsPage() {
   }
 
   const openReview = (revisionId: string): void => router.push(area.review(revisionId))
-  const openFromKeyboard = (event: KeyboardEvent<HTMLTableRowElement>, revisionId: string): void => {
-    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-    event.preventDefault()
-    openReview(revisionId)
-  }
 
   return (
     <PageFrame
@@ -176,13 +171,12 @@ export default function CoordinationReviewsPage() {
                   <TableRow
                     key={item.id}
                     className="cursor-pointer"
-                    tabIndex={0}
-                    aria-label={`Abrir revisión de ${item.subject}`}
                     onClick={(event) => activateRow(event.nativeEvent, () => openReview(item.revision_id))}
-                    onKeyDown={(event) => openFromKeyboard(event, item.revision_id)}
                   >
                     <TableCell>
-                      <div>{item.subject}</div>
+                      <div>
+                        <Link href={area.review(item.revision_id)} className={rowLinkClass}>{item.subject}</Link>
+                      </div>
                       <div className="text-sm text-muted-foreground">
                         {item.code} · {item.period}
                       </div>

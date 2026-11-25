@@ -77,7 +77,7 @@ describe("Documentos de apoyo", () => {
     expect(document.body.querySelector('[data-testid="support-document-form"]')).toBeNull()
     expect(getCoordinationSupportDocuments).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole("row", { name: "Ver Proyecto de carrera" }))
+    fireEvent.click(screen.getByRole("button", { name: "Proyecto de carrera" }))
     await flush()
     expect(viewSupportDocument).toHaveBeenCalledWith("d1")
     expect(window.open).toHaveBeenCalledWith("", "silabos-pdf", expect.stringContaining("popup=yes"))
@@ -88,7 +88,7 @@ describe("Documentos de apoyo", () => {
   it("un documento sin vista previa no se abre al pulsar la fila", async () => {
     await mountPanel("coordination")
 
-    expect(screen.queryByRole("row", { name: "Ver TIC TAC" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "TIC TAC" })).toBeNull()
     expect(document.body.textContent).toContain("No se pudo preparar la vista")
     expect(document.body.textContent).not.toContain("Excel")
   })
@@ -123,7 +123,7 @@ describe("Documentos de apoyo", () => {
     vi.mocked(viewSupportDocument).mockReturnValue(new Promise(() => {}))
     await mountPanel("teacher")
 
-    fireEvent.click(screen.getByRole("row", { name: "Ver Proyecto de carrera" }))
+    fireEvent.click(screen.getByRole("button", { name: "Proyecto de carrera" }))
     await flush()
 
     expect(viewSupportDocument).toHaveBeenCalledWith("d1")

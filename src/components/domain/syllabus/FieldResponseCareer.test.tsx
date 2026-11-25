@@ -89,7 +89,7 @@ describe("El coordinador escribe un campo Carrera y deja espacios para el docent
   it("un campo vacío completo se escribe con el editor de texto y su cinta trae el botón de espacios", async () => {
     const { container } = mountSetup({ type: "doc", content: [{ type: "paragraph" }] })
     await flush()
-    expect(container.querySelector('[aria-label="Negrita"]')).not.toBeNull()
+    await vi.waitFor(() => expect(container.querySelector('[aria-label="Negrita"]')).not.toBeNull())
     expect(container.querySelector('[role="toolbar"] button[aria-label="Espacio para el docente"]')).not.toBeNull()
   })
 

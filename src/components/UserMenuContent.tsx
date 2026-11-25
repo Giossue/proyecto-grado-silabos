@@ -1,27 +1,23 @@
 "use client"
 
-import { Building2, Download, LogOut, Moon, PersonStanding, Settings, Sun } from "lucide-react"
+import { Building2, LogOut, Moon, PersonStanding, Settings, Sun } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { leaveActiveRole } from "@/api/session"
 import { UserInfo } from "@/components/UserInfo"
 import { DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { useAppearance } from "@/composables/useAppearance"
-import { useShowsSidebar } from "@/composables/useShowsSidebar"
 import { paths, roleSetting } from "@/lib/routes"
 import { accessibilityDialogOpen } from "@/state/accessibilityDialog"
-import { useInstallApp } from "@/state/installApp"
 import { sessionState, useSession } from "@/state/session"
-import { installAppOpen, logoutConfirmOpen } from "@/state/shellDialogs"
+import { logoutConfirmOpen } from "@/state/shellDialogs"
 import type { User } from "@/types"
 
 export function UserMenuContent({ user }: { user: User }) {
   const router = useRouter()
   const { appearance, updateAppearance } = useAppearance()
   const dark = appearance === "dark"
-  const showsSidebar = useShowsSidebar()
   const { session } = useSession()
-  const { installed } = useInstallApp()
   const canSwitchScope = session?.active_role != null && (session?.available_roles.length ?? 0) > 1
   const code = session?.active_role?.code
   const settingsHref = code ? roleSetting(code, "profile") : null
@@ -51,12 +47,6 @@ export function UserMenuContent({ user }: { user: User }) {
         <DropdownMenuItem data-test="switch-scope" onSelect={() => void switchScope()}>
           <Building2 data-icon="inline-start" aria-hidden="true" />
           Cambiar carrera o rol
-        </DropdownMenuItem>
-      ) : null}
-      {!showsSidebar && !installed ? (
-        <DropdownMenuItem className="sm:hidden" data-test="install-app" onSelect={() => { installAppOpen.value = true }}>
-          <Download data-icon="inline-start" aria-hidden="true" />
-          Instalar aplicación
         </DropdownMenuItem>
       ) : null}
       <DropdownMenuItem className="sm:hidden" onSelect={() => updateAppearance(dark ? "light" : "dark")}>

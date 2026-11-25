@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { scrollBehavior } from "@/lib/motion"
 
 type Mark = { top: number; element: HTMLElement }
 
@@ -37,7 +38,7 @@ export function ChangeMarks({ root }: { root: HTMLElement | null }) {
   if (marks.length === 0) return null
 
   return (
-    <div className="pointer-events-none fixed top-14 right-3 bottom-0 scroll-lock-offset z-20 hidden w-3 lg:block" aria-label="Cambios en el documento">
+    <div className="pointer-events-none fixed top-14 right-3 bottom-0 scroll-lock-offset z-20 hidden w-3 lg:block" role="group" aria-label="Cambios en el documento">
       {marks.map((mark, index) => (
         <Button
           key={index}
@@ -46,7 +47,7 @@ export function ChangeMarks({ root }: { root: HTMLElement | null }) {
           className="pointer-events-auto absolute right-0 h-1.5 min-h-0 w-3 rounded-full bg-warning p-0 hover:bg-warning"
           style={{ top: `${mark.top}%` }}
           aria-label={`Ir al cambio ${index + 1}`}
-          onClick={() => mark.element.scrollIntoView({ behavior: "smooth", block: "center" })}
+          onClick={() => mark.element.scrollIntoView({ behavior: scrollBehavior(), block: "center" })}
         />
       ))}
     </div>

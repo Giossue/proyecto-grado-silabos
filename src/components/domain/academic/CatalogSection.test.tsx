@@ -25,23 +25,24 @@ describe("CatalogSection", () => {
 
     expect(screen.getByText("Inactiva")).toBeInTheDocument()
     expect(screen.getByText("Sin logo")).toBeInTheDocument()
-    fireEvent.click(screen.getByRole("row", { name: "Editar Ciencias" }))
+    fireEvent.click(screen.getByRole("button", { name: "Ciencias" }).closest("tr")!)
     await flush()
     expect(screen.getByRole("dialog").textContent).toContain("Datos registrados")
     expect(document.body.querySelector<HTMLInputElement>("#edit-name-f1")!.value).toBe("Ciencias")
 
     fireEvent.change(screen.getByLabelText("Buscar facultad"), { target: { value: "sal" } })
     await flush()
-    expect(screen.queryByRole("row", { name: "Editar Ciencias" })).toBeNull()
-    expect(screen.getByRole("row", { name: "Editar Salud" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Ciencias" })).toBeNull()
+    expect(screen.getByRole("button", { name: "Salud" })).toBeInTheDocument()
   })
 
-  it("muestra la facultad de cada carrera y abre su ficha con Enter", async () => {
+  it("muestra la facultad de cada carrera y abre su ficha con el botón de su nombre", async () => {
     renderWithProviders(<CatalogSection section="careers" catalogs={catalogs} options={options} onChanged={vi.fn()} />)
 
-    const row = screen.getByRole("row", { name: "Editar Software" })
-    expect(row.textContent).toContain("Ciencias")
-    fireEvent.keyDown(row, { key: "Enter" })
+    const name = screen.getByRole("button", { name: "Software" })
+    expect(name.closest("tr")!.textContent).toContain("Ciencias")
+    expect(name.closest("tr")!.hasAttribute("tabindex")).toBe(false)
+    fireEvent.click(name)
     await flush()
     expect(document.body.querySelector<HTMLInputElement>("#edit-code-c1")!.value).toBe("SW")
   })

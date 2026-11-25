@@ -18,9 +18,14 @@ export const viewport: Viewport = {
   themeColor: "#122c41",
 };
 
+const preferencesScript = `(function(){var r=document.documentElement;var d=null;try{d=localStorage.getItem("appearance")}catch(e){}if(d!=="light"&&d!=="dark"){try{d=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){d="light"}}if(d==="dark")r.classList.add("dark");var m=false;try{m=window.matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){}var a={};try{var v=JSON.parse(localStorage.getItem("silabos:accesibilidad")||"null");if(v&&typeof v==="object")a=v}catch(e){}var t=["100","115","130","150"].indexOf(a.textSize)>=0?a.textSize:"100";r.dataset.contrast=a.highContrast===true?"high":"normal";r.dataset.textSize=t;r.dataset.motion=(typeof a.noMotion==="boolean"?a.noMotion:m)?"none":"normal";r.dataset.spacing=a.wideSpacing===true?"wide":"normal"})()`
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: preferencesScript }} />
+      </head>
       <body>
         <AppProviders>{children}</AppProviders>
       </body>

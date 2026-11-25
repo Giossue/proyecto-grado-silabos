@@ -244,7 +244,6 @@ function FieldError({
 
   return (
     <div
-      role="alert"
       id={field?.errorId}
       data-slot="field-error"
       className={cn("text-destructive text-sm font-normal", className)}

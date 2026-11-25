@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDateDisplay } from "@/lib/dateDisplay"
+import { scrollBehavior } from "@/lib/motion"
 import { libraryCommentLines } from "@/lib/reviewComment"
 import { reviewAreaPaths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
@@ -96,7 +97,7 @@ export default function CoordinationReviewHistoryPage() {
   )
   const [highlight, setHighlight] = useState(true)
   const [marks, setMarks] = useState<Mark[]>([])
-  const page = useRef<HTMLElement | null>(null)
+  const page = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (comparison.isError) toast.error(errorMessage(comparison.error, "No se pudieron destacar los cambios"))
@@ -176,7 +177,7 @@ export default function CoordinationReviewHistoryPage() {
           </div>
         ) : (
           <div className="flex min-w-0 flex-col leading-tight">
-            <span className="truncate font-medium">{data?.syllabus.subject ?? ""}</span>
+            <h1 className="truncate font-medium">{data?.syllabus.subject ?? ""}</h1>
             <span className="truncate text-sm text-muted-foreground">{title}</span>
           </div>
         )}
@@ -210,16 +211,16 @@ export default function CoordinationReviewHistoryPage() {
         <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col lg:flex-row">
           <div className="relative min-w-0 flex-1">
             <ScrollArea type="auto" className="h-full lg:h-[calc(100dvh-3.5rem)]">
-              <main ref={page} className="p-4 sm:p-6">
+              <div ref={page} className="p-4 sm:p-6">
                 {loading && !data ? (
                   <LoadingSkeleton variant="preview" />
                 ) : data ? (
                   <SyllabusDocumentPreview presentation={data.presentation} sections={previewSections} changed={highlight ? changedFields : NO_CHANGES} />
                 ) : null}
-              </main>
+              </div>
             </ScrollArea>
             {marks.length ? (
-              <div className="pointer-events-none absolute inset-y-0 right-3 hidden w-3 lg:block" aria-label="Cambios en el documento">
+              <div className="pointer-events-none absolute inset-y-0 right-3 hidden w-3 lg:block" role="group" aria-label="Cambios en el documento">
                 {marks.map((mark, index) => (
                   <Button
                     key={index}
@@ -228,7 +229,7 @@ export default function CoordinationReviewHistoryPage() {
                     className="pointer-events-auto absolute right-0 h-1.5 min-h-0 w-3 rounded-full bg-warning p-0 hover:bg-warning"
                     style={{ top: `${mark.top}%` }}
                     aria-label={`Ir al cambio ${index + 1}`}
-                    onClick={() => mark.element.scrollIntoView({ behavior: "smooth", block: "center" })}
+                    onClick={() => mark.element.scrollIntoView({ behavior: scrollBehavior(), block: "center" })}
                   />
                 ))}
               </div>

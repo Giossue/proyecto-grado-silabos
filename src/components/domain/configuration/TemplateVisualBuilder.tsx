@@ -47,6 +47,7 @@ import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import { templateEditorState } from "@/state/templateEditor"
 import { emptyDocument, type FieldResponsible } from "@/types/configuration"
+import { scrollBehavior } from "@/lib/motion"
 
 type Template = NonNullable<TemplatePayload["template"]>
 type Sections = TemplateSectionPayload[]
@@ -513,7 +514,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     if (previewing) setPreviewing(false)
     setTimeout(() => {
       const selector = first.target === "field" ? `[data-field="${first.id}"]` : first.target === "section" ? `[data-section="${first.id}"]` : "[data-general-problems]"
-      root.current?.querySelector<HTMLElement>(selector)?.scrollIntoView?.({ behavior: "smooth", block: "center" })
+      root.current?.querySelector<HTMLElement>(selector)?.scrollIntoView?.({ behavior: scrollBehavior(), block: "center" })
       if (first.target === "field" && first.id) selectField(first.id, null)
       if (first.target === "section" && first.id) selectSection(first.id)
     }, 0)

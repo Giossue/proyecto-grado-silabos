@@ -1,7 +1,7 @@
 "use client"
 
 import { Trash2 } from "lucide-react"
-import { useRef, useState, type KeyboardEvent } from "react"
+import { useRef, useState } from "react"
 import { removeCareerTeacher, resendCareerTeacherInvitation, type TeacherAssignments } from "@/api/career-academics"
 import { ApiError } from "@/api/client"
 import { CareerTeacherEditDialog } from "@/components/domain/academic/CareerTeacherEditDialog"
@@ -19,7 +19,7 @@ import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableR
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { useClientPagination } from "@/composables/useClientPagination"
 import { afterDialogExit, useShownWhileClosing } from "@/lib/dialogExit"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowButtonClass } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
 
 type TeacherRow = TeacherAssignments["careerTeachers"][number]
@@ -53,11 +53,6 @@ export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssi
   const openEditor = (item: TeacherRow): void => {
     setEditing(item)
     changeSheet(true)
-  }
-  const editFromKeyboard = (event: KeyboardEvent<HTMLTableRowElement>, item: TeacherRow): void => {
-    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-    event.preventDefault()
-    openEditor(item)
   }
 
   const askRemoval = (item: TeacherRow): void => {
@@ -135,13 +130,10 @@ export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssi
               <TableRow
                 key={item.id}
                 className="cursor-pointer"
-                tabIndex={0}
-                aria-label={`Editar ${item.name}`}
                 onClick={(event) => activateRow(event.nativeEvent, () => openEditor(item))}
-                onKeyDown={(event) => editFromKeyboard(event, item)}
               >
                 <TableCell>
-                  {item.name}
+                  <button type="button" className={rowButtonClass} onClick={() => openEditor(item)}>{item.name}</button>
                   <TableCardLine>
                     {item.email}
                     <StatusBadge label={statusOf(item)} tone={item.pending_activation ? "warning" : "success"} />

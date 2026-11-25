@@ -4,7 +4,7 @@ import { History } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { ApiError } from "@/api/client"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
 import { IconTooltip } from "@/components/domain/IconTooltip"
@@ -24,7 +24,7 @@ import { rememberLibraryFaculty, savedLibraryFaculty } from "@/lib/libraryFacult
 import { LIBRARY_STATE_FILTERS, libraryStatus, libraryStatusLabel, libraryStatusTone } from "@/lib/libraryStates"
 import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowLinkClass } from "@/lib/rowActivation"
 import { cn } from "@/lib/utils"
 import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
 import { dashboardSummaryQuery } from "@/queries/dashboard"
@@ -35,12 +35,6 @@ type Filters = { q: string; state: string; faculty: string }
 const NO_FILTERS: Filters = { q: "", state: "all", faculty: "all" }
 
 const STATE_OPTIONS = Object.entries(LIBRARY_STATE_FILTERS).map(([value, label]) => ({ value, label }))
-
-const activateWithKey = (event: KeyboardEvent<HTMLTableRowElement>, action: () => void): void => {
-  if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-  event.preventDefault()
-  action()
-}
 
 export default function LibraryReviewsPage() {
   const router = useRouter()
@@ -206,15 +200,12 @@ export default function LibraryReviewsPage() {
                   <TableRow
                     key={item.revision_id}
                     className="cursor-pointer"
-                    tabIndex={0}
-                    aria-label={`Abrir revisión de ${item.subject}`}
                     onClick={(event) => activateRow(event.nativeEvent, () => open(item.revision_id))}
-                    onKeyDown={(event) => activateWithKey(event, () => open(item.revision_id))}
                   >
                     <TableCell data-card-hide="true">{item.faculty ?? "—"}</TableCell>
                     <TableCell data-card-hide="true">{item.career}</TableCell>
                     <TableCell>
-                      {item.subject}
+                      <Link href={paths.library.review(item.revision_id)} className={rowLinkClass}>{item.subject}</Link>
                       <TableCardLine>
                         {item.faculty ? `${item.faculty} · ` : ""}
                         {item.career}

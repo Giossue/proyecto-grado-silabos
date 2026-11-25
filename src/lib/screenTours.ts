@@ -18,7 +18,7 @@ const shell = {
   menu: step('[data-sidebar="sidebar"]', 'Menú', 'Aquí están todas sus pantallas. El botón de arriba a la izquierda lo esconde o lo muestra', 'right'),
   notifications: step('[aria-label^="Notificaciones"]', 'Avisos', 'Aquí le llegan los avisos. Pulse uno para ir a donde corresponde', 'bottom'),
   theme: step('[aria-label^="Tema visual"]', 'Claro u oscuro', 'Cambia los colores de la pantalla', 'bottom'),
-  user: step('[aria-label="Menú de usuario"]', 'Su cuenta', 'Cambie de carrera o de rol, vea su perfil o cierre la sesión', 'bottom'),
+  user: step('[data-user-menu]', 'Su cuenta', 'Cambie de carrera o de rol, vea su perfil o cierre la sesión', 'bottom'),
   accessibility: step('[aria-label="Accesibilidad"]', 'Accesibilidad', 'Agrande el texto, suba el contraste o quite las animaciones', 'bottom'),
 };
 const basics = [shell.menu, shell.notifications, shell.theme, shell.accessibility, shell.user];

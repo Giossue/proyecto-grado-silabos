@@ -10,6 +10,7 @@ import { InputError } from "@/components/InputError"
 import { PasswordInput } from "@/components/PasswordInput"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Field } from "@/components/ui/field"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -94,11 +95,11 @@ export function OtherSessions() {
             <DialogHeader>
               <DialogTitle>Cerrar otras sesiones</DialogTitle>
               <DialogDescription>
-                Se cerrará su cuenta en los demás dispositivos, también en los que marcaron «Mantener la sesión iniciada». Este dispositivo sigue abierto
+                Se cerrará su cuenta en los demás dispositivos. Este dispositivo sigue abierto
               </DialogDescription>
             </DialogHeader>
             {error ? <FeedbackAlert message={error} /> : null}
-            <div className="grid gap-2">
+            <Field data-invalid={Boolean(fieldMessage(errors, "current_password"))} className="gap-2">
               <Label htmlFor="other-sessions-password" required>
                 Contraseña actual
               </Label>
@@ -110,7 +111,7 @@ export function OtherSessions() {
                 )}
               />
               <InputError message={fieldMessage(errors, "current_password")} />
-            </div>
+            </Field>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancelar

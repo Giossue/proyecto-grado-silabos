@@ -1,9 +1,10 @@
 "use client"
 
 import { BookOpen, ChevronDown, FileText, Plus } from "lucide-react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { type ScheduledSubjects } from "@/api/career-academics"
 import { FichaImportDialog } from "@/components/domain/academic/FichaImportDialog"
 import { SupportDocumentsPanel } from "@/components/domain/academic/SupportDocumentsPanel"
@@ -24,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { paths } from "@/lib/routes"
+import { rowLinkClass } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import { queryErrorMessage } from "@/lib/queryClient"
@@ -73,14 +75,6 @@ export default function CoordinationCareerProjectPage() {
     else query.delete("tab")
     const search = query.toString()
     router.replace(search ? `${paths.coordination.careerProject}?${search}` : paths.coordination.careerProject)
-  }
-
-  const open = (subject: Subject): void => router.push(paths.coordination.careerProjectSubject(subject.id))
-
-  const openFromKeyboard = (event: KeyboardEvent<HTMLDivElement>, subject: Subject): void => {
-    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-    event.preventDefault()
-    open(subject)
   }
 
   const saved = async (message = "Proyecto de carrera guardado"): Promise<void> => {
@@ -201,15 +195,13 @@ export default function CoordinationCareerProjectPage() {
                       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label={group.cycle === "Sin ciclo" ? "Materias sin ciclo" : `Materias del ciclo ${group.cycle}`}>
                         {group.list.map((subject) => (
                           <li key={subject.id}>
-                            <Card
-                              className="h-full cursor-pointer transition-colors hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-hidden"
-                              tabIndex={0}
-                              aria-label={`Abrir el proyecto de carrera de ${subject.nombre}`}
-                              onClick={() => open(subject)}
-                              onKeyDown={(event) => openFromKeyboard(event, subject)}
-                            >
+                            <Card className="relative h-full cursor-pointer transition-colors hover:bg-accent/40 has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50">
                               <CardHeader>
-                                <CardTitle>{subject.nombre}</CardTitle>
+                                <CardTitle>
+                                  <Link href={paths.coordination.careerProjectSubject(subject.id)} className={cn(rowLinkClass, "after:absolute after:inset-0 after:rounded-[inherit] focus-visible:ring-0")}>
+                                    {subject.nombre}
+                                  </Link>
+                                </CardTitle>
                               </CardHeader>
                               <CardContent>
                                 <StatusBadge label={statusOf(subject)} tone={subject.profile_complete ? "success" : "warning"} />

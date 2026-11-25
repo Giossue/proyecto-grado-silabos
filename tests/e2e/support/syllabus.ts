@@ -1,7 +1,7 @@
 import path from "node:path"
 import { expect, type Locator, type Page } from "@playwright/test"
 import { certificatePassword, signaturesDir, type Account } from "./accounts"
-import { chooseOption, confirmPurgeIfAsked, uniqueSuffix } from "./ui"
+import { chooseOption, confirmPurgeIfAsked, rowNamed, uniqueSuffix } from "./ui"
 
 const autosaveUrl = /\/api\/v1\/teacher\/syllabi\/[^/]+\/fields\/[^/]+$/
 
@@ -67,16 +67,15 @@ export async function restartFromReview(page: Page, subject: string, reason: str
 
 export async function openCoordinationReview(page: Page, subject: string): Promise<void> {
   await page.goto("/coordinacion/revisiones")
-  await page.getByRole("table", { name: "Revisiones de coordinación" }).getByRole("row", { name: `Abrir revisión de ${subject}` }).click()
+  await page.getByRole("table", { name: "Revisiones de coordinación" }).getByRole("link", { name: subject, exact: true }).click()
   await expect(page.getByRole("heading", { level: 1, name: subject })).toBeVisible()
 }
 
 export async function openTrackedReview(page: Page, subject: string, parallel = "A"): Promise<void> {
   await page.goto("/coordinacion/revisiones?tab=seguimiento")
-  await page
-    .getByRole("table", { name: "Seguimiento de la convocatoria" })
-    .getByRole("row", { name: `Abrir revisión de ${subject}` })
+  await rowNamed(page.getByRole("table", { name: "Seguimiento de la convocatoria" }), subject)
     .filter({ has: page.getByText(`Paralelo ${parallel}`, { exact: true }) })
+    .getByRole("link", { name: subject, exact: true })
     .click()
   await expect(page.getByRole("heading", { level: 1, name: subject })).toBeVisible()
 }
@@ -138,6 +137,7 @@ export async function fillPlanning(page: Page): Promise<void> {
 export async function fillRichText(page: Page): Promise<void> {
   await openSection(page, /^7\. Metodología/)
   const editors = page.locator('[contenteditable="true"]')
+  await expect(editors.first()).toBeVisible()
   const count = await editors.count()
   expect(count).toBeGreaterThan(0)
   for (let index = 0; index < count; index += 1) {

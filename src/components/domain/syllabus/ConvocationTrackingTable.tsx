@@ -1,8 +1,9 @@
 "use client"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { useMemo, type KeyboardEvent } from "react"
+import { useMemo } from "react"
 import { type ConvocationDetail } from "@/api/convocations"
 import { reviewStageLabel } from "@/api/reviews"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
@@ -16,7 +17,7 @@ import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableR
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { useClientPagination } from "@/composables/useClientPagination"
 import { reviewAreaPaths } from "@/lib/routes"
-import { activateRow } from "@/lib/rowActivation"
+import { activateRow, rowLinkClass } from "@/lib/rowActivation"
 import { SYLLABUS_STATE_OPTIONS, syllabusStateLabel } from "@/lib/syllabusStates"
 import { queryErrorMessage } from "@/lib/queryClient"
 import { convocationQuery } from "@/queries/convocations"
@@ -47,11 +48,6 @@ export function ConvocationTrackingTable({ convocationId }: { convocationId: str
     void query.refetch()
   }
   const open = (revisionId: string): void => router.push(reviewAreaPaths().review(revisionId))
-  const openFromKeyboard = (event: KeyboardEvent<HTMLTableRowElement>, revisionId: string | null | undefined): void => {
-    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
-    event.preventDefault()
-    if (revisionId) open(revisionId)
-  }
 
   if (error) return <LoadErrorState message={error} onRetry={retry} />
   if (loading && !data) return <LoadingSkeleton variant="table" columns={3} filters={1} filterWidth="lg:w-44" actions={false} cellLines={[2, 2, 1]} badges={[3]} />
@@ -106,15 +102,18 @@ export function ConvocationTrackingTable({ convocationId }: { convocationId: str
               <TableRow
                 key={syllabus.id}
                 className={syllabus.revision_id ? "cursor-pointer" : ""}
-                tabIndex={syllabus.revision_id ? 0 : undefined}
-                aria-label={syllabus.revision_id ? `Abrir revisión de ${syllabus.subject}` : undefined}
                 onClick={(event) => {
                   if (syllabus.revision_id) activateRow(event.nativeEvent, () => open(syllabus.revision_id!))
                 }}
-                onKeyDown={(event) => openFromKeyboard(event, syllabus.revision_id)}
               >
                 <TableCell>
-                  <div>{syllabus.subject}</div>
+                  <div>
+                    {syllabus.revision_id ? (
+                      <Link href={reviewAreaPaths().review(syllabus.revision_id)} className={rowLinkClass}>{syllabus.subject}</Link>
+                    ) : (
+                      syllabus.subject
+                    )}
+                  </div>
                   <div className="text-sm text-muted-foreground">{syllabus.code}</div>
                 </TableCell>
                 <TableCell data-card-no-label="true">

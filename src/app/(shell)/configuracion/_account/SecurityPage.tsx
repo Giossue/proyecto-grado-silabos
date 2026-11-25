@@ -16,6 +16,7 @@ import { PasswordInput } from "@/components/PasswordInput"
 import { Accordion } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Field } from "@/components/ui/field"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import { SettingsLayout } from "@/layouts/settings/Layout"
@@ -144,27 +145,27 @@ export default function SecurityPage() {
               <DialogDescription>Use una contraseña larga y única para proteger su cuenta</DialogDescription>
             </DialogHeader>
             {requestError ? <FeedbackAlert message={requestError} /> : null}
-            <div className="grid gap-2">
+            <Field data-invalid={Boolean(fieldMessage(errors, "current_password"))} className="gap-2">
               <Label htmlFor="current_password" required>
                 Contraseña actual
               </Label>
               {passwordField("current_password", "current_password", "current-password", "Contraseña actual")}
               <InputError message={fieldMessage(errors, "current_password")} />
-            </div>
-            <div className="grid gap-2">
+            </Field>
+            <Field data-invalid={Boolean(fieldMessage(errors, "password"))} className="gap-2">
               <Label htmlFor="password" required>
                 Contraseña nueva
               </Label>
               {passwordField("password", "password", "new-password", "Contraseña nueva")}
               <InputError message={fieldMessage(errors, "password")} />
-            </div>
-            <div className="grid gap-2">
+            </Field>
+            <Field data-invalid={Boolean(fieldMessage(errors, "password_confirmation"))} className="gap-2">
               <Label htmlFor="password_confirmation" required>
                 Confirmar contraseña
               </Label>
               {passwordField("password_confirmation", "password_confirmation", "new-password", "Confirmar contraseña")}
               <InputError message={fieldMessage(errors, "password_confirmation")} />
-            </div>
+            </Field>
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="outline">

@@ -4,7 +4,7 @@ import { expect, test } from "./support/fixtures"
 import { fillWorkbookCell, writeDocx, writePdf } from "./support/files"
 import { storageStateOf } from "./support/accounts"
 import { expireInvitation, query } from "./support/db"
-import { chooseOption, confirmPurgeIfAsked, lettersOnly, dragBetween, toast, uniqueSuffix } from "./support/ui"
+import { chooseOption, confirmPurgeIfAsked, lettersOnly, dragBetween, rowNamed, toast, uniqueSuffix } from "./support/ui"
 
 test.use({ storageState: storageStateOf("coordinator") })
 
@@ -144,22 +144,22 @@ test.describe.serial("coordination", () => {
     await create.getByRole("textbox", { name: "Correo institucional (obligatorio)" }).fill(email)
     await create.getByRole("button", { name: "Crear docente" }).click()
     await expect(create).toBeHidden()
-    const row = page.getByRole("row", { name: `Editar PRUEBA ETOE ${surname}` })
+    const row = rowNamed(page, `PRUEBA ETOE ${surname}`, "button")
     await expect(row).toContainText(email)
 
     await expireInvitation(email)
     await page.reload()
-    await row.click()
+    await row.getByRole("button", { name: `PRUEBA ETOE ${surname}`, exact: true }).click()
     const detail = page.getByRole("dialog", { name: "Docente" })
     const resent = page.waitForResponse((response) => /\/resend-activation$/.test(response.url()))
     await detail.getByRole("button", { name: "Reenviar invitación" }).click()
     expect((await resent).status()).toBe(200)
     await expect(toast(page)).toBeVisible()
 
-    const testRows = page.getByRole("row", { name: /^Editar PRUEBA ETOE DOCENTE / })
+    const testRows = rowNamed(page, /^PRUEBA ETOE DOCENTE /, "button")
     while ((await testRows.count()) > 0) {
       const target = testRows.first()
-      await target.click()
+      await target.getByRole("button", { name: /^PRUEBA ETOE DOCENTE / }).click()
       const dialog = page.getByRole("dialog", { name: "Docente" })
       await dialog.getByRole("button", { name: "Quitar de la carrera" }).click()
       const confirmation = page.getByRole("dialog").filter({ hasNot: page.getByRole("heading", { name: "Docente", exact: true }) }).last()
@@ -266,7 +266,7 @@ test.describe.serial("coordination", () => {
     await confirmPurgeIfAsked(page)
     await expect(created).toContainText("JUAN CARLOS GAIBOR NARANJO")
     await dialog.getByRole("button", { name: "Cerrar" }).last().click()
-    await expect(page.getByRole("row", { name: "Paralelos y docentes de SW-B3-014 · Cálculo III" })).toContainText(code)
+    await expect(rowNamed(page, "Cálculo III", "button")).toContainText(code)
     issues.expectClean()
   })
 
@@ -285,13 +285,13 @@ test.describe.serial("coordination", () => {
       await expect(table).toContainText(title)
     }
     for (const title of [`Guía E2E ${suffix}`, `Rúbrica E2E ${suffix}`]) {
-      const row = page.getByRole("row", { name: `Ver ${title}` })
+      const row = rowNamed(table, title, "button")
       await expect(async () => {
         await page.reload()
         await expect(row).toBeVisible({ timeout: 2_000 })
       }).toPass({ timeout: 90_000 })
       const popup = page.waitForEvent("popup")
-      await row.click()
+      await row.getByRole("button", { name: title, exact: true }).click()
       await expect.poll(async () => (await popup).url()).toMatch(/^blob:|\/view|\.pdf/)
       await (await popup).close()
     }
