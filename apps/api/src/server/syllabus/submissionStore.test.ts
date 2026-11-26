@@ -30,10 +30,10 @@ async function submissionTx(db: Db): Promise<SubmissionTx> {
 describe("submission store", () => {
   it("locks the syllabus row only, then the latest revision, in that order", async () => {
     const { db, queries } = recordingDb((query) =>
-      query.text.includes("from revisiones_silabo") ? [{ id: "r2", number: 2, stage: "coordinacion" }] : [{ id: SYLLABUS, state: "borrador", version: 4 }],
+      query.text.includes("from revisiones_silabo") ? [{ id: "r2", number: 2, stage: "coordinacion" }] : [{ id: SYLLABUS, state: "sin_iniciar", version: 4, started: true }],
     )
     const tx = await submissionTx(db)
-    expect(await tx.lockSyllabus(SYLLABUS)).toEqual({ id: SYLLABUS, state: "borrador", version: 4 })
+    expect(await tx.lockSyllabus(SYLLABUS)).toEqual({ id: SYLLABUS, state: "sin_iniciar", version: 4, started: true })
     expect(await tx.lockLatestRevision(SYLLABUS)).toEqual({ id: "r2", number: 2, correctionStage: "coordinacion" })
     expect(queries).toHaveLength(2)
     expect(text(queries[0])).toMatch(/from silabos where silabos\.silabo_id = \$1::uuid and exists \(.*\) limit 1 for update of silabos$/)

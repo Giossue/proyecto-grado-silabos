@@ -24,12 +24,13 @@ const SAVED_AT = "2027-01-15T10:00:00+00:00"
 let world: FakeWorld
 let templates: FakeTemplateWorld
 let facts: DraftSyllabus | null
-let locked: { id: string; state: string; version: number; subjectId: string } | null
+let locked: { id: string; state: string; version: number; subjectId: string; started?: boolean } | null
 let fields: Map<string, DraftFieldRecord>
 let values: Map<string, unknown>
 let log: string[]
 let saved: { syllabusId: string; fieldId: string; document: PhpRecord; newId: string; fingerprint?: string }[]
 let drafts: { id: string; version: number; savedAt: number }[]
+let states: string[]
 let committed: boolean
 let today: string
 let teachers: IdentificationSource["teachers"]
@@ -80,9 +81,10 @@ function deps(): DraftFieldDeps {
               saved.push({ syllabusId, fieldId: field, document, newId, ...(fingerprint === definitionHash(fields.get(field)?.content) ? {} : { fingerprint }) })
               values.set(`${syllabusId}:${field}`, document)
             },
-            saveDraft: async (id, version, savedAt) => {
+            saveDraft: async (id, version, savedAt, state) => {
               log.push("draft")
               drafts.push({ id, version, savedAt })
+              states.push(state)
             },
           })
           committed = true
@@ -137,6 +139,7 @@ beforeEach(() => {
   log = []
   saved = []
   drafts = []
+  states = []
   committed = false
   today = "2027-01-15"
   teachers = [{ name: "Ana Pérez", email: "ana@ueb.edu.ec" }]
@@ -157,7 +160,9 @@ describe("PATCH /api/v1/teacher/syllabi/{syllabus}/fields/{field}", () => {
     }
     expect(saved).toEqual([{ syllabusId: SYLLABUS, fieldId: TEXT_FIELD, document: normalized, newId: NEW_VALUE }])
     expect(drafts).toEqual([{ id: SYLLABUS, version: 4, savedAt: Date.parse(SAVED_AT) / 1000 }])
-    expect(Object.keys(json ?? {})).toEqual(["message", "version_bloqueo", "guardado_en", "document"])
+    expect(Object.keys(json ?? {})).toEqual(["message", "estado", "version_bloqueo", "guardado_en", "document"])
+    expect(json?.estado).toBe("borrador")
+    expect(states).toEqual(["borrador"])
     expect(json?.message).toBe("Borrador guardado.")
     expect(json?.version_bloqueo).toBe(4)
     expect(json?.guardado_en).toBe(SAVED_AT)
@@ -166,6 +171,59 @@ describe("PATCH /api/v1/teacher/syllabi/{syllabus}/fields/{field}", () => {
       content: [{ type: "paragraph", attrs: { textAlign: "left" }, content: [{ type: "text", text: "Docente: " }, { type: "text", text: "Ana Pérez", marks: [] }] }],
     })
     expect(text).toBe(JSON.stringify(JSON.parse(text)))
+  })
+
+  describe("a syllabus the teacher opened but has not written yet", () => {
+    beforeEach(() => {
+      facts = { ...facts!, state: "sin_iniciar", started: true }
+      locked = { id: SYLLABUS, state: "sin_iniciar", version: 1, subjectId: SUBJECT, started: true }
+    })
+
+    it("turns into a draft with the first save that changes what is stored", async () => {
+      values.set(`${SYLLABUS}:${TEXT_FIELD}`, doc("Lo que vino del periodo anterior."))
+      const { status, json } = await patch({ version_bloqueo: 1, value: doc("Lo que vino del periodo anterior, ajustado.") })
+      expect(status).toBe(200)
+      expect(json?.estado).toBe("borrador")
+      expect(json?.version_bloqueo).toBe(2)
+      expect(states).toEqual(["borrador"])
+      expect(drafts).toEqual([{ id: SYLLABUS, version: 2, savedAt: Date.parse(SAVED_AT) / 1000 }])
+      expect(saved).toHaveLength(1)
+    })
+
+    it("turns into a draft when the teacher writes a field that had nothing stored", async () => {
+      const { status, json } = await patch({ version_bloqueo: 1, value: doc("Primera palabra") })
+      expect(status).toBe(200)
+      expect(json?.estado).toBe("borrador")
+      expect(states).toEqual(["borrador"])
+    })
+
+    it("stays not started when the save repeats the stored value", async () => {
+      const first = await patch({ version_bloqueo: 1, value: doc("Igual que antes.") })
+      expect(first.json?.estado).toBe("borrador")
+      locked = { id: SYLLABUS, state: "sin_iniciar", version: 2, subjectId: SUBJECT, started: true }
+      states.length = 0
+      const { status, json } = await patch({ version_bloqueo: 2, value: doc("Igual que antes.") })
+      expect(status).toBe(200)
+      expect(json?.estado).toBe("sin_iniciar")
+      expect(states).toEqual(["sin_iniciar"])
+    })
+
+    it("stays not started when the save sends the empty field the template already shows", async () => {
+      const template = goldenTemplate()
+      if (template.definition) delete template.definition.response_policy
+      templates.template = template
+      const { status, json } = await patch({ version_bloqueo: 1, value: liveField(8).content })
+      expect(status).toBe(200)
+      expect(json?.estado).toBe("sin_iniciar")
+      expect(states).toEqual(["sin_iniciar"])
+    })
+
+    it("refuses a syllabus that was never opened, because it has not been prepared", async () => {
+      facts = { ...facts!, started: false }
+      const { status } = await patch({ version_bloqueo: 1, value: doc("Texto") })
+      expect(status).toBe(403)
+      expect(saved).toEqual([])
+    })
   })
 
   it("answers a stale version with the recoverable conflict and writes nothing", async () => {

@@ -99,7 +99,7 @@ function tx(): DraftStartTx {
     async lockSyllabus(id) {
       log.push(`lock:${id}`)
       const found = rows.get(id)
-      return found ? { id: found.id, state: found.state, version: found.version, subjectId: found.subjectId } : null
+      return found ? { id: found.id, state: found.state, version: found.version, subjectId: found.subjectId, started: found.startedAt !== null } : null
     },
     async previousPeriodSource(_id, _subject, _user, modifiedAt) {
       modifiedAtSeen.push(modifiedAt)
@@ -127,7 +127,7 @@ function tx(): DraftStartTx {
     },
     async start(syllabusId, now) {
       log.push("start")
-      Object.assign(rows.get(syllabusId)!, { state: "borrador", startedAt: iso(now), savedAt: iso(now), version: 1 })
+      Object.assign(rows.get(syllabusId)!, { startedAt: iso(now), savedAt: iso(now), version: 1 })
     },
     async copied(syllabusId, version, now) {
       log.push("copied")
@@ -211,8 +211,8 @@ describe("POST teacher/syllabi/{syllabus}/start", () => {
 
     expect(response.status).toBe(200)
     expect(Object.keys(response.json!)).toEqual(["message", "syllabus"])
-    expect(response.json!.message).toBe("Borrador iniciado con la plantilla y los datos maestros fijados.")
-    expect(response.json!.syllabus).toMatchObject({ id: TARGET, state: "borrador", iniciado_en: NOW_ISO, version_bloqueo: 1, guardado_en: NOW_ISO })
+    expect(response.json!.message).toBe("Sílabo preparado con la plantilla y los datos maestros fijados.")
+    expect(response.json!.syllabus).toMatchObject({ id: TARGET, state: "sin_iniciar", iniciado_en: NOW_ISO, version_bloqueo: 1, guardado_en: NOW_ISO })
     expect(log).toEqual(["begin", `lock:${TARGET}`, `carry:${TARGET}:${goldenTemplate().id}`, "start", "commit"])
     expect(modifiedAtSeen).toEqual(["2026-11-23 16:10:54.932237+00"])
   })
@@ -227,9 +227,19 @@ describe("POST teacher/syllabi/{syllabus}/start", () => {
     expect(response.status).toBe(200)
     expect(log).toEqual(["begin", `lock:${TARGET}`, "delete", ...inherited.map((id) => `insert:${id}`), `carry:${TARGET}:${goldenTemplate().id}`, "start", "commit"])
     expect(fingerprints.get(techniques)).toBe(definitionHash(goldenFields[fieldIndex("tecnicas_ensenanza")].content))
-    expect(rows.get(TARGET)!.state).toBe("borrador")
+    expect(rows.get(TARGET)!.state).toBe("sin_iniciar")
     expect([...rows.get(TARGET)!.values.keys()]).toEqual(inherited)
     expect(rows.get(TARGET)!.values.get(techniques)).toEqual(fieldResponseNormalize(goldenFields[fieldIndex("tecnicas_ensenanza")].content, answer, definition()))
+  })
+
+  it("opening an already prepared syllabus again returns it as it is, without copying anything or changing its state", async () => {
+    rows.set(TARGET, row({ startedAt: iso(NOW - 60), savedAt: iso(NOW - 60), version: 1, values: new Map<string, unknown>([["campo", { type: "doc" }]]) }))
+    previousSource = PREVIOUS
+    const response = await start()
+    expect(response.status).toBe(200)
+    expect(response.json!.syllabus).toMatchObject({ id: TARGET, state: "sin_iniciar", iniciado_en: iso(NOW - 60), version_bloqueo: 1 })
+    expect(log).toEqual(["begin", `lock:${TARGET}`, "commit"])
+    expect([...rows.get(TARGET)!.values.keys()]).toEqual(["campo"])
   })
 
   it("refuses a draft that another session already started", async () => {

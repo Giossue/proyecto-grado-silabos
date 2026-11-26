@@ -62,7 +62,7 @@ export function draftStartTx(executor: Executor): DraftStartTx {
     },
     carryTeacherFields: (syllabusId, template) => carryTeacherFields(executor, syllabusId, template, uuid7),
     async start(syllabusId, now) {
-      await executor.$executeRaw`update silabos set estado_silabo = 'borrador', iniciado_en = ${fromEpoch(now)}, guardado_en = ${fromEpoch(now)}, version_borrador = 1
+      await executor.$executeRaw`update silabos set iniciado_en = ${fromEpoch(now)}, guardado_en = ${fromEpoch(now)}, version_borrador = 1
         where silabos.silabo_id = ${syllabusId}::uuid`
     },
     async copied(syllabusId, version, now) {

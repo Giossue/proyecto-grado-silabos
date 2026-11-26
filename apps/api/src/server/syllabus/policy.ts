@@ -20,6 +20,11 @@ export type SyllabusFacts = {
   currentTeacher: boolean
   writtenByUser: boolean
   hasLibrarySubmission: boolean
+  started?: boolean
+}
+
+export function editableState(state: string, started: boolean): boolean {
+  return EDITABLE_STATES.includes(state) || (state === "sin_iniciar" && started)
 }
 
 export function hasRole(session: AppSession, role: string): boolean {
@@ -53,7 +58,7 @@ function canTeacherEdit(session: AppSession, facts: SyllabusFacts, today: string
 }
 
 export function mayEdit(session: AppSession, facts: SyllabusFacts, today: string): boolean {
-  return canTeacherEdit(session, facts, today, true) && EDITABLE_STATES.includes(facts.state)
+  return canTeacherEdit(session, facts, today, true) && editableState(facts.state, facts.started === true)
 }
 
 export function mayStart(session: AppSession, facts: SyllabusFacts, today: string): boolean {

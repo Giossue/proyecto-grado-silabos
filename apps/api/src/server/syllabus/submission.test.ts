@@ -31,7 +31,7 @@ let keyed: { id: string; number: number; submittedBy: string } | null
 let signedRoles: string[]
 let snapshot: () => Record<string, unknown>
 let blocking: number | Response
-let locked: { id: string; state: string; version: number } | null
+let locked: { id: string; state: string; version: number; started?: boolean } | null
 let latest: { id: string; number: number; correctionStage: string | null } | null
 let verification: { verifiedBy: string; verifiedAt: number; snapshot: unknown } | null
 let today: string
@@ -251,6 +251,24 @@ describe("POST teacher/syllabi/{s}/submit", () => {
     expect(submissions).toEqual([{ revisionId: NEW_ID, verifiedBy: null, verifiedAt: null, inherited: false }])
     expect(log).toEqual(["validate", "begin", `lock:${SYLLABUS}`, `submitted:${SYLLABUS}:8:${NOW}`, "commit"])
     expect(notices.notifications.map((row) => [row.userId, row.key, row.title])).toEqual([[LIBRARIAN, `flujo:silabo.enviado:${NEW_ID}`, "Sílabo enviado"]])
+  })
+
+  it("sends a syllabus the teacher opened and left as it came, without writing anything", async () => {
+    signedRoles = ["docente"]
+    syllabus = draft({ state: "sin_iniciar", started: true })
+    locked = { id: SYLLABUS, state: "sin_iniciar", version: 7, started: true }
+    const response = await submit({ version_bloqueo: 7, idempotency_key: KEY })
+    expect(response).toMatchObject({ status: 200, json: { message: "Revisión 1 enviada.", syllabus: { id: SYLLABUS, state: "en_revision" } } })
+    expect(log).toEqual(["validate", "begin", `lock:${SYLLABUS}`, `submitted:${SYLLABUS}:8:${NOW}`, "commit"])
+  })
+
+  it("does not send a syllabus that was never opened", async () => {
+    signedRoles = ["docente"]
+    syllabus = draft({ state: "sin_iniciar", started: false })
+    locked = { id: SYLLABUS, state: "sin_iniciar", version: 7, started: false }
+    const response = await submit({ version_bloqueo: 7, idempotency_key: KEY })
+    expect(response.status).not.toBe(200)
+    expect(revisions).toEqual([])
   })
 
   it("carries the library verification when coordination returned it and the bibliography did not change", async () => {

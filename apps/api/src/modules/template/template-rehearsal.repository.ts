@@ -25,7 +25,7 @@ export function rehearsalReadsOn(db: Db): RehearsalReads {
     async syllabi(processId) {
       const found = await db.silabos.findMany({
         where: {
-          estado_silabo: { not: "sin_iniciar" },
+          OR: [{ estado_silabo: { not: "sin_iniciar" } }, { iniciado_en: { not: null } }],
           convocatorias_carreras: { convocatoria_universidad_id: processId, estado_convocatoria_carrera: { in: ["abierta", "pausada"] } },
         },
         select: { silabo_id: true, estado_silabo: true, paralelos: { select: { asignatura_id: true } }, convocatorias_carreras: { select: { carreras: { select: { nombre_carrera: true } } } } },

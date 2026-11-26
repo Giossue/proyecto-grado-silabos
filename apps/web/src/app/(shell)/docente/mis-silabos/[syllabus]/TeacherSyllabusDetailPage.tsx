@@ -75,11 +75,15 @@ function useTracked<T>(initial: T): [T, (value: T) => void, { readonly current: 
 const blockReasonOf = (syllabus: SyllabusDetail | null, local: string | null): string | null =>
   local ?? (syllabus?.editable === false ? (syllabus.edit_block_reason ?? "El sílabo no admite cambios en este momento") : null)
 
-const canEditOf = (syllabus: SyllabusDetail | null, local: string | null): boolean =>
-  EDITABLE_STATES.includes(syllabus?.state ?? "") && blockReasonOf(syllabus, local) === null
+const startedOf = (syllabus: SyllabusDetail | null): boolean => syllabus !== null && (syllabus.state !== "sin_iniciar" || syllabus.iniciado_en !== null)
+
+const editableOf = (syllabus: SyllabusDetail | null): boolean =>
+  EDITABLE_STATES.includes(syllabus?.state ?? "") || (syllabus?.state === "sin_iniciar" && startedOf(syllabus))
+
+const canEditOf = (syllabus: SyllabusDetail | null, local: string | null): boolean => editableOf(syllabus) && blockReasonOf(syllabus, local) === null
 
 const canStartOf = (syllabus: SyllabusDetail | null, local: string | null): boolean =>
-  syllabus?.state === "sin_iniciar" && blockReasonOf(syllabus, local) === null
+  syllabus?.state === "sin_iniciar" && !startedOf(syllabus) && blockReasonOf(syllabus, local) === null
 
 const fieldsOf = (syllabus: SyllabusDetail | null): SyllabusField[] => (syllabus?.sections ?? []).flatMap((section) => section.fields)
 
@@ -180,7 +184,7 @@ export default function TeacherSyllabusDetailPage() {
         : emptyParts > 1
           ? `Faltan ${emptyParts} campos por completar`
           : ""
-  const copySources = canEdit && syllabus?.state === "borrador" ? (syllabus.copy_sources ?? []) : []
+  const copySources = canEdit && (syllabus?.state === "borrador" || syllabus?.state === "sin_iniciar") ? (syllabus.copy_sources ?? []) : []
   const visibleSections = (syllabus?.sections ?? []).filter((section) => section.fields.some(isTeacherField))
   const activeSectionId = visibleSections.find((section) => section.id === chosenSectionId)?.id ?? visibleSections[0]?.id ?? ""
   const previewSections = useMemo(() => {
@@ -192,7 +196,7 @@ export default function TeacherSyllabusDetailPage() {
     ? previewHint
       ? sheetPixels(null).portrait
       : undefined
-    : syllabus.state !== "sin_iniciar" && !showEditor
+    : startedOf(syllabus) && !showEditor
       ? sheetPixels(syllabus.presentation.document).portrait
       : undefined
   const loading = (!syllabus || canStart) && !error
@@ -308,7 +312,7 @@ export default function TeacherSyllabusDetailPage() {
           const saved = await saveTeacherField(current.id, fieldId, current.version_bloqueo, value)
           const latest = syllabusRef.current
           if (latest) {
-            const versioned = { ...latest, version_bloqueo: saved.version_bloqueo }
+            const versioned = { ...latest, version_bloqueo: saved.version_bloqueo, state: saved.estado ?? latest.state }
             setSyllabus(dirtyFields.current.has(fieldId) ? versioned : withField(versioned, fieldId, { document: saved.document }))
           }
           if (!hasUnsavedChanges()) setSaveFailed(false)
@@ -607,14 +611,14 @@ export default function TeacherSyllabusDetailPage() {
 
         {syllabus ? (
           <>
-            {showBlockReason && syllabus.state === "sin_iniciar" ? (
+            {showBlockReason && !startedOf(syllabus) ? (
               <div className="edit-blocked">
                 <ProcessLockAlert title="Edición no disponible" message={editBlockReason ?? undefined} hideAction />
               </div>
             ) : null}
-            {syllabus.state !== "sin_iniciar" || pausedEdit ? (
+            {startedOf(syllabus) || pausedEdit ? (
               <div className={pausedEdit ? "mx-auto flex w-full max-w-screen-2xl min-w-0 flex-col gap-8" : "mx-auto flex w-full max-w-screen-2xl min-w-0 flex-col gap-8 pb-16"}>
-                {showBlockReason && EDITABLE_STATES.includes(syllabus.state) ? (
+                {showBlockReason && editableOf(syllabus) ? (
                   <div className="edit-blocked">
                     <ProcessLockAlert title="Edición no disponible" message={editBlockReason ?? undefined} hideAction />
                   </div>

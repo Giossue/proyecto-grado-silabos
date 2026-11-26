@@ -169,7 +169,7 @@ export function syllabusDetailStoreOn(executor: Executor): SyllabusDetailStore {
         Prisma.sql`select silabos.silabo_id as id, ${PARALLEL_CODE} as parallel, silabos.estado_silabo as state
           from silabos inner join paralelos paralelo on paralelo.paralelo_id = silabos.paralelo_id
           where silabos.convocatoria_carrera_id = ${syllabus.convocationId}::uuid and silabos.silabo_id <> ${syllabus.id}::uuid
-            and silabos.estado_silabo <> 'sin_iniciar' and paralelo.asignatura_id = ${syllabus.subjectId}::uuid
+            and (silabos.estado_silabo <> 'sin_iniciar' or silabos.iniciado_en is not null) and paralelo.asignatura_id = ${syllabus.subjectId}::uuid
             and ${currentTeacherSql(userId)} and ${SYLLABUS_EXISTS}`,
       )
       return rows.sort((left, right) => phpCompareStrings(left.parallel, right.parallel))

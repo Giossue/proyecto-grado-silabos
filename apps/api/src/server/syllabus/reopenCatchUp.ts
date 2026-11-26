@@ -232,7 +232,7 @@ export class ReopenCatchUp {
       const author = revision?.author ?? null
       return author !== null && author !== assignment.userId
     }
-    return syllabus.state === "borrador" && dataGet(syllabus.context, `${CLOSED_DOCUMENT}.identification.email`) !== assignment.email
+    return (syllabus.state === "borrador" || (syllabus.state === "sin_iniciar" && syllabus.started)) && dataGet(syllabus.context, `${CLOSED_DOCUMENT}.identification.email`) !== assignment.email
   }
 
   private async handovers(syllabi: PlannedSyllabus[], processId: string, finalized: boolean): Promise<string[]> {

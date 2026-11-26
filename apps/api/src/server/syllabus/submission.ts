@@ -17,7 +17,7 @@ import { canonicalHash } from "../documents/canonicalJson"
 import { SignatureRejected, signatureSettings, type SignatureSettings } from "../signatures/cmsVerifier"
 import { decisionSignatureFrom } from "../signatures/decisionSignature"
 import { signDecision, type SignatureTx, type Verifier } from "../signatures/signDecision"
-import { hasRole, isRunning, ROLE_TEACHER } from "./policy"
+import { editableState, hasRole, isRunning, ROLE_TEACHER } from "./policy"
 import { signingStatement, snapshotDefinition } from "./snapshotDocuments"
 import type { DetailSyllabus } from "./syllabusDetail"
 import { createSubmissionDeps } from "./submissionStore"
@@ -28,7 +28,7 @@ import { requireBound, type Binder } from "./boundSession"
 export type SubmissionSchedule = { convocationState: string; processState: string; startsOn: string; dueOn: string }
 export type KeyedRevision = { id: string; number: number; submittedBy: string }
 export type LatestRevision = { id: string; number: number; correctionStage: string | null }
-export type LockedSubmission = { id: string; state: string; version: number }
+export type LockedSubmission = { id: string; state: string; version: number; started?: boolean }
 export type Verification = { verifiedBy: string; verifiedAt: number; snapshot: unknown }
 
 export type RevisionRow = {
@@ -94,7 +94,6 @@ export function defaultSubmissionDeps(prisma: PrismaService): SubmissionDeps {
 
 const TEACHER = "docente"
 const SUBMIT_STATES = ["borrador", "correccion_solicitada", "en_revision"]
-const EDITABLE = ["borrador", "correccion_solicitada"]
 const CONFLICT = "El borrador cambió en otra sesión. Recarga antes de continuar."
 
 class Rejected extends Error {
@@ -121,7 +120,7 @@ function maySubmit(session: AppSession, syllabus: DetailSyllabus): boolean {
     session.activeRole?.careerId === syllabus.careerId &&
     syllabus.currentTeacher &&
     isRunning(syllabus) &&
-    SUBMIT_STATES.includes(syllabus.state)
+    (SUBMIT_STATES.includes(syllabus.state) || editableState(syllabus.state, syllabus.started === true))
   )
 }
 
@@ -139,7 +138,7 @@ function assertOpen(schedule: SubmissionSchedule, today: string): void {
 }
 
 async function assertSubmittable(original: Request, syllabus: DetailSyllabus, expected: number, deps: SubmissionDeps): Promise<void> {
-  if (!EDITABLE.includes(syllabus.state)) reject("syllabus", "El expediente no está listo para envío.")
+  if (!editableState(syllabus.state, syllabus.started === true)) reject("syllabus", "El expediente no está listo para envío.")
   const schedule = await deps.store.schedule(syllabus.id)
   if (schedule === null) throw new Missing(MODELS.convocation)
   assertOpen(schedule, deps.today())
@@ -256,7 +255,7 @@ export async function submitSyllabusFor(request: Request, auth: SubmissionBound,
       const again = await replay(await tx.revisionByKey(locked.id, key))
       if (again !== null) return again.number
       if (locked.version !== expected) conflict(original, locked.version)
-      if (!EDITABLE.includes(locked.state)) reject("syllabus", "La transición de envío ya no está permitida.")
+      if (!editableState(locked.state, locked.started === true)) reject("syllabus", "La transición de envío ya no está permitida.")
       const previous = await tx.lockLatestRevision(locked.id)
       const snapshot = await tx.snapshot(locked.id)
       const now = deps.now()

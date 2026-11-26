@@ -131,7 +131,7 @@ export const saveTeacherField = (
   version: number,
   value: unknown,
 ) =>
-  api<{ version_bloqueo: number; guardado_en: string | null; document: DocumentNode }>(
+  api<{ estado?: SyllabusDetail["state"]; version_bloqueo: number; guardado_en: string | null; document: DocumentNode }>(
     `/teacher/syllabi/${syllabusId}/fields/${fieldId}`,
     {
       method: "PATCH",

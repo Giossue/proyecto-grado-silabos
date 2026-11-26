@@ -371,7 +371,7 @@ export class InProgressWork {
   }
 
   async adaptToTemplate(syllabus: WorkSyllabus): Promise<void> {
-    if (syllabus.state === "sin_iniciar") {
+    if (syllabus.state === "sin_iniciar" && !syllabus.started) {
       await this.restartSyllabus(syllabus)
       return
     }

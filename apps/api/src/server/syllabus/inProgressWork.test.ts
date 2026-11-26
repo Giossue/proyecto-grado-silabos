@@ -148,3 +148,26 @@ describe("InProgressWork generation", () => {
     expect(inserts.at(-1)?.values.slice(2)).toEqual([FORMATION_FIELD_ID, JSON.stringify(formation), definitionHash(FORMATION_CONTENT)])
   })
 })
+
+describe("InProgressWork adapting to a new template", () => {
+  const workSyllabus = (started: boolean) => ({ id: SYLLABUS, convocationId: CONVOCATION, parallelId: PARALLEL, state: "sin_iniciar", context: {}, started, version: 1 })
+
+  it("restarts a syllabus nobody has opened yet", async () => {
+    const { db } = recordingDb(() => [])
+    const work = new InProgressWork(db, () => {})
+    const restarted: string[] = []
+    work.restartSyllabus = async (syllabus) => (restarted.push(syllabus.id), syllabus.id)
+    await work.adaptToTemplate(workSyllabus(false))
+    expect(restarted).toEqual([SYLLABUS])
+  })
+
+  it("adapts a syllabus the teacher opened, even if it is still not started, instead of restarting it", async () => {
+    const { db, statements } = recordingDb(() => [])
+    const work = new InProgressWork(db, () => {})
+    const restarted: string[] = []
+    work.restartSyllabus = async (syllabus) => (restarted.push(syllabus.id), syllabus.id)
+    await work.adaptToTemplate(workSyllabus(true)).catch(() => undefined)
+    expect(restarted).toEqual([])
+    expect(statements[0]?.text).toContain("from valores_campo where silabo_id")
+  })
+})

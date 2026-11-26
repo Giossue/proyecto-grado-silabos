@@ -25,7 +25,7 @@ import { MODELS } from "../http/models"
 import { requireBound, type Binder } from "./boundSession"
 import { fieldFingerprint } from "./teacherFields"
 
-export type LockedDraft = { id: string; state: string; version: number; subjectId: string }
+export type LockedDraft = { id: string; state: string; version: number; subjectId: string; started?: boolean }
 export type TeacherField = { id: string; responsible: string; content: unknown }
 
 export interface DraftStartTx {
@@ -137,6 +137,7 @@ export async function startDraftFor(request: Request, { session, syllabus }: Dra
         const locked = await tx.lockSyllabus(syllabus.id)
         if (locked === null) throw new Missing(MODELS.syllabus, syllabus.id)
         if (locked.state !== "sin_iniciar") throw new Rejected(validationError({ syllabus: ["El borrador ya fue iniciado o no está editable."] }))
+        if (locked.started === true) return payloadWithin(tx, request, session, locked.id, deps)
         const template = await tx.templateStore.template()
         if (template === null) throw new Missing(MODELS.template)
         const sourceId = await tx.previousPeriodSource(locked.id, locked.subjectId, session.user.id, template.modifiedAt)
@@ -146,7 +147,7 @@ export async function startDraftFor(request: Request, { session, syllabus }: Dra
         await tx.start(locked.id, now)
         return payloadWithin(tx, request, session, locked.id, deps)
       })
-      return apiJson(phpShape({ message: "Borrador iniciado con la plantilla y los datos maestros fijados.", syllabus: payload }))
+      return apiJson(phpShape({ message: "Sílabo preparado con la plantilla y los datos maestros fijados.", syllabus: payload }))
     })
 }
 

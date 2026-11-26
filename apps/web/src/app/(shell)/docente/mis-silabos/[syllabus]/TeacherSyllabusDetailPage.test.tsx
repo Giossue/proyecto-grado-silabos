@@ -619,19 +619,40 @@ describe("TeacherSyllabusDetailPage", () => {
     page.unmount()
   })
 
-  it("al abrir un sílabo sin iniciar, inicia el borrador solo y muestra el formulario", async () => {
-    const pending = syllabus("borrador")
-    pending.state = "sin_iniciar" as SyllabusDetail["state"]
+  it("al abrir un sílabo sin iniciar, lo prepara solo y muestra el formulario sin pasarlo a borrador", async () => {
+    const pending = { ...syllabus("borrador"), state: "sin_iniciar" as SyllabusDetail["state"], iniciado_en: null }
     vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: pending })
-    vi.mocked(startTeacherSyllabus).mockResolvedValue({ message: "Borrador iniciado", syllabus: syllabus("borrador") })
+    vi.mocked(startTeacherSyllabus).mockResolvedValue({ message: "Sílabo preparado", syllabus: { ...syllabus("borrador"), state: "sin_iniciar" } })
     const page = mountPage()
     await flush()
 
+    expect(startTeacherSyllabus).toHaveBeenCalledTimes(1)
     expect(startTeacherSyllabus).toHaveBeenCalledWith(pending.id)
+    expect(page.container.querySelector('[data-tour="page-header"]')!.textContent).toContain("Sin iniciar")
+    expect(page.container.querySelector('[data-tour="page-header"]')!.textContent).not.toContain("Borrador")
     expect(page.container.querySelector('[data-tour="page-header"]')!.textContent).toContain("Volver a mis sílabos")
     expect(buttonNamed(page, "Iniciar borrador")).toBeUndefined()
     expect(page.container.textContent).not.toContain("Listo para iniciar")
     expect(editorIds(page)).toHaveLength(1)
+    page.unmount()
+  })
+
+  it("un sílabo ya preparado sin iniciar se edita sin volver a prepararlo y pasa a «Borrador» con el primer cambio guardado", async () => {
+    vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: { ...syllabus("borrador", "docente"), state: "sin_iniciar" } })
+    vi.mocked(saveTeacherField).mockResolvedValue({ estado: "borrador", version_bloqueo: 3, guardado_en: null, document: doc("Texto nuevo") })
+    const page = mountPage()
+    await flush()
+
+    expect(startTeacherSyllabus).not.toHaveBeenCalled()
+    expect(editorIds(page)).toHaveLength(1)
+    const header = () => page.container.querySelector('[data-tour="page-header"]')!.textContent
+    expect(header()).toContain("Sin iniciar")
+    emitDocument(page, doc("Texto nuevo"))
+    await click(buttonNamed(page, "Vista previa")!)
+
+    expect(saveTeacherField).toHaveBeenCalledWith("syllabus-1", "field-1", 2, doc("Texto nuevo"))
+    expect(header()).toContain("Borrador")
+    expect(header()).not.toContain("Sin iniciar")
     page.unmount()
   })
 

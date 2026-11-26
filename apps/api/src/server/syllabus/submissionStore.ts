@@ -38,15 +38,15 @@ function submissionTx(executor: Executor, notifications: SubmissionTx["notificat
     notifications,
     librarians: () => recipients.librarians(),
     async lockSyllabus(id) {
-      const [row] = await rowsOf<{ id: string; state: string; version: number }>(
+      const [row] = await rowsOf<{ id: string; state: string; version: number; started: boolean }>(
         executor,
-        Prisma.sql`select silabos.silabo_id as id, silabos.estado_silabo as state, silabos.version_borrador as version from silabos
+        Prisma.sql`select silabos.silabo_id as id, silabos.estado_silabo as state, silabos.version_borrador as version, silabos.iniciado_en is not null as started from silabos
           where silabos.silabo_id = ${id}::uuid
             and exists (select convocatorias_carreras.convocatoria_carrera_id from convocatorias_carreras
               where convocatorias_carreras.convocatoria_carrera_id = silabos.convocatoria_carrera_id)
           limit 1 for update of silabos`,
       )
-      return row ? { id: row.id, state: row.state, version: Number(row.version) } : null
+      return row ? { id: row.id, state: row.state, version: Number(row.version), started: row.started === true } : null
     },
     revisionByKey: (syllabusId, key) => revisionByKey(executor, syllabusId, key),
     async lockLatestRevision(syllabusId) {

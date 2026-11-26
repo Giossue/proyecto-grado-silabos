@@ -21,7 +21,7 @@ export async function syllabusFacts(executor: Executor, id: string, userId: stri
         exists (select envios_biblioteca.envio_biblioteca_id from envios_biblioteca
           inner join revisiones_silabo on revisiones_silabo.revision_silabo_id = envios_biblioteca.revision_silabo_id
           where revisiones_silabo.silabo_id = silabos.silabo_id) as "hasLibrarySubmission",
-        paralelos.asignatura_id as "subjectId"
+        paralelos.asignatura_id as "subjectId", silabos.iniciado_en is not null as started
       from silabos
         inner join convocatorias_carreras on convocatorias_carreras.convocatoria_carrera_id = silabos.convocatoria_carrera_id
         inner join convocatorias_universidad on convocatorias_universidad.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id
@@ -60,13 +60,13 @@ function syllabusValue(syllabusId: string, fieldId: string): Prisma.Sql {
 function draftTx(executor: Executor): DraftFieldTx {
   return {
     async lockSyllabus(id) {
-      const [row] = await rowsOf<{ id: string; state: string; version: number; subjectId: string }>(
+      const [row] = await rowsOf<{ id: string; state: string; version: number; subjectId: string; started: boolean }>(
         executor,
-        Prisma.sql`select silabos.silabo_id as id, silabos.estado_silabo as state, silabos.version_borrador as version,
+        Prisma.sql`select silabos.silabo_id as id, silabos.estado_silabo as state, silabos.version_borrador as version, silabos.iniciado_en is not null as started,
             (select paralelos.asignatura_id from paralelos where paralelos.paralelo_id = silabos.paralelo_id) as "subjectId"
           from silabos where silabos.silabo_id = ${id}::uuid and ${SYLLABUS_EXISTS} limit 1 for update`,
       )
-      return row ? { id: row.id, state: row.state, version: Number(row.version), subjectId: row.subjectId } : null
+      return row ? { id: row.id, state: row.state, version: Number(row.version), subjectId: row.subjectId, started: row.started === true } : null
     },
     templateStore: createTemplateStore(executor),
     async values(syllabusId) {
@@ -92,8 +92,8 @@ function draftTx(executor: Executor): DraftFieldTx {
       await executor.$executeRaw`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo, huella_definicion_campo)
         values (${newId}::uuid, ${syllabusId}::uuid, ${fieldId}::uuid, ${value}, ${fingerprint})`
     },
-    async saveDraft(syllabusId, version, savedAt) {
-      await executor.$executeRaw`update silabos set version_borrador = ${version}, guardado_en = ${fromEpoch(savedAt)} where silabos.silabo_id = ${syllabusId}::uuid`
+    async saveDraft(syllabusId, version, savedAt, state) {
+      await executor.$executeRaw`update silabos set estado_silabo = ${state}, version_borrador = ${version}, guardado_en = ${fromEpoch(savedAt)} where silabos.silabo_id = ${syllabusId}::uuid`
     },
   }
 }

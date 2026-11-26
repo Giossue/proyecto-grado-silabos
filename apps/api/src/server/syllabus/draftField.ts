@@ -26,10 +26,10 @@ import {
   type TemplateDefinition,
 } from "../configuration/templateRuntime"
 import { createTemplateStore, type TemplateStore } from "../shared/templateStore"
-import type { PhpRecord } from "../configuration/phpValues"
+import { phpEquals, type PhpRecord } from "../configuration/phpValues"
 import { institutionToday } from "../shared/clock"
 import { identificationOf, type IdentificationSource } from "./identificationCard"
-import { mayEdit, type SyllabusFacts } from "./policy"
+import { editableState, mayEdit, type SyllabusFacts } from "./policy"
 import { createDraftFieldStore } from "./draftFieldStore"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
@@ -38,7 +38,7 @@ import { fieldFingerprint } from "./teacherFields"
 
 export type DraftSyllabus = SyllabusFacts & { subjectId: string }
 export type DraftFieldRecord = { id: string; templateId: string; responsible: string; content: unknown; key: string; live: boolean }
-export type LockedSyllabus = { id: string; state: string; version: number; subjectId: string }
+export type LockedSyllabus = { id: string; state: string; version: number; subjectId: string; started?: boolean }
 
 export interface DraftFieldTx {
   lockSyllabus(id: string): Promise<LockedSyllabus | null>
@@ -46,7 +46,7 @@ export interface DraftFieldTx {
   values(syllabusId: string): Promise<Map<string, unknown>>
   valueExists(syllabusId: string, fieldId: string): Promise<boolean>
   saveValue(syllabusId: string, fieldId: string, document: PhpRecord, newId: string, fingerprint: string): Promise<void>
-  saveDraft(syllabusId: string, version: number, savedAt: number): Promise<void>
+  saveDraft(syllabusId: string, version: number, savedAt: number, state: string): Promise<void>
 }
 
 export interface DraftFieldStore {
@@ -111,11 +111,20 @@ function conflict(request: Request, version: number): Response {
     : apiJson({ message: CONFLICT }, 409)
 }
 
-async function save(input: PhpArray, auth: DraftFieldBound, deps: DraftFieldDeps, tx: DraftFieldTx, original: Request): Promise<{ version: number; savedAt: number; definition: TemplateDefinition }> {
+function changesStored(template: unknown, stored: unknown, document: PhpRecord, definition: TemplateDefinition): boolean {
+  try {
+    return !phpEquals(fieldResponseNormalize(template, stored ?? template, definition), document)
+  } catch (error) {
+    if (error instanceof TemplateValidationError) return true
+    throw error
+  }
+}
+
+async function save(input: PhpArray, auth: DraftFieldBound, deps: DraftFieldDeps, tx: DraftFieldTx, original: Request): Promise<{ version: number; savedAt: number; state: string; definition: TemplateDefinition }> {
   const locked = await tx.lockSyllabus(auth.syllabus.id)
   if (locked === null) throw new Missing(MODELS.syllabus, auth.syllabus.id)
   if (locked.version !== phpIntCast(input.version_bloqueo)) throw new Rejected(conflict(original, locked.version))
-  if (!["borrador", "correccion_solicitada"].includes(locked.state)) reject("syllabus", "El expediente no está en estado editable.")
+  if (!editableState(locked.state, locked.started === true)) reject("syllabus", "El expediente no está en estado editable.")
   const template = await tx.templateStore.template()
   if (template === null) throw new Missing(MODELS.template)
   const definition = template.definition
@@ -130,8 +139,10 @@ async function save(input: PhpArray, auth: DraftFieldBound, deps: DraftFieldDeps
   const limit = limitAllowed(field.responsible) ? (fieldLimits(definition)[field.key] ?? null) : null
   const fieldTemplate = templates[field.id] ?? field.content
   const conditions = (values: Map<string, unknown>) => syllabusConditions(template, fieldConditions(definition), values, templates)
-  const storedValues = limit === null ? null : await tx.values(locked.id)
-  const before = storedValues === null ? 0 : fieldLimitCount(fieldTemplate, storedValues.get(field.id) ?? null, conditions(storedValues).answers, definition)
+  const notStarted = locked.state === "sin_iniciar"
+  const storedValues = limit === null && !notStarted ? null : await tx.values(locked.id)
+  const before = storedValues === null || limit === null ? 0 : fieldLimitCount(fieldTemplate, storedValues.get(field.id) ?? null, conditions(storedValues).answers, definition)
+  const state = notStarted && storedValues !== null && changesStored(fieldTemplate, storedValues.get(field.id), document, definition) ? "borrador" : locked.state
   await tx.saveValue(locked.id, field.id, document, deps.newId(), fieldFingerprint(field.content))
   if (limit !== null && storedValues !== null) {
     const after = conditions(new Map([...storedValues, [field.id, document]]))
@@ -140,8 +151,8 @@ async function save(input: PhpArray, auth: DraftFieldBound, deps: DraftFieldDeps
   }
   const version = locked.version + 1
   const savedAt = deps.now()
-  await tx.saveDraft(locked.id, version, savedAt)
-  return { version, savedAt, definition }
+  await tx.saveDraft(locked.id, version, savedAt, state)
+  return { version, savedAt, state, definition }
 }
 
 function documentErrors(value: PhpValue | undefined, definition: TemplateDefinition): Record<string, string[]> | null {
@@ -183,6 +194,7 @@ export async function updateDraftFieldFor(request: Request, auth: DraftFieldBoun
   const variables = resolveVariables(saved.definition, { identification: identificationOf(await deps.store.identification(auth.syllabus.id)) })
   return apiJson({
     message: "Borrador guardado.",
+    estado: saved.state,
     version_bloqueo: saved.version,
     guardado_en: isoFromSeconds(saved.savedAt),
     document: resolveDocument(normalizeFieldDocument(stored ?? auth.field.content, saved.definition), variables, saved.definition),
