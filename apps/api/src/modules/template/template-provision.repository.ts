@@ -19,7 +19,7 @@ export function provisionTxOn(db: Db): ProvisionTx {
         (await hasRows(db.secciones_plantilla.findMany({ where: { plantilla_id: templateId, vigente_en_plantilla: true }, select: { seccion_plantilla_id: true }, take: 1 }))) &&
         (await hasRows(
           db.campos_plantilla.findMany({
-            where: { plantilla_id: templateId, vigente_en_plantilla: true, secciones_plantilla_campos_plantilla_seccion_plantilla_idTosecciones_plantilla: { vigente_en_plantilla: true } },
+            where: { plantilla_id: templateId, vigente_en_plantilla: true, secciones_plantilla: { vigente_en_plantilla: true } },
             select: { campo_plantilla_id: true },
             take: 1,
           }),
@@ -45,11 +45,11 @@ export function provisionTxOn(db: Db): ProvisionTx {
           plantilla_id: templateId,
           vigente_en_plantilla: true,
           quien_llena_definicion_campo: { not: "institucional" },
-          campos_plantilla_definiciones_campo_campo_plantilla_idTocampos_plantilla: { vigente_en_plantilla: true },
+          campos_plantilla: { vigente_en_plantilla: true },
         },
-        select: { definicion_campo_id: true, campos_plantilla_definiciones_campo_campo_plantilla_idTocampos_plantilla: { select: { clave_campo_plantilla: true } } },
+        select: { definicion_campo_id: true, campos_plantilla: { select: { clave_campo_plantilla: true } } },
       })
-      return new Map(found.map((row) => [row.campos_plantilla_definiciones_campo_campo_plantilla_idTocampos_plantilla.clave_campo_plantilla, row.definicion_campo_id]))
+      return new Map(found.map((row) => [row.campos_plantilla.clave_campo_plantilla, row.definicion_campo_id]))
     },
     async moveSubjectValues(from, to) {
       await db.valores_campo.updateMany({ where: { definicion_campo_id: from, asignatura_id: { not: null } }, data: { definicion_campo_id: to } })

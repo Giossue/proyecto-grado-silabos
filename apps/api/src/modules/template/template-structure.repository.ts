@@ -22,10 +22,10 @@ export async function syncDocumentOn(db: Db, templateId: string, sections: Docum
   await db.secciones_plantilla.updateMany({ where: { plantilla_id: templateId, seccion_plantilla_id: { notIn: sectionIds } }, data: { vigente_en_plantilla: false } })
   await db.definiciones_campo.deleteMany({ where: { plantilla_id: templateId, vigente_en_plantilla: false, valores_campo: { none: {} } } })
   await db.campos_plantilla.deleteMany({
-    where: { plantilla_id: templateId, vigente_en_plantilla: false, definiciones_campo_definiciones_campo_campo_plantilla_idTocampos_plantilla: { is: null } },
+    where: { plantilla_id: templateId, vigente_en_plantilla: false, definiciones_campo: { none: {} } },
   })
   await db.secciones_plantilla.deleteMany({
-    where: { plantilla_id: templateId, vigente_en_plantilla: false, campos_plantilla_campos_plantilla_seccion_plantilla_idTosecciones_plantilla: { none: {} } },
+    where: { plantilla_id: templateId, vigente_en_plantilla: false, campos_plantilla: { none: {} } },
   })
   for (const [sectionIndex, section] of sections.entries()) {
     const values = {

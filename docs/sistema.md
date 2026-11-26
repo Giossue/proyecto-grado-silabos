@@ -114,7 +114,6 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 |---|---|
 | Estructura académica | `facultades`, `carreras`, `periodos_academicos`, `asignaturas`, `requisitos_asignatura`, `paralelos` |
 | Personas y roles | `usuarios`, `asignaciones_rol`, `asignaciones_paralelo`, `invitaciones_activacion`, `restablecimientos_contrasena` |
-| Sesiones (Better Auth) | `sesiones_usuario`, `cuentas_usuario`, `verificaciones_usuario`, `dos_factores_usuario` |
 | Plantilla del sílabo | `plantilla_silabo`, `secciones_plantilla`, `campos_plantilla`, `definiciones_campo` |
 | Proceso del período | `convocatorias_universidad` (institucional), `convocatorias_carreras` (por carrera) |
 | Sílabos | `silabos`, `valores_campo`, `revisiones_silabo`, `envios_biblioteca`, `revisiones_coordinacion`, `aprobaciones`, `firmas_silabo` |
@@ -127,13 +126,18 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
   - claves foráneas;
   - restricciones `CHECK` (estados, jornadas, rangos);
   - índices únicos;
-  - una vista: `docentes_vigentes_silabo`.
+  - una vista: `docentes_vigentes_silabo`;
+  - las firmas quedan atadas a su versión con la clave foránea compuesta `firmas_silabo (revision_silabo_id, silabo_id)` → `revisiones_silabo`, así una firma no puede apuntar a una versión de otro sílabo;
+  - los triggers `comprobar_coordinacion_activa_unica` y `comprobar_administrador_exclusivo` toman un bloqueo (`pg_advisory_xact_lock`) por carrera o por usuario antes de comprobar, así dos asignaciones simultáneas no pasan las dos.
+- **Nombres en la base:** clave primaria `<tabla>_pkey`, clave foránea `<tabla>_<columnas>_fk`, único `<tabla>_<columnas>_unica`, índice `<tabla>_<columnas>_idx` y `CHECK` `<tabla>_<regla>_check`. Si el nombre pasa de 63 caracteres o el índice es parcial o de expresión, la parte del medio describe la regla (por ejemplo `asignaciones_rol_activa_unica`).
+- **Auditoría:** las tablas que cambian tienen `creado_en` y `actualizado_en` (`timestamptz`, por omisión `now()`); `actualizado_en` lo pone el trigger `marcar_actualizado_en` en cada `UPDATE` que cambia la fila. Si la tabla ya tenía su fecha de creación (`asignado_en`, `subido_en`, `solicitado_en`, `creada_en`, `enviado_en`, `notificado_en`), solo se agregó `actualizado_en`; `ajustes_sistema` ya tenía `modificado_en` y solo recibió `creado_en`. No las tienen las tablas que no se modifican (`aprobaciones`, `firmas_silabo`, `revisiones_coordinacion`, `revisiones_silabo`, `envios_biblioteca`, `archivos`) ni las de Better Auth, que usan `created_at`/`updated_at`.
 - **Cada envío de sílabo** guarda una **instantánea** del contenido y su **SHA-256**. Lo aprobado no cambia.
 - **Formación del docente:** es el campo `formacion_docente` de la sección «Identificación» de la plantilla. Lo llena el docente en cada sílabo; la definición de la plantilla lo marca en `teacher_fields`, así que no aparece en el perfil de la asignatura de Coordinación ni en la ficha en Excel. En el Word y el PDF sale en la misma fila de la tabla de identificación (variable `formacion_docente`), no como bloque aparte. Es obligatorio para enviar.
 - **Campus y correquisitos del docente:** la base ya no guarda el campus de la facultad ni correquisitos (todo requisito de la malla es un prerrequisito de un ciclo anterior). Los campos `nombre_campus` y `correquisitos_asignatura` de la sección «Identificación» son campos del docente, como `formacion_docente`: están en `teacher_fields`, salen en la tabla de identificación (fuentes `identification.teacher_campus` y `identification.teacher_corequisites`) y el campus se arrastra del sílabo anterior del docente; los correquisitos no, porque dependen de la asignatura. Los sílabos creados antes conservan lo que mostraban.
 - **Arrastre entre sílabos:** cada valor guarda en `valores_campo.huella_definicion_campo` el SHA-256 de la definición del campo con la que se escribió. Al generar o iniciar un sílabo, si un campo del docente está vacío, toma lo último que escribió cada docente vigente en ese mismo campo (cualquier materia o período, por `silabos.guardado_en`), siempre que la definición no haya cambiado. Si hay varios docentes, sus textos van uno debajo del otro, sin repetir.
 - **Estado al abrir un sílabo:** al abrirlo por primera vez, la API (`POST /teacher/syllabi/{id}/start`) lo prepara: copia lo del período anterior, arrastra los campos del docente y fija `silabos.iniciado_en`, pero lo deja en `sin_iniciar`. Pasa a `borrador` con el primer guardado de un campo que cambia lo guardado (o con «Copiar desde otro paralelo»); guardar el mismo valor no lo cambia. Un sílabo `sin_iniciar` con `iniciado_en` ya se puede editar, validar y enviar, y para el resto del sistema (plantilla nueva, cambio de docente al reabrir, copiar desde otro paralelo, protección al eliminar) cuenta como empezado.
 - **Migración `20261125220000_formacion_como_campo`:** agrega el campo y la huella, pasa la formación que estaba en `usuarios` a los sílabos vivos (los enviados o aprobados toman la de su última versión enviada), llena las huellas y elimina `usuarios.formacion_experiencia_usuario`. No toca versiones, aprobaciones ni instantáneas.
+- **Migraciones `20261126010000_limpiar_restos_y_relaciones`, `20261126010100_nombres_uniformes` y `20261126010200_auditoria_y_bloqueos`:** la primera borra lo que quedaba del sistema anterior (tabla `sesiones`, `usuarios.codigo_recordarme`, esquema `drizzle`), las sesiones y verificaciones vencidas, las claves foráneas repetidas de `campos_plantilla` y `definiciones_campo` (quedan las compuestas, con `RESTRICT`, que era lo que ya se aplicaba) y tres índices redundantes, y agrega la clave compuesta de las firmas y los índices de `notificaciones.periodo_academico_id` y `sesiones_usuario.active_role_assignment_id`; la segunda solo cambia nombres de restricciones, índices y de la función `impedir_cambio_periodo_con_convocatorias_carrera`; la tercera agrega los bloqueos y las columnas de auditoría. Las filas que ya existían quedaron con `creado_en` y `actualizado_en` iguales a la fecha de la migración, no a su fecha real.
 - **Migraciones `20261126000000_quitar_campus_y_correquisitos` y `20261126000100_campus_y_correquisitos_como_campo`:** la primera borra los correquisitos y quita `requisitos_asignatura.tipo_requisito_asignatura` y `facultades.campus_facultad`; la segunda cambia las fuentes en las plantillas guardadas, agrega los dos campos del docente y los llena en los sílabos existentes con lo que ya mostraban (los enviados o aprobados, con su última versión enviada).
 
 ---
@@ -180,7 +184,8 @@ Rutas públicas fuera de la API: `/logos/institucion`, `/logos/facultad/:id`, `/
   - en la base de datos, con cookie `HttpOnly`;
   - duración configurable (`SESSION_LIFETIME`; hoy 240 minutos, previsto bajar a 30);
   - sin «mantener sesión iniciada»;
-  - se cierran todas al restablecer la contraseña.
+  - se cierran todas al restablecer la contraseña;
+  - cada vez que se abre una sesión se borran las sesiones y verificaciones vencidas de todos los usuarios (no hay trabajos programados en la cola, así que la limpieza va en el ingreso).
 - **CSRF y orígenes:** solo se aceptan peticiones desde los dominios configurados (`STATEFUL_DOMAINS`).
 - **Permisos:**
   - por rol y por carrera, verificados en el servidor en cada endpoint;

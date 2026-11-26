@@ -108,6 +108,13 @@ export function createAuth(database: BetterAuthOptions["database"], settings: Au
             const user = await context?.context.internalAdapter.findUserById(session.userId)
             if (!user || (user as { active?: unknown }).active === false) throw APIError.from("FORBIDDEN", { message: INACTIVE_ACCOUNT, code: "ACCOUNT_INACTIVE" })
           },
+          after: async (_session, context) => {
+            const adapter = context?.context.adapter
+            if (!adapter) return
+            const expired = [{ field: "expiresAt", operator: "lt" as const, value: new Date() }]
+            await adapter.deleteMany({ model: "session", where: expired })
+            await adapter.deleteMany({ model: "verification", where: expired })
+          },
         },
       },
     },

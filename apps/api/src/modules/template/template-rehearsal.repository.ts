@@ -42,9 +42,9 @@ export function rehearsalReadsOn(db: Db): RehearsalReads {
       if (fieldIds.length === 0) return new Map()
       const found = await db.definiciones_campo.findMany({
         where: { definicion_campo_id: { in: fieldIds } },
-        select: { definicion_campo_id: true, campos_plantilla_definiciones_campo_campo_plantilla_idTocampos_plantilla: { select: { clave_campo_plantilla: true } } },
+        select: { definicion_campo_id: true, campos_plantilla: { select: { clave_campo_plantilla: true } } },
       })
-      return new Map(found.map((row) => [row.definicion_campo_id, row.campos_plantilla_definiciones_campo_campo_plantilla_idTocampos_plantilla.clave_campo_plantilla]))
+      return new Map(found.map((row) => [row.definicion_campo_id, row.campos_plantilla.clave_campo_plantilla]))
     },
     store: createTemplateStore(db),
   }

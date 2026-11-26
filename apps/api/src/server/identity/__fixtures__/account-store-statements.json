@@ -29,7 +29,7 @@
  ],
  "insertAccount": [
   {
-   "text": "insert into \"usuarios\" (\"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"correo_verificado_en\", \"contrasena\", \"usuario_activo\", \"codigo_recordarme\", \"secreto_dos_factores\", \"codigos_recuperacion_dos_factores\", \"dos_factores_confirmado_en\", \"preferencias_correo_usuario\") values ($1, $2, $3, $4, $5, $6, default, default, default, default, default)",
+   "text": "insert into \"usuarios\" (\"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"correo_verificado_en\", \"contrasena\", \"usuario_activo\", \"secreto_dos_factores\", \"codigos_recuperacion_dos_factores\", \"dos_factores_confirmado_en\", \"preferencias_correo_usuario\") values ($1, $2, $3, $4, $5, $6, default, default, default, default)",
    "values": [
     "01a1c5ba-0000-7000-8000-000000000099",
     "Ana",

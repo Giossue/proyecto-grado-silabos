@@ -15,26 +15,27 @@ model ajustes_sistema {
   valor_ajuste   Json
   modificado_por String?   @db.Uuid
   modificado_en  DateTime  @default(now()) @db.Timestamptz(0)
-  usuarios       usuarios? @relation(fields: [modificado_por], references: [usuario_id], onUpdate: NoAction, map: "ajustes_sistema_modificado_por_foreign")
+  creado_en      DateTime  @default(now()) @db.Timestamptz(6)
+  usuarios       usuarios? @relation(fields: [modificado_por], references: [usuario_id], onUpdate: NoAction, map: "ajustes_sistema_modificado_por_fk")
 
-  @@index([modificado_por], map: "ajustes_sistema_modificado_por_index")
+  @@index([modificado_por])
 }
 
 model aprobaciones {
   aprobacion_id          String            @id @db.Uuid
-  revision_silabo_id     String            @unique(map: "aprobaciones_revision_silabo_id_unique") @db.Uuid
+  revision_silabo_id     String            @unique(map: "aprobaciones_revision_silabo_id_unica") @db.Uuid
   clave_solicitud        String            @db.Uuid
   hash_contenido         String            @db.Char(64)
   aprobado_por           String            @db.Uuid
   aprobado_en            DateTime          @db.Timestamptz(0)
   aprobacion_anterior_id String?           @db.Uuid
-  aprobaciones           aprobaciones?     @relation("aprobacionesToaprobaciones", fields: [aprobacion_anterior_id], references: [aprobacion_id], onDelete: Restrict, onUpdate: NoAction, map: "aprobaciones_aprobacion_anterior_id_foreign")
+  aprobaciones           aprobaciones?     @relation("aprobacionesToaprobaciones", fields: [aprobacion_anterior_id], references: [aprobacion_id], onDelete: Restrict, onUpdate: NoAction, map: "aprobaciones_aprobacion_anterior_id_fk")
   other_aprobaciones     aprobaciones[]    @relation("aprobacionesToaprobaciones")
-  usuarios               usuarios          @relation(fields: [aprobado_por], references: [usuario_id], onUpdate: NoAction, map: "aprobaciones_aprobado_por_foreign")
-  revisiones_silabo      revisiones_silabo @relation(fields: [revision_silabo_id], references: [revision_silabo_id], onUpdate: NoAction, map: "aprobaciones_revision_silabo_id_foreign")
+  usuarios               usuarios          @relation(fields: [aprobado_por], references: [usuario_id], onUpdate: NoAction, map: "aprobaciones_aprobado_por_fk")
+  revisiones_silabo      revisiones_silabo @relation(fields: [revision_silabo_id], references: [revision_silabo_id], onUpdate: NoAction, map: "aprobaciones_revision_silabo_id_fk")
 
-  @@index([aprobacion_anterior_id], map: "aprobaciones_aprobacion_anterior_id_index")
-  @@index([aprobado_por], map: "aprobaciones_aprobado_por_index")
+  @@index([aprobacion_anterior_id])
+  @@index([aprobado_por])
 }
 
 model archivos {
@@ -48,28 +49,29 @@ model archivos {
   categoria                                                    String                @db.VarChar(80)
   subido_por                                                   String?               @db.Uuid
   almacenado_en                                                DateTime              @db.Timestamptz(0)
-  usuarios                                                     usuarios?             @relation(fields: [subido_por], references: [usuario_id], onDelete: Restrict, onUpdate: NoAction, map: "archivos_subido_por_foreign")
+  usuarios                                                     usuarios?             @relation(fields: [subido_por], references: [usuario_id], onDelete: Restrict, onUpdate: NoAction, map: "archivos_subido_por_fk")
   documentos_apoyo_documentos_apoyo_archivo_idToarchivos       documentos_apoyo?     @relation("documentos_apoyo_archivo_idToarchivos")
   documentos_apoyo_documentos_apoyo_archivo_vista_idToarchivos documentos_apoyo[]    @relation("documentos_apoyo_archivo_vista_idToarchivos")
   exportaciones_silabo                                         exportaciones_silabo?
   facultades                                                   facultades[]
 
-  @@unique([disco, ruta_archivo], map: "archivos_disco_ruta_archivo_unique")
-  @@index([categoria, almacenado_en], map: "archivos_categoria_almacenado_en_index")
-  @@index([hash_archivo], map: "archivos_hash_archivo_index")
-  @@index([subido_por], map: "archivos_subido_por_index")
+  @@unique([disco, ruta_archivo], map: "archivos_disco_ruta_archivo_unica")
+  @@index([categoria, almacenado_en])
+  @@index([hash_archivo])
+  @@index([subido_por])
 }
 
 model asignaciones_paralelo {
   asignacion_paralelo_id     String           @id @db.Uuid
-  paralelo_id                String           @unique(map: "asignaciones_paralelo_paralelo_activo_unico", where: raw("asignacion_paralelo_activa")) @db.Uuid
+  paralelo_id                String           @unique(map: "asignaciones_paralelo_paralelo_activo_unica", where: raw("asignacion_paralelo_activa")) @db.Uuid
   asignacion_paralelo_activa Boolean          @default(true)
   asignado_en                DateTime         @default(now()) @db.Timestamptz(0)
   asignacion_rol_id          String           @db.Uuid
-  asignaciones_rol           asignaciones_rol @relation(fields: [asignacion_rol_id], references: [asignacion_rol_id], onUpdate: NoAction, map: "asignaciones_paralelo_asignacion_rol_id_foreign")
-  paralelos                  paralelos        @relation(fields: [paralelo_id], references: [paralelo_id], onUpdate: NoAction, map: "asignaciones_paralelo_paralelo_id_foreign")
+  actualizado_en             DateTime         @default(now()) @db.Timestamptz(6)
+  asignaciones_rol           asignaciones_rol @relation(fields: [asignacion_rol_id], references: [asignacion_rol_id], onUpdate: NoAction, map: "asignaciones_paralelo_asignacion_rol_id_fk")
+  paralelos                  paralelos        @relation(fields: [paralelo_id], references: [paralelo_id], onUpdate: NoAction, map: "asignaciones_paralelo_paralelo_id_fk")
 
-  @@index([asignacion_rol_id, asignacion_paralelo_activa], map: "asignaciones_paralelo_activa_idx")
+  @@index([asignacion_rol_id, asignacion_paralelo_activa], map: "asignaciones_paralelo_asignacion_rol_activa_idx")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -81,12 +83,13 @@ model asignaciones_rol {
   asignacion_rol_activa Boolean                 @default(true)
   asignado_en           DateTime                @default(now()) @db.Timestamptz(0)
   rol                   String                  @db.VarChar(20)
+  actualizado_en        DateTime                @default(now()) @db.Timestamptz(6)
   asignaciones_paralelo asignaciones_paralelo[]
-  carreras              carreras?               @relation(fields: [carrera_id], references: [carrera_id], onDelete: Restrict, onUpdate: NoAction, map: "asignaciones_rol_carrera_id_foreign")
-  usuarios              usuarios                @relation(fields: [usuario_id], references: [usuario_id], onUpdate: NoAction, map: "asignaciones_rol_usuario_id_foreign")
+  carreras              carreras?               @relation(fields: [carrera_id], references: [carrera_id], onDelete: Restrict, onUpdate: NoAction, map: "asignaciones_rol_carrera_id_fk")
+  usuarios              usuarios                @relation(fields: [usuario_id], references: [usuario_id], onUpdate: NoAction, map: "asignaciones_rol_usuario_id_fk")
   sesiones_usuario      sesiones_usuario[]
 
-  @@index([carrera_id], map: "asignaciones_rol_carrera_id_index")
+  @@index([carrera_id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -107,51 +110,54 @@ model asignaturas {
   carrera_id                                                             String                  @db.Uuid
   total_horas_asignatura                                                 Int?                    @default(dbgenerated("(round(((COALESCE(horas_docencia, (0)::numeric) + COALESCE(horas_practicas, (0)::numeric)) + COALESCE(horas_autonomas, (0)::numeric))))::smallint")) @db.SmallInt
   genera_silabo_asignatura                                               Boolean                 @default(true)
-  carreras                                                               carreras                @relation(fields: [carrera_id], references: [carrera_id], onUpdate: NoAction, map: "asignaturas_carrera_id_foreign")
+  creado_en                                                              DateTime                @default(now()) @db.Timestamptz(6)
+  actualizado_en                                                         DateTime                @default(now()) @db.Timestamptz(6)
+  carreras                                                               carreras                @relation(fields: [carrera_id], references: [carrera_id], onUpdate: NoAction, map: "asignaturas_carrera_id_fk")
   paralelos                                                              paralelos[]
   requisitos_asignatura_requisitos_asignatura_asignatura_idToasignaturas requisitos_asignatura[] @relation("requisitos_asignatura_asignatura_idToasignaturas")
   requisitos_asignatura_requisitos_asignatura_requisito_idToasignaturas  requisitos_asignatura[] @relation("requisitos_asignatura_requisito_idToasignaturas")
   valores_campo                                                          valores_campo[]
 
-  @@unique([carrera_id, codigo_asignatura], map: "asignaturas_carrera_id_codigo_asignatura_unique")
-  @@unique([asignatura_id, carrera_id], map: "asignaturas_identidad_carrera_unica")
+  @@unique([carrera_id, codigo_asignatura], map: "asignaturas_carrera_id_codigo_asignatura_unica")
 }
 
 model campos_plantilla {
-  campo_plantilla_id                                                                          String               @id @db.Uuid
-  seccion_plantilla_id                                                                        String               @db.Uuid
-  plantilla_id                                                                                String               @db.Uuid
-  clave_campo_plantilla                                                                       String               @db.VarChar(120)
-  titulo_campo_plantilla                                                                      String               @default("") @db.VarChar(180)
-  posicion_campo_plantilla                                                                    Int                  @db.SmallInt
-  vigente_en_plantilla                                                                        Boolean              @default(true)
-  plantilla_silabo                                                                            plantilla_silabo     @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "campos_plantilla_plantilla_id_foreign")
-  secciones_plantilla_campos_plantilla_seccion_plantilla_id_plantilla_idTosecciones_plantilla secciones_plantilla  @relation("campos_plantilla_seccion_plantilla_id_plantilla_idTosecciones_plantilla", fields: [seccion_plantilla_id, plantilla_id], references: [seccion_plantilla_id, plantilla_id], onUpdate: NoAction, map: "campos_plantilla_seccion_misma_plantilla_foreign")
-  secciones_plantilla_campos_plantilla_seccion_plantilla_idTosecciones_plantilla              secciones_plantilla  @relation("campos_plantilla_seccion_plantilla_idTosecciones_plantilla", fields: [seccion_plantilla_id], references: [seccion_plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "campos_plantilla_seccion_plantilla_id_foreign")
-  definiciones_campo_definiciones_campo_campo_plantilla_id_plantilla_idTocampos_plantilla     definiciones_campo[] @relation("definiciones_campo_campo_plantilla_id_plantilla_idTocampos_plantilla")
-  definiciones_campo_definiciones_campo_campo_plantilla_idTocampos_plantilla                  definiciones_campo?  @relation("definiciones_campo_campo_plantilla_idTocampos_plantilla")
+  campo_plantilla_id       String               @id @db.Uuid
+  seccion_plantilla_id     String               @db.Uuid
+  plantilla_id             String               @db.Uuid
+  clave_campo_plantilla    String               @db.VarChar(120)
+  titulo_campo_plantilla   String               @default("") @db.VarChar(180)
+  posicion_campo_plantilla Int                  @db.SmallInt
+  vigente_en_plantilla     Boolean              @default(true)
+  creado_en                DateTime             @default(now()) @db.Timestamptz(6)
+  actualizado_en           DateTime             @default(now()) @db.Timestamptz(6)
+  plantilla_silabo         plantilla_silabo     @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "campos_plantilla_plantilla_id_fk")
+  secciones_plantilla      secciones_plantilla  @relation(fields: [seccion_plantilla_id, plantilla_id], references: [seccion_plantilla_id, plantilla_id], onUpdate: NoAction, map: "campos_plantilla_seccion_plantilla_id_plantilla_id_fk")
+  definiciones_campo       definiciones_campo[]
 
-  @@unique([campo_plantilla_id, plantilla_id], map: "campos_plantilla_id_plantilla_unica")
+  @@unique([campo_plantilla_id, plantilla_id], map: "campos_plantilla_campo_plantilla_id_plantilla_id_unica")
   @@unique([plantilla_id, clave_campo_plantilla], map: "campos_plantilla_vigente_clave_unica", where: raw("vigente_en_plantilla"))
-  @@index([seccion_plantilla_id, posicion_campo_plantilla], map: "campos_plantilla_seccion_plantilla_id_posicion_index")
+  @@index([seccion_plantilla_id, posicion_campo_plantilla], map: "campos_plantilla_seccion_plantilla_id_posicion_idx")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model carreras {
   carrera_id             String                   @id @db.Uuid
   facultad_id            String                   @db.Uuid
-  codigo_carrera         String                   @unique(map: "carreras_codigo_carrera_unique") @db.VarChar(80)
+  codigo_carrera         String                   @unique(map: "carreras_codigo_carrera_unica") @db.VarChar(80)
   nombre_carrera         String                   @db.VarChar(180)
   carrera_activa         Boolean                  @default(true)
   modalidad_carrera      modalidad_estudio?
   numero_ciclos          Int                      @db.SmallInt
+  creado_en              DateTime                 @default(now()) @db.Timestamptz(6)
+  actualizado_en         DateTime                 @default(now()) @db.Timestamptz(6)
   asignaciones_rol       asignaciones_rol[]
   asignaturas            asignaturas[]
-  facultades             facultades               @relation(fields: [facultad_id], references: [facultad_id], onUpdate: NoAction, map: "carreras_facultad_id_foreign")
+  facultades             facultades               @relation(fields: [facultad_id], references: [facultad_id], onUpdate: NoAction, map: "carreras_facultad_id_fk")
   convocatorias_carreras convocatorias_carreras[]
   documentos_apoyo       documentos_apoyo[]
 
-  @@index([facultad_id], map: "carreras_facultad_id_index")
+  @@index([facultad_id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -161,13 +167,15 @@ model convocatorias_carreras {
   estado_convocatoria_carrera               String                    @default("preparacion") @db.VarChar(24)
   convocatoria_universidad_id               String                    @db.Uuid
   estado_previo_cierre_convocatoria_carrera String?                   @db.VarChar(24)
-  carreras                                  carreras                  @relation(fields: [carrera_id], references: [carrera_id], onUpdate: NoAction, map: "convocatorias_carreras_carrera_id_foreign")
-  convocatorias_universidad                 convocatorias_universidad @relation(fields: [convocatoria_universidad_id], references: [convocatoria_universidad_id], onUpdate: NoAction, map: "convocatorias_carreras_convocatoria_universidad_id_foreign")
+  creado_en                                 DateTime                  @default(now()) @db.Timestamptz(6)
+  actualizado_en                            DateTime                  @default(now()) @db.Timestamptz(6)
+  carreras                                  carreras                  @relation(fields: [carrera_id], references: [carrera_id], onUpdate: NoAction, map: "convocatorias_carreras_carrera_id_fk")
+  convocatorias_universidad                 convocatorias_universidad @relation(fields: [convocatoria_universidad_id], references: [convocatoria_universidad_id], onUpdate: NoAction, map: "convocatorias_carreras_convocatoria_universidad_id_fk")
   silabos                                   silabos[]
 
-  @@unique([carrera_id, convocatoria_universidad_id], map: "convocatorias_carreras_carrera_proceso_unico")
-  @@index([carrera_id, estado_convocatoria_carrera], map: "convocatorias_carreras_carrera_id_estado_index")
-  @@index([convocatoria_universidad_id], map: "convocatorias_carreras_proceso_id_index")
+  @@unique([carrera_id, convocatoria_universidad_id], map: "convocatorias_carreras_carrera_id_convocatoria_unica")
+  @@index([carrera_id, estado_convocatoria_carrera], map: "convocatorias_carreras_carrera_id_estado_idx")
+  @@index([convocatoria_universidad_id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -177,12 +185,14 @@ model convocatorias_universidad {
   fecha_inicio                    DateTime                 @db.Timestamptz(0)
   fecha_entrega                   DateTime                 @db.Timestamptz(0)
   estado_convocatoria_universidad String                   @default("abierto") @db.VarChar(20)
-  periodo_academico_id            String                   @unique(map: "convocatorias_universidad_periodo_unico") @db.Uuid
+  periodo_academico_id            String                   @unique(map: "convocatorias_universidad_periodo_academico_id_unica") @db.Uuid
   pausado_en                      DateTime?                @db.Timestamptz(6)
   cantidad_prorrogas              Int                      @default(0)
   finalizada_en                   DateTime?                @db.Timestamptz(6)
+  creado_en                       DateTime                 @default(now()) @db.Timestamptz(6)
+  actualizado_en                  DateTime                 @default(now()) @db.Timestamptz(6)
   convocatorias_carreras          convocatorias_carreras[]
-  periodos_academicos             periodos_academicos      @relation(fields: [periodo_academico_id], references: [periodo_academico_id], onUpdate: NoAction, map: "convocatorias_universidad_periodo_academico_id_foreign")
+  periodos_academicos             periodos_academicos      @relation(fields: [periodo_academico_id], references: [periodo_academico_id], onUpdate: NoAction, map: "convocatorias_universidad_periodo_academico_id_fk")
 }
 
 model cuentas_usuario {
@@ -199,26 +209,27 @@ model cuentas_usuario {
   password                 String?
   created_at               DateTime  @default(now()) @db.Timestamptz(6)
   updated_at               DateTime  @default(now()) @db.Timestamptz(6)
-  usuarios                 usuarios  @relation(fields: [user_id], references: [usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "cuentas_usuario_user_id_usuarios_usuario_id_fk")
+  usuarios                 usuarios  @relation(fields: [user_id], references: [usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "cuentas_usuario_user_id_fk")
 
-  @@unique([provider_id, account_id], map: "cuentas_usuario_provider_account_unique")
-  @@index([user_id], map: "cuentas_usuario_user_id_index")
+  @@unique([provider_id, account_id], map: "cuentas_usuario_provider_id_account_id_unica")
+  @@index([user_id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model definiciones_campo {
-  definicion_campo_id                                                                   String           @id @db.Uuid
-  campo_plantilla_id                                                                    String           @unique(map: "definiciones_campo_campo_unico") @db.Uuid
-  plantilla_id                                                                          String           @db.Uuid
-  vigente_en_plantilla                                                                  Boolean          @default(true)
-  quien_llena_definicion_campo                                                          String           @default("carrera") @db.VarChar(20)
-  contenido_definicion_campo                                                            Json             @default("{\"type\": \"doc\", \"content\": [{\"type\": \"paragraph\"}]}")
-  campos_plantilla_definiciones_campo_campo_plantilla_id_plantilla_idTocampos_plantilla campos_plantilla @relation("definiciones_campo_campo_plantilla_id_plantilla_idTocampos_plantilla", fields: [campo_plantilla_id, plantilla_id], references: [campo_plantilla_id, plantilla_id], onUpdate: NoAction, map: "definiciones_campo_campo_misma_plantilla_foreign")
-  campos_plantilla_definiciones_campo_campo_plantilla_idTocampos_plantilla              campos_plantilla @relation("definiciones_campo_campo_plantilla_idTocampos_plantilla", fields: [campo_plantilla_id], references: [campo_plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "definiciones_campo_campo_plantilla_id_foreign")
-  plantilla_silabo                                                                      plantilla_silabo @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "definiciones_campo_plantilla_id_foreign")
-  valores_campo                                                                         valores_campo[]
+  definicion_campo_id          String           @id @db.Uuid
+  campo_plantilla_id           String           @unique(map: "definiciones_campo_campo_plantilla_id_unica") @db.Uuid
+  plantilla_id                 String           @db.Uuid
+  vigente_en_plantilla         Boolean          @default(true)
+  quien_llena_definicion_campo String           @default("carrera") @db.VarChar(20)
+  contenido_definicion_campo   Json             @default("{\"type\": \"doc\", \"content\": [{\"type\": \"paragraph\"}]}")
+  creado_en                    DateTime         @default(now()) @db.Timestamptz(6)
+  actualizado_en               DateTime         @default(now()) @db.Timestamptz(6)
+  campos_plantilla             campos_plantilla @relation(fields: [campo_plantilla_id, plantilla_id], references: [campo_plantilla_id, plantilla_id], onUpdate: NoAction, map: "definiciones_campo_campo_plantilla_id_plantilla_id_fk")
+  plantilla_silabo             plantilla_silabo @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "definiciones_campo_plantilla_id_fk")
+  valores_campo                valores_campo[]
 
-  @@index([plantilla_id], map: "definiciones_campo_plantilla_id_index")
+  @@index([plantilla_id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -226,52 +237,53 @@ model documentos_apoyo {
   documento_apoyo_id                                   String    @id @db.Uuid
   carrera_id                                           String    @db.Uuid
   titulo_documento                                     String    @db.VarChar(180)
-  archivo_id                                           String    @unique(map: "documentos_apoyo_archivo_id_unique") @db.Uuid
+  archivo_id                                           String    @unique(map: "documentos_apoyo_archivo_id_unica") @db.Uuid
   archivo_vista_id                                     String?   @db.Uuid
   estado_vista                                         String    @default("pendiente") @db.VarChar(20)
   subido_por                                           String    @db.Uuid
   subido_en                                            DateTime  @default(now()) @db.Timestamptz(0)
-  archivos_documentos_apoyo_archivo_idToarchivos       archivos  @relation("documentos_apoyo_archivo_idToarchivos", fields: [archivo_id], references: [archivo_id], onUpdate: NoAction, map: "documentos_apoyo_archivo_id_foreign")
-  archivos_documentos_apoyo_archivo_vista_idToarchivos archivos? @relation("documentos_apoyo_archivo_vista_idToarchivos", fields: [archivo_vista_id], references: [archivo_id], onDelete: Restrict, onUpdate: NoAction, map: "documentos_apoyo_archivo_vista_id_foreign")
-  carreras                                             carreras  @relation(fields: [carrera_id], references: [carrera_id], onUpdate: NoAction, map: "documentos_apoyo_carrera_id_foreign")
-  usuarios                                             usuarios  @relation(fields: [subido_por], references: [usuario_id], onUpdate: NoAction, map: "documentos_apoyo_subido_por_foreign")
+  actualizado_en                                       DateTime  @default(now()) @db.Timestamptz(6)
+  archivos_documentos_apoyo_archivo_idToarchivos       archivos  @relation("documentos_apoyo_archivo_idToarchivos", fields: [archivo_id], references: [archivo_id], onUpdate: NoAction, map: "documentos_apoyo_archivo_id_fk")
+  archivos_documentos_apoyo_archivo_vista_idToarchivos archivos? @relation("documentos_apoyo_archivo_vista_idToarchivos", fields: [archivo_vista_id], references: [archivo_id], onDelete: Restrict, onUpdate: NoAction, map: "documentos_apoyo_archivo_vista_id_fk")
+  carreras                                             carreras  @relation(fields: [carrera_id], references: [carrera_id], onUpdate: NoAction, map: "documentos_apoyo_carrera_id_fk")
+  usuarios                                             usuarios  @relation(fields: [subido_por], references: [usuario_id], onUpdate: NoAction, map: "documentos_apoyo_subido_por_fk")
 
-  @@index([archivo_vista_id], map: "documentos_apoyo_archivo_vista_id_index")
-  @@index([carrera_id, subido_en], map: "documentos_apoyo_carrera_id_subido_en_index")
-  @@index([subido_por], map: "documentos_apoyo_subido_por_index")
+  @@index([archivo_vista_id])
+  @@index([carrera_id, subido_en])
+  @@index([subido_por])
 }
-
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model envios_biblioteca {
   envio_biblioteca_id   String            @id @db.Uuid
-  revision_silabo_id    String            @unique(map: "envios_biblioteca_revision_unica") @db.Uuid
+  revision_silabo_id    String            @unique(map: "envios_biblioteca_revision_silabo_id_unica") @db.Uuid
   verificado_por        String?           @db.Uuid
   verificado_en         DateTime?         @db.Timestamptz(6)
   verificacion_heredada Boolean           @default(false)
-  revisiones_silabo     revisiones_silabo @relation(fields: [revision_silabo_id], references: [revision_silabo_id], onUpdate: NoAction, map: "envios_biblioteca_revision_silabo_id_foreign")
-  usuarios              usuarios?         @relation(fields: [verificado_por], references: [usuario_id], onDelete: Restrict, onUpdate: NoAction)
+  revisiones_silabo     revisiones_silabo @relation(fields: [revision_silabo_id], references: [revision_silabo_id], onUpdate: NoAction, map: "envios_biblioteca_revision_silabo_id_fk")
+  usuarios              usuarios?         @relation(fields: [verificado_por], references: [usuario_id], onDelete: Restrict, onUpdate: NoAction, map: "envios_biblioteca_verificado_por_fk")
 
-  @@index([verificado_por], map: "envios_biblioteca_verificado_por_index")
+  @@index([verificado_por])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model exportaciones_silabo {
   exportacion_silabo_id String            @id @db.Uuid
   revision_silabo_id    String            @db.Uuid
-  archivo_pdf_id        String?           @unique(map: "exportaciones_silabo_archivo_pdf_id_unique") @db.Uuid
+  archivo_pdf_id        String?           @unique(map: "exportaciones_silabo_archivo_pdf_id_unica") @db.Uuid
   clave_solicitud       String            @db.Uuid
   estado_exportacion    String            @default("pendiente") @db.VarChar(24)
   solicitado_por        String            @db.Uuid
   solicitado_en         DateTime          @db.Timestamptz(0)
   completado_en         DateTime?         @db.Timestamptz(0)
-  archivos              archivos?         @relation(fields: [archivo_pdf_id], references: [archivo_id], onDelete: Restrict, onUpdate: NoAction, map: "exportaciones_silabo_archivo_pdf_id_foreign")
-  revisiones_silabo     revisiones_silabo @relation(fields: [revision_silabo_id], references: [revision_silabo_id], onUpdate: NoAction, map: "exportaciones_silabo_revision_silabo_id_foreign")
-  usuarios              usuarios          @relation(fields: [solicitado_por], references: [usuario_id], onUpdate: NoAction, map: "exportaciones_silabo_solicitado_por_foreign")
+  actualizado_en        DateTime          @default(now()) @db.Timestamptz(6)
+  archivos              archivos?         @relation(fields: [archivo_pdf_id], references: [archivo_id], onDelete: Restrict, onUpdate: NoAction, map: "exportaciones_silabo_archivo_pdf_id_fk")
+  revisiones_silabo     revisiones_silabo @relation(fields: [revision_silabo_id], references: [revision_silabo_id], onUpdate: NoAction, map: "exportaciones_silabo_revision_silabo_id_fk")
+  usuarios              usuarios          @relation(fields: [solicitado_por], references: [usuario_id], onUpdate: NoAction, map: "exportaciones_silabo_solicitado_por_fk")
 
-  @@unique([revision_silabo_id, clave_solicitud], map: "exportaciones_silabo_revision_clave_solicitud_unica")
-  @@index([revision_silabo_id, estado_exportacion, solicitado_en], map: "exportaciones_silabo_revision_estado_solicitado_index")
-  @@index([solicitado_por], map: "exportaciones_silabo_solicitado_por_index")
+  @@unique([revision_silabo_id, clave_solicitud], map: "exportaciones_silabo_revision_silabo_id_clave_solicitud_unica")
+  @@index([revision_silabo_id, estado_exportacion, solicitado_en], map: "exportaciones_silabo_revision_estado_solicitado_idx")
+  @@index([solicitado_por])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -281,10 +293,12 @@ model facultades {
   facultad_activa           Boolean    @default(true)
   logo_archivo_id           String?    @db.Uuid
   bibliotecas_koha_facultad Json       @default("[]")
+  creado_en                 DateTime   @default(now()) @db.Timestamptz(6)
+  actualizado_en            DateTime   @default(now()) @db.Timestamptz(6)
   carreras                  carreras[]
-  archivos                  archivos?  @relation(fields: [logo_archivo_id], references: [archivo_id], onDelete: Restrict, onUpdate: NoAction, map: "facultades_logo_archivo_id_foreign")
+  archivos                  archivos?  @relation(fields: [logo_archivo_id], references: [archivo_id], onDelete: Restrict, onUpdate: NoAction, map: "facultades_logo_archivo_id_fk")
 
-  @@index([logo_archivo_id], map: "facultades_logo_archivo_id_index")
+  @@index([logo_archivo_id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -301,29 +315,29 @@ model firmas_silabo {
   entidad_emisora          String            @db.VarChar(500)
   certificado_valido_hasta DateTime          @db.Timestamptz(0)
   firmado_en               DateTime          @db.Timestamptz(0)
-  revisiones_silabo        revisiones_silabo @relation(fields: [revision_silabo_id], references: [revision_silabo_id], onUpdate: NoAction, map: "firmas_silabo_revision_silabo_id_foreign")
-  silabos                  silabos           @relation(fields: [silabo_id], references: [silabo_id], onUpdate: NoAction, map: "firmas_silabo_silabo_id_foreign")
-  usuarios                 usuarios          @relation(fields: [usuario_id], references: [usuario_id], onUpdate: NoAction, map: "firmas_silabo_usuario_id_foreign")
+  revisiones_silabo        revisiones_silabo @relation(fields: [revision_silabo_id, silabo_id], references: [revision_silabo_id, silabo_id], onUpdate: NoAction, map: "firmas_silabo_revision_silabo_id_silabo_id_fk")
+  usuarios                 usuarios          @relation(fields: [usuario_id], references: [usuario_id], onUpdate: NoAction, map: "firmas_silabo_usuario_id_fk")
 
-  @@unique([silabo_id, firmado_como], map: "firmas_silabo_firmado_como_unico")
-  @@index([revision_silabo_id], map: "firmas_silabo_revision_silabo_id_index")
-  @@index([usuario_id], map: "firmas_silabo_usuario_id_index")
+  @@unique([silabo_id, firmado_como], map: "firmas_silabo_silabo_id_firmado_como_unica")
+  @@index([revision_silabo_id])
+  @@index([usuario_id])
 }
 
 model invitaciones_activacion {
   invitacion_activacion_id                                          String    @id @db.Uuid
   usuario_id                                                        String    @db.Uuid
-  hash_activacion                                                   String    @unique(map: "invitaciones_activacion_hash_activacion_unique") @db.Char(64)
+  hash_activacion                                                   String    @unique(map: "invitaciones_activacion_hash_activacion_unica") @db.Char(64)
   expira_en                                                         DateTime  @db.Timestamptz(0)
   usada_en                                                          DateTime? @db.Timestamptz(0)
   invalidada_en                                                     DateTime? @db.Timestamptz(0)
   emitida_por_usuario_id                                            String?   @db.Uuid
   creada_en                                                         DateTime  @default(now()) @db.Timestamptz(0)
-  usuarios_invitaciones_activacion_emitida_por_usuario_idTousuarios usuarios? @relation("invitaciones_activacion_emitida_por_usuario_idTousuarios", fields: [emitida_por_usuario_id], references: [usuario_id], onUpdate: NoAction, map: "invitaciones_activacion_emitida_por_usuario_id_foreign")
-  usuarios_invitaciones_activacion_usuario_idTousuarios             usuarios  @relation("invitaciones_activacion_usuario_idTousuarios", fields: [usuario_id], references: [usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "invitaciones_activacion_usuario_id_foreign")
+  actualizado_en                                                    DateTime  @default(now()) @db.Timestamptz(6)
+  usuarios_invitaciones_activacion_emitida_por_usuario_idTousuarios usuarios? @relation("invitaciones_activacion_emitida_por_usuario_idTousuarios", fields: [emitida_por_usuario_id], references: [usuario_id], onUpdate: NoAction, map: "invitaciones_activacion_emitida_por_usuario_id_fk")
+  usuarios_invitaciones_activacion_usuario_idTousuarios             usuarios  @relation("invitaciones_activacion_usuario_idTousuarios", fields: [usuario_id], references: [usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "invitaciones_activacion_usuario_id_fk")
 
-  @@index([emitida_por_usuario_id], map: "invitaciones_activacion_emitida_por_usuario_id_index")
-  @@index([usuario_id, expira_en], map: "invitaciones_activacion_usuario_id_expira_en_index")
+  @@index([emitida_por_usuario_id])
+  @@index([usuario_id, expira_en])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -335,12 +349,13 @@ model mensajes_ia_plantilla {
   contenido_mensaje       Json
   enviado_en              DateTime                 @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
   ocultado_en             DateTime?                @db.Timestamptz(6)
-  plantilla_silabo        plantilla_silabo         @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "mensajes_ia_plantilla_plantilla_id_foreign")
-  usuarios                usuarios                 @relation(fields: [usuario_id], references: [usuario_id], onUpdate: NoAction, map: "mensajes_ia_plantilla_usuario_id_foreign")
+  actualizado_en          DateTime                 @default(now()) @db.Timestamptz(6)
+  plantilla_silabo        plantilla_silabo         @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "mensajes_ia_plantilla_plantilla_id_fk")
+  usuarios                usuarios                 @relation(fields: [usuario_id], references: [usuario_id], onUpdate: NoAction, map: "mensajes_ia_plantilla_usuario_id_fk")
   propuestas_ia_plantilla propuestas_ia_plantilla?
 
-  @@index([plantilla_id, usuario_id, enviado_en], map: "mensajes_ia_plantilla_plantilla_id_usuario_id_enviado_en_index")
-  @@index([usuario_id], map: "mensajes_ia_plantilla_usuario_id_index")
+  @@index([plantilla_id, usuario_id, enviado_en])
+  @@index([usuario_id])
 }
 
 model notificaciones {
@@ -355,12 +370,14 @@ model notificaciones {
   leido_en             DateTime?            @db.Timestamptz(0)
   notificado_en        DateTime             @db.Timestamptz(0)
   periodo_academico_id String?              @db.Uuid
-  periodos_academicos  periodos_academicos? @relation(fields: [periodo_academico_id], references: [periodo_academico_id], onUpdate: NoAction, map: "notificaciones_periodo_academico_id_foreign")
-  usuarios             usuarios             @relation(fields: [usuario_id], references: [usuario_id], onUpdate: NoAction, map: "notificaciones_usuario_id_foreign")
+  actualizado_en       DateTime             @default(now()) @db.Timestamptz(6)
+  periodos_academicos  periodos_academicos? @relation(fields: [periodo_academico_id], references: [periodo_academico_id], onUpdate: NoAction, map: "notificaciones_periodo_academico_id_fk")
+  usuarios             usuarios             @relation(fields: [usuario_id], references: [usuario_id], onUpdate: NoAction, map: "notificaciones_usuario_id_fk")
 
-  @@unique([usuario_id, clave_unica], map: "notificaciones_usuario_id_clave_unica_unique")
-  @@index([usuario_id, periodo_academico_id], map: "notificaciones_usuario_id_periodo_academico_id_index")
-  @@index([usuario_id, leido_en, notificado_en], map: "notificaciones_usuario_leido_notificado_index")
+  @@unique([usuario_id, clave_unica], map: "notificaciones_usuario_id_clave_unica_unica")
+  @@index([periodo_academico_id])
+  @@index([usuario_id, leido_en, notificado_en])
+  @@index([usuario_id, periodo_academico_id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -370,20 +387,22 @@ model paralelos {
   codigo_paralelo       String                 @db.VarChar(30)
   jornada_paralelo      String                 @db.VarChar(20)
   asignatura_id         String                 @db.Uuid
+  creado_en             DateTime               @default(now()) @db.Timestamptz(6)
+  actualizado_en        DateTime               @default(now()) @db.Timestamptz(6)
   asignaciones_paralelo asignaciones_paralelo?
-  asignaturas           asignaturas            @relation(fields: [asignatura_id], references: [asignatura_id], onUpdate: NoAction, map: "paralelos_asignatura_id_foreign")
+  asignaturas           asignaturas            @relation(fields: [asignatura_id], references: [asignatura_id], onUpdate: NoAction, map: "paralelos_asignatura_id_fk")
   silabos               silabos[]
-
-  @@index([asignatura_id], map: "paralelos_asignatura_id_index")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model periodos_academicos {
   periodo_academico_id      String                     @id @db.Uuid
-  codigo_periodo_academico  String                     @unique(map: "periodos_academicos_codigo_unico") @db.VarChar(40)
+  codigo_periodo_academico  String                     @unique(map: "periodos_academicos_codigo_periodo_academico_unica") @db.VarChar(40)
   fecha_inicio_periodo      DateTime                   @db.Date
   fecha_fin_periodo         DateTime                   @db.Date
   cantidad_semanas_lectivas Int                        @default(16) @db.SmallInt
+  creado_en                 DateTime                   @default(now()) @db.Timestamptz(6)
+  actualizado_en            DateTime                   @default(now()) @db.Timestamptz(6)
   convocatorias_universidad convocatorias_universidad?
   notificaciones            notificaciones[]
 }
@@ -394,6 +413,8 @@ model plantilla_silabo {
   plantilla_id            String                    @id @db.Uuid
   plantilla_modificada_en DateTime?                 @db.Timestamptz(6)
   definicion_plantilla    Json                      @default("{}") @db.Json
+  creado_en               DateTime                  @default(now()) @db.Timestamptz(6)
+  actualizado_en          DateTime                  @default(now()) @db.Timestamptz(6)
   campos_plantilla        campos_plantilla[]
   definiciones_campo      definiciones_campo[]
   mensajes_ia_plantilla   mensajes_ia_plantilla[]
@@ -405,7 +426,7 @@ model plantilla_silabo {
 model propuestas_ia_plantilla {
   propuesta_ia_plantilla_id                                 String                @id @db.Uuid
   plantilla_id                                              String                @db.Uuid
-  mensaje_ia_plantilla_id                                   String                @unique(map: "propuestas_ia_plantilla_mensaje_ia_plantilla_id_unique") @db.Uuid
+  mensaje_ia_plantilla_id                                   String                @unique(map: "propuestas_ia_plantilla_mensaje_ia_plantilla_id_unica") @db.Uuid
   solicitada_por                                            String                @db.Uuid
   estructura_propuesta                                      Json
   cambios_propuesta                                         Json
@@ -415,14 +436,15 @@ model propuestas_ia_plantilla {
   decidida_por                                              String?               @db.Uuid
   decidida_en                                               DateTime?             @db.Timestamptz(6)
   creada_en                                                 DateTime              @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  usuarios_propuestas_ia_plantilla_decidida_porTousuarios   usuarios?             @relation("propuestas_ia_plantilla_decidida_porTousuarios", fields: [decidida_por], references: [usuario_id], onDelete: Restrict, onUpdate: NoAction, map: "propuestas_ia_plantilla_decidida_por_foreign")
-  mensajes_ia_plantilla                                     mensajes_ia_plantilla @relation(fields: [mensaje_ia_plantilla_id], references: [mensaje_ia_plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "propuestas_ia_plantilla_mensaje_ia_plantilla_id_foreign")
-  plantilla_silabo                                          plantilla_silabo      @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "propuestas_ia_plantilla_plantilla_id_foreign")
-  usuarios_propuestas_ia_plantilla_solicitada_porTousuarios usuarios              @relation("propuestas_ia_plantilla_solicitada_porTousuarios", fields: [solicitada_por], references: [usuario_id], onUpdate: NoAction, map: "propuestas_ia_plantilla_solicitada_por_foreign")
+  actualizado_en                                            DateTime              @default(now()) @db.Timestamptz(6)
+  usuarios_propuestas_ia_plantilla_decidida_porTousuarios   usuarios?             @relation("propuestas_ia_plantilla_decidida_porTousuarios", fields: [decidida_por], references: [usuario_id], onDelete: Restrict, onUpdate: NoAction, map: "propuestas_ia_plantilla_decidida_por_fk")
+  mensajes_ia_plantilla                                     mensajes_ia_plantilla @relation(fields: [mensaje_ia_plantilla_id], references: [mensaje_ia_plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "propuestas_ia_plantilla_mensaje_ia_plantilla_id_fk")
+  plantilla_silabo                                          plantilla_silabo      @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "propuestas_ia_plantilla_plantilla_id_fk")
+  usuarios_propuestas_ia_plantilla_solicitada_porTousuarios usuarios              @relation("propuestas_ia_plantilla_solicitada_porTousuarios", fields: [solicitada_por], references: [usuario_id], onUpdate: NoAction, map: "propuestas_ia_plantilla_solicitada_por_fk")
 
-  @@index([decidida_por], map: "propuestas_ia_plantilla_decidida_por_index")
-  @@index([plantilla_id, estado_propuesta], map: "propuestas_ia_plantilla_plantilla_id_estado_propuesta_index")
-  @@index([solicitada_por], map: "propuestas_ia_plantilla_solicitada_por_index")
+  @@index([decidida_por])
+  @@index([plantilla_id, estado_propuesta])
+  @@index([solicitada_por])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -430,11 +452,13 @@ model requisitos_asignatura {
   requisito_asignatura_id                                      String      @id @db.Uuid
   asignatura_id                                                String      @db.Uuid
   requisito_id                                                 String      @db.Uuid
-  asignaturas_requisitos_asignatura_asignatura_idToasignaturas asignaturas @relation("requisitos_asignatura_asignatura_idToasignaturas", fields: [asignatura_id], references: [asignatura_id], onUpdate: NoAction, map: "requisitos_asignatura_asignatura_id_foreign")
-  asignaturas_requisitos_asignatura_requisito_idToasignaturas  asignaturas @relation("requisitos_asignatura_requisito_idToasignaturas", fields: [requisito_id], references: [asignatura_id], onUpdate: NoAction, map: "requisitos_asignatura_requisito_id_foreign")
+  creado_en                                                    DateTime    @default(now()) @db.Timestamptz(6)
+  actualizado_en                                               DateTime    @default(now()) @db.Timestamptz(6)
+  asignaturas_requisitos_asignatura_asignatura_idToasignaturas asignaturas @relation("requisitos_asignatura_asignatura_idToasignaturas", fields: [asignatura_id], references: [asignatura_id], onUpdate: NoAction, map: "requisitos_asignatura_asignatura_id_fk")
+  asignaturas_requisitos_asignatura_requisito_idToasignaturas  asignaturas @relation("requisitos_asignatura_requisito_idToasignaturas", fields: [requisito_id], references: [asignatura_id], onUpdate: NoAction, map: "requisitos_asignatura_requisito_id_fk")
 
-  @@unique([asignatura_id, requisito_id], map: "requisitos_asignatura_par_unico")
-  @@index([requisito_id], map: "requisitos_asignatura_requisito_id_index")
+  @@unique([asignatura_id, requisito_id], map: "requisitos_asignatura_asignatura_id_requisito_id_unica")
+  @@index([requisito_id])
 }
 
 model restablecimientos_contrasena {
@@ -445,13 +469,13 @@ model restablecimientos_contrasena {
 
 model revisiones_coordinacion {
   revision_coordinacion_id String            @id @db.Uuid
-  revision_silabo_id       String            @unique(map: "revisiones_coordinacion_revision_unica") @db.Uuid
+  revision_silabo_id       String            @unique(map: "revisiones_coordinacion_revision_silabo_id_unica") @db.Uuid
   revisado_por             String            @db.Uuid
   revisado_en              DateTime          @db.Timestamptz(6)
-  usuarios                 usuarios          @relation(fields: [revisado_por], references: [usuario_id], onUpdate: NoAction)
-  revisiones_silabo        revisiones_silabo @relation(fields: [revision_silabo_id], references: [revision_silabo_id], onUpdate: NoAction)
+  usuarios                 usuarios          @relation(fields: [revisado_por], references: [usuario_id], onUpdate: NoAction, map: "revisiones_coordinacion_revisado_por_fk")
+  revisiones_silabo        revisiones_silabo @relation(fields: [revision_silabo_id], references: [revision_silabo_id], onUpdate: NoAction, map: "revisiones_coordinacion_revision_silabo_id_fk")
 
-  @@index([revisado_por], map: "revisiones_coordinacion_revisado_por_index")
+  @@index([revisado_por])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -475,54 +499,43 @@ model revisiones_silabo {
   exportaciones_silabo                                           exportaciones_silabo[]
   firmas_silabo                                                  firmas_silabo[]
   revisiones_coordinacion                                        revisiones_coordinacion?
-  usuarios_revisiones_silabo_correccion_solicitada_porTousuarios usuarios?                @relation("revisiones_silabo_correccion_solicitada_porTousuarios", fields: [correccion_solicitada_por], references: [usuario_id], onDelete: Restrict, onUpdate: NoAction, map: "revisiones_silabo_correccion_solicitada_por_foreign")
-  usuarios_revisiones_silabo_enviado_porTousuarios               usuarios                 @relation("revisiones_silabo_enviado_porTousuarios", fields: [enviado_por], references: [usuario_id], onUpdate: NoAction, map: "revisiones_silabo_enviado_por_foreign")
-  revisiones_silabo                                              revisiones_silabo?       @relation("revisiones_silaboTorevisiones_silabo", fields: [revision_anterior_id], references: [revision_silabo_id], onDelete: Restrict, onUpdate: NoAction, map: "revisiones_silabo_revision_anterior_id_foreign")
+  usuarios_revisiones_silabo_correccion_solicitada_porTousuarios usuarios?                @relation("revisiones_silabo_correccion_solicitada_porTousuarios", fields: [correccion_solicitada_por], references: [usuario_id], onDelete: Restrict, onUpdate: NoAction, map: "revisiones_silabo_correccion_solicitada_por_fk")
+  usuarios_revisiones_silabo_enviado_porTousuarios               usuarios                 @relation("revisiones_silabo_enviado_porTousuarios", fields: [enviado_por], references: [usuario_id], onUpdate: NoAction, map: "revisiones_silabo_enviado_por_fk")
+  revisiones_silabo                                              revisiones_silabo?       @relation("revisiones_silaboTorevisiones_silabo", fields: [revision_anterior_id], references: [revision_silabo_id], onDelete: Restrict, onUpdate: NoAction, map: "revisiones_silabo_revision_anterior_id_fk")
   other_revisiones_silabo                                        revisiones_silabo[]      @relation("revisiones_silaboTorevisiones_silabo")
-  silabos                                                        silabos                  @relation(fields: [silabo_id], references: [silabo_id], onUpdate: NoAction, map: "revisiones_silabo_silabo_id_foreign")
+  silabos                                                        silabos                  @relation(fields: [silabo_id], references: [silabo_id], onUpdate: NoAction, map: "revisiones_silabo_silabo_id_fk")
 
-  @@unique([silabo_id, clave_solicitud], map: "revisiones_silabo_silabo_id_clave_solicitud_unique")
-  @@unique([silabo_id, numero_revision], map: "revisiones_silabo_silabo_id_numero_revision_unique")
-  @@index([correccion_solicitada_por], map: "revisiones_silabo_correccion_solicitada_por_index")
-  @@index([enviado_por], map: "revisiones_silabo_enviado_por_index")
-  @@index([revision_anterior_id], map: "revisiones_silabo_revision_anterior_id_index")
-  @@index([silabo_id, enviado_en], map: "revisiones_silabo_silabo_id_enviado_en_index")
+  @@unique([revision_silabo_id, silabo_id], map: "revisiones_silabo_revision_silabo_id_silabo_id_unica")
+  @@unique([silabo_id, clave_solicitud], map: "revisiones_silabo_silabo_id_clave_solicitud_unica")
+  @@unique([silabo_id, numero_revision], map: "revisiones_silabo_silabo_id_numero_revision_unica")
+  @@index([correccion_solicitada_por])
+  @@index([enviado_por])
+  @@index([revision_anterior_id])
+  @@index([silabo_id, enviado_en])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model secciones_plantilla {
-  seccion_plantilla_id                                                                     String             @id @db.Uuid
-  plantilla_id                                                                             String             @db.Uuid
-  clave_seccion_plantilla                                                                  String             @db.VarChar(120)
-  titulo_seccion_plantilla                                                                 String             @db.VarChar(180)
-  posicion_seccion_plantilla                                                               Int                @db.SmallInt
-  vigente_en_plantilla                                                                     Boolean            @default(true)
-  orientacion_seccion_plantilla                                                            String             @default("portrait") @db.VarChar(12)
-  campos_plantilla_campos_plantilla_seccion_plantilla_id_plantilla_idTosecciones_plantilla campos_plantilla[] @relation("campos_plantilla_seccion_plantilla_id_plantilla_idTosecciones_plantilla")
-  campos_plantilla_campos_plantilla_seccion_plantilla_idTosecciones_plantilla              campos_plantilla[] @relation("campos_plantilla_seccion_plantilla_idTosecciones_plantilla")
-  plantilla_silabo                                                                         plantilla_silabo   @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "secciones_plantilla_plantilla_id_foreign")
+  seccion_plantilla_id          String             @id @db.Uuid
+  plantilla_id                  String             @db.Uuid
+  clave_seccion_plantilla       String             @db.VarChar(120)
+  titulo_seccion_plantilla      String             @db.VarChar(180)
+  posicion_seccion_plantilla    Int                @db.SmallInt
+  vigente_en_plantilla          Boolean            @default(true)
+  orientacion_seccion_plantilla String             @default("portrait") @db.VarChar(12)
+  creado_en                     DateTime           @default(now()) @db.Timestamptz(6)
+  actualizado_en                DateTime           @default(now()) @db.Timestamptz(6)
+  campos_plantilla              campos_plantilla[]
+  plantilla_silabo              plantilla_silabo   @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "secciones_plantilla_plantilla_id_fk")
 
-  @@unique([seccion_plantilla_id, plantilla_id], map: "secciones_plantilla_id_plantilla_unica")
+  @@unique([seccion_plantilla_id, plantilla_id], map: "secciones_plantilla_seccion_plantilla_id_plantilla_id_unica")
   @@unique([plantilla_id, clave_seccion_plantilla], map: "secciones_plantilla_vigente_clave_unica", where: raw("vigente_en_plantilla"))
-  @@index([plantilla_id, posicion_seccion_plantilla], map: "secciones_plantilla_plantilla_id_posicion_index")
-}
-
-model sesiones {
-  id            String    @id @db.VarChar(255)
-  user_id       String?   @db.Uuid
-  ip_address    String?   @db.VarChar(45)
-  user_agent    String?
-  payload       String
-  last_activity Int
-  usuarios      usuarios? @relation(fields: [user_id], references: [usuario_id], onUpdate: NoAction, map: "sesiones_user_id_foreign")
-
-  @@index([last_activity], map: "sesiones_last_activity_index")
-  @@index([user_id], map: "sesiones_user_id_index")
+  @@index([plantilla_id, posicion_seccion_plantilla], map: "secciones_plantilla_plantilla_id_posicion_idx")
 }
 
 model sesiones_usuario {
   id                        String            @id
-  token                     String            @unique(map: "sesiones_usuario_token_unique")
+  token                     String            @unique(map: "sesiones_usuario_token_unica")
   user_id                   String            @db.Uuid
   expires_at                DateTime          @db.Timestamptz(6)
   ip_address                String?
@@ -530,10 +543,11 @@ model sesiones_usuario {
   active_role_assignment_id String?           @db.Uuid
   created_at                DateTime          @default(now()) @db.Timestamptz(6)
   updated_at                DateTime          @default(now()) @db.Timestamptz(6)
-  asignaciones_rol          asignaciones_rol? @relation(fields: [active_role_assignment_id], references: [asignacion_rol_id], onUpdate: NoAction, map: "sesiones_usuario_active_role_assignment_id_asignaciones_rol_asi")
-  usuarios                  usuarios          @relation(fields: [user_id], references: [usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "sesiones_usuario_user_id_usuarios_usuario_id_fk")
+  asignaciones_rol          asignaciones_rol? @relation(fields: [active_role_assignment_id], references: [asignacion_rol_id], onUpdate: NoAction, map: "sesiones_usuario_active_role_assignment_id_fk")
+  usuarios                  usuarios          @relation(fields: [user_id], references: [usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "sesiones_usuario_user_id_fk")
 
-  @@index([user_id], map: "sesiones_usuario_user_id_index")
+  @@index([active_role_assignment_id])
+  @@index([user_id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -546,26 +560,28 @@ model silabos {
   guardado_en             DateTime?              @db.Timestamptz(0)
   datos_academicos_silabo Json                   @default("{}")
   paralelo_id             String                 @db.Uuid
-  firmas_silabo           firmas_silabo[]
+  creado_en               DateTime               @default(now()) @db.Timestamptz(6)
+  actualizado_en          DateTime               @default(now()) @db.Timestamptz(6)
   revisiones_silabo       revisiones_silabo[]
-  convocatorias_carreras  convocatorias_carreras @relation(fields: [convocatoria_carrera_id], references: [convocatoria_carrera_id], onUpdate: NoAction, map: "silabos_convocatoria_carrera_id_foreign")
-  paralelos               paralelos              @relation(fields: [paralelo_id], references: [paralelo_id], onUpdate: NoAction, map: "silabos_paralelo_id_foreign")
+  convocatorias_carreras  convocatorias_carreras @relation(fields: [convocatoria_carrera_id], references: [convocatoria_carrera_id], onUpdate: NoAction, map: "silabos_convocatoria_carrera_id_fk")
+  paralelos               paralelos              @relation(fields: [paralelo_id], references: [paralelo_id], onUpdate: NoAction, map: "silabos_paralelo_id_fk")
   valores_campo           valores_campo[]
 
-  @@unique([convocatoria_carrera_id, paralelo_id], map: "silabos_convocatoria_id_paralelo_id_unique")
-  @@index([convocatoria_carrera_id, estado_silabo], map: "silabos_campania_id_estado_index")
-  @@index([paralelo_id], map: "silabos_paralelo_id_index")
+  @@unique([convocatoria_carrera_id, paralelo_id], map: "silabos_convocatoria_carrera_id_paralelo_id_unica")
+  @@index([convocatoria_carrera_id, estado_silabo])
+  @@index([paralelo_id])
 }
 
 model usuarios {
   usuario_id                                                                       String                    @id @db.Uuid
   nombre_usuario                                                                   String                    @db.VarChar(255)
-  correo_electronico                                                               String                    @unique(map: "usuarios_correo_electronico_unique") @db.VarChar(255)
+  correo_electronico                                                               String                    @unique(map: "usuarios_correo_electronico_unica") @db.VarChar(255)
   correo_verificado_en                                                             DateTime?                 @db.Timestamptz(0)
   contrasena                                                                       String                    @db.VarChar(255)
   usuario_activo                                                                   Boolean                   @default(true)
-  codigo_recordarme                                                                String?                   @db.VarChar(100)
   preferencias_correo_usuario                                                      Json?
+  creado_en                                                                        DateTime                  @default(now()) @db.Timestamptz(6)
+  actualizado_en                                                                   DateTime                  @default(now()) @db.Timestamptz(6)
   ajustes_sistema                                                                  ajustes_sistema[]
   aprobaciones                                                                     aprobaciones[]
   archivos                                                                         archivos[]
@@ -584,10 +600,7 @@ model usuarios {
   revisiones_coordinacion                                                          revisiones_coordinacion[]
   revisiones_silabo_revisiones_silabo_correccion_solicitada_porTousuarios          revisiones_silabo[]       @relation("revisiones_silabo_correccion_solicitada_porTousuarios")
   revisiones_silabo_revisiones_silabo_enviado_porTousuarios                        revisiones_silabo[]       @relation("revisiones_silabo_enviado_porTousuarios")
-  sesiones                                                                         sesiones[]
   sesiones_usuario                                                                 sesiones_usuario[]
-
-  @@index([usuario_activo], map: "usuarios_usuario_activo_index")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -598,13 +611,15 @@ model valores_campo {
   valor_campo             Json?
   asignatura_id           String?            @db.Uuid
   huella_definicion_campo String?            @db.Char(64)
-  asignaturas             asignaturas?       @relation(fields: [asignatura_id], references: [asignatura_id], onDelete: Cascade, onUpdate: NoAction, map: "valores_campo_asignatura_id_foreign")
-  definiciones_campo      definiciones_campo @relation(fields: [definicion_campo_id], references: [definicion_campo_id], onUpdate: NoAction, map: "valores_campo_definicion_campo_id_foreign")
-  silabos                 silabos?           @relation(fields: [silabo_id], references: [silabo_id], onDelete: Cascade, onUpdate: NoAction, map: "valores_campo_silabo_id_foreign")
+  creado_en               DateTime           @default(now()) @db.Timestamptz(6)
+  actualizado_en          DateTime           @default(now()) @db.Timestamptz(6)
+  asignaturas             asignaturas?       @relation(fields: [asignatura_id], references: [asignatura_id], onDelete: Cascade, onUpdate: NoAction, map: "valores_campo_asignatura_id_fk")
+  definiciones_campo      definiciones_campo @relation(fields: [definicion_campo_id], references: [definicion_campo_id], onUpdate: NoAction, map: "valores_campo_definicion_campo_id_fk")
+  silabos                 silabos?           @relation(fields: [silabo_id], references: [silabo_id], onDelete: Cascade, onUpdate: NoAction, map: "valores_campo_silabo_id_fk")
 
   @@unique([asignatura_id, definicion_campo_id], map: "valores_campo_asignatura_definicion_unica", where: raw("(asignatura_id IS NOT NULL)"))
   @@unique([silabo_id, definicion_campo_id], map: "valores_campo_silabo_definicion_unica", where: raw("(silabo_id IS NOT NULL)"))
-  @@index([definicion_campo_id], map: "valores_campo_definicion_campo_id_index")
+  @@index([definicion_campo_id])
 }
 
 model verificaciones_usuario {
@@ -615,7 +630,7 @@ model verificaciones_usuario {
   created_at DateTime @default(now()) @db.Timestamptz(6)
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 
-  @@index([identifier], map: "verificaciones_usuario_identifier_index")
+  @@index([identifier])
 }
 
 view docentes_vigentes_silabo {
