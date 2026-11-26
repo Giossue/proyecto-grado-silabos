@@ -66,7 +66,7 @@ describe("TemplateVisualBuilder: cinta con pestañas, panel lateral y menú «M�
     expect(activePanel().querySelector('button[aria-label="Tipo de respuesta"]')).not.toBeNull()
 
     await openTab("Diseño")
-    expect(groups(activePanel())).toEqual(["Página", "Tamaños de letra"])
+    expect(groups(activePanel())).toEqual(["Página", "Fuente"])
     expect(activePanel().querySelector("#template-layout-margin_cm")).not.toBeNull()
     expect(activePanel().querySelector("#template-layout-body_font_size")).not.toBeNull()
   })

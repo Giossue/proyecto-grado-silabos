@@ -14,7 +14,7 @@ import {
   withoutOwnOptions,
   type TemplateDefinition,
 } from "./templateRuntime"
-import { defineDocumentStyle, documentWithLayout } from "./templateStyle"
+import { defineDocumentStyle, documentWithLayout, documentWithStyles } from "./templateStyle"
 import { documentFromHtml, documentLines } from "./documentHtml"
 import { defineBlock } from "./blockDefinition"
 import { canonicalJson } from "../documents/canonicalJson"
@@ -257,6 +257,8 @@ export class DraftRequest {
   private withTitleAndLayout(base: TemplateDefinition): TemplateDefinition {
     let document = base.document
     let definition = base
+    const styles = this.input.document
+    if (phpIntCast(this.input.version) !== FORMAT_VERSION && isPhpArray(styles)) document = documentWithStyles(document, styles)
     const title = this.input.title
     if (typeof title === "string" && phpTrim(title) !== "") document = { ...document, title: { ...record(document.title), text: phpTrim(title) } }
     const layout = this.input.layout

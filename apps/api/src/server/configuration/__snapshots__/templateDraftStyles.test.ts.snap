@@ -1,0 +1,41 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «block_changes_broken» draft 1`] = `"error: {"definition":["blocks.practicas.rules.0.checks.0.filled: «practicas.*.nada» no existe en el valor del bloque."]}"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «block_changes_list» draft 1`] = `"error: {"definition":["blocks.0: el nombre del bloque usa minúsculas, números y _."]}"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «block_changes_locked» draft 1`] = `"error: {"definition":["La tabla «Identificación institucional» no se puede cambiar desde el editor. Para cambiarla use Opciones avanzadas → Editar JSON."]}"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «block_changes» draft 1`] = `"6022fa910d1dd46610f9ae926dc676591730175f0329fa96d21c5ca9677cabd9"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «condition_problems» draft 1`] = `"7b331132480b5f69683040d8835de56a3038e6a1a194f1ecb690c673abc7dc5f"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «conditions» draft 1`] = `"ad4777a08a21b637d71261a1b75b1c26ea6590b4ce7dbe9e57b32d94fd396d11"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «html_content» draft 1`] = `"c5b7124e6d5aa2cadfb3a3977236faf43bd8e253278bff1f5cd53888b5739670"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «html_ok» draft 1`] = `"c5b7124e6d5aa2cadfb3a3977236faf43bd8e253278bff1f5cd53888b5739670"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «institutional_response» draft 1`] = `"c5b7124e6d5aa2cadfb3a3977236faf43bd8e253278bff1f5cd53888b5739670"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «invalid_rules» draft 1`] = `"c5b7124e6d5aa2cadfb3a3977236faf43bd8e253278bff1f5cd53888b5739670"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «legacy_responsible» draft 1`] = `"71948c7bc1ef77187f2293f53c241e5f652998f9d17dc64633c9ff4a51d2beb4"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «lists_bad_limits» draft 1`] = `"error: {"definition":["«unidad»: el máximo debe ser al menos 1 y no menor que el mínimo."]}"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «lists_bad_path» draft 1`] = `"error: {"definition":["«libros.*.autor» no es una lista del bloque «bibliografia»."]}"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «lists_bad_start» draft 1`] = `"error: {"definition":["«libro»: «Al empezar» debe estar entre el mínimo y el máximo."]}"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «lists_ok» draft 1`] = `"eae0ab83120c3a8a64a6c2e410aadc18b4b9c8618f19a24f1fcc2045cf2b87e1"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «lists_unknown_block» draft 1`] = `"error: {"definition":["«nada» no es un bloque de la plantilla."]}"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «lists» draft 1`] = `"d2e1e48fb8bf8e90d8a199323fd6e89244d097bc4bf47df6c295908a1cc83ea2"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «missing_and_empty» draft 1`] = `"c5b7124e6d5aa2cadfb3a3977236faf43bd8e253278bff1f5cd53888b5739670"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «no_sections» draft 1`] = `"01ab5086cf2a615dc5a35396aa63c46667a19f41cbd4a4282941b62e8dd74b04"`;
+
+exports[`version-1 drafts without document styles > builds the same definition as before for the «official» draft 1`] = `"c5b7124e6d5aa2cadfb3a3977236faf43bd8e253278bff1f5cd53888b5739670"`;

@@ -38,7 +38,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { setTemplateRuntime, templateRuntime } from "@/lib/blocks/runtime"
 import type { BlockDefinition, DocumentStyle, TemplateDefinitionPayload } from "@silabos/shared/lib/blocks/types"
 import { useShownWhileClosing } from "@/lib/dialogExit"
-import { layoutOf, layoutStyle, sheetPixels, type DocumentLayout } from "@/lib/documentLayout"
+import { documentTextStyles, layoutOf, layoutStyle, sheetPixels, styleDraftOf, withStyleDraft, type DocumentLayout, type DocumentStyleDraft } from "@/lib/documentLayout"
 import { limitLabel } from "@/lib/fieldLimits"
 import { conditionLabel, conditionSources, newResponseId, responseIds, withNewResponseIds, withResponseId, type ConditionSource } from "@/lib/responseConditions"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
@@ -54,7 +54,7 @@ type Sections = TemplateSectionPayload[]
 type Marks = { sections: string[]; fields: string[] }
 type TableChange = { definition: BlockDefinition; design: RepeatableTableDesign | null }
 type Tables = Record<string, TableChange>
-type BuilderState = { sections: Sections; title: string; layout: DocumentLayout; marks: Marks; tables: Tables }
+type BuilderState = { sections: Sections; title: string; layout: DocumentLayout; style: DocumentStyleDraft | null; marks: Marks; tables: Tables }
 type Removal = { kind: "section" | "field"; id: string; name: string; count: number }
 type DragItem = { kind: "field" | "section"; id: string }
 type DropMark = { kind: "field"; sectionId: string; index: number } | { kind: "section"; index: number }
@@ -62,6 +62,7 @@ type SheetEntry = { section: TemplateSectionPayload; fields: TemplateField[]; la
 type Sheet = { landscape: boolean; items: SheetEntry[] }
 type Selected = { section: TemplateSectionPayload; sectionIndex: number; fieldIndex: number }
 type RibbonTab = "inicio" | "insertar" | "diseno" | "seleccion"
+const PARAGRAPH_SPACING = "[&_.free-text-content>p]:mb-(--document-paragraph-spacing)! [&_.ProseMirror>p]:mb-(--document-paragraph-spacing)!"
 const RIBBON_PANEL = "data-[state=inactive]:hidden flex min-h-16 items-stretch overflow-x-auto px-1 py-1.5"
 
 export type TemplateVisualBuilderHandle = {
@@ -154,6 +155,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const [dirty, setDirty] = useState(false)
   const [titleDraft, setTitleDraft] = useState("")
   const [layoutDraft, setLayoutDraft] = useState<DocumentLayout>(() => layoutOf(template.layout))
+  const [styleDraft, setStyleDraft] = useState<DocumentStyleDraft | null>(() => styleDraftOf(templateRuntime().definition?.document))
   const [tables, setTables] = useState<Tables>(NO_TABLES)
   const [ribbonTab, setRibbonTab] = useState<RibbonTab>("inicio")
   const [panelClosed, setPanelClosed] = useState(false)
@@ -196,6 +198,8 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const sections: SheetEntry[] = source.map((section, index) => ({ section, fields: section.fields.filter(drawnInDocument), landscape: section.orientation === "landscape", index }))
   const sheets = sheetsOf(sections)
   const shownLayout = preview && !awaitingReload ? layoutOf(template.layout) : layoutDraft
+  const shownDocument = preview && !awaitingReload ? documentStyle : withStyleDraft(documentStyle, styleDraft)
+  const textStyles = documentTextStyles(shownDocument)
   const shownTitle = preview && !awaitingReload ? template.titleBlock.text : titleDraft
   const changed = !preview && dirty
   const structureEditable = !readOnly && !locked && !busy
@@ -208,7 +212,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const allSources = conditionSources(orderedFields)
 
   const scaleFor = (landscape: boolean): number => {
-    const pixels = sheetPixels(documentStyle)
+    const pixels = sheetPixels(shownDocument)
     const width = landscape ? pixels.landscape : pixels.portrait
     return available > 0 ? Math.min(1, available / width) : 1
   }
@@ -274,13 +278,14 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     paginateSoon()
   }
 
-  const captureState = (): BuilderState => ({ sections: draft, title: titleDraft, layout: layoutDraft, marks: assistantMarks, tables })
+  const captureState = (): BuilderState => ({ sections: draft, title: titleDraft, layout: layoutDraft, style: styleDraft, marks: assistantMarks, tables })
   const structure = useStructureHistory<BuilderState>({
     capture: captureState,
     restore: (state) => {
       updateDraft(() => state.sections)
       setTitleDraft(state.title)
       setLayoutDraft(state.layout)
+      setStyleDraft(state.style)
       setAssistantMarks(state.marks)
       changeTables(state.tables)
       const sectionIds = new Set(state.sections.map((section) => section.id))
@@ -309,6 +314,11 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     if (!Number.isFinite(number)) return
     record()
     setLayoutDraft((current) => ({ ...current, [key]: number }))
+    touched()
+  }
+  const setStyle = (style: DocumentStyleDraft, group: string): void => {
+    record(group)
+    setStyleDraft(style)
     touched()
   }
   const setDocumentTitle = (value: string): void => {
@@ -350,6 +360,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     version: 1,
     title: titleDraft.trim() || template.titleBlock.text,
     layout: layoutDraft,
+    ...(styleDraft ? { document: styleDraft } : {}),
     sections: draftSections(),
     ...(Object.keys(tables).length ? { block_changes: Object.fromEntries(Object.entries(tables).map(([kind, table]) => [kind, table.definition])) } : {}),
   })
@@ -359,10 +370,12 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     const sections = awaitingReload ? draft : clone(template.sections)
     const title = awaitingReload ? titleDraft : template.titleBlock.text
     const layout = awaitingReload ? layoutDraft : layoutOf(template.layout)
+    const style = awaitingReload ? styleDraft : styleDraftOf(templateRuntime().definition?.document)
     if (!awaitingReload) {
       updateDraft(() => sections)
       setTitleDraft(title)
       setLayoutDraft(layout)
+      setStyleDraft(style)
       setDirty(false)
     }
     setError(null)
@@ -371,7 +384,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     setEditSession(crypto.randomUUID())
     setAssistantMarks(NO_MARKS)
     structure.reset()
-    savedState.current = JSON.stringify({ sections, title, layout, marks: NO_MARKS, tables: NO_TABLES } satisfies BuilderState)
+    savedState.current = JSON.stringify({ sections, title, layout, style, marks: NO_MARKS, tables: NO_TABLES } satisfies BuilderState)
     setPreview(false)
   }
   const cancelEditing = (): void => {
@@ -798,7 +811,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const paginateLater = useEffectEvent((): void => paginate())
 
   useEffect(() => {
-    latest.current = { sheets, documentStyle }
+    latest.current = { sheets, documentStyle: shownDocument }
   })
 
   useEffect(() => {
@@ -937,7 +950,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
               ) : null}
             </TabsContent>
             <TabsContent forceMount value="diseno" className={RIBBON_PANEL}>
-              <TemplateDesignTools options={template.layoutOptions} layout={layoutDraft} disabled={editingDisabled} onLayout={setLayout} />
+              <TemplateDesignTools options={template.layoutOptions} layout={layoutDraft} style={styleDraft} title={titleDraft} disabled={editingDisabled} onLayout={setLayout} onStyle={setStyle} onTitle={setDocumentTitle} />
             </TabsContent>
             {selection ? (
               <TabsContent forceMount value="seleccion" className={RIBBON_PANEL}>
@@ -975,8 +988,8 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
             ref={(element) => setSheet(sheetIndex, element)}
             data-sheet
             data-preview={readOnly ? "true" : "false"}
-            style={{ zoom: scaleFor(sheet.landscape), ...layoutStyle(shownLayout, documentStyle) } as CSSProperties}
-            className={cn("template-sheet relative shadow-none", sheet.landscape && "template-sheet--landscape")}
+            style={{ zoom: scaleFor(sheet.landscape), ...layoutStyle(shownLayout, shownDocument), ...textStyles.body } as CSSProperties}
+            className={cn("template-sheet relative shadow-none", sheet.landscape && "template-sheet--landscape", shownDocument && PARAGRAPH_SPACING)}
           >
             <div data-sheet-content className="flex flex-col gap-6">
               {sheetIndex === 0 ? (
@@ -1002,11 +1015,11 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                   ) : null}
                   <div className="flex items-center justify-center px-2 py-1">
                     {!readOnly && !locked ? (
-                      <div className="template-sheet-title w-full">
-                        <TemplateInlineText value={titleDraft} maxLength={180} label="Título del documento" className="rounded-sm text-center hover:outline hover:outline-1 hover:outline-primary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" onValueChange={setDocumentTitle} />
+                      <div className="template-sheet-title w-full" style={textStyles.title}>
+                        <TemplateInlineText value={titleDraft} maxLength={180} label="Título del documento" className="rounded-sm [text-align:inherit] hover:outline hover:outline-1 hover:outline-primary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" onValueChange={setDocumentTitle} />
                       </div>
                     ) : (
-                      <h2 className="template-sheet-title">{shownTitle}</h2>
+                      <h2 className="template-sheet-title" style={textStyles.title}>{shownTitle}</h2>
                     )}
                   </div>
                   {!preview && problemsByTarget.general.length ? (
@@ -1030,11 +1043,12 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                     <TemplateInsertPoint disabled={locked || busy} actions={[{ key: "section", label: "Nueva sección" }]} position="top" gap="section" onInsert={() => addSection(sectionIndex)} />
                   ) : null}
                   {readOnly ? (
-                    <h3 className="font-bold" data-section-title>{section.title}</h3>
+                    <h3 className="font-bold" style={textStyles.section} data-section-title>{section.title}</h3>
                   ) : (
                     <div
                       data-section-heading
                       data-section-title
+                      style={textStyles.section}
                       data-changed={proposedSection(section) || undefined}
                       className={cn("group/heading relative rounded-sm font-bold outline-offset-2", proposedSection(section) && "rounded-md bg-warning/10 ring-2 ring-warning/60", selectedSection === section.id ? "outline outline-2 outline-primary" : "hover:outline hover:outline-1 hover:outline-primary/40")}
                       onFocus={() => selectSection(section.id)}
@@ -1062,6 +1076,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                         maxLength={180}
                         disabled={locked}
                         label={`Sección ${section.title}`}
+                        className="[text-align:inherit]"
                         autoFocus={focusId === section.id}
                         onAutoFocused={() => setFocusId(null)}
                         onValueChange={(title) => setTitle(section, title)}

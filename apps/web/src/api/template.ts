@@ -3,7 +3,7 @@ import type { SyllabusDetail } from '@/api/syllabi';
 import { setTemplateRuntime } from '@/lib/blocks/runtime';
 import type { BlockDefinition, TemplateDefinitionPayload } from '@silabos/shared/lib/blocks/types';
 import type { LockDetail } from '@/api/locks';
-import type { DocumentLayout, DocumentLayoutOptions } from '@/lib/documentLayout';
+import type { DocumentLayout, DocumentLayoutOptions, DocumentStyleDraft } from '@/lib/documentLayout';
 import { api } from '@/api/client';
 import type { DocumentNode, TemplateVariable } from '@silabos/shared/lib/templateDocument';
 import type { FieldResponsible } from '@/types/configuration';
@@ -39,7 +39,7 @@ export const uploadTemplateLogo = (id: string, file: File) => {
 export const clearTemplate = (id: string) => api<{ message: string }>(`/admin/template/${id}/structure`, { method: 'DELETE' });
 export const formatTemplate = (id: string) => api<{ message: string }>(`/admin/template/${id}/format`, { method: 'POST', body: JSON.stringify({}) });
 
-export type TemplateDraftPayload = { version: 1; title: string; layout: DocumentLayout; sections: Array<{ key: string; title: string; orientation: 'portrait' | 'landscape'; fields: Array<{ key: string; label: string; quien_llena: FieldResponsible; content: DocumentNode; show_if?: ResponseCondition | null; max_length?: number | null }> }>; block_changes?: Record<string, BlockDefinition> };
+export type TemplateDraftPayload = { version: 1; title: string; layout: DocumentLayout; document?: DocumentStyleDraft; sections: Array<{ key: string; title: string; orientation: 'portrait' | 'landscape'; fields: Array<{ key: string; label: string; quien_llena: FieldResponsible; content: DocumentNode; show_if?: ResponseCondition | null; max_length?: number | null }> }>; block_changes?: Record<string, BlockDefinition> };
 export const designRepeatableTable = (templateId: string, body: RepeatableTableDesign & { new?: boolean }) =>
     api<DesignedTable>(`/admin/template/${templateId}/blocks/design`, { method: 'POST', body: JSON.stringify(body) });
 export type TemplateDraftImpactCounts = { in_progress: number; keep: number; lose: number; back_to_draft: number };

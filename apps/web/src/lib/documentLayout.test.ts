@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import definition from '@silabos/shared/test/fixtures/template-definition.json';
 import type { DocumentStyle } from '@silabos/shared/lib/blocks/types';
-import { layoutStyle } from '@/lib/documentLayout';
+import { documentTextStyles, layoutStyle, styleDraftOf, withStyleDraft } from '@/lib/documentLayout';
 
 const document = definition.document as unknown as DocumentStyle;
 
@@ -31,5 +31,35 @@ describe('table header look from document', () => {
         expect(plain.every((attrs) => attrs.bold === null)).toBe(true);
         expect(all.filter((attrs) => attrs.backgroundColor === '#C3D4EA' && typeof attrs.textAlign === 'string')).toHaveLength(22);
         expect(all.filter((attrs) => attrs.backgroundColor === '#4F81BD')).toHaveLength(1);
+    });
+});
+
+describe('document styles drafted in the template editor', () => {
+    it('keeps every style the editor can change and leaves the title text, header and choices out', () => {
+        const draft = styleDraftOf(document)!;
+
+        expect(Object.keys(draft).sort()).toEqual(['body', 'colors', 'empty_text', 'font_family', 'line_height', 'orientation', 'paper', 'paragraph_spacing_pt', 'section_title', 'title']);
+        expect(draft.title).toEqual({ bold: true, italic: false, alignment: 'center' });
+        expect(styleDraftOf(null)).toBeNull();
+    });
+
+    it('lays the draft over the saved document, keeping the title text', () => {
+        const draft = { ...styleDraftOf(document)!, paper: 'a4' as const, title: { bold: false, italic: true, alignment: 'right' } };
+        const shown = withStyleDraft(document, draft)!;
+
+        expect(shown.paper).toBe('a4');
+        expect(shown.title).toEqual({ text: document.title.text, bold: false, italic: true, alignment: 'right' });
+        expect(shown.choices).toEqual(document.choices);
+        expect(withStyleDraft(null, draft)).toBeNull();
+        expect(withStyleDraft(document, null)).toBe(document);
+    });
+
+    it('turns the alignment, bold, italic and paragraph spacing into sheet styles', () => {
+        const styles = documentTextStyles({ ...document, paragraph_spacing_pt: 12, body: { alignment: 'justify' }, section_title: { bold: false, italic: true, alignment: 'center' } });
+
+        expect(styles.body).toEqual({ textAlign: 'justify', '--document-paragraph-spacing': '12pt' });
+        expect(styles.title).toEqual({ fontWeight: 700, fontStyle: 'normal', textAlign: 'center' });
+        expect(styles.section).toEqual({ fontWeight: 400, fontStyle: 'italic', textAlign: 'center' });
+        expect(documentTextStyles(null)).toEqual({ body: {}, title: {}, section: {} });
     });
 });

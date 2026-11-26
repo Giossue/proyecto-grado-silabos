@@ -50,6 +50,17 @@ describe("templateDraftSchema", () => {
     expect(Object.keys(errors)).toEqual(["version", "layout.body_font_size", "lists", "sections.0.fields.0.content"])
     expect(errors["sections.0.fields.0.content"]).toEqual(["Contenido de sections.0.fields.0.content"])
   })
+
+  const draft = { version: 1, layout: { body_font_size: 11 }, sections: [{ key: "a", title: "A", fields: [] }] }
+
+  it("accepts a version-1 draft that carries the document styles, and one without them", async () => {
+    expect(await schemaErrors(schema, { ...draft, document: { paper: "a4", colors: { title: "#112233" }, title: { bold: false } } })).toEqual({})
+    expect(await schemaErrors(schema, draft)).toEqual({})
+  })
+
+  it("rejects document styles that are not an object", async () => {
+    expect(await schemaErrors(schema, { ...draft, document: "a4" })).toEqual({ document: ["El campo documento debe ser una lista."] })
+  })
 })
 
 describe("assistantRequestSchema", () => {

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { DocumentStyle } from '@silabos/shared/lib/blocks/types';
 
 export type DocumentLayout = { margin_cm: number; title_font_size: number; section_font_size: number; body_font_size: number };
@@ -50,3 +51,40 @@ export const layoutStyle = (source: Partial<DocumentLayout> | null | undefined, 
 export const documentLayout = (document: DocumentStyle | null | undefined): DocumentLayout => document
     ? { margin_cm: document.margin_cm, title_font_size: document.sizes.title, section_font_size: document.sizes.section, body_font_size: document.sizes.body }
     : DEFAULT_LAYOUT;
+
+export type DocumentStyleDraft = Pick<DocumentStyle, 'paper' | 'orientation' | 'font_family' | 'line_height' | 'paragraph_spacing_pt' | 'colors' | 'section_title' | 'body' | 'empty_text'> & { title: Omit<DocumentStyle['title'], 'text'> };
+
+export const styleDraftOf = (document: DocumentStyle | null | undefined): DocumentStyleDraft | null => document
+    ? {
+        paper: document.paper,
+        orientation: document.orientation,
+        font_family: document.font_family,
+        line_height: document.line_height,
+        paragraph_spacing_pt: document.paragraph_spacing_pt,
+        colors: { ...document.colors },
+        title: { bold: document.title.bold, italic: document.title.italic, alignment: document.title.alignment },
+        section_title: { ...document.section_title },
+        body: { ...document.body },
+        empty_text: document.empty_text,
+    }
+    : null;
+
+export const withStyleDraft = (document: DocumentStyle | null | undefined, draft: DocumentStyleDraft | null): DocumentStyle | null => document && draft
+    ? { ...document, ...draft, title: { ...document.title, ...draft.title } }
+    : document ?? null;
+
+type TextAlign = CSSProperties['textAlign'];
+
+const headingStyle = (heading: { bold: boolean; italic: boolean; alignment: string }): CSSProperties => ({
+    fontWeight: heading.bold ? 700 : 400,
+    fontStyle: heading.italic ? 'italic' : 'normal',
+    textAlign: heading.alignment as TextAlign,
+});
+
+export const documentTextStyles = (document: DocumentStyle | null | undefined): { body: CSSProperties; title: CSSProperties; section: CSSProperties } => document
+    ? {
+        body: { textAlign: document.body.alignment as TextAlign, '--document-paragraph-spacing': `${document.paragraph_spacing_pt}pt` } as CSSProperties,
+        title: headingStyle(document.title),
+        section: headingStyle(document.section_title),
+    }
+    : { body: {}, title: {}, section: {} };

@@ -155,6 +155,18 @@ export function defineDocumentStyle(raw: unknown): PhpRecord {
   }
 }
 
+const DRAFT_STYLES = ["paper", "orientation", "font_family", "line_height", "paragraph_spacing_pt", "colors", "title", "section_title", "body", "empty_text"]
+
+export function documentWithStyles(document: PhpRecord, raw: unknown): PhpRecord {
+  const styles = object(raw, "document", DRAFT_STYLES)
+  const merged: PhpRecord = { ...document }
+  for (const [key, value] of Object.entries(styles)) {
+    const current = document[key]
+    merged[key] = isRecord(current) && isRecord(value) ? { ...current, ...value } : value
+  }
+  return defineDocumentStyle(merged)
+}
+
 const LAYOUT_CHOICES: Record<string, string> = {
   margin_cm: "margin_cm",
   title_font_size: "title",
