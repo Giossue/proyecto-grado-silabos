@@ -64,7 +64,7 @@ export class AdminCareerAcademicController {
 
   @Patch("mallas/:malla")
   @ApiOperation({
-    summary: "Edita el nombre o el estado de la malla.",
+    summary: "Edita el código o el estado de la malla.",
     description: "Hacerla vigente no cambia las demás mallas. No se cierra si sus materias tienen sílabos en un periodo académico abierto.",
   })
   @ApiParam({ name: "malla", format: "uuid" })

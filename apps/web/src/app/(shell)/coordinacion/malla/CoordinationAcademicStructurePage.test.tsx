@@ -1,4 +1,5 @@
 import { fireEvent } from "@testing-library/react"
+import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getCurriculum, getMallas, getScheduledSubjects, getTeacherAssignments, type Curriculum } from "@/api/career-academics"
 import { getSession } from "@/api/session"
@@ -9,6 +10,8 @@ import { flush, renderWithProviders } from "@/test/render"
 import { CoordinationAcademicStructurePage } from "./CoordinationAcademicStructurePage"
 
 vi.mock("next/navigation", () => import("@/test/nextNavigation"))
+
+const openMallaDialog = (): Element | null => document.querySelector('[data-testid="malla-dialog"][data-open="true"]')
 vi.mock("@/api/session", () => ({ getSession: vi.fn() }))
 vi.mock("@/api/career-academics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/api/career-academics")>()),
@@ -18,33 +21,38 @@ vi.mock("@/api/career-academics", async (importOriginal) => ({
   getTeacherAssignments: vi.fn(),
 }))
 vi.mock("@/components/domain/academic/curriculum/CurriculumCanvas", () => ({
-  CurriculumCanvas: ({ editing, onChanged }: { editing: boolean; onChanged: (message: string) => void }) => (
+  CurriculumCanvas: ({ editing, onChanged, header }: { editing: boolean; onChanged: (message: string) => void; header?: ReactNode }) => (
     <div data-testid="canvas" data-editing={String(editing)}>
+      {header}
       <button type="button" onClick={() => onChanged("Malla actualizada.")}>
         cambiar malla
       </button>
     </div>
   ),
 }))
-vi.mock("@/components/domain/academic/curriculum/CurriculumConfigurationDialog", () => ({ CurriculumConfigurationDialog: () => null }))
 vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: () => <div>Pause el periodo académico para editar</div> }))
 vi.mock("@/components/ui/select", async () => (await import("@/components/domain/academic/curriculum/curriculumTestUtils")).selectStub)
 vi.mock("@/components/domain/ImportSpreadsheetDialog", () => ({
-  ImportSpreadsheetDialog: ({ extra }: { extra?: Record<string, string> }) => <div data-testid="import" data-malla={extra?.malla_id ?? ""} />,
+  ImportSpreadsheetDialog: ({ extra, title }: { extra?: Record<string, string>; title: string }) => <div data-testid="import" data-malla={extra?.malla_id ?? ""} data-title={title} />,
 }))
 vi.mock("@/components/domain/academic/curriculum/MallaDialog", () => ({
-  MallaDialog: ({ open, malla }: { open: boolean; malla: { name: string } | null }) => (open ? <div data-testid="malla-dialog">{malla === null ? "nueva" : malla.name}</div> : null),
+  MallaDialog: ({ open, onOpenChange, malla }: { open: boolean; onOpenChange: (open: boolean) => void; malla: { code: string } | null }) => (
+    <div data-testid="malla-dialog" data-open={String(open)}>
+      <span data-label>{malla === null ? "nueva" : malla.code}</span>
+      <button type="button" data-close onClick={() => onOpenChange(false)} />
+    </div>
+  ),
 }))
 
 const MALLAS = [
-  { id: "malla-9", name: "Malla SW-9", cycle_count: 3, state: "vigente" as const, subject_count: 6 },
-  { id: "malla-8", name: "Malla SW-8", cycle_count: 4, state: "cerrada" as const, subject_count: 7 },
+  { id: "malla-9", code: "SW-9", cycle_count: 3, state: "vigente" as const, subject_count: 6 },
+  { id: "malla-8", code: "SW-8", cycle_count: 4, state: "cerrada" as const, subject_count: 7 },
 ]
 
 const curriculum = (editable = true, malla = MALLAS[0]): Curriculum =>
   ({
     career: { id: "career-1", name: "Software", modality: null },
-    malla: { id: malla.id, name: malla.name, state: malla.state },
+    malla: { id: malla.id, code: malla.code, state: malla.state },
     curriculum: { id: malla.id, cycle_count: malla.cycle_count, editable, lock_reason: editable ? null : "Periodo académico activo" },
     fixedFields: [],
     fixedFieldTotals: [],
@@ -89,7 +97,8 @@ describe("CoordinationAcademicStructurePage, edición de malla", () => {
     expect(document.querySelector('[aria-label="Herramientas del editor de malla"]')).toBeNull()
     const pageHeader = document.querySelector('[data-tour="page-header"]')!
     expect(pageHeader.textContent).toContain("Volver a la vista")
-    expect(pageHeader.querySelector('button[aria-label="Configurar ciclos"]')).not.toBeNull()
+    expect(pageHeader.querySelector('button[aria-label="Configurar ciclos"]')).toBeNull()
+    expect(pageHeader.querySelector('[data-tour="curriculum-data"]')!.textContent).toBe("Datos de la malla")
 
     fireEvent.click([...pageHeader.querySelectorAll("button")].find((button) => button.textContent?.includes("Volver a la vista"))!)
     await flush()
@@ -158,16 +167,67 @@ describe("CoordinationAcademicStructurePage, varias mallas", () => {
     await mountPage()
     fireEvent.click([...document.querySelectorAll("button")].find((button) => button.textContent?.includes("Nueva malla"))!)
     await flush()
-    expect(document.querySelector('[data-testid="malla-dialog"]')!.textContent).toBe("nueva")
+    expect(openMallaDialog()!.querySelector("[data-label]")!.textContent).toBe("nueva")
   })
 
-  it("abre los datos de la malla elegida para editarlos", async () => {
+  it("en la vista, «Nueva malla» va arriba con los demás botones, el selector sobre la malla y «Datos de la malla» no aparece", async () => {
+    await mountPage()
+    const pageHeader = document.querySelector('[data-tour="page-header"]')!
+    expect([...pageHeader.querySelectorAll("button")].some((button) => button.textContent?.includes("Nueva malla"))).toBe(true)
+    expect(document.querySelector('[data-testid="canvas"] [data-tour="malla-selector"]')).not.toBeNull()
+    expect(document.querySelector('[data-tour="malla-selector"] button')).toBeNull()
+    expect([...document.querySelectorAll("button")].some((button) => button.textContent?.includes("Datos de la malla"))).toBe(false)
+  })
+
+  it("al editar la malla, «Datos de la malla» aparece arriba y abre la malla elegida", async () => {
     await mountPage()
     fireEvent.click(document.querySelector('[data-tour="malla-selector"] [data-value="malla-8"]')!)
     await flush()
+    fireEvent.click(editButton())
+    await flush()
+    expect(document.querySelector('[data-tour="malla-selector"]')).toBeNull()
+    expect([...document.querySelectorAll("button")].some((button) => button.textContent?.includes("Nueva malla"))).toBe(false)
+    const pageHeader = document.querySelector('[data-tour="page-header"]')!
+    fireEvent.click([...pageHeader.querySelectorAll("button")].find((button) => button.textContent?.includes("Datos de la malla"))!)
+    await flush()
+    expect(openMallaDialog()!.querySelector("[data-label]")!.textContent).toBe("SW-8")
+  })
+
+  it("al cerrar los datos de la malla el diálogo sigue mostrando esa malla y no pasa a «Nueva malla»", async () => {
+    await mountPage()
+    fireEvent.click(editButton())
+    await flush()
     fireEvent.click([...document.querySelectorAll("button")].find((button) => button.textContent?.includes("Datos de la malla"))!)
     await flush()
-    expect(document.querySelector('[data-testid="malla-dialog"]')!.textContent).toBe("Malla SW-8")
+    const dialog = openMallaDialog()!
+    expect(dialog.querySelector("[data-label]")!.textContent).toBe("SW-9")
+
+    fireEvent.click(dialog.querySelector("[data-close]")!)
+    await flush()
+    expect(openMallaDialog()).toBeNull()
+    expect(dialog.isConnected).toBe(true)
+    expect(dialog.querySelector("[data-label]")!.textContent).toBe("SW-9")
+  })
+
+  it("muestra cada malla como «Malla <código>» en el selector, el título del editor y la importación", async () => {
+    await mountPage()
+    const selector = document.querySelector('[data-tour="malla-selector"]')!
+    expect([...selector.querySelectorAll("[data-value]")].map((option) => option.textContent)).toEqual(["Malla SW-9 · Vigente", "Malla SW-8 · Cerrada"])
+    expect(document.querySelector('[data-testid="import"]')!.getAttribute("data-title")).toBe("Importar materias a Malla SW-9")
+
+    fireEvent.click(selector.querySelector('[data-value="malla-8"]')!)
+    await flush()
+    expect(document.querySelector('[data-testid="import"]')!.getAttribute("data-title")).toBe("Importar materias a Malla SW-8")
+    fireEvent.click(editButton())
+    await flush()
+    expect(document.querySelector('[data-tour="page-header"]')!.textContent).toContain("Malla SW-8 de Software")
+  })
+
+  it("el selector de malla no lleva etiqueta visible y conserva su nombre accesible", async () => {
+    await mountPage()
+    const selector = document.querySelector('[data-tour="malla-selector"]')!
+    expect(selector.querySelector("label")).toBeNull()
+    expect(selector.querySelector('[aria-label="Malla"]')).not.toBeNull()
   })
 })
 

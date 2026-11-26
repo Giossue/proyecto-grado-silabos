@@ -25,7 +25,7 @@ const OTHER_MALLA = "01a1c5bc-9000-7000-8000-000000000003"
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const SHIFTS = '"shiftOptions":[{"value":"matutina","label":"Matutina"},{"value":"vespertina","label":"Vespertina"},{"value":"nocturna","label":"Nocturna"}]'
 const MODALITIES =
-  '[{"value":"presencial","label":"Presencial"},{"value":"semipresencial","label":"Semipresencial"},{"value":"en_linea","label":"En línea"},{"value":"a_distancia","label":"A distancia"},{"value":"hibrida","label":"Híbrida"}]'
+  '[{"value":"presencial","label":"Presencial"},{"value":"hibrida","label":"Híbrida"},{"value":"en_linea","label":"En línea"}]'
 const BASE_OPTIONS = `"faculties":[],"careers":[],"periods":[],"modalityOptions":${MODALITIES},${SHIFTS},"currentCurricula":[],"activeSubjects":[],"scheduledSubjects":[]`
 
 let world: FakeWorld
@@ -84,7 +84,7 @@ function deps() {
   }
 }
 
-const malla = (id: string, careerId: string, name: string, state: string, cycleCount: number): MallaRecord => ({ id, careerId, name, cycleCount, state, subjectCount: 0 })
+const malla = (id: string, careerId: string, code: string, state: string, cycleCount: number): MallaRecord => ({ id, careerId, code, cycleCount, state, subjectCount: 0 })
 
 function get(path: string): Request {
   return apiRequest(path, { cookie })
@@ -106,7 +106,7 @@ beforeEach(() => {
   }
   asRole("coordinador")
   careers = new Map([[CAREER, { id: CAREER, name: "Software", modality: "presencial", cycleCount: 4 }]])
-  mallas = [malla(MALLA, CAREER, "Malla SW", "vigente", 4), malla(OLD_MALLA, CAREER, "Malla SW-8", "cerrada", 9), malla(OTHER_MALLA, OTHER, "Malla RED", "vigente", 8)]
+  mallas = [malla(MALLA, CAREER, "SW", "vigente", 4), malla(OLD_MALLA, CAREER, "SW-8", "cerrada", 9), malla(OTHER_MALLA, OTHER, "RED", "vigente", 8)]
   lock = null
   subjects = [subject()]
   calls = []
@@ -159,7 +159,7 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
       status: 200,
       text:
         `{"career":{"id":"${CAREER}","name":"Software","modality":{"value":"presencial","label":"Presencial"}},` +
-        `"malla":{"id":"${MALLA}","name":"Malla SW","state":"vigente"},` +
+        `"malla":{"id":"${MALLA}","code":"SW","state":"vigente"},` +
         `"curriculum":{"id":"${MALLA}","cycle_count":4,"editable":true,"lock_reason":null,"lock":null},` +
         `${fixed},${totals},"subjects":[${first},${second}],` +
         `"requirements":[{"id":"r-1","subject_id":"01a1c5bc-7d0a-7172-b554-6ae09a4da972","requirement_id":"01a1c5bc-7cbf-7091-860c-63a02b91e998"}],` +
@@ -178,7 +178,7 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
     careers.set(CAREER, { id: CAREER, name: "Software", modality: null, cycleCount: 4 })
     const text = await (await curriculumBuilder(get(`/api/v1/coordination/academic/curriculum/${OLD_MALLA}`), OLD_MALLA, deps())).text()
     expect(text).toContain(
-      `"career":{"id":"${CAREER}","name":"Software","modality":null},"malla":{"id":"${OLD_MALLA}","name":"Malla SW-8","state":"cerrada"},"curriculum":{"id":"${OLD_MALLA}","cycle_count":9,"editable":false,"lock_reason":"Periodo académico activo",` +
+      `"career":{"id":"${CAREER}","name":"Software","modality":null},"malla":{"id":"${OLD_MALLA}","code":"SW-8","state":"cerrada"},"curriculum":{"id":"${OLD_MALLA}","cycle_count":9,"editable":false,"lock_reason":"Periodo académico activo",` +
         '"lock":{"scope":"convocation","period":"Noviembre-Marzo 2026-2027","institutional_pause":true,"delivery_on":"2026-12-10"}}',
     )
     expect(text).toContain(

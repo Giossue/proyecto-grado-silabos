@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getNotifications, openNotification, type Notification, type NotificationsResponse } from "@/api/notifications"
-import { NotificationsSheet } from "@/components/NotificationsSheet"
+import { NotificationsPopover } from "@/components/NotificationsPopover"
 import { sessionState } from "@/state/session"
 import { navigation } from "@/test/nextNavigation"
 import { flush, renderWithProviders } from "@/test/render"
@@ -16,6 +16,12 @@ vi.mock("@/api/notifications", () => ({
 }))
 
 const load = vi.fn()
+
+const administratorSession = {
+  user: { id: "user-1", name: "Ada Admin", email: "ada@example.test", email_verified: true, can_edit_identity: true },
+  active_role: { id: "role-1", code: "administrador" as const, career_id: null, career_name: null },
+  available_roles: [{ id: "role-1", code: "administrador" as const, career_id: null, career_name: null }],
+}
 
 const notification = (overrides: Partial<Notification> = {}): Notification => ({
   id: "notification-1",
@@ -38,14 +44,14 @@ const response = (data: Notification[], unread = 1): NotificationsResponse => ({
 const bell = (): HTMLElement => document.querySelector<HTMLElement>('button[aria-haspopup="dialog"]')!
 
 const mountOpen = async (user: ReturnType<typeof userEvent.setup>) => {
-  const view = renderWithProviders(<NotificationsSheet />)
+  const view = renderWithProviders(<NotificationsPopover />)
   await flush()
   await user.click(bell())
   await flush()
   return view
 }
 
-describe("NotificationsSheet", () => {
+describe("NotificationsPopover", () => {
   beforeEach(() => {
     navigation.reset("/rol")
     load.mockReset()
@@ -53,6 +59,62 @@ describe("NotificationsSheet", () => {
     vi.mocked(getNotifications).mockReset().mockResolvedValue(response([notification()]))
     sessionState.replace(null)
     vi.spyOn(sessionState, "load").mockImplementation(load)
+  })
+
+  it("abre un panel desplegable anclado a la campana, sin oscurecer ni bloquear la página", async () => {
+    const user = userEvent.setup()
+    await mountOpen(user)
+
+    const panel = screen.getByRole("dialog", { name: "Notificaciones" })
+    expect(panel).toHaveAttribute("data-slot", "popover-content")
+    expect(document.querySelector('[data-slot$="-overlay"]')).toBeNull()
+    expect(document.body).not.toHaveAttribute("data-scroll-locked")
+    expect(bell()).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it("al abrir deja el foco en el panel, no sobre «Marcar todas como leídas»", async () => {
+    const user = userEvent.setup()
+    await mountOpen(user)
+
+    expect(screen.getByRole("dialog", { name: "Notificaciones" })).toHaveFocus()
+  })
+
+  it("tiene un botón visible para cerrar, que devuelve el foco a la campana", async () => {
+    const user = userEvent.setup()
+    await mountOpen(user)
+
+    await user.click(screen.getByRole("button", { name: "Cerrar notificaciones" }))
+    await flush()
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(bell()).toHaveFocus()
+  })
+
+  it("se cierra con Escape o al pulsar otra vez la campana", async () => {
+    const user = userEvent.setup()
+    await mountOpen(user)
+    await user.keyboard("{Escape}")
+    await flush()
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(bell()).toHaveAttribute("aria-expanded", "false")
+
+    await user.click(bell())
+    await flush()
+    await user.click(bell())
+    await flush()
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("en pantallas angostas y con ámbito elegido la campana lleva a la página, sin abrir el panel", async () => {
+    vi.spyOn(window, "matchMedia").mockImplementation((query) => ({ matches: query === "(width < 40rem)", media: query, addEventListener: () => undefined, removeEventListener: () => undefined }) as unknown as MediaQueryList)
+    sessionState.replace(administratorSession)
+    const user = userEvent.setup()
+    await mountOpen(user)
+
+    expect(navigation.push).toHaveBeenCalledWith("/admin/notificaciones")
+    expect(screen.queryByRole("dialog")).toBeNull()
+    // Solo el contador de la campana consulta al servidor.
+    expect(getNotifications).toHaveBeenCalledTimes(1)
   })
 
   it("mantiene el filtro visible mientras carga los avisos y reemplaza la carga al recibirlos", async () => {
@@ -137,7 +199,7 @@ describe("NotificationsSheet", () => {
   it("la campana queda marcada en la lista de avisos, no en la pestaña «Notificaciones» de Configuración", async () => {
     const variantAt = async (path: string): Promise<string | null> => {
       navigation.reset(path)
-      const view = renderWithProviders(<NotificationsSheet />)
+      const view = renderWithProviders(<NotificationsPopover />)
       await flush()
       const variant = bell().getAttribute("data-variant")
       view.unmount()

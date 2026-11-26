@@ -12,6 +12,11 @@ export function openCurriculum(subject: string): Prisma.Sql {
   return Prisma.sql`exists (select 1 from mallas malla_abierta where malla_abierta.malla_id = ${Prisma.raw(subject)}.malla_id and malla_abierta.estado_malla <> 'cerrada')`
 }
 
+/** How a malla (table alias) is shown to people: «Malla <código>», e.g. «Malla SW-8» (scheduled subjects, the syllabus academic context). */
+export function mallaLabelSql(malla: string): Prisma.Sql {
+  return Prisma.sql`('Malla ' || ${Prisma.raw(malla)}.codigo_malla)`
+}
+
 export const CURRENT_PROCESS = Prisma.sql`(select actual.convocatoria_universidad_id from convocatorias_universidad actual
   order by actual.fecha_inicio desc, actual.convocatoria_universidad_id desc limit 1)`
 

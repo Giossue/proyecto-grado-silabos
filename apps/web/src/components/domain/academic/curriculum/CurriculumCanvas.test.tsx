@@ -150,6 +150,13 @@ describe("CurriculumCanvas", () => {
     expect(node("a").data.editable).toBe(false)
   })
 
+  it("las conexiones son solo prerrequisitos: van de la salida de una materia a la entrada de otra", () => {
+    renderWithProviders(<CurriculumCanvas {...baseProps({ subjects: [subject("a", 0), subject("b", 1)] })} />)
+
+    // In loose mode the library snaps an id-less pair of handles to the bottom one, even when pointing at the top one
+    expect(props().connectionMode).toBe("strict")
+  })
+
   it("mueve una materia y abre la elección de relación desde el menú, sin arrastrar", async () => {
     renderWithProviders(<CurriculumCanvas {...baseProps({ curriculum: { id: "career", cycle_count: 1, editable: true, lock_reason: null }, subjects: [subject("a", 0), subject("b", 1)] })} />)
 
@@ -204,7 +211,8 @@ describe("CurriculumCanvas", () => {
     expect(props().translateExtent).toBeUndefined()
     const scroll = document.body.querySelector("[data-curriculum-scroll]")!
     expect(scroll.classList).toContain("overflow-auto")
-    expect(scroll.classList).toContain("top-14")
+    expect(scroll.classList).toContain("left-14")
+    expect(scroll.classList).not.toContain("top-14")
 
     const board = (): HTMLElement => document.body.querySelector<HTMLElement>("[data-curriculum-board]")!
     const fullWidth = parseFloat(board().style.width)
@@ -220,5 +228,35 @@ describe("CurriculumCanvas", () => {
     renderWithProviders(<CurriculumCanvas {...baseProps({ editing: false, subjects: [subject("a", 0)] })} />)
     expect(parseFloat(board().style.width)).toBeCloseTo(fullWidth / 2, 0)
     expect(buttonNamed("Ajustar la malla al ancho disponible")).toHaveAttribute("aria-pressed", "false")
+  })
+
+  it("pone los botones de navegación en una sola columna, todos con fondo", () => {
+    renderWithProviders(<CurriculumCanvas {...baseProps({ editing: false, subjects: [subject("a", 0)] })} />)
+    const zoom = document.body.querySelector('[aria-label="Zoom de la malla"]')!
+    const column = zoom.parentElement!
+    expect(column.classList).toContain("flex-col")
+    expect(zoom.classList).toContain("flex-col")
+    const buttons = [...column.querySelectorAll("button")]
+    expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Acercar la malla",
+      "Alejar la malla",
+      "Ajustar la malla al ancho disponible",
+      "Cómo moverse por la malla",
+      "Ver leyenda y totales de la malla",
+    ])
+    expect(buttons.every((button) => button.classList.contains("bg-card/90"))).toBe(true)
+  })
+
+  it("muestra la cabecera sobre la malla, alineada con su contenido, y sin cabecera no deja nada", () => {
+    const view = renderWithProviders(<CurriculumCanvas {...baseProps({ editing: false, subjects: [subject("a", 0)] })} header={<span data-testid="malla-header">Malla SW-9</span>} />)
+    const scroll = document.body.querySelector("[data-curriculum-scroll]")!
+    const header = scroll.querySelector<HTMLElement>("[data-curriculum-header]")!
+    expect(header.querySelector('[data-testid="malla-header"]')).not.toBeNull()
+    expect(header.nextElementSibling).toBe(scroll.querySelector("[data-curriculum-board]"))
+    expect(header.style.paddingLeft).not.toBe("")
+    view.unmount()
+
+    renderWithProviders(<CurriculumCanvas {...baseProps({ editing: false, subjects: [subject("a", 0)] })} />)
+    expect(document.body.querySelector("[data-curriculum-header]")).toBeNull()
   })
 })

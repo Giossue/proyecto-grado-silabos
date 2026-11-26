@@ -43,6 +43,18 @@ describe("DeadlineChip", () => {
     expect(element.dataset.tone).toBe(tone)
   })
 
+  // The app header repaints .text-muted-foreground as light text, so a light chip would become unreadable there.
+  it.each([
+    [{ state: "paused" }, ["bg-sidebar-accent", "text-sidebar-foreground"]],
+    [{ state: "closed" }, ["bg-sidebar-accent", "text-sidebar-foreground"]],
+    [{ state: "overdue" }, ["bg-destructive", "text-destructive-foreground"]],
+  ] as const)("usa colores legibles sobre la barra superior: %o", (value, colors) => {
+    const classes = chip(value).className.split(" ")
+
+    expect(classes).toEqual(expect.arrayContaining([...colors]))
+    expect(classes).not.toContain("text-muted-foreground")
+  })
+
   it("muestra el detalle completo al abrirla", async () => {
     const user = userEvent.setup()
     await user.click(chip({}))

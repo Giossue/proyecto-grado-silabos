@@ -129,10 +129,8 @@ describe("GET admin/academic/{section?}", () => {
       periods: [],
       modalityOptions: [
         { value: "presencial", label: "Presencial" },
-        { value: "semipresencial", label: "Semipresencial" },
-        { value: "en_linea", label: "En línea" },
-        { value: "a_distancia", label: "A distancia" },
         { value: "hibrida", label: "Híbrida" },
+        { value: "en_linea", label: "En línea" },
       ],
       shiftOptions: [
         { value: "matutina", label: "Matutina" },

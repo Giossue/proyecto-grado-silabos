@@ -139,7 +139,7 @@ export function PageFrame({
           </div>
 
           {tools && !loading ? (
-            <div data-tour="page-tools" className="flex shrink-0 items-center gap-1 sm:-mr-2 sm:gap-2">
+            <div data-tour="page-tools" className="flex shrink-0 items-center gap-1 sm:-mr-2 sm:gap-2 sm:has-[[data-labeled-tool]]:mr-0">
               {tools}
             </div>
           ) : null}

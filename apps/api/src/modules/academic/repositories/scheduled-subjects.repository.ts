@@ -3,7 +3,7 @@ import { Prisma } from "../../../generated/prisma/client"
 import { PrismaService } from "../../../prisma/prisma.service"
 import { uuidList } from "../../../prisma/sql"
 import { IN_PROGRESS, SYLLABUS_SCOPE, TOUCHED_SYLLABUS } from "../../../server/academic/academicSql"
-import { openCurriculum } from "../../../server/syllabus/syllabusSql"
+import { mallaLabelSql, openCurriculum } from "../../../server/syllabus/syllabusSql"
 import type { CareerParallelRecord, ScheduledSubjectRecord, ScheduledSubjectsRepository } from "../../../server/academic/scheduledSubjects"
 
 type SubjectRow = { id: string; codigo: string; nombre: string; ciclo: number | null; activo: boolean; genera: boolean; modalidad: string | null; malla: string }
@@ -49,12 +49,12 @@ export class ScheduledSubjectsPrismaRepository implements ScheduledSubjectsRepos
   async careerSubjects(careerId: string): Promise<ScheduledSubjectRecord[]> {
     const found = await this.prisma.$queryRaw<SubjectRow[]>`select asignatura.asignatura_id::text as id, asignatura.codigo_asignatura as codigo, asignatura.nombre_asignatura as nombre,
         asignatura.ciclo_asignatura as ciclo, asignatura.asignatura_activa as activo, asignatura.genera_silabo_asignatura as genera,
-        coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modalidad, malla.nombre_malla as malla
+        coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modalidad, ${mallaLabelSql("malla")} as malla
       from asignaturas asignatura
       inner join mallas malla on malla.malla_id = asignatura.malla_id
       left join carreras carrera on carrera.carrera_id = asignatura.carrera_id
       where asignatura.carrera_id = ${careerId}::uuid and malla.estado_malla <> 'cerrada'
-      order by (malla.estado_malla = 'vigente') desc, malla.nombre_malla asc, asignatura.ciclo_asignatura asc, asignatura.orden_asignatura_en_ciclo asc, asignatura.nombre_asignatura asc`
+      order by (malla.estado_malla = 'vigente') desc, malla.codigo_malla asc, asignatura.ciclo_asignatura asc, asignatura.orden_asignatura_en_ciclo asc, asignatura.nombre_asignatura asc`
     return found.map((row) => ({
       id: row.id,
       code: row.codigo,

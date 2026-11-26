@@ -49,7 +49,7 @@ export function UserMenuContent({ user }: { user: User }) {
           Cambiar carrera o rol
         </DropdownMenuItem>
       ) : null}
-      <DropdownMenuItem className="sm:hidden" onSelect={() => updateAppearance(dark ? "light" : "dark")}>
+      <DropdownMenuItem onSelect={() => updateAppearance(dark ? "light" : "dark")}>
         {dark ? <Sun data-icon="inline-start" aria-hidden="true" /> : <Moon data-icon="inline-start" aria-hidden="true" />}
         {dark ? "Tema claro" : "Tema oscuro"}
       </DropdownMenuItem>
@@ -57,7 +57,7 @@ export function UserMenuContent({ user }: { user: User }) {
         <PersonStanding data-icon="inline-start" aria-hidden="true" />
         Accesibilidad
       </DropdownMenuItem>
-      {settingsHref ? <DropdownMenuSeparator /> : null}
+      <DropdownMenuSeparator />
       <DropdownMenuItem variant="destructive" className="w-full" data-test="logout-button" onSelect={() => { logoutConfirmOpen.value = true }}>
         <LogOut data-icon="inline-start" aria-hidden="true" />
         Cerrar sesión

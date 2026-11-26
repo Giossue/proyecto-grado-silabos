@@ -149,9 +149,11 @@ export class TemplateDocumentWord {
         }
         const destination = row.addCell(cellWidth, options)
         this.keepWithNext = leadingHeading
+        const documentHeader = isHeader && given(attrs, "backgroundColor") === null
+        const textAttrs = documentHeader && this.tableHeaderBackground !== null && typeof attrs.bold !== "boolean" ? { ...attrs, bold: true } : attrs
         for (const child of nodes(cell.content)) {
-          const styled = isHeader && this.tableHeaderColor !== null && given(attrs, "backgroundColor") === null ? this.withTextColor(child, this.tableHeaderColor) : child
-          this.append(destination, this.withCellTextStyle(styled, attrs), cellWidth, null, typeof attrs.textAlign === "string" ? attrs.textAlign : null, true)
+          const styled = documentHeader && this.tableHeaderColor !== null ? this.withTextColor(child, this.tableHeaderColor) : child
+          this.append(destination, this.withCellTextStyle(styled, textAttrs), cellWidth, null, typeof attrs.textAlign === "string" ? attrs.textAlign : null, true)
         }
         column += span
       }

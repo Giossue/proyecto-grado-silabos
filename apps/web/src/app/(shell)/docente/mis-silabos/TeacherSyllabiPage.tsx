@@ -8,7 +8,6 @@ import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
 import { ApiError } from "@/api/client"
 import { EmptyState } from "@/components/domain/EmptyState"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
-import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
@@ -106,15 +105,14 @@ export default function TeacherSyllabiPage() {
       description="Los sílabos de las materias que usted dicta"
       size="wide"
       loading={firstLoad}
-      actionsSkeleton={firstLoad ? ["w-9"] : []}
+      actionsSkeleton={firstLoad ? ["w-28"] : []}
       tools={
-        <IconTooltip label="Historial">
-          <Button asChild variant="ghost" size="icon">
-            <Link href={paths.teacher.history} aria-label="Historial">
-              <History aria-hidden="true" />
-            </Link>
-          </Button>
-        </IconTooltip>
+        <Button asChild variant="outline" data-labeled-tool className="max-sm:size-9 max-sm:has-[>svg]:px-0">
+          <Link href={paths.teacher.history} aria-label="Historial">
+            <History aria-hidden="true" />
+            <span className="max-sm:sr-only">Historial</span>
+          </Link>
+        </Button>
       }
     >
       {error ? <LoadErrorState message={error} onRetry={() => void load()} /> : null}

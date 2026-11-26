@@ -12,7 +12,7 @@ import { FormModal } from "@/components/domain/FormModal"
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { initialLibraries, librariesToStore, useCatalogLibraries } from "@/composables/useCatalogLibraries"
 import { useInstitutionToday } from "@/composables/useInstitutionDate"
@@ -32,7 +32,11 @@ type CatalogRecordDialogProps = Pick<AcademicStructureProps, "options"> & {
   open?: boolean
   onOpenChange?: (open: boolean) => void
   onSaved?: (message: string) => void
+  onCreated?: (record: { id: string; nombre: string }) => void
 }
+
+// Select item that opens the new faculty dialog instead of becoming the field value.
+const NEW_FACULTY = "nueva-facultad"
 
 const EMPTY_FORM: RecordForm = { nombre: "", code: "", faculty_id: "", modality: "", cycle_count: "", starts_on: "", ends_on: "" }
 
@@ -47,7 +51,7 @@ const recordSchema = (entity: GovernanceCatalogEntity, values: RecordForm) =>
 
 const filled = (...values: string[]): boolean => values.every((value) => String(value).trim() !== "")
 
-export function CatalogRecordDialog({ options, entity, disabled = false, showTrigger = true, open, onOpenChange, onSaved }: CatalogRecordDialogProps) {
+export function CatalogRecordDialog({ options, entity, disabled = false, showTrigger = true, open, onOpenChange, onSaved, onCreated }: CatalogRecordDialogProps) {
   const [isOpen, setOpen] = useModelOpen(open, onOpenChange)
   const [processing, setProcessing] = useState(false)
   const recordForm = useSchemaForm((values) => recordSchema(entity, values as RecordForm), { defaultValues: EMPTY_FORM })
@@ -57,6 +61,10 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
   const [logo, setLogo] = useState<File | null>(null)
   const { step, goTo, reset: resetStep, stepClassName } = useFormSteps<1 | 2>(1)
   const [chosenLibraries, setChosenLibraries] = useState<string[]>([])
+  const [newFacultyOpen, setNewFacultyOpen] = useState(false)
+  // Faculties registered from this form, offered until the refreshed options include them.
+  const [createdFaculties, setCreatedFaculties] = useState<{ id: string; nombre: string }[]>([])
+  const faculties = [...(options.faculties ?? []), ...createdFaculties.filter((created) => !options.faculties?.some((item) => item.id === created.id))]
   const { libraries: koha, error: kohaError, load: loadKoha } = useCatalogLibraries()
   const minimumPeriodDate = useInstitutionToday()
   const minimumPeriodEndDate = form.starts_on || minimumPeriodDate
@@ -67,6 +75,8 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
     setLogo(null)
     resetStep()
     setChosenLibraries([])
+    setNewFacultyOpen(false)
+    setCreatedFaculties([])
   })
 
   const markLibraries = useEffectEvent((found: CatalogLibrary[] | null): void => {
@@ -117,6 +127,7 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
         const result = await createAcademicRecord(entity, payload)
         setOpen(false)
         onSaved?.(result.message)
+        if (result.id) onCreated?.({ id: result.id, nombre: String(recordForm.getValues().nombre).trim() })
       } catch (reason) {
         const received = applyApiErrors(recordForm.setError, reason, { fallback: "No se pudo guardar" })
         if (entity === "facultad") goTo(Object.keys(received).some((key) => key.startsWith("catalog_libraries")) ? 2 : 1)
@@ -144,12 +155,20 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
     await save(event)
   }
 
-  const selectField = (key: keyof RecordForm, id: string, label: string, placeholder: string, items: { value: string; label: string }[]) => (
+  const selectField = (key: keyof RecordForm, id: string, label: string, placeholder: string, items: { value: string; label: string }[], add?: { value: string; label: string; onSelect: () => void }) => (
     <Field data-invalid={Boolean(errors[key])}>
       <FieldLabel htmlFor={id} required>
         {label}
       </FieldLabel>
-      <Select value={form[key]} onValueChange={(value) => setField(key, value)} required>
+      <Select
+        value={form[key]}
+        onValueChange={(value) => {
+          if (add && value === add.value) add.onSelect()
+          // Radix reports "" when the value is set before its new option is registered.
+          else if (value) setField(key, value)
+        }}
+        required
+      >
         <SelectTrigger id={id}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
@@ -161,23 +180,36 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
               </SelectItem>
             ))}
           </SelectGroup>
+          {add ? (
+            <>
+              {items.length > 0 ? <SelectSeparator /> : null}
+              <SelectGroup>
+                <SelectItem value={add.value}>
+                  <Plus aria-hidden="true" />
+                  {add.label}
+                </SelectItem>
+              </SelectGroup>
+            </>
+          ) : null}
         </SelectContent>
       </Select>
       <FieldError errors={errors[key]} />
     </Field>
   )
 
+  // The new faculty dialog opens over the career one: their name fields need different ids.
+  const nameId = entity === "carrera" ? "catalog-career-name" : "catalog-name"
   const nameField = (
     <Field data-invalid={Boolean(errors.nombre)}>
-      <FieldLabel htmlFor="catalog-name" required>
-        Nombre
+      <FieldLabel htmlFor={nameId} required>
+        {entity === "facultad" ? "Nombre de facultad" : "Nombre"}
       </FieldLabel>
-      <Input id="catalog-name" value={form.nombre} onChange={(event) => setField("nombre", event.target.value)} aria-required="true" />
+      <Input id={nameId} value={form.nombre} onChange={(event) => setField("nombre", event.target.value)} aria-required="true" />
       <FieldError errors={errors.nombre} />
     </Field>
   )
 
-  return (
+  const modal = (
     <FormModal
       open={isOpen}
       onOpenChange={setOpen}
@@ -230,7 +262,8 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
                   "catalog-faculty",
                   "Facultad",
                   "Seleccione una facultad",
-                  options.faculties.map((item) => ({ value: item.id, label: item.nombre ?? "" })),
+                  faculties.map((item) => ({ value: item.id, label: item.nombre ?? "" })),
+                  { value: NEW_FACULTY, label: "Registrar nueva facultad", onSelect: () => setNewFacultyOpen(true) },
                 )}
                 {selectField("modality", "catalog-modality", "Modalidad", "Seleccione la modalidad aprobada", options.modalityOptions)}
                 {nameField}
@@ -256,7 +289,6 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
                       step={1}
                       aria-required="true"
                     />
-                    <FieldDescription>Se crea la malla vigente «Malla {form.code.trim() || "<código>"}» con estos ciclos. Después los ciclos se cambian en cada malla</FieldDescription>
                     <FieldError errors={errors.cycle_count} />
                   </Field>
                 </div>
@@ -318,5 +350,26 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
         </form>
       )}
     </FormModal>
+  )
+
+  if (entity !== "carrera") return modal
+
+  return (
+    <>
+      {modal}
+      {/* Outside the career form, so that saving the faculty does not submit the career. */}
+      <CatalogRecordDialog
+        entity="facultad"
+        options={options}
+        showTrigger={false}
+        open={newFacultyOpen}
+        onOpenChange={setNewFacultyOpen}
+        onSaved={onSaved}
+        onCreated={(created) => {
+          setCreatedFaculties((previous) => [...previous, created])
+          setField("faculty_id", created.id)
+        }}
+      />
+    </>
   )
 }

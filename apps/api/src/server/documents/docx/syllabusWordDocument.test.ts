@@ -118,6 +118,61 @@ describe("Word document like PhpWordDocumentRenderer", () => {
     expect(xml).toMatch(/<w:numPr><w:numId w:val="2"\/><w:ilvl w:val="0"\/><\/w:numPr>[\s\S]*?viñeta/)
   })
 
+  it("gives a plain table header the document header background and bold, like a header styled with them", async () => {
+    const header = (text: string, attrs: PhpRecord) => ({
+      type: "table",
+      content: [{ type: "tableRow", content: [{ type: "tableHeader", attrs: { colspan: 1, rowspan: 1, ...attrs }, content: [{ type: "paragraph", content: [{ type: "text", text }] }] }] }],
+    })
+    const sections = [
+      {
+        key: "tablas",
+        title: "Tablas",
+        orientation: "portrait",
+        fields: [
+          {
+            definition_id: "01a1c5ba-0000-7000-8000-000000000099",
+            key: "tablas",
+            label: "",
+            quien_llena: "institucional",
+            document: { type: "doc", content: [header("Estilado", { backgroundColor: "#C3D4EA", bold: true }), header("Simple", { backgroundColor: null, bold: null })] },
+          },
+        ],
+      },
+    ]
+    const xml = await documentXml(await renderDocx(inputOf(plantilla, { sections }), noLogos))
+    const cellOf = (text: string) => (xml.match(new RegExp(`<w:tc>(?:(?!<w:tc>).)*?${text}.*?</w:tc>`)) ?? [""])[0].replace(text, "TEXTO")
+    const styled = cellOf("Estilado")
+    expect(styled).toContain('w:fill="C3D4EA"')
+    expect(styled).toContain('<w:b w:val="1"/>')
+    expect(golden.definition.document.colors.text).toBe(golden.definition.document.colors.table_header_text)
+    expect(cellOf("Simple").replace('<w:color w:val="000000"/>', "")).toBe(styled)
+  })
+
+  it("keeps a plain table header normal weight when the document has no header background", async () => {
+    const sections = [
+      {
+        key: "tablas",
+        title: "Tablas",
+        orientation: "portrait",
+        fields: [
+          {
+            definition_id: "01a1c5ba-0000-7000-8000-000000000099",
+            key: "tablas",
+            label: "",
+            quien_llena: "institucional",
+            document: { type: "doc", content: [{ type: "table", content: [{ type: "tableRow", content: [{ type: "tableHeader", attrs: { colspan: 1, rowspan: 1 }, content: [{ type: "paragraph", content: [{ type: "text", text: "Simple" }] }] }] }] }] },
+          },
+        ],
+      },
+    ]
+    const input = inputOf({ document: { colors: { table_header_background: null, table_header_text: null } }, snapshot: plantilla.snapshot } as never, { sections })
+    const xml = await documentXml(await renderDocx(input, noLogos))
+    const cell = (xml.match(/<w:tc>(?:(?!<w:tc>).)*?Simple.*?<\/w:tc>/) ?? [""])[0]
+    expect(cell).toContain("Simple")
+    expect(cell).not.toContain("<w:b ")
+    expect(cell).not.toContain("w:fill")
+  })
+
   it("writes Laravel's plain-text PDF when Gotenberg is off", async () => {
     const bundle = await renderSyllabusDocuments(inputOf(plantilla), noLogos, null)
     expect(bundle.pdf.bytes.toString("base64")).toBe(textGolden.cases[0].pdf)

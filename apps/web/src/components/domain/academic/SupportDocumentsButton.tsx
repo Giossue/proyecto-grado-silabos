@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { type SupportDocument } from "@/api/support-documents"
 import { openSupportDocument, supportDocumentSize } from "@/components/domain/academic/supportDocumentViewer"
-import { IconTooltip } from "@/components/domain/IconTooltip"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
@@ -37,11 +36,10 @@ export function SupportDocumentsButton() {
 
   return (
     <>
-      <IconTooltip label="Documentos de apoyo">
-        <Button type="button" variant="ghost" size="icon" aria-label="Documentos de apoyo" onClick={() => changeOpen(true)}>
-          <FolderOpen aria-hidden="true" />
-        </Button>
-      </IconTooltip>
+      <Button type="button" variant="outline" data-labeled-tool className="max-lg:size-9 max-lg:has-[>svg]:px-0" aria-label="Documentos de apoyo" onClick={() => changeOpen(true)}>
+        <FolderOpen aria-hidden="true" />
+        <span className="max-lg:sr-only">Documentos de apoyo</span>
+      </Button>
       <Dialog open={open} onOpenChange={changeOpen}>
         <DialogContent>
           <DialogHeader>

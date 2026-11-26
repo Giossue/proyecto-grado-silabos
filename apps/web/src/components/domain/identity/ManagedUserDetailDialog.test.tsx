@@ -1,6 +1,6 @@
 import { fireEvent } from "@testing-library/react"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
-import { removeManagedUserRole, type ManagedUser } from "@/api/admin-users"
+import { removeManagedUserRole, updateManagedUser, type ManagedUser } from "@/api/admin-users"
 import { ManagedUserDetailDialog } from "@/components/domain/identity/ManagedUserDetailDialog"
 import { flush, renderWithProviders } from "@/test/render"
 
@@ -51,33 +51,51 @@ describe("ManagedUserDetailDialog", () => {
     expect([...document.body.querySelectorAll("button")].some((item) => item.textContent?.includes("Editar"))).toBe(false)
   })
 
-  it("las acciones van en el pie como botones con texto, sin menú", async () => {
+  it("las acciones de la cuenta solo aparecen al editar, en el pie, como botones con texto y sin menú", async () => {
+    const action = (label: string) => document.body.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
+    const startEditing = async () => {
+      fireEvent.click(button("Editar"))
+      await flush()
+    }
     const onAction = vi.fn()
     const first = renderWithProviders(<ManagedUserDetailDialog {...props} canEdit onAction={onAction} />)
     await flush()
+    expect(action("Deshabilitar acceso")).toBeNull()
 
-    expect(document.body.querySelector('button[aria-label="Deshabilitar acceso"]')).not.toBeNull()
+    await startEditing()
+    expect(action("Deshabilitar acceso")).not.toBeNull()
     expect(document.body.querySelector('button[aria-label^="Acciones para"]')).toBeNull()
 
-    fireEvent.click(document.body.querySelector<HTMLButtonElement>('button[aria-label="Deshabilitar acceso"]')!)
+    fireEvent.click(button("Cancelar"))
     await flush()
-    expect(onAction.mock.calls[0]).toEqual(["access"])
+    expect(action("Deshabilitar acceso")).toBeNull()
+
+    await startEditing()
+    fireEvent.click(action("Deshabilitar acceso")!)
+    await flush()
+    // The action buttons live inside the edit form but must not save it
+    expect(onAction.mock.calls).toEqual([["access"]])
+    expect(updateManagedUser).not.toHaveBeenCalled()
     first.unmount()
 
     const fresh = renderWithProviders(
       <ManagedUserDetailDialog {...props} user={{ ...user, pending_activation: true, invitation_expired: false } as ManagedUser} canEdit />,
     )
     await flush()
-    expect(document.body.querySelector('button[aria-label="Eliminar cuenta pendiente"]')).not.toBeNull()
+    expect(action("Eliminar cuenta pendiente")).toBeNull()
+    await startEditing()
+    expect(action("Eliminar cuenta pendiente")).not.toBeNull()
     expect(document.body.textContent).not.toContain("Reenviar invitación")
     fresh.unmount()
 
     renderWithProviders(<ManagedUserDetailDialog {...props} user={{ ...user, pending_activation: true, invitation_expired: true } as ManagedUser} canEdit />)
     await flush()
-    expect(document.body.querySelector('button[aria-label^="Acciones para"]')).toBeNull()
-    expect(document.body.querySelector('button[aria-label="Reenviar invitación"]')?.textContent).toContain("Reenviar invitación")
-    expect(document.body.querySelector('button[aria-label="Eliminar cuenta pendiente"]')?.textContent).toContain("Eliminar cuenta pendiente")
     expect(document.body.textContent).toContain("Invitación vencida")
+    expect(action("Reenviar invitación")).toBeNull()
+    await startEditing()
+    expect(document.body.querySelector('button[aria-label^="Acciones para"]')).toBeNull()
+    expect(action("Reenviar invitación")?.textContent).toContain("Reenviar invitación")
+    expect(action("Eliminar cuenta pendiente")?.textContent).toContain("Eliminar cuenta pendiente")
   })
 
   it("no ofrece acciones en la propia cuenta", async () => {

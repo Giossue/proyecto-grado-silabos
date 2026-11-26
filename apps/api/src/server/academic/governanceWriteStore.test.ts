@@ -16,7 +16,7 @@ function recordingDatabase() {
 const FACULTY = "01a1c5ba-10b4-7129-925f-c28a9489323c"
 
 describe("governanceWriteTx career creation", () => {
-  it("creates the career without cycles and its first vigente malla «Malla <código>» with the cycles of the form", async () => {
+  it("creates the career without cycles and its first vigente malla, whose code is the career code, with the cycles of the form", async () => {
     const { db, statements } = recordingDatabase()
     const id = await governanceWriteTx(db, () => undefined, 0).createCareer({ facultyId: FACULTY, modality: "presencial", code: "SW", name: "Software", cycleCount: 9 })
     expect(statements).toHaveLength(2)
@@ -24,7 +24,9 @@ describe("governanceWriteTx career creation", () => {
     expect(statements[0].text).not.toContain("numero_ciclos")
     expect(statements[1].text).toContain('insert into "mallas"')
     expect(statements[1].text).not.toContain("resolucion_malla")
-    expect(statements[1].values).toEqual(expect.arrayContaining([id, "Malla SW", 9, "vigente"]))
+    expect(statements[1].text).toContain('"codigo_malla"')
+    expect(statements[1].values).toEqual(expect.arrayContaining([id, "SW", 9, "vigente"]))
+    expect(statements[1].values).not.toContain("Malla SW")
     expect(statements[1].values).not.toContain(null)
   })
 })

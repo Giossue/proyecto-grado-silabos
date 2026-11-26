@@ -23,6 +23,7 @@ const mountButton = async () => {
   await flush()
 }
 const openList = async () => {
+  expect(screen.getByRole("button", { name: "Documentos de apoyo" }).textContent).toBe("Documentos de apoyo")
   fireEvent.click(screen.getByRole("button", { name: "Documentos de apoyo" }))
   await flush()
 }

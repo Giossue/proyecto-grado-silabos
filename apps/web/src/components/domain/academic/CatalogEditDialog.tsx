@@ -241,7 +241,7 @@ export function CatalogEditDialog({
   const nameField = (
     <Field data-invalid={Boolean(errors.nombre)}>
       <FieldLabel htmlFor={`edit-name-${recordId}`} required>
-        Nombre
+        {entity === "facultad" ? "Nombre de facultad" : "Nombre"}
       </FieldLabel>
       <Input id={`edit-name-${recordId}`} value={form.nombre} onChange={(event) => setField("nombre", event.target.value)} aria-required="true" disabled={readOnly} />
       <FieldError errors={errors.nombre} />

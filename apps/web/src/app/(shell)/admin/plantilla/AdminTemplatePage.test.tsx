@@ -143,7 +143,7 @@ describe("AdminTemplatePage", () => {
     await mountPage()
     await startEditing()
 
-    await click(one('button[aria-label="Ver como docente"]'))
+    await click(buttonWithText("Ver como docente"))
 
     expect(getTemplateTeacherPreview).not.toHaveBeenCalled()
     expect(previewTemplateDraft).toHaveBeenCalledWith(
@@ -152,6 +152,10 @@ describe("AdminTemplatePage", () => {
     )
     expect(body().textContent).toContain("Vista de prueba del borrador sin guardar")
     expect(one("section.teacher-form").textContent).toContain("Descripción del borrador")
+
+    await click(buttonWithText("Volver a editar"))
+    expect(body().querySelector("section.teacher-form")).toBeNull()
+    expect(buttonWithText("Ver como docente")).toBeDefined()
   })
 
   it("«Ver como docente» cambia la hoja por el formulario del docente con la plantilla guardada, y se puede volver", async () => {
@@ -169,17 +173,17 @@ describe("AdminTemplatePage", () => {
       ],
     } as never)
     await mountPage()
-    const toggle = () => one('button[aria-label="Ver como docente"]')
 
-    await click(toggle())
+    await click(buttonWithText("Ver como docente"))
     expect(getTemplateTeacherPreview).toHaveBeenCalledWith("template-1")
     expect(body().textContent).toContain("Vista de prueba: así verá el formulario el docente. Lo que escriba aquí no se guarda")
     expect(one("section.teacher-form").textContent).toContain("Descripción")
     expect(buttonWithText("Editar")).toBeUndefined()
     expect(one("[data-sheet]").closest('[style*="display: none"]')).not.toBeNull()
 
-    await click(toggle())
+    await click(buttonWithText("Volver a la plantilla"))
     expect(body().querySelector("section.teacher-form")).toBeNull()
+    expect(buttonWithText("Ver como docente")).toBeDefined()
     expect(buttonWithText("Editar")).toBeDefined()
   })
 

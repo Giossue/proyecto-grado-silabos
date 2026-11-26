@@ -17,7 +17,6 @@ import {
   type SyllabusDetail,
   type SyllabusField,
 } from "@/api/syllabi"
-import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { ProcessLockAlert } from "@/components/domain/ProcessLockAlert"
@@ -522,7 +521,7 @@ export default function TeacherSyllabusDetailPage() {
         title={syllabus?.subject ?? ""}
         description={syllabus?.period ?? ""}
         loading={loading}
-        actionsSkeleton={loading && !previewHint ? ["w-9", "w-24"] : []}
+        actionsSkeleton={loading && !previewHint ? ["w-9 lg:w-32", "w-24"] : []}
         headerClass="syllabus-editor-header"
         headerWidth={documentHeaderWidth}
         hideIcon
@@ -537,25 +536,32 @@ export default function TeacherSyllabusDetailPage() {
           <>
             {syllabus ? <SupportDocumentsButton /> : null}
             {syllabus && showEditor ? (
-              <IconTooltip label="Vista previa">
-                <Button
-                  type="button"
-                  variant={previewing ? "secondary" : "ghost"}
-                  size="icon"
-                  aria-label="Vista previa"
-                  aria-pressed={previewing}
-                  onClick={() => (previewing ? setPreviewing(false) : void openPreview())}
-                >
-                  <Eye aria-hidden="true" />
-                </Button>
-              </IconTooltip>
+              <Button
+                type="button"
+                variant={previewing ? "secondary" : "outline"}
+                data-labeled-tool
+                className="max-lg:size-9 max-lg:has-[>svg]:px-0"
+                aria-label="Vista previa"
+                aria-pressed={previewing}
+                onClick={() => (previewing ? setPreviewing(false) : void openPreview())}
+              >
+                <Eye aria-hidden="true" />
+                <span className="max-lg:sr-only">Vista previa</span>
+              </Button>
             ) : null}
             {syllabus?.state === "aprobado" && syllabus.approved_revision_id ? (
-              <IconTooltip label="Ver PDF">
-                <Button type="button" variant="ghost" size="icon" aria-label="Ver PDF" disabled={openingPdf} onClick={() => void openPdf(syllabus.approved_revision_id!)}>
-                  {openingPdf ? <Spinner /> : <FileText aria-hidden="true" />}
-                </Button>
-              </IconTooltip>
+              <Button
+                type="button"
+                variant="outline"
+                data-labeled-tool
+                className="max-lg:size-9 max-lg:has-[>svg]:px-0"
+                aria-label="Ver PDF"
+                disabled={openingPdf}
+                onClick={() => void openPdf(syllabus.approved_revision_id!)}
+              >
+                {openingPdf ? <Spinner /> : <FileText aria-hidden="true" />}
+                <span className="max-lg:sr-only">Ver PDF</span>
+              </Button>
             ) : null}
           </>
         }

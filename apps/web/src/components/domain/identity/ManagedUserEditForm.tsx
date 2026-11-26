@@ -1,7 +1,7 @@
 "use client"
 
 import { Check, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { Controller } from "react-hook-form"
 import { removeManagedUserRole, updateManagedUser, type ManagedUser } from "@/api/admin-users"
 import { ApiError } from "@/api/client"
@@ -26,13 +26,14 @@ type ManagedUserEditFormProps = {
   careers: { id: string; nombre: string }[]
   onSaved: (message: string) => void
   onCancel: () => void
+  secondary?: ReactNode
 }
 
 type Role = ManagedUser["roles"][number]
 
 const formFor = (user: ManagedUser): ManagedUserEditFormValues => ({ ...splitName(user.nombre), correo_electronico: user.correo_electronico, role_code: "", career_id: "" })
 
-export function ManagedUserEditForm({ user, roles, careers, onSaved, onCancel }: ManagedUserEditFormProps) {
+export function ManagedUserEditForm({ user, roles, careers, onSaved, onCancel, secondary }: ManagedUserEditFormProps) {
   const [processing, setProcessing] = useState(false)
   const savedName = joinName(splitName(user.nombre))
   const form = useSchemaForm(
@@ -215,7 +216,7 @@ export function ManagedUserEditForm({ user, roles, careers, onSaved, onCancel }:
               <FieldError errors={errorMessages(errors.career_id)} />
             </Field>
           ) : null}
-          <FormDialogActions close={onCancel} processing={processing} disabled={unchanged} icon={Check} label="Guardar cambios" />
+          <FormDialogActions close={onCancel} processing={processing} disabled={unchanged} icon={Check} label="Guardar cambios" secondary={secondary} />
         </FieldGroup>
       </form>
       <Dialog

@@ -21,10 +21,10 @@ let log: string[]
 let mallas: MallaRecord[]
 let withOpenSyllabi: Set<string>
 
-const malla = (id: string, careerId: string, name: string, state: string, cycleCount = 8, subjectCount = 0): MallaRecord => ({
+const malla = (id: string, careerId: string, code: string, state: string, cycleCount = 8, subjectCount = 0): MallaRecord => ({
   id,
   careerId,
-  name,
+  code,
   cycleCount,
   state,
   subjectCount,
@@ -38,7 +38,7 @@ function deps(): MallaDeps {
       mallas: async (careerId) => mallas.filter((item) => item.careerId === careerId),
       malla: async (careerId, id) => mallas.find((item) => item.careerId === careerId && item.id === id) ?? null,
     },
-    mallaNameTaken: async (careerId, name, except) => mallas.some((item) => item.careerId === careerId && item.name === name && item.id !== except),
+    mallaCodeTaken: async (careerId, code, except) => mallas.some((item) => item.careerId === careerId && item.code === code && item.id !== except),
     async transaction(work) {
       log.push("begin")
       try {
@@ -84,29 +84,29 @@ beforeEach(() => {
   log = []
   withOpenSyllabi = new Set()
   mallas = [
-    malla(OLD, CAREER, "Malla 2015", "cerrada", 10, 2),
+    malla(OLD, CAREER, "2015", "cerrada", 10, 2),
     // A stray resolution on the record must never reach the payload.
-    { ...malla(CURRENT, CAREER, "Malla SW-9", "vigente", 3, 6), resolution: "RCU-2022-043" } as MallaRecord,
-    malla(PREVIOUS, CAREER, "Malla SW-8", "cerrada", 4, 7),
-    malla(FOREIGN, OTHER_CAREER, "Malla RED", "vigente", 8, 1),
+    { ...malla(CURRENT, CAREER, "SW-9", "vigente", 3, 6), resolution: "RCU-2022-043" } as MallaRecord,
+    malla(PREVIOUS, CAREER, "SW-8", "cerrada", 4, 7),
+    malla(FOREIGN, OTHER_CAREER, "RED", "vigente", 8, 1),
   ]
 })
 
 describe("GET /api/v1/coordination/academic/mallas", () => {
-  it("lists the mallas of the career, vigente first then cerradas by name, without a resolution", async () => {
+  it("lists the mallas of the career by code, vigente first then cerradas by code, without a name or a resolution", async () => {
     const response = await list()
     expect(response.status).toBe(200)
     expect(response.json).toEqual({
       mallas: [
-        { id: CURRENT, name: "Malla SW-9", cycle_count: 3, state: "vigente", subject_count: 6 },
-        { id: OLD, name: "Malla 2015", cycle_count: 10, state: "cerrada", subject_count: 2 },
-        { id: PREVIOUS, name: "Malla SW-8", cycle_count: 4, state: "cerrada", subject_count: 7 },
+        { id: CURRENT, code: "SW-9", cycle_count: 3, state: "vigente", subject_count: 6 },
+        { id: OLD, code: "2015", cycle_count: 10, state: "cerrada", subject_count: 2 },
+        { id: PREVIOUS, code: "SW-8", cycle_count: 4, state: "cerrada", subject_count: 7 },
       ],
     })
   })
 
-  it("lists several vigente mallas first, by name, then the cerradas by name", async () => {
-    mallas.push(malla(NEW_ID, CAREER, "Malla 2026", "vigente", 9, 0))
+  it("lists several vigente mallas first, by code, then the cerradas by code", async () => {
+    mallas.push(malla(NEW_ID, CAREER, "2026", "vigente", 9, 0))
     const response = await list()
     expect((response.json?.mallas as { id: string; state: string }[]).map((item) => [item.id, item.state])).toEqual([
       [NEW_ID, "vigente"],
@@ -126,44 +126,65 @@ describe("GET /api/v1/coordination/academic/mallas", () => {
 })
 
 describe("POST /api/v1/coordination/academic/mallas", () => {
-  it("creates a malla in the career, ignoring a resolution", async () => {
-    const response = await create({ name: "Malla 2026", resolution: "RCU-2026-010", cycle_count: 9, state: "cerrada" })
+  it("creates a vigente malla with its trimmed code, ignoring a name, a resolution and a state", async () => {
+    const response = await create({ code: "  2026  ", name: "Malla 2026", resolution: "RCU-2026-010", cycle_count: 9, state: "cerrada" })
     expect(response.status).toBe(201)
     expect(response.json).toEqual({ message: "Malla creada.", id: NEW_ID })
-    expect(log).toEqual(["begin", `insert:${CAREER}:${JSON.stringify({ name: "Malla 2026", cycleCount: 9, state: "cerrada" })}`, "commit"])
+    expect(log).toEqual(["begin", `insert:${CAREER}:${JSON.stringify({ code: "2026", cycleCount: 9, state: "vigente" })}`, "commit"])
   })
 
-  it("refuses the removed en_transicion state", async () => {
-    const response = await create({ name: "Malla 2026", cycle_count: 9, state: "en_transicion" })
-    expect(response.json?.errors).toEqual({ state: ["El valor seleccionado en estado no es válido."] })
+  it("asks for the code: a name alone does not create a malla", async () => {
+    const response = await create({ name: "Malla 2026", cycle_count: 9 })
+    expect(response.status).toBe(422)
+    expect(response.json?.errors).toEqual({ code: ["El campo código es obligatorio."] })
+    expect(log).toEqual([])
+  })
+
+  it("asks only for the code and the cycles", async () => {
+    const response = await create({})
+    expect(response.json?.errors).toEqual({ code: ["El campo código es obligatorio."], cycle_count: ["El campo cantidad de ciclos es obligatorio."] })
     expect(log).toEqual([])
   })
 
   it("a second vigente malla coexists with the current vigente one: nothing is closed", async () => {
-    const response = await create({ name: "Malla 2026", cycle_count: 9, state: "vigente" })
+    const response = await create({ code: "2026", cycle_count: 9 })
     expect(response.status).toBe(201)
     expect(response.json).toEqual({ message: "Malla creada.", id: NEW_ID })
-    expect(log).toEqual(["begin", `insert:${CAREER}:${JSON.stringify({ name: "Malla 2026", cycleCount: 9, state: "vigente" })}`, "commit"])
+    expect(log).toEqual(["begin", `insert:${CAREER}:${JSON.stringify({ code: "2026", cycleCount: 9, state: "vigente" })}`, "commit"])
   })
 
   it("creates a vigente malla even when the current vigente one has syllabi in an open period", async () => {
     withOpenSyllabi.add(CURRENT)
-    const response = await create({ name: "Malla 2026", cycle_count: 9, state: "vigente" })
+    const response = await create({ code: "2026", cycle_count: 9 })
     expect(response.status).toBe(201)
-    expect(log).toEqual(["begin", `insert:${CAREER}:${JSON.stringify({ name: "Malla 2026", cycleCount: 9, state: "vigente" })}`, "commit"])
+    expect(log).toEqual(["begin", `insert:${CAREER}:${JSON.stringify({ code: "2026", cycleCount: 9, state: "vigente" })}`, "commit"])
   })
 
-  it("refuses a name already used in the career, but accepts a name used by another career", async () => {
-    expect((await create({ name: "Malla SW-8", cycle_count: 4, state: "cerrada" })).json?.errors).toEqual({ name: ["Ya existe una malla con ese nombre en esta carrera."] })
-    expect((await create({ name: "Malla RED", cycle_count: 4, state: "cerrada" })).status).toBe(201)
+  it("refuses a code already used in the career (also with spaces around), but accepts a code used by another career", async () => {
+    const duplicate = await create({ code: " SW-8 ", cycle_count: 4 })
+    expect(duplicate.status).toBe(422)
+    expect(duplicate.json?.errors).toEqual({ code: ["Ya existe una malla con ese código en esta carrera."] })
+    expect((await create({ code: "RED", cycle_count: 4 })).status).toBe(201)
   })
 })
 
 describe("PATCH /api/v1/coordination/academic/mallas/{malla}", () => {
-  it("renames, ignoring a resolution and writing only what changed", async () => {
-    const response = await patch(PREVIOUS, { name: "Malla 2019", resolution: "RCU-2019-001", state: "cerrada" })
+  it("changes the code, ignoring a name and a resolution and writing only what changed", async () => {
+    const response = await patch(PREVIOUS, { code: " 2019 ", name: "Malla 2019", resolution: "RCU-2019-001", state: "cerrada" })
     expect(response.json).toEqual({ message: "Malla actualizada." })
-    expect(log).toEqual(["begin", `update:${PREVIOUS}:${JSON.stringify({ nombre_malla: "Malla 2019" })}`, "commit"])
+    expect(log).toEqual(["begin", `update:${PREVIOUS}:${JSON.stringify({ codigo_malla: "2019" })}`, "commit"])
+  })
+
+  it("refuses the removed en_transicion state", async () => {
+    const response = await patch(PREVIOUS, { state: "en_transicion" })
+    expect(response.json?.errors).toEqual({ state: ["El valor seleccionado en estado no es válido."] })
+    expect(log).toEqual([])
+  })
+
+  it("a name alone changes nothing", async () => {
+    const response = await patch(PREVIOUS, { name: "Malla 2019" })
+    expect(response.json).toEqual({ message: "Malla actualizada." })
+    expect(log).toEqual(["begin", "commit"])
   })
 
   it("reopening a closed malla as vigente leaves the other vigente malla untouched", async () => {
@@ -186,10 +207,10 @@ describe("PATCH /api/v1/coordination/academic/mallas/{malla}", () => {
     expect(log).toEqual(["begin", `update:${CURRENT}:${JSON.stringify({ estado_malla: "cerrada" })}`, "commit"])
   })
 
-  it("refuses a duplicate name and answers 404 for a malla of another career", async () => {
-    expect((await patch(PREVIOUS, { name: "Malla SW-9" })).json?.errors).toEqual({ name: ["Ya existe una malla con ese nombre en esta carrera."] })
-    expect((await patch(PREVIOUS, { name: "Malla SW-8" })).status).toBe(200)
-    const foreign = await patch(FOREIGN, { name: "Otra" })
+  it("refuses a duplicate code and answers 404 for a malla of another career", async () => {
+    expect((await patch(PREVIOUS, { code: "SW-9" })).json?.errors).toEqual({ code: ["Ya existe una malla con ese código en esta carrera."] })
+    expect((await patch(PREVIOUS, { code: "SW-8" })).status).toBe(200)
+    const foreign = await patch(FOREIGN, { code: "Otra" })
     expect(foreign.status).toBe(404)
     expect(log.filter((line) => line.startsWith("update"))).toEqual([])
   })

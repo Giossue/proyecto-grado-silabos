@@ -157,10 +157,14 @@ describe("AppSidebarLayout", () => {
     expect(sessionState.current.value?.active_role).toBeNull()
   })
 
-  it("permite alternar el tema y conserva la preferencia", async () => {
+  it("permite alternar el tema desde el menú de usuario, no desde la barra, y conserva la preferencia", async () => {
     const user = userEvent.setup()
     await mountShell()
-    await user.click(screen.getByRole("button", { name: "Tema visual: Claro. Cambiar a Oscuro" }))
+    expect(screen.queryByRole("button", { name: /^Tema visual/ })).toBeNull()
+    await openUserMenu(user)
+    const option = screen.getByRole("menuitem", { name: "Tema oscuro" })
+    expect(option.className.split(" ")).not.toContain("sm:hidden")
+    await user.click(option)
 
     expect(document.documentElement.classList.contains("dark")).toBe(true)
     expect(localStorage.getItem("appearance")).toBe("dark")

@@ -42,7 +42,7 @@ export class GovernancePrismaRepository implements GovernanceRepository {
         codigo_carrera: true,
         nombre_carrera: true,
         carrera_activa: true,
-        mallas: { where: { estado_malla: "vigente" }, take: 1, select: { numero_ciclos: true } },
+        mallas: { where: { estado_malla: "vigente" }, orderBy: { numero_ciclos: "desc" }, take: 1, select: { numero_ciclos: true } },
         asignaciones_rol: {
           where: { rol: "coordinador", asignacion_rol_activa: true },
           take: 1,

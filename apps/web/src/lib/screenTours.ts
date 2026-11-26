@@ -17,11 +17,10 @@ const CHECKLIST = '.driver-checklist-launcher';
 const shell = {
   menu: step('[data-sidebar="sidebar"]', 'Menú', 'Aquí están todas sus pantallas. El botón de arriba a la izquierda lo esconde o lo muestra', 'right'),
   notifications: step('[aria-label^="Notificaciones"]', 'Avisos', 'Aquí le llegan los avisos. Pulse uno para ir a donde corresponde', 'bottom'),
-  theme: step('[aria-label^="Tema visual"]', 'Claro u oscuro', 'Cambia los colores de la pantalla', 'bottom'),
-  user: step('[data-user-menu]', 'Su cuenta', 'Cambie de carrera o de rol, vea su perfil o cierre la sesión', 'bottom'),
+  user: step('[data-user-menu]', 'Su cuenta', 'Cambie de carrera o de rol, vea su perfil, use el tema claro u oscuro o cierre la sesión', 'bottom'),
   accessibility: step('[aria-label="Accesibilidad"]', 'Accesibilidad', 'Agrande el texto, suba el contraste o quite las animaciones', 'bottom'),
 };
-const basics = [shell.menu, shell.notifications, shell.theme, shell.accessibility, shell.user];
+const basics = [shell.menu, shell.notifications, shell.accessibility, shell.user];
 
 const checklist = step(CHECKLIST, 'Antes de empezar', 'Lo que falta preparar antes de abrir un periodo académico. Pulse un paso y le mostramos dónde se hace', 'left');
 
@@ -36,10 +35,9 @@ export const screenTours: Record<string, TourStep[]> = {
     ...basics,
   ],
   '/admin/estructura-academica': [
-    step(ACTIONS, 'Crear', 'Cree una facultad o una carrera. Las carreras también se pueden subir con un Excel', 'left'),
-    step(TABS, 'Facultades y carreras', 'Cambie entre la lista de facultades y la de carreras', 'bottom'),
-    step(FILTERS, 'Buscar', 'Busque por nombre', 'bottom'),
-    step(TABLE, 'Lista', 'Pulse una fila para editarla. Nada se borra: lo que ya no se usa se desactiva', 'top'),
+    step(ACTIONS, 'Crear', 'Cree una carrera. Si su facultad todavía no existe, regístrela desde el mismo formulario. Las carreras también se pueden subir con un Excel', 'left'),
+    step(FILTERS, 'Buscar', 'Busque por carrera o por facultad', 'bottom'),
+    step(TABLE, 'Lista', 'Pulse una fila para editar la carrera, o el nombre de la facultad para editar la facultad. Nada se borra: lo que ya no se usa se desactiva', 'top'),
   ],
   '/admin/usuarios': [
     step(ACTIONS, 'Crear cuentas', 'Cree una cuenta o suba varias con un Excel. Cada persona recibe un correo para entrar', 'left'),
@@ -105,7 +103,7 @@ export const screenTours: Record<string, TourStep[]> = {
     step('[aria-label="Zoom de la malla"]', 'Tamaño de la malla', 'Ajústela al ancho o elija 50 %, 75 % o 100 %. Se mueve con la rueda o las barras', 'right'),
     // Pasos del editor: solo aparecen mientras se edita.
     step('[data-tour="curriculum-back"]', 'Volver', 'Sale del editor', 'bottom'),
-    step('[aria-label="Configurar ciclos"]', 'Ciclos', 'Cambie cuántos ciclos tiene la carrera', 'bottom'),
+    step('[data-tour="curriculum-data"]', 'Datos de la malla', 'Cambie el código, los ciclos o el estado', 'bottom'),
     step('[data-tour="curriculum-add"]', 'Agregar materia', 'Agrega una materia en ese ciclo. Arrastre de una materia a otra para unirlas como requisito', 'top'),
   ],
   '/biblioteca/revisiones': [
@@ -114,7 +112,6 @@ export const screenTours: Record<string, TourStep[]> = {
     step(FILTERS, 'Buscar', 'Busque por materia, carrera o docente, o filtre por facultad y estado. La facultad se recuerda', 'bottom'),
     step(TABLE, 'Sílabos', 'Pulse uno para revisar sus libros y firmarlo, o devolverlo al docente', 'top'),
     shell.notifications,
-    shell.theme,
     shell.user,
   ],
   '/biblioteca/revisiones/:revision': [

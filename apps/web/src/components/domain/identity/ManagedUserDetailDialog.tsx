@@ -90,7 +90,14 @@ export function ManagedUserDetailDialog({ user, roles, careers, canEdit, open, o
       description={editing ? "Cambie los datos y guarde" : "Datos, roles y estado de la cuenta"}
     >
       {editing ? (
-        <ManagedUserEditForm user={user} roles={roles} careers={careers} onSaved={saved} onCancel={() => setEditing(false)} />
+        <ManagedUserEditForm
+          user={user}
+          roles={roles}
+          careers={careers}
+          onSaved={saved}
+          onCancel={() => setEditing(false)}
+          secondary={<DialogActions actions={accountActions} onSelect={runAction} />}
+        />
       ) : (
         <>
           <div className="flex flex-col gap-6">
@@ -130,7 +137,6 @@ export function ManagedUserDetailDialog({ user, roles, careers, canEdit, open, o
             </section>
           </div>
           <FormDialogFooter>
-            <DialogActions actions={accountActions} onSelect={runAction} />
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cerrar
             </Button>

@@ -319,3 +319,28 @@ describe("template JSON in Spanish", () => {
     expect(imported(payload)).toEqual(definition)
   })
 })
+
+describe("template styles live in document", () => {
+  const REDUNDANT = 'style="background:#C3D4EA;font-weight:bold"'
+
+  it("exports the official table headers without repeating the document header background and bold", () => {
+    const text = JSON.stringify(exported())
+
+    expect(text).not.toContain(REDUNDANT.replaceAll('"', '\\"'))
+    expect(text).toContain("<th>Autor</th>")
+    expect(text.match(/<th[^>]*style=\\"background:#C3D4EA;text-align:(center|right)\\"/g)).toHaveLength(22)
+    expect(text).toContain('style=\\"background:#4F81BD;color:#FFFFFF;font-weight:bold\\"')
+  })
+
+  it("imports an older JSON whose headers still repeat the document style and keeps that style", () => {
+    const definition = officialDefinition()
+    const payload = exported(definition)
+    const older = JSON.parse(JSON.stringify(payload).replaceAll("<th>Autor</th>", `<th ${REDUNDANT.replaceAll('"', '\\"')}>Autor</th>`)) as PhpRecord
+    const header = (JSON.stringify(imported(older)).match(/\{"type":"tableHeader","attrs":\{[^}]*\},"content":\[\{"type":"paragraph"[^\]]*"text":"Autor"/) ?? [""])[0]
+
+    expect(JSON.stringify(older)).toContain(REDUNDANT.replaceAll('"', '\\"'))
+    expect(header).toContain('"backgroundColor":"#C3D4EA"')
+    expect(header).toContain('"bold":true')
+    expect(imported(payload)).toEqual(definition)
+  })
+})

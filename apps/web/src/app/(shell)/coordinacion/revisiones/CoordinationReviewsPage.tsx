@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useEffect, useState, type FormEvent } from "react"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
-import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
@@ -139,13 +138,12 @@ export default function CoordinationReviewsPage() {
       loading={!data && !error}
       actionsSkeleton={loading && !data ? ["w-48"] : []}
       tools={
-        <IconTooltip label="Historial">
-          <Button asChild variant="ghost" size="icon">
-            <Link href={paths.coordination.periodHistory} aria-label="Historial">
-              <History aria-hidden="true" />
-            </Link>
-          </Button>
-        </IconTooltip>
+        <Button asChild variant="outline" data-labeled-tool className="max-sm:size-9 max-sm:has-[>svg]:px-0">
+          <Link href={paths.coordination.periodHistory} aria-label="Historial">
+            <History aria-hidden="true" />
+            <span className="max-sm:sr-only">Historial</span>
+          </Link>
+        </Button>
       }
       actions={summary?.coordination_convocation ? <ConvocationActions convocation={summary.coordination_convocation} blockedReason={openHint} onChanged={(message) => void changed(message)} /> : null}
     >

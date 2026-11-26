@@ -132,7 +132,7 @@
 
 :root {
     --notifications-width: min(24rem, calc(100vw - 1rem));
-    --notifications-max-height: min(26rem, 60dvh);
+    --notifications-max-height: 34rem;
     --curriculum-canvas-height: 76dvh;
     --curriculum-canvas-full-height: calc(100dvh - 3.5rem - 1px);
     --document-table-border: #333333;

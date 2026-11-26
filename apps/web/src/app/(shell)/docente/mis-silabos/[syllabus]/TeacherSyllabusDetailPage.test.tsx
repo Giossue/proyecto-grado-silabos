@@ -204,6 +204,7 @@ describe("TeacherSyllabusDetailPage", () => {
     const page = mountPage()
     await flush()
     expect(preview(page)).toBeNull()
+    expect(buttonNamed(page, "Vista previa")!.textContent).toBe("Vista previa")
 
     await click(buttonNamed(page, "Vista previa")!)
     expect(preview(page)).not.toBeNull()
@@ -991,7 +992,7 @@ describe("TeacherSyllabusDetailPage", () => {
     await flush()
 
     expect(preview(page)).not.toBeNull()
-    expect(buttonNamed(page, "Ver PDF")).toBeDefined()
+    expect(buttonNamed(page, "Ver PDF")?.textContent).toBe("Ver PDF")
     expect(buttonNamed(page, "Asistente")).toBeUndefined()
     expect(page.container.querySelector('a[href*="documentos"]')).toBeNull()
     expect(buttonNamed(page, "Firmar")).toBeUndefined()

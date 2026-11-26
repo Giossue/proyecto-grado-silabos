@@ -101,6 +101,7 @@ describe("LibraryReviewsPage", () => {
     expect(row.textContent).not.toContain("N.º")
     expect(row.textContent).toContain("Corrección solicitada")
     expect(container.querySelector('[aria-label="Historial"]')!.getAttribute("href")).toBe("/biblioteca/historial")
+    expect(container.querySelector('[aria-label="Historial"]')!.textContent).toBe("Historial")
 
     fireEvent.click(row)
     expect(navigation.push).toHaveBeenCalledWith("/biblioteca/revisiones/revision-2")

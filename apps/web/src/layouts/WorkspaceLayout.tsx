@@ -2,9 +2,8 @@
 
 import Image from "next/image"
 import { useMemo, useState, type ReactNode } from "react"
-import { AppearanceToggle } from "@/components/AppearanceToggle"
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog"
-import { NotificationsSheet } from "@/components/NotificationsSheet"
+import { NotificationsPopover } from "@/components/NotificationsPopover"
 import { UserMenuContent } from "@/components/UserMenuContent"
 import { MenuTooltip } from "@/components/domain/MenuTooltip"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -29,8 +28,7 @@ export function WorkspaceLayout({ children }: { children: ReactNode }) {
             <Image src="/logo-ueb-horizontal.webp" width={600} height={164} unoptimized decoding="async" alt="" aria-hidden="true" className="hidden h-12 w-auto dark:block" />
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <NotificationsSheet />
-            <AppearanceToggle />
+            <NotificationsPopover />
             <MenuTooltip label="Menú de usuario">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

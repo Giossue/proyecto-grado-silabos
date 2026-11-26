@@ -66,9 +66,73 @@ describe("AdminUsersPage", () => {
 
     const row = cells()
     expect([...row[0]!.querySelectorAll("[data-user-roles-label]")].map((label) => label.textContent)).toEqual(["Roles"])
-    expect([...row[0]!.querySelectorAll("[data-user-role-line]")].map((line) => line.textContent)).toEqual(["Docente · Software", "Administrador"])
+    expect([...row[0]!.querySelectorAll("[data-user-role-line]")].map((line) => line.textContent)).toEqual(["Administrador", "Docente · Software"])
     expect(row[1]!.dataset.cardHide).toBe("true")
     expect(row[2]!.dataset.cardHide).toBe("true")
+  })
+
+  const assignments = (...items: Array<[ManagedUser["roles"][number]["code"], string | null]>): ManagedUser["roles"] => {
+    const names = { administrador: "Administrador", coordinador: "Coordinador", docente: "Docente", bibliotecario: "Bibliotecario" }
+    return items.map(([code, career_name], index) => ({ id: `r${index}`, code, name: names[code], career_name }))
+  }
+
+  const renderRoles = async (roles: ManagedUser["roles"]) => {
+    vi.mocked(getManagedUsers).mockResolvedValue(response([{ ...user, roles }]))
+    renderWithProviders(<AdminUsersPage />)
+    await flush()
+
+    const row = cells()
+    const roleItems = [...row[1]!.querySelectorAll("li")]
+    return {
+      roles: roleItems.map((item) => [...item.querySelectorAll("span")].map((name) => name.textContent)),
+      spans: roleItems.map((item) => item.style.gridRow),
+      careers: [...row[2]!.querySelectorAll("li")].map((item) => item.textContent),
+      mobile: [...row[0]!.querySelectorAll("[data-user-role-line]")].map((line) => line.textContent),
+      text: row.map((cell) => cell.textContent),
+    }
+  }
+
+  it("cada rol aparece una sola vez con todas sus carreras en orden", async () => {
+    const table = await renderRoles(assignments(["docente", "Software · SW-10"], ["docente", "Software · SW-9"], ["docente", "Software · SW-8"]))
+
+    expect(table.roles).toEqual([["Docente"]])
+    expect(table.spans).toEqual(["span 3"])
+    expect(table.careers).toEqual(["Software · SW-8", "Software · SW-9", "Software · SW-10"])
+  })
+
+  it("los roles con exactamente las mismas carreras comparten el bloque, también en móvil", async () => {
+    const table = await renderRoles(
+      assignments(["docente", "Software · SW-9"], ["docente", "Software · SW-8"], ["coordinador", "Software · SW-9"], ["coordinador", "Software · SW-8"]),
+    )
+
+    expect(table.roles).toEqual([["Coordinador", "Docente"]])
+    expect(table.spans).toEqual(["span 2"])
+    expect(table.careers).toEqual(["Software · SW-8", "Software · SW-9"])
+    expect(table.mobile).toEqual(["Coordinador, Docente · Software · SW-8, Software · SW-9"])
+  })
+
+  it("los roles cuyas carreras no coinciden del todo quedan en bloques separados", async () => {
+    const table = await renderRoles(assignments(["docente", "Software · SW-8"], ["docente", "Software · SW-9"], ["coordinador", "Software · SW-9"]))
+
+    expect(table.roles).toEqual([["Coordinador"], ["Docente"]])
+    expect(table.spans).toEqual(["span 1", "span 2"])
+    expect(table.careers).toEqual(["Software · SW-9", "Software · SW-8", "Software · SW-9"])
+    expect(table.mobile).toEqual(["Coordinador · Software · SW-9", "Docente · Software · SW-8, Software · SW-9"])
+  })
+
+  it("Administrador conserva su guion y no se une con un rol de todas las carreras", async () => {
+    const table = await renderRoles(assignments(["bibliotecario", null], ["administrador", null]))
+
+    expect(table.roles).toEqual([["Administrador"], ["Bibliotecario"]])
+    expect(table.careers).toEqual(["-", "Todas las carreras"])
+    expect(table.mobile).toEqual(["Administrador", "Bibliotecario"])
+  })
+
+  it("una cuenta sin rol vigente se sigue mostrando igual", async () => {
+    const table = await renderRoles([])
+
+    expect(table.text[0]).toContain("Sin rol vigente")
+    expect(table.text.slice(1, 3)).toEqual(["Sin rol vigente", "—"])
   })
 
   it("lee los filtros de la dirección y «Quitar filtros» vuelve a cargar sin ellos", async () => {

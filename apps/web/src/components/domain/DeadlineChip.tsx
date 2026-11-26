@@ -22,10 +22,11 @@ const chipFor = (deadline: DashboardDeadline, audience: Audience): { label: stri
   return { label, tone: toDue <= URGENT_DAYS ? "urgent" : "notice" }
 }
 
+// The chip sits on the app header, which shares the dark sidebar color: tinted or page-muted colors are unreadable there.
 const toneClass: Record<Tone, string> = {
   notice: "border-notice-border bg-notice text-notice-foreground hover:bg-notice/80",
-  urgent: "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15",
-  muted: "border-border bg-muted text-muted-foreground hover:bg-muted/80",
+  urgent: "border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90",
+  muted: "border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:border-sidebar-ring",
 }
 
 export function DeadlineChip({ deadline, audience, className }: { deadline: DashboardDeadline; audience: Audience; className?: string }) {

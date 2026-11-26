@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Bot, Pencil, RotateCcw, UserPen, X } from "lucide-react"
+import { ArrowLeft, Bot, FileText, Pencil, RotateCcw, UserPen, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -9,7 +9,6 @@ import type { SyllabusDetail, SyllabusField } from "@/api/syllabi"
 import { getTemplate, getTemplateTeacherPreview, previewTemplateDraft } from "@/api/template"
 import { applyTemplateAssistantProposal, discardTemplateAssistantProposal, getTemplateAssistantProposal } from "@/api/templateAssistant"
 import { AppearanceToggle } from "@/components/AppearanceToggle"
-import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
@@ -157,12 +156,19 @@ export default function AdminTemplatePage() {
     }
   }, [reloadFromMutation])
 
+  // El texto dice qué hace el botón; por eso no lleva aria-pressed, que exige un nombre fijo.
+  const TeacherToggleIcon = !teacherView ? UserPen : editing ? Pencil : FileText
   const teacherToggle = (
-    <IconTooltip label={teacherView ? "Volver a la plantilla" : "Ver como docente"}>
-      <Button type="button" variant={teacherView ? "secondary" : "ghost"} size="icon" aria-label="Ver como docente" aria-pressed={teacherView} data-draft-teacher-view={editing || undefined} onClick={() => void toggleTeacherView()}>
-        <UserPen aria-hidden="true" />
-      </Button>
-    </IconTooltip>
+    <Button
+      type="button"
+      variant="outline"
+      className={editing ? "max-sm:size-9 max-sm:has-[>svg]:px-0" : undefined}
+      data-draft-teacher-view={editing || undefined}
+      onClick={() => void toggleTeacherView()}
+    >
+      <TeacherToggleIcon data-icon="inline-start" aria-hidden="true" />
+      <span className={editing ? "max-sm:sr-only" : undefined}>{!teacherView ? "Ver como docente" : editing ? "Volver a editar" : "Volver a la plantilla"}</span>
+    </Button>
   )
 
   return (
@@ -179,7 +185,7 @@ export default function AdminTemplatePage() {
         </header>
       ) : null}
       {loading ? (
-        <PageFrame title="Plantilla de sílabo" description="El formato del sílabo: secciones y campos" size="wide" headerWidth={SHEET_WIDTH} loading actionsSkeleton={["w-22"]}>
+        <PageFrame title="Plantilla de sílabo" description="El formato del sílabo: secciones y campos" size="wide" headerWidth={SHEET_WIDTH} loading actionsSkeleton={["w-44", "w-22"]}>
           <LoadingSkeleton variant="template" />
         </PageFrame>
       ) : loadError ? (

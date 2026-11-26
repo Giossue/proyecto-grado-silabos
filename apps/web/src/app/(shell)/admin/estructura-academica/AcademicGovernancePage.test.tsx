@@ -28,17 +28,24 @@ describe("AcademicGovernancePage", () => {
     expect(api.getAcademicGovernance).not.toHaveBeenCalled()
   })
 
-  it("sin sección muestra Facultades", async () => {
-    api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
-    api.params = {}
-    api.getAcademicGovernance.mockResolvedValue(governance)
-    renderWithProviders(<AcademicGovernancePage />)
-    await flush()
+  it.each([[{}], [{ section: "facultades" }], [{ section: "carreras" }]] as Array<[Record<string, string>]>)(
+    "es una sola pantalla sin pestañas y solo ofrece crear carrera: %o",
+    async (params) => {
+      api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
+      api.params = params
+      api.getAcademicGovernance.mockResolvedValue(governance)
+      renderWithProviders(<AcademicGovernancePage />)
+      await flush()
 
-    expect(document.querySelector("h1")?.textContent).toBe("Facultades")
-  })
+      expect(document.querySelector("h1")?.textContent).toBe("Facultades y carreras")
+      expect(document.querySelector('[role="tablist"]')).toBeNull()
+      const buttons = [...document.querySelectorAll("button")].map((button) => button.getAttribute("aria-label") ?? button.textContent)
+      expect(buttons).toContain("Crear carrera")
+      expect(buttons).not.toContain("Crear facultad")
+    },
+  )
 
-  it("mientras carga muestra las pestañas como skeleton", async () => {
+  it("mientras carga no anuncia pestañas en el skeleton", async () => {
     api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
     api.params = {}
     let resolve: (value: unknown) => void = () => undefined
@@ -46,13 +53,11 @@ describe("AcademicGovernancePage", () => {
     renderWithProviders(<AcademicGovernancePage />)
     await flush()
 
-    expect(document.querySelector('[role="tablist"]')).toBeNull()
-    expect(document.querySelector('[data-skeleton="table-tabs"]')).not.toBeNull()
+    expect(document.querySelector('[data-skeleton="table-tabs"]')).toBeNull()
 
     resolve(governance)
     await flush()
-    expect(document.querySelector('[role="tablist"]')).not.toBeNull()
-    expect(document.querySelector('[data-skeleton="table-tabs"]')).toBeNull()
+    expect(document.querySelector('[role="tablist"]')).toBeNull()
   })
 
   it("el aviso de cambios solo sale con un periodo académico en curso, no con uno finalizado", async () => {

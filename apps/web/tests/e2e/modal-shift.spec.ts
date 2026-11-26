@@ -60,7 +60,9 @@ const cases: ModalCase[] = [
     name: "multi-step form dialog",
     path: "/admin/estructura-academica",
     open: async (page) => {
-      await page.getByRole("button", { name: "Crear facultad" }).click()
+      await page.getByRole("button", { name: "Crear carrera" }).click()
+      await page.locator("#catalog-faculty").click()
+      await page.getByRole("option", { name: "Registrar nueva facultad" }).click()
       return page.getByRole("dialog", { name: "Nueva facultad" })
     },
     close: escape,
@@ -75,7 +77,7 @@ const cases: ModalCase[] = [
     close: escape,
   },
   {
-    name: "notifications sheet",
+    name: "notifications panel",
     path: "/admin/usuarios",
     widths: [1440],
     open: async (page) => {

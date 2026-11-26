@@ -10,6 +10,7 @@ import { fakeTemplateStore, fieldId, goldenFields, goldenTemplate, type FakeTemp
 import { loadSubjectContext, previewSubjectProfile, subjectAcademicContext, type SubjectContextRow, type SubjectPreviewDeps } from "./subjectProfilePreview"
 import type { PhpRecord } from "./phpValues"
 import type { Db } from "../../prisma/db"
+import { Prisma } from "../../generated/prisma/client"
 
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
@@ -209,19 +210,21 @@ describe("loadSubjectContext", () => {
     expect(queries.join(" ")).not.toMatch(/tipo_requisito|campus/)
   })
 
-  it("takes the cycle count and the name from the malla of the subject, not from the career", async () => {
+  it("takes the cycle count and the name «Malla <código>» from the malla of the subject, not from the career", async () => {
     const queries: string[] = []
     const db = {
-      $queryRaw: async (strings: TemplateStringsArray) => {
-        const text = strings.join("?").replace(/\s+/g, " ")
+      $queryRaw: async (raw: TemplateStringsArray | Prisma.Sql, ...values: unknown[]) => {
+        const text = (raw instanceof Prisma.Sql ? raw : Prisma.sql(raw, ...values)).text.replace(/\s+/g, " ")
         queries.push(text)
-        if (text.includes("from asignaturas asignatura")) return [{ ...SUBJECT_ROW, cycle_count: 3 }]
+        if (text.includes("from asignaturas asignatura")) return [{ ...SUBJECT_ROW, curriculum_name: "Malla SW-8", cycle_count: 3 }]
         return []
       },
     } as unknown as Db
     const context = await loadSubjectContext(db, SUBJECT)
-    expect(context?.curriculum).toEqual({ id: MALLA, name: "Malla 2022", cycle_count: 3 })
+    expect(context?.curriculum).toEqual({ id: MALLA, name: "Malla SW-8", cycle_count: 3 })
     expect(queries[0]).toContain("inner join mallas malla on malla.malla_id = asignatura.malla_id")
+    expect(queries[0]).toContain("('Malla ' || malla.codigo_malla) as curriculum_name")
+    expect(queries[0]).not.toContain("nombre_malla")
     expect(queries[0]).toContain("malla.numero_ciclos as cycle_count")
     expect(queries[0]).not.toContain("carrera.numero_ciclos")
   })

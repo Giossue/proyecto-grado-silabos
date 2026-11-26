@@ -3,9 +3,8 @@
 import { Menu } from "lucide-react"
 import Image from "next/image"
 import { AccessibilityDialog } from "@/components/AccessibilityDialog"
-import { AppearanceToggle } from "@/components/AppearanceToggle"
 import { NavUser } from "@/components/NavUser"
-import { NotificationsSheet } from "@/components/NotificationsSheet"
+import { NotificationsPopover } from "@/components/NotificationsPopover"
 import { RoleDeadlineChip } from "@/components/domain/RoleDeadlineBanner"
 import { Button } from "@/components/ui/button"
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
@@ -38,8 +37,7 @@ export function AppSidebarHeader({ sidebar = true }: AppSidebarHeaderProps) {
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-1 max-sm:contents sm:gap-2">
         <div className="max-sm:hidden"><RoleDeadlineChip /></div>
-        <NotificationsSheet />
-        <div className="max-sm:hidden"><AppearanceToggle /></div>
+        <NotificationsPopover />
         <AccessibilityDialog remote />
         <NavUser />
       </div>

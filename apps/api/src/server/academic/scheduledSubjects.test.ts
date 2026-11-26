@@ -18,7 +18,7 @@ const RETIRED = "01a1c5bc-7cbf-7091-860c-63a02b91e990"
 const RETIRED_WITH_PARALLEL = "01a1c5bc-7cbf-7091-860c-63a02b91e991"
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const MODALITIES =
-  '[{"value":"presencial","label":"Presencial"},{"value":"semipresencial","label":"Semipresencial"},{"value":"en_linea","label":"En línea"},{"value":"a_distancia","label":"A distancia"},{"value":"hibrida","label":"Híbrida"}]'
+  '[{"value":"presencial","label":"Presencial"},{"value":"hibrida","label":"Híbrida"},{"value":"en_linea","label":"En línea"}]'
 const SHIFTS = '[{"value":"matutina","label":"Matutina"},{"value":"vespertina","label":"Vespertina"},{"value":"nocturna","label":"Nocturna"}]'
 
 let world: FakeWorld
@@ -188,7 +188,7 @@ describe("scheduled subjects across mallas", () => {
     return { repository: new ScheduledSubjectsPrismaRepository(prisma), queries }
   }
 
-  it("lists the subjects of every malla that is not closed, with the name of their malla", async () => {
+  it("lists the subjects of every malla that is not closed, labelled «Malla <código>» and ordered by malla code", async () => {
     const { repository: found, queries } = repository([
       { id: ALGORITHMS, codigo: "SW-B1-001", nombre: "Algoritmos", ciclo: 1, activo: true, genera: true, modalidad: "presencial", malla: "Malla SW-8" },
     ])
@@ -197,7 +197,9 @@ describe("scheduled subjects across mallas", () => {
     ])
     expect(queries[0]).toContain("inner join mallas malla on malla.malla_id = asignatura.malla_id")
     expect(queries[0]).toContain("malla.estado_malla <> 'cerrada'")
-    expect(queries[0]).toContain("malla.nombre_malla as malla")
+    expect(queries[0]).toContain("('Malla ' || malla.codigo_malla) as malla")
+    expect(queries[0]).toContain("order by (malla.estado_malla = 'vigente') desc, malla.codigo_malla asc, asignatura.ciclo_asignatura asc")
+    expect(queries[0]).not.toContain("nombre_malla")
   })
 
   it("only lists the parallels of subjects whose malla is not closed", async () => {

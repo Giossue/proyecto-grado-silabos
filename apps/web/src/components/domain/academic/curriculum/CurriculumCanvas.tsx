@@ -3,7 +3,7 @@
 import "@xyflow/react/dist/style.css"
 import { ConnectionMode, NodeChangeset, ReactFlow, type Connection, type Edge, type Node } from "@xyflow/react"
 import { Info } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useFillHeight } from "@/composables/useFillHeight"
 import { ApiError } from "@/api/client"
 import { updateSubjectLayout } from "@/api/career-academics"
@@ -24,7 +24,7 @@ import {
   type ZoomChoice,
 } from "@/components/domain/academic/curriculum/curriculumCanvasLayout"
 import { CurriculumLegend } from "@/components/domain/academic/curriculum/CurriculumLegend"
-import { CurriculumNavigationControls } from "@/components/domain/academic/curriculum/CurriculumNavigationControls"
+import { CONTROL_CLASS, CurriculumNavigationControls } from "@/components/domain/academic/curriculum/CurriculumNavigationControls"
 import { CurriculumAddContext, curriculumEdgeTypes, curriculumNodeTypes } from "@/components/domain/academic/curriculum/curriculumNodeTypes"
 import { CurriculumRelationPicker, type RelationPickerState } from "@/components/domain/academic/curriculum/CurriculumRelationPicker"
 import { CurriculumRequirementDialogs, useRequirementConnection } from "@/components/domain/academic/curriculum/CurriculumRequirementDialogs"
@@ -47,6 +47,8 @@ type CurriculumCanvasProps = Pick<CurriculumBuilderProps, "curriculum" | "fixedF
   organizationUnits: CurriculumBuilderProps["organizationUnitOptions"]
   modalityOptions: CurriculumBuilderProps["modalityOptions"]
   onChanged: (message: string) => void
+  /** Shown above the board, aligned with its first column (the malla selector in the view). */
+  header?: ReactNode
 }
 
 type DragPreview = { subjectId: string; cycle: number; index: number }
@@ -72,7 +74,7 @@ const withMeasures = (next: Node[], previous: Node[]): Node[] => {
 
 const sameList = (left: unknown[], right: unknown[]): boolean => left.length === right.length && left.every((value, index) => Object.is(value, right[index]))
 
-export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, subjects, requirements, career, editing, fullScreen = false, organizationUnits, modalityOptions, onChanged }: CurriculumCanvasProps) {
+export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, subjects, requirements, career, editing, fullScreen = false, organizationUnits, modalityOptions, onChanged, header }: CurriculumCanvasProps) {
   const scrollElement = useRef<HTMLDivElement>(null)
   const canvasElement = useRef<HTMLDivElement>(null)
   const fillHeight = useFillHeight(canvasElement, !fullScreen)
@@ -326,7 +328,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  className="bg-card/90"
+                  className={CONTROL_CLASS}
                   aria-label="Ver leyenda y totales de la malla"
                   aria-haspopup="dialog"
                   aria-expanded={legendOpen}
@@ -348,7 +350,12 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
           </PopoverContent>
         </Popover>
       </CurriculumNavigationControls>
-      <div ref={scrollElement} data-curriculum-scroll className="absolute inset-x-0 top-14 bottom-0 overflow-auto">
+      <div ref={scrollElement} data-curriculum-scroll className="absolute inset-y-0 right-0 left-14 overflow-auto">
+        {header ? (
+          <div data-curriculum-header className="mx-auto pt-3" style={{ width: `${boardWidth * zoom}px`, paddingLeft: `${navigationPadding * zoom}px` }}>
+            {header}
+          </div>
+        ) : null}
         <div data-curriculum-board className="relative mx-auto" style={{ width: `${boardWidth * zoom}px`, height: `${boardHeight * zoom}px` }}>
           <CurriculumAddContext.Provider value={beginSubjectCreation}>
             <ReactFlow
@@ -368,7 +375,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
               zoomOnPinch={false}
               zoomOnDoubleClick={false}
               preventScrolling={false}
-              connectionMode={ConnectionMode.Loose}
+              connectionMode={ConnectionMode.Strict}
               nodesDraggable={editable && !hasOpenEditor}
               nodesConnectable={editable && !hasOpenEditor}
               elementsSelectable

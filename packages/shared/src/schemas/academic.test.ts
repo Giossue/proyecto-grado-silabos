@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import { schemaErrors } from "./issues"
-import { careerSchema, facultySchema, MALLA_STATE_LABELS, mallaSchema, mallaTargetSchema, parallelsSchema, periodSchema, requirementSchema, STUDY_MODALITIES, studyModalityLabel, subjectSchema } from "./academic"
+import { careerSchema, CODE_MAX, facultySchema, MALLA_STATE_LABELS, mallaSchema, mallaTargetSchema, parallelsSchema, periodSchema, requirementSchema, STUDY_MODALITIES, studyModalityLabel, subjectSchema } from "./academic"
 
 const UUID = "01a1c5ba-2222-7000-8000-999999999999"
 
@@ -30,11 +30,15 @@ describe("academic schemas", () => {
   it("store study modalities as technical values and show them with their labels", async () => {
     const schema = careerSchema({ facultyExists: async () => true, codeAvailable: async () => true, updating: false })
     const career = { faculty_id: UUID, code: "ADM", nombre: "Administración", cycle_count: 10 }
-    expect(STUDY_MODALITIES).toEqual(["presencial", "semipresencial", "en_linea", "a_distancia", "hibrida"])
-    expect(STUDY_MODALITIES.map(studyModalityLabel)).toEqual(["Presencial", "Semipresencial", "En línea", "A distancia", "Híbrida"])
+    expect(STUDY_MODALITIES).toEqual(["presencial", "hibrida", "en_linea"])
+    expect(STUDY_MODALITIES.map(studyModalityLabel)).toEqual(["Presencial", "Híbrida", "En línea"])
     expect(studyModalityLabel(null)).toBeNull()
     expect(await schemaErrors(schema, { ...career, modality: "en_linea" })).toEqual({})
     expect(Object.keys(await schemaErrors(schema, { ...career, modality: "En línea" }))).toEqual(["modality"])
+    for (const modality of ["semipresencial", "a_distancia"]) {
+      expect(Object.keys(await schemaErrors(schema, { ...career, modality }))).toEqual(["modality"])
+      expect(Object.keys(await schemaErrors(subjectSchema(), { modality }))).toContain("modality")
+    }
   })
 
   it("validate period dates, and the order of the dates when editing", async () => {
@@ -63,40 +67,49 @@ describe("academic schemas", () => {
     })
   })
 
-  it("validate a new malla: name unique in the career, cycles and state", async () => {
-    const taken = mallaSchema({ nameAvailable: async () => false, updating: false })
-    expect(await schemaErrors(taken, { name: "Malla 2025", cycle_count: 0, state: "abierta" })).toEqual({
-      name: ["Ya existe una malla con ese nombre en esta carrera."],
+  it("validate a new malla: code unique in the career and cycles, without a state", async () => {
+    const taken = mallaSchema({ codeAvailable: async () => false, updating: false })
+    expect(await schemaErrors(taken, { code: "SW-8", cycle_count: 0 })).toEqual({
+      code: ["Ya existe una malla con ese código en esta carrera."],
       cycle_count: ["El campo cantidad de ciclos debe ser al menos 1."],
-      state: ["El valor seleccionado en estado no es válido."],
     })
     expect(await schemaErrors(taken, {})).toEqual({
-      name: ["El campo nombre es obligatorio."],
+      code: ["El campo código es obligatorio."],
       cycle_count: ["El campo cantidad de ciclos es obligatorio."],
-      state: ["El campo estado es obligatorio."],
     })
-    const free = mallaSchema({ nameAvailable: async () => true, updating: false })
-    expect(await schemaErrors(free, { name: "Malla 2025", cycle_count: 9, state: "vigente" })).toEqual({})
+    const free = mallaSchema({ codeAvailable: async () => true, updating: false })
+    expect(await schemaErrors(free, { code: "SW-8", cycle_count: 9 })).toEqual({})
+    expect(Object.keys(free.shape)).not.toContain("name")
+    expect(Object.keys(free.shape)).not.toContain("state")
+  })
+
+  it("a malla code follows the career and subject code rules: at most CODE_MAX characters", async () => {
+    const schema = mallaSchema({ codeAvailable: async () => true, updating: false })
+    expect(await schemaErrors(schema, { code: "X".repeat(CODE_MAX), cycle_count: 9 })).toEqual({})
+    expect(await schemaErrors(schema, { code: "X".repeat(CODE_MAX + 1), cycle_count: 9 })).toEqual(
+      await schemaErrors(careerSchema({ updating: false }).pick({ code: true }), { code: "X".repeat(CODE_MAX + 1) }),
+    )
   })
 
   it("a malla is only vigente or cerrada", async () => {
-    const schema = mallaSchema({ nameAvailable: async () => true, updating: false })
-    expect(await schemaErrors(schema, { name: "Malla 2025", cycle_count: 9, state: "en_transicion" })).toEqual({ state: ["El valor seleccionado en estado no es válido."] })
-    expect(await schemaErrors(schema, { name: "Malla 2025", cycle_count: 9, state: "cerrada" })).toEqual({})
+    const schema = mallaSchema({ codeAvailable: async () => true, updating: true })
+    expect(await schemaErrors(schema, { state: "en_transicion" })).toEqual({ state: ["El valor seleccionado en estado no es válido."] })
+    expect(await schemaErrors(schema, { state: "cerrada" })).toEqual({})
     expect(MALLA_STATE_LABELS).toEqual({ vigente: "Vigente", cerrada: "Cerrada" })
   })
 
   it("a malla has no resolution: the field is ignored, not validated", async () => {
-    const schema = mallaSchema({ nameAvailable: async () => true, updating: true })
+    const schema = mallaSchema({ codeAvailable: async () => true, updating: true })
     expect(await schemaErrors(schema, { resolution: "R".repeat(500) })).toEqual({})
     expect(Object.keys(schema.shape)).not.toContain("resolution")
   })
 
   it("validate a malla edit: every field optional, no cycle count", async () => {
-    const schema = mallaSchema({ nameAvailable: async () => true, updating: true })
+    const schema = mallaSchema({ codeAvailable: async () => true, updating: true })
     expect(await schemaErrors(schema, {})).toEqual({})
     expect(await schemaErrors(schema, { state: "cerrada" })).toEqual({})
-    expect(await schemaErrors(schema, { name: "", state: "x" })).toEqual({ name: ["El campo nombre es obligatorio."], state: ["El valor seleccionado en estado no es válido."] })
+    expect(await schemaErrors(schema, { code: "", state: "x" })).toEqual({ code: ["El campo código es obligatorio."], state: ["El valor seleccionado en estado no es válido."] })
+    expect(await schemaErrors(mallaSchema({ codeAvailable: async () => false, updating: true }), { code: "SW-9" })).toEqual({ code: ["Ya existe una malla con ese código en esta carrera."] })
   })
 
   it("require the malla that receives subjects and check it belongs to the career", async () => {

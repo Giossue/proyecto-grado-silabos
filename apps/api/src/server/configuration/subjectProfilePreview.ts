@@ -7,6 +7,7 @@ import { CURRICULAR_UNITS } from "../academic/structure"
 import { jsonError, apiJson, validationError } from "../http/responses"
 import { buildIdentification, dataGet } from "../syllabus/identificationCard"
 import { phpCompareStrings } from "../syllabus/syllabusDetailQueries"
+import { mallaLabelSql } from "../syllabus/syllabusSql"
 import { createLogoStore, type LogoStore } from "../shared/logoStore"
 import { presentationLogos } from "./institutionalLogos"
 import { phpShape, type PhpRecord } from "./phpValues"
@@ -86,7 +87,7 @@ export async function loadSubjectContext(db: Db, subjectId: string): Promise<Php
         to_char(asignatura.horas_docencia, 'FM999999990.00') as hours_ac, to_char(asignatura.horas_practicas, 'FM999999990.00') as hours_pae,
         to_char(asignatura.horas_autonomas, 'FM999999990.00') as hours_aa,
         carrera.carrera_id::text as career_id, carrera.codigo_carrera as career_code, carrera.nombre_carrera as career_name,
-        malla.malla_id::text as curriculum_id, malla.nombre_malla as curriculum_name, malla.numero_ciclos as cycle_count, carrera.facultad_id::text as faculty_id, facultad.nombre_facultad as faculty,
+        malla.malla_id::text as curriculum_id, ${mallaLabelSql("malla")} as curriculum_name, malla.numero_ciclos as cycle_count, carrera.facultad_id::text as faculty_id, facultad.nombre_facultad as faculty,
         archivo.hash_archivo as faculty_logo
       from asignaturas asignatura
         inner join mallas malla on malla.malla_id = asignatura.malla_id

@@ -349,7 +349,7 @@ model invitaciones_activacion {
 model mallas {
   malla_id                    String               @id @db.Uuid
   carrera_id                  String               @db.Uuid
-  nombre_malla                String               @db.VarChar(180)
+  codigo_malla                String               @db.VarChar(80)
   numero_ciclos               Int                  @db.SmallInt
   estado_malla                String               @db.VarChar(20)
   periodo_academico_inicio_id String?              @db.Uuid
@@ -360,7 +360,7 @@ model mallas {
   periodos_academicos         periodos_academicos? @relation(fields: [periodo_academico_inicio_id], references: [periodo_academico_id], onDelete: Restrict, onUpdate: NoAction, map: "mallas_periodo_academico_inicio_id_fk")
 
   @@unique([malla_id, carrera_id], map: "mallas_malla_id_carrera_id_unica")
-  @@unique([carrera_id, nombre_malla], map: "mallas_carrera_id_nombre_malla_unica")
+  @@unique([carrera_id, codigo_malla], map: "mallas_carrera_id_codigo_malla_unica")
   @@index([periodo_academico_inicio_id])
 }
 

@@ -11,8 +11,8 @@ import { isUuid, type MallaReadRepository, type MallaRecord } from "./structure"
 export const MALLA_NOT_FOUND = "La malla no existe en esta carrera."
 export const MALLA_CLOSING_REFUSED = "No se puede cerrar la malla: sus materias tienen sílabos en un periodo académico abierto."
 
-export type MallaData = { name: string; cycleCount: number; state: string }
-export type MallaColumn = "nombre_malla" | "estado_malla"
+export type MallaData = { code: string; cycleCount: number; state: string }
+export type MallaColumn = "codigo_malla" | "estado_malla"
 
 /** A career may have several vigente mallas at once: making a malla vigente never touches the others. */
 export interface MallaTx {
@@ -27,22 +27,22 @@ export type MallaDeps = {
   bridge: BridgeDeps
   careerActive(careerId: string): Promise<boolean>
   mallas: MallaReadRepository
-  mallaNameTaken(careerId: string, name: string, except: string | null): Promise<boolean>
+  mallaCodeTaken(careerId: string, code: string, except: string | null): Promise<boolean>
   transaction<T>(work: (tx: MallaTx) => Promise<T>): Promise<T>
 }
 
 const STATE_ORDER: Record<string, number> = { vigente: 0, cerrada: 1 }
 
 export function sortedMallas(mallas: MallaRecord[]): MallaRecord[] {
-  return [...mallas].sort((left, right) => (STATE_ORDER[left.state] ?? 2) - (STATE_ORDER[right.state] ?? 2) || left.name.localeCompare(right.name, "es"))
+  return [...mallas].sort((left, right) => (STATE_ORDER[left.state] ?? 2) - (STATE_ORDER[right.state] ?? 2) || left.code.localeCompare(right.code, "es"))
 }
 
 export function mallaPayload(malla: MallaRecord): Record<string, unknown> {
-  return { id: malla.id, name: malla.name, cycle_count: malla.cycleCount, state: malla.state, subject_count: malla.subjectCount }
+  return { id: malla.id, code: malla.code, cycle_count: malla.cycleCount, state: malla.state, subject_count: malla.subjectCount }
 }
 
 function trimmed(input: PhpArray): PhpArray {
-  if (typeof input.name === "string") input.name = phpTrim(input.name)
+  if (typeof input.code === "string") input.code = phpTrim(input.code)
   return input
 }
 
@@ -57,9 +57,10 @@ export async function createMalla(request: Request, deps: MallaDeps, requestedCa
   const context = await careerSession(request.clone(), deps.bridge, deps.careerActive, requestedCareerId)
   if (context instanceof Response) return context
   const input = trimmed(await requestInput(request))
-  const { errors } = await validateSchema(mallaSchema({ nameAvailable: async (value) => !(await deps.mallaNameTaken(context.careerId, String(value), null)), updating: false }), input)
+  const { errors } = await validateSchema(mallaSchema({ codeAvailable: async (value) => !(await deps.mallaCodeTaken(context.careerId, String(value), null)), updating: false }), input)
   if (errors !== null) return validationError(errors)
-  const data: MallaData = { name: input.name as string, cycleCount: phpIntCast(input.cycle_count), state: input.state as string }
+  // A new malla always starts vigente; closing it is a later edit.
+  const data: MallaData = { code: input.code as string, cycleCount: phpIntCast(input.cycle_count), state: "vigente" }
   return settle(original, deps, async () => {
     const id = await deps.transaction((tx) => tx.insertMalla(context.careerId, data))
     return apiJson({ message: "Malla creada.", id }, 201)
@@ -72,7 +73,7 @@ export async function updateMalla(request: Request, mallaId: string, deps: Malla
   if (context instanceof Response) return context
   if (!isUuid(mallaId) || (await deps.mallas.malla(context.careerId, mallaId)) === null) return apiJson({ message: MALLA_NOT_FOUND }, 404)
   const input = trimmed(await requestInput(request))
-  const { errors } = await validateSchema(mallaSchema({ nameAvailable: async (value) => !(await deps.mallaNameTaken(context.careerId, String(value), mallaId)), updating: true }), input)
+  const { errors } = await validateSchema(mallaSchema({ codeAvailable: async (value) => !(await deps.mallaCodeTaken(context.careerId, String(value), mallaId)), updating: true }), input)
   if (errors !== null) return validationError(errors)
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
@@ -81,7 +82,7 @@ export async function updateMalla(request: Request, mallaId: string, deps: Malla
       const state = typeof input.state === "string" ? input.state : malla.state
       if (state === "cerrada" && malla.state !== "cerrada" && (await tx.hasOpenPeriodSyllabi(malla.id))) throw invalid("state", MALLA_CLOSING_REFUSED)
       const wanted: [MallaColumn, string | null, string | null][] = [
-        ["nombre_malla", "name" in input ? (input.name as string) : malla.name, malla.name],
+        ["codigo_malla", "code" in input ? (input.code as string) : malla.code, malla.code],
         ["estado_malla", state, malla.state],
       ]
       const dirty = wanted.filter(([, after, before]) => after !== before)

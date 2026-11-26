@@ -29,7 +29,7 @@ export type Curriculum = {
     name: string;
     modality: { value: string; label: string } | null;
   };
-  malla: { id: string; name: string; state: MallaState };
+  malla: { id: string; code: string; state: MallaState };
   /** `id` is the malla id: every curriculum route addresses one malla of the career. */
   curriculum: {
     id: string;
@@ -167,13 +167,14 @@ export type TeacherAssignments = {
 export const getCurriculum = (mallaId: string, scope: string | null = null) =>
   api<Curriculum>(careerAcademicPath(`/curriculum/${mallaId}`, scope));
 
-export type MallaPayload = { name: string; cycle_count: number; state: MallaState };
+export type MallaPayload = { code: string; cycle_count: number; state: MallaState };
 
 /** Mallas of the career, vigente first, then the cerradas. */
 export const getMallas = (scope: string | null = null) =>
   api<{ mallas: Malla[] }>(careerAcademicPath("/mallas", scope)).then((result) => result.mallas);
 
-export const createMalla = (payload: MallaPayload) =>
+/** The new malla starts vigente. */
+export const createMalla = (payload: Omit<MallaPayload, "state">) =>
   api<{ message: string; id: string }>(careerAcademicPath("/mallas"), { method: "POST", body: JSON.stringify(payload) });
 
 export const updateMalla = (mallaId: string, payload: Partial<Omit<MallaPayload, "cycle_count">>) =>

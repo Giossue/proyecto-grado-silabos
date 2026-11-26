@@ -7,7 +7,6 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useEffect, useState, type FormEvent } from "react"
 import { ApiError } from "@/api/client"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
-import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { MetricTiles } from "@/components/domain/MetricTiles"
@@ -128,15 +127,14 @@ export default function LibraryReviewsPage() {
       description="Bibliografía de los sílabos enviados"
       size="wide"
       loading={firstLoad}
-      actionsSkeleton={firstLoad ? ["w-9"] : []}
+      actionsSkeleton={firstLoad ? ["w-28"] : []}
       tools={
-        <IconTooltip label="Historial">
-          <Button asChild variant="ghost" size="icon">
-            <Link href={paths.library.history} aria-label="Historial">
-              <History aria-hidden="true" />
-            </Link>
-          </Button>
-        </IconTooltip>
+        <Button asChild variant="outline" data-labeled-tool className="max-sm:size-9 max-sm:has-[>svg]:px-0">
+          <Link href={paths.library.history} aria-label="Historial">
+            <History aria-hidden="true" />
+            <span className="max-sm:sr-only">Historial</span>
+          </Link>
+        </Button>
       }
     >
       {error ? (

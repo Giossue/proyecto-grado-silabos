@@ -54,6 +54,7 @@ describe("TeacherSyllabiPage", () => {
     expect(container.querySelector('[aria-label="Documentos de apoyo"]')).toBeNull()
     expect(container.querySelector('[aria-label="Historial"]')).not.toBeNull()
     expect(container.querySelector('[aria-label="Historial"]')!.getAttribute("href")).toBe("/docente/historial")
+    expect(container.querySelector('[aria-label="Historial"]')!.textContent).toBe("Historial")
     expect(getTeacherSupportDocuments).not.toHaveBeenCalled()
   })
 

@@ -264,12 +264,13 @@ test.describe.serial("template editing during a paused convocation", () => {
     await expect(page.getByRole("textbox", { name: "Sección Prueba E2E" })).toBeVisible()
 
     const teacherView = page.getByRole("button", { name: "Ver como docente" })
+    const backToEditing = page.getByRole("button", { name: "Volver a editar" })
     await teacherView.click()
-    await expect(teacherView).toHaveAttribute("aria-pressed", "true")
+    await expect(backToEditing).toBeVisible()
     await expect(page.getByText("Vista de prueba del borrador sin guardar: así verá el formulario el docente. Lo que escriba aquí no se guarda")).toBeVisible()
     await expect(page.getByRole("tab", { name: "Prueba E2E" })).toBeVisible()
-    await teacherView.click()
-    await expect(teacherView).toHaveAttribute("aria-pressed", "false")
+    await backToEditing.click()
+    await expect(teacherView).toBeVisible()
     await expect(page.getByRole("textbox", { name: "Sección Prueba E2E" })).toBeVisible()
 
     await page.getByRole("button", { name: "Asistente", exact: true }).click()

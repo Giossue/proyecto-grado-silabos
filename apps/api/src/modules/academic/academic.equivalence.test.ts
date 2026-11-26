@@ -129,7 +129,7 @@ const structureRepository = {
   teacherUsers: async () => [{ id: golden.userId, name: "Ana", email: "ana@ueb.edu.ec" }],
 }
 
-const mallaRecord = { id: MALLA, careerId: CAREER, name: "Malla SW", cycleCount: 8, state: "vigente", subjectCount: 1 }
+const mallaRecord = { id: MALLA, careerId: CAREER, code: "SW", cycleCount: 8, state: "vigente", subjectCount: 1 }
 const mallaRepository = {
   mallas: async (careerId: string) => (careerId === CAREER ? [mallaRecord] : []),
   malla: async (careerId: string, id: string) => (careerId === CAREER && id === MALLA ? mallaRecord : null),
@@ -175,7 +175,7 @@ const fakes = {
     },
   }),
   structure: () => ({ bridge, academic: structureRepository, mallas: mallaRepository }),
-  mallas: () => ({ bridge, careerActive, mallas: mallaRepository, mallaNameTaken: async () => false, transaction: rejectTransaction }),
+  mallas: () => ({ bridge, careerActive, mallas: mallaRepository, mallaCodeTaken: async () => false, transaction: rejectTransaction }),
   scheduled: () => ({
     bridge,
     academic: structureRepository,

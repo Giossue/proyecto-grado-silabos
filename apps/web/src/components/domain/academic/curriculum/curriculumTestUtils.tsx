@@ -9,7 +9,7 @@ export const selectStub = {
       <div data-select>{children}</div>
     </SelectContext.Provider>
   ),
-  SelectTrigger: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  SelectTrigger: ({ children, "aria-label": label }: { children?: ReactNode; "aria-label"?: string }) => <div aria-label={label}>{children}</div>,
   SelectValue: () => <span />,
   SelectContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   SelectGroup: ({ children }: { children?: ReactNode }) => <div>{children}</div>,

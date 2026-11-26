@@ -15,173 +15,121 @@ import { useClientFilter, type ClientFilterDefinition } from "@/composables/useC
 import { useClientPagination } from "@/composables/useClientPagination"
 import { useTableSort, type SortColumns } from "@/composables/useTableSort"
 import { activateRow, rowButtonClass } from "@/lib/rowActivation"
-import type { AcademicStructureProps, CatalogRecord, GovernanceSection } from "@/types/academic"
+import type { AcademicStructureProps, CatalogRecord } from "@/types/academic"
 
 type Career = AcademicStructureProps["catalogs"]["careers"][number]
 
 type CatalogSectionProps = Pick<AcademicStructureProps, "catalogs" | "options"> & {
-  section: GovernanceSection
   onChanged: (message: string) => void
 }
 
-const facultySearch = (item: CatalogRecord) => [item.nombre]
-const careerSearch = (item: Career) => [item.name]
-const careerFilters: Record<string, ClientFilterDefinition<Career>> = {
-  modalidad: { matches: (item, value) => item.modality === value },
+// One row per career with its faculty; a faculty without careers keeps a row of its own so it stays reachable.
+type CatalogRow = { id: string; career: Career | null; faculty: CatalogRecord | undefined; facultyName: string }
+
+const catalogRows = ({ faculties, careers }: AcademicStructureProps["catalogs"]): CatalogRow[] => {
+  const byId = new Map(faculties.map((faculty) => [faculty.id, faculty]))
+  const used = new Set(careers.map((career) => career.faculty_id))
+
+  return [
+    ...careers.map((career) => {
+      const faculty = byId.get(career.faculty_id)
+
+      return { id: career.id, career, faculty, facultyName: faculty?.nombre ?? "Facultad no disponible" }
+    }),
+    ...faculties.filter((faculty) => !used.has(faculty.id)).map((faculty) => ({ id: faculty.id, career: null, faculty, facultyName: faculty.nombre })),
+  ]
 }
+
+const rowSearch = (row: CatalogRow) => [row.career?.name ?? "", row.facultyName]
+const rowFilters: Record<string, ClientFilterDefinition<CatalogRow>> = {
+  modalidad: { matches: (row, value) => row.career?.modality === value },
+}
+const rowColumns = {
+  name: { label: "Carrera", value: (row: CatalogRow) => row.career?.name ?? null },
+  faculty: { label: "Facultad", value: (row: CatalogRow) => row.facultyName },
+  modality: { label: "Modalidad", value: (row: CatalogRow) => row.career?.modality_label ?? null },
+  cycles: { label: "Ciclos", type: "number", value: (row: CatalogRow) => row.career?.cycle_count ?? null },
+} satisfies SortColumns<CatalogRow>
 
 const NO_LIBRARIES: string[] = []
 
-const facultyColumns = {
-  name: { label: "Facultad", value: (item: CatalogRecord) => item.nombre },
-} satisfies SortColumns<CatalogRecord>
+const inactiveBadge = (
+  <span className="ml-2 inline-flex">
+    <StatusBadge label="Inactiva" tone="neutral" />
+  </span>
+)
 
-export function CatalogSection({ section, catalogs, options, onChanged }: CatalogSectionProps) {
+export function CatalogSection({ catalogs, options, onChanged }: CatalogSectionProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  const facultyNames = useMemo(() => new Map(catalogs.faculties.map((faculty) => [faculty.id, faculty.nombre])), [catalogs.faculties])
-  const facultyName = (facultyId: string): string => facultyNames.get(facultyId) ?? "Facultad no disponible"
-  const careerColumns = useMemo(
-    () =>
-      ({
-        name: { label: "Carrera", value: (item: Career) => item.name },
-        faculty: { label: "Facultad", value: (item: Career) => facultyNames.get(item.faculty_id) ?? "Facultad no disponible" },
-        modality: { label: "Modalidad", value: (item: Career) => item.modality_label },
-        cycles: { label: "Ciclos", type: "number", value: (item: Career) => item.cycle_count ?? null },
-      }) satisfies SortColumns<Career>,
-    [facultyNames],
-  )
-
-  const facultyFilter = useClientFilter(catalogs.faculties, facultySearch)
-  const facultySort = useTableSort(facultyFilter.items, facultyColumns)
-  const facultyPage = useClientPagination(facultySort.items, 20, `${facultyFilter.criteria}|${facultySort.criteria}`)
-  const careerFilter = useClientFilter(catalogs.careers, careerSearch, careerFilters)
-  const careerSort = useTableSort(careerFilter.items, careerColumns)
-  const careerPage = useClientPagination(careerSort.items, 20, `${careerFilter.criteria}|${careerSort.criteria}`)
+  const rows = useMemo(() => catalogRows(catalogs), [catalogs])
+  const filter = useClientFilter(rows, rowSearch, rowFilters)
+  const sort = useTableSort(filter.items, rowColumns)
+  const page = useClientPagination(sort.items, 20, `${filter.criteria}|${sort.criteria}`)
+  // Several rows may share a faculty: its dialog is mounted once, outside the table.
+  const pageFaculties = [...new Set(page.items.flatMap((row) => (row.faculty ? [row.faculty] : [])))]
 
   const editRecord = (id: string): void => setEditingId(id)
   const editOpenChange = (id: string) => (open: boolean) => setEditingId((current) => (open ? id : current === id ? null : current))
 
-
-
   return (
-    <>
-      {section === "faculties" ? (
-        <div className="flex flex-col gap-4">
-          <ClientFilterBar
-            filter={facultyFilter}
-            inputId="faculties-search"
-            label="Buscar facultad"
-            placeholder="Buscar por nombre"
-            sort={facultySort}
-          />
-          <Table label="Listado académico">
-            <TableHeader>
-              <TableRow>
-                <SortableHead sort={facultySort} column="name">Facultad</SortableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {facultyPage.items.length === 0 ? (
-                <TableEmpty colSpan={1}>{facultyFilter.active ? "Ninguna facultad coincide con los filtros" : "No existen facultades registradas"}</TableEmpty>
-              ) : (
-                facultyPage.items.map((faculty) => (
-                  <TableRow
-                    key={faculty.id}
-                    className="cursor-pointer"
-                    onClick={(event) => activateRow(event.nativeEvent, () => editRecord(faculty.id))}
-                  >
-                    <TableCell>
-                      <button type="button" className={rowButtonClass} onClick={() => editRecord(faculty.id)}>{faculty.nombre}</button>
-                      {!faculty.activo ? (
-                        <span className="ml-2 inline-flex">
-                          <StatusBadge label="Inactiva" tone="neutral" />
-                        </span>
-                      ) : null}
-                      <CatalogActions
-                        entity="facultad"
-                        recordId={faculty.id}
-                        recordName={faculty.nombre}
-                        active={faculty.activo}
-                        catalogLibraries={faculty.catalog_libraries ?? NO_LIBRARIES}
-                        modalityOptions={options.modalityOptions}
-                        logoUrl={faculty.logo_url}
-                        faculties={catalogs.faculties}
-                        deactivateBlockedReason={faculty.deactivate_block ?? null}
-                        lockReason={faculty.lock_reason ?? null}
-                        editOpen={editingId === faculty.id}
-                        onEditOpenChange={editOpenChange(faculty.id)}
-                        onChanged={onChanged}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          <SortStatus sort={facultySort} />
-          <TablePagination meta={facultyPage.meta} label="Paginación de facultades" onPageChange={facultyPage.setPage} />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          <ClientFilterBar
-            filter={careerFilter}
-            inputId="careers-search"
-            label="Buscar carrera"
-            placeholder="Buscar por nombre"
-            sort={careerSort}
-            filters={
-              <Field>
-                <FieldLabel htmlFor="careers-search-modality" className="sr-only">
-                  Modalidad
-                </FieldLabel>
-                <Select value={careerFilter.values.modalidad} onValueChange={(value) => careerFilter.setValue("modalidad", value)}>
-                  <SelectTrigger id="careers-search-modality">
-                    <SelectValue placeholder="Todas las modalidades" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="all">Todas las modalidades</SelectItem>
-                      {options.modalityOptions.map((modality) => (
-                        <SelectItem key={modality.value} value={modality.value}>
-                          {modality.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-            }
-          />
-          <Table label="Listado académico">
-            <TableHeader>
-              <TableRow>
-                <SortableHead sort={careerSort} column="name">Carrera</SortableHead>
-                <SortableHead sort={careerSort} column="faculty">Facultad</SortableHead>
-                <SortableHead sort={careerSort} column="modality">Modalidad</SortableHead>
-                <SortableHead sort={careerSort} column="cycles">Ciclos</SortableHead>
-                <TableHead className="w-24">
-                  <span className="sr-only">Trabajo de la carrera</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {careerPage.items.length === 0 ? (
-                <TableEmpty colSpan={5}>{careerFilter.active ? "Ninguna carrera coincide con los filtros" : "No existen carreras registradas"}</TableEmpty>
-              ) : (
-                careerPage.items.map((career) => (
-                  <TableRow
-                    key={career.id}
-                    className="cursor-pointer"
-                    onClick={(event) => activateRow(event.nativeEvent, () => editRecord(career.id))}
-                  >
-                    <TableCell>
+    <div className="flex flex-col gap-4">
+      <ClientFilterBar
+        filter={filter}
+        inputId="careers-search"
+        label="Buscar carrera o facultad"
+        placeholder="Buscar por carrera o facultad"
+        sort={sort}
+        filters={
+          <Field>
+            <FieldLabel htmlFor="careers-search-modality" className="sr-only">
+              Modalidad
+            </FieldLabel>
+            <Select value={filter.values.modalidad} onValueChange={(value) => filter.setValue("modalidad", value)}>
+              <SelectTrigger id="careers-search-modality">
+                <SelectValue placeholder="Todas las modalidades" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">Todas las modalidades</SelectItem>
+                  {options.modalityOptions.map((modality) => (
+                    <SelectItem key={modality.value} value={modality.value}>
+                      {modality.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+        }
+      />
+      <Table label="Listado académico">
+        <TableHeader>
+          <TableRow>
+            <SortableHead sort={sort} column="name">Carrera</SortableHead>
+            <SortableHead sort={sort} column="faculty">Facultad</SortableHead>
+            <SortableHead sort={sort} column="modality" className="text-center">Modalidad</SortableHead>
+            <SortableHead sort={sort} column="cycles" className="text-center">Ciclos</SortableHead>
+            <TableHead className="w-12">
+              <span className="sr-only">Trabajo de la carrera</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {page.items.length === 0 ? (
+            <TableEmpty colSpan={5}>{filter.active ? "Ninguna carrera ni facultad coincide con los filtros" : "No existen facultades ni carreras registradas"}</TableEmpty>
+          ) : (
+            page.items.map(({ id, career, faculty, facultyName }) => (
+              <TableRow
+                key={id}
+                className="cursor-pointer"
+                onClick={(event) => activateRow(event.nativeEvent, () => editRecord(id))}
+              >
+                <TableCell>
+                  {career ? (
+                    <>
                       <button type="button" className={rowButtonClass} onClick={() => editRecord(career.id)}>{career.name}</button>
-                      {!career.active ? (
-                        <span className="ml-2 inline-flex">
-                          <StatusBadge label="Inactiva" tone="neutral" />
-                        </span>
-                      ) : null}
+                      {!career.active ? inactiveBadge : null}
                       <TableCardLine>
                         {career.modality_label ?? "Sin modalidad"}
                       </TableCardLine>
@@ -202,21 +150,49 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                         onEditOpenChange={editOpenChange(career.id)}
                         onChanged={onChanged}
                       />
-                    </TableCell>
-                    <TableCell>{facultyName(career.faculty_id)}</TableCell>
-                    <TableCell data-card-hide="true">{career.modality_label ?? "Sin modalidad"}</TableCell>
-                    <TableCell data-card-hide="true" title="Ciclos de la malla vigente">{career.cycle_count ?? "Sin malla vigente"}</TableCell>
-                    <TableCell>{career.active ? <CareerWorkLinks careerId={career.id} careerName={career.name} /> : null}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          <SortStatus sort={careerSort} />
-          <TablePagination meta={careerPage.meta} label="Paginación de carreras" onPageChange={careerPage.setPage} />
-        </div>
-      )}
-
-    </>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">Sin carreras</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {faculty ? (
+                    <>
+                      <button type="button" className={rowButtonClass} onClick={() => editRecord(faculty.id)}>{faculty.nombre}</button>
+                      {!faculty.activo ? inactiveBadge : null}
+                    </>
+                  ) : (
+                    facultyName
+                  )}
+                </TableCell>
+                <TableCell className="text-center" data-card-hide="true">{career ? (career.modality_label ?? "Sin modalidad") : "—"}</TableCell>
+                <TableCell className="text-center" data-card-hide="true" title="Ciclos de la malla vigente">{career ? (career.cycle_count ?? "Sin malla vigente") : "—"}</TableCell>
+                <TableCell>{career?.active ? <CareerWorkLinks careerId={career.id} careerName={career.name} /> : null}</TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+      <SortStatus sort={sort} />
+      <TablePagination meta={page.meta} label="Paginación de facultades y carreras" onPageChange={page.setPage} />
+      {pageFaculties.map((faculty) => (
+        <CatalogActions
+          key={faculty.id}
+          entity="facultad"
+          recordId={faculty.id}
+          recordName={faculty.nombre}
+          active={faculty.activo}
+          catalogLibraries={faculty.catalog_libraries ?? NO_LIBRARIES}
+          modalityOptions={options.modalityOptions}
+          logoUrl={faculty.logo_url}
+          faculties={catalogs.faculties}
+          deactivateBlockedReason={faculty.deactivate_block ?? null}
+          lockReason={faculty.lock_reason ?? null}
+          editOpen={editingId === faculty.id}
+          onEditOpenChange={editOpenChange(faculty.id)}
+          onChanged={onChanged}
+        />
+      ))}
+    </div>
   )
 }

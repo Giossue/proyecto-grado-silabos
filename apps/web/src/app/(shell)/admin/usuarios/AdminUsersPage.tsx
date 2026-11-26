@@ -44,9 +44,30 @@ const IMPORT_COLUMNS = [
   { key: "carrera", label: "Carrera" },
 ]
 
+const ROLE_ORDER: Record<RoleAssignment["code"], number> = { administrador: 0, coordinador: 1, docente: 2, bibliotecario: 3 }
+
+type RoleBlock = { roles: string[]; careers: string[]; scoped: boolean }
+
 const careerOf = (role: RoleAssignment): string => (role.code === "administrador" ? "-" : (role.career_name ?? "Todas las carreras"))
 
-const roleLine = (role: RoleAssignment): string => (role.career_name ? `${role.name} · ${role.career_name}` : role.name)
+/** One entry per role with all its careers; roles holding exactly the same careers share one block. */
+function roleBlocks(assignments: RoleAssignment[]): RoleBlock[] {
+  const blocks = new Map<string, RoleBlock>()
+  const ordered = [...assignments].sort((a, b) => ROLE_ORDER[a.code] - ROLE_ORDER[b.code])
+
+  for (const code of new Set(ordered.map((item) => item.code))) {
+    const held = ordered.filter((item) => item.code === code)
+    const careers = [...new Set(held.map(careerOf))].sort((a, b) => a.localeCompare(b, "es", { numeric: true }))
+    const key = JSON.stringify(careers)
+    const block = blocks.get(key)
+    if (block) block.roles.push(held[0]!.name)
+    else blocks.set(key, { roles: [held[0]!.name], careers, scoped: held.some((item) => item.career_name !== null) })
+  }
+
+  return [...blocks.values()]
+}
+
+const blockLine = ({ roles, careers, scoped }: RoleBlock): string => (scoped ? `${roles.join(", ")} · ${careers.join(", ")}` : roles.join(", "))
 
 export default function AdminUsersPage() {
   const router = useRouter()
@@ -263,6 +284,7 @@ export default function AdminUsersPage() {
               ) : (
                 result.users.data.map((user) => {
                   const status = managedUserStatus(user)
+                  const blocks = roleBlocks(user.roles)
 
                   return (
                     <TableRow
@@ -285,11 +307,11 @@ export default function AdminUsersPage() {
                             <span data-user-roles-label className="text-xs font-medium text-muted-foreground">
                               Roles
                             </span>
-                            {user.roles.length ? (
+                            {blocks.length ? (
                               <ul className="flex flex-col gap-1">
-                                {user.roles.map((item) => (
-                                  <li key={item.id} data-user-role-line>
-                                    {roleLine(item)}
+                                {blocks.map((block) => (
+                                  <li key={block.roles.join()} data-user-role-line>
+                                    {blockLine(block)}
                                   </li>
                                 ))}
                               </ul>
@@ -300,11 +322,17 @@ export default function AdminUsersPage() {
                         </div>
                       </TableCell>
                       <TableCell className="h-px py-0" data-card-hide="true">
-                        {user.roles.length ? (
-                          <ul className="-mx-2 flex h-full min-h-11 flex-col">
-                            {user.roles.map((item, index) => (
-                              <li key={index} className="flex min-h-9 flex-1 items-center border-border px-2 not-first:border-t">
-                                {item.name}
+                        {blocks.length ? (
+                          <ul className="-mx-2 grid h-full min-h-11 auto-rows-[minmax(2.25rem,1fr)]">
+                            {blocks.map((block) => (
+                              <li
+                                key={block.roles.join()}
+                                className="flex flex-col justify-center border-border px-2 not-first:border-t"
+                                style={{ gridRow: `span ${block.careers.length}` }}
+                              >
+                                {block.roles.map((name) => (
+                                  <span key={name}>{name}</span>
+                                ))}
                               </li>
                             ))}
                           </ul>
@@ -313,16 +341,18 @@ export default function AdminUsersPage() {
                         )}
                       </TableCell>
                       <TableCell className="h-px py-0" data-card-hide="true">
-                        {user.roles.length ? (
-                          <ul className="-mx-2 flex h-full min-h-11 flex-col text-sm">
-                            {user.roles.map((item, index) => (
-                              <li
-                                key={index}
-                                className={cn("flex min-h-9 flex-1 items-center border-border px-2 not-first:border-t", !item.career_name && "text-muted-foreground")}
-                              >
-                                {careerOf(item)}
-                              </li>
-                            ))}
+                        {blocks.length ? (
+                          <ul className="-mx-2 grid h-full min-h-11 auto-rows-[minmax(2.25rem,1fr)] text-sm">
+                            {blocks.flatMap((block) =>
+                              block.careers.map((career) => (
+                                <li
+                                  key={`${block.roles.join()}-${career}`}
+                                  className={cn("flex items-center border-border px-2 not-first:border-t", !block.scoped && "text-muted-foreground")}
+                                >
+                                  {career}
+                                </li>
+                              )),
+                            )}
                           </ul>
                         ) : (
                           <span className="text-sm text-muted-foreground">—</span>

@@ -258,7 +258,7 @@ describe("GET career and curriculum import templates", () => {
     expect(response.headers.get("content-disposition")).toBe("attachment; filename=plantilla-carreras.xlsx")
     const book = await readBook(Buffer.from(await response.arrayBuffer()))
     expect(book.getWorksheet("Datos")!.getCell("A2").dataValidation).toMatchObject({ type: "list", formulae: ["Listas!$A$1:$A$1"] })
-    expect(book.getWorksheet("Datos")!.getCell("B2").dataValidation).toMatchObject({ type: "list", formulae: ["Listas!$B$1:$B$5"] })
+    expect(book.getWorksheet("Datos")!.getCell("B2").dataValidation).toMatchObject({ type: "list", formulae: ["Listas!$B$1:$B$3"] })
     expect(book.getWorksheet("Listas")!.getCell("A1").value).toBe(FACULTY_NAME)
     signIn("coordinador", CAREER)
     expect(await (await careerImportTemplate(get("/api/v1/admin/academic/careers/import-template"), deps())).text()).toBe(

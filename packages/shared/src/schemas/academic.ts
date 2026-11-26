@@ -3,10 +3,8 @@ import { attributeName, checkItems, is, itemsAt, nullableField, requiredField, s
 
 export const STUDY_MODALITY_LABELS: Record<string, string> = {
   presencial: "Presencial",
-  semipresencial: "Semipresencial",
-  en_linea: "En línea",
-  a_distancia: "A distancia",
   hibrida: "Híbrida",
+  en_linea: "En línea",
 }
 export const STUDY_MODALITIES = Object.keys(STUDY_MODALITY_LABELS)
 
@@ -88,14 +86,14 @@ export const curriculumConfigurationSchema = z.object({ cycle_count: requiredFie
 export const MALLA_STATE_LABELS: Record<string, string> = { vigente: "Vigente", cerrada: "Cerrada" }
 export const MALLA_STATES = Object.keys(MALLA_STATE_LABELS)
 
-/** A career's curriculum (malla). Creating asks for its cycles; editing changes name or state only. */
-export function mallaSchema({ nameAvailable, updating }: { nameAvailable?: Exists; updating: boolean }) {
-  const name = [is.string(), is.max(NAME_MAX), ...(nameAvailable ? [is.unique(nameAvailable, "Ya existe una malla con ese nombre en esta carrera.")] : [])]
+/** A career's curriculum (malla), identified by a code unique in the career (same rules as career and subject codes). Creating asks for its cycles and the malla starts vigente; editing changes code or state (cycles have their own schema). */
+export function mallaSchema({ codeAvailable, updating }: { codeAvailable?: Exists; updating: boolean }) {
+  const code = [is.string(), is.max(CODE_MAX), ...(codeAvailable ? [is.unique(codeAvailable, "Ya existe una malla con ese código en esta carrera.")] : [])]
   const state = [is.string(), is.oneOf(MALLA_STATES)]
   return z.object({
-    name: updating ? sometimesField("nombre", name, { required: true }) : requiredField("nombre", name),
+    code: updating ? sometimesField("código", code, { required: true }) : requiredField("código", code),
     ...(updating ? {} : { cycle_count: requiredField("cantidad de ciclos", [is.integer(), is.min(1), is.max(CYCLE_LIMIT)]) }),
-    state: updating ? sometimesField("estado", state, { required: true }) : requiredField("estado", state),
+    ...(updating ? { state: sometimesField("estado", state, { required: true }) } : {}),
   })
 }
 

@@ -83,6 +83,7 @@ describe("CatalogEditDialog · logo de la facultad", () => {
     const name = () => document.body.querySelector<HTMLInputElement>('input[id^="edit-name-"]')!
 
     expect(name().disabled).toBe(true)
+    expect(document.body.querySelector(`label[for="${name().id}"]`)!.textContent).toContain("Nombre de facultad")
     expect(buttonWithText("Guardar cambios")).toBeUndefined()
 
     fireEvent.click(buttonWithText("Editar")!)

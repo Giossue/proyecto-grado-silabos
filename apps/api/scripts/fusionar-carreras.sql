@@ -5,9 +5,9 @@
 --
 -- What it does, in one transaction:
 --   1. Every malla of the absorbed career moves to the kept career and keeps its state (a career
---      may have several 'vigente' mallas); a malla whose name
---      collides gets the suffix " (<absorb>)". Subjects follow their malla through the
---      ON UPDATE CASCADE composite FK asignaturas(malla_id, carrera_id) -> mallas.
+--      may have several 'vigente' mallas); a malla whose code collides gets the suffix
+--      " (<absorb>)" (a code holds 80 characters: a longer result aborts). Subjects follow their
+--      malla through the ON UPDATE CASCADE composite FK asignaturas(malla_id, carrera_id) -> mallas.
 --   2. convocatorias_carreras: when the kept career already takes part in the same university
 --      convocatoria, the absorbed row's syllabi move to the kept row (its state is kept) and the
 --      absorbed row is deleted; otherwise the row itself moves.
@@ -58,9 +58,9 @@ BEGIN
 
     -- 1. Mallas (subjects follow through ON UPDATE CASCADE).
     UPDATE mallas AS m
-    SET nombre_malla = m.nombre_malla || ' (' || v_absorb_code || ')'
+    SET codigo_malla = m.codigo_malla || ' (' || v_absorb_code || ')'
     WHERE m.carrera_id = v_absorb
-      AND EXISTS (SELECT 1 FROM mallas AS k WHERE k.carrera_id = v_keep AND k.nombre_malla = m.nombre_malla);
+      AND EXISTS (SELECT 1 FROM mallas AS k WHERE k.carrera_id = v_keep AND k.codigo_malla = m.codigo_malla);
 
     UPDATE mallas AS m
     SET carrera_id = v_keep
@@ -148,12 +148,12 @@ BEGIN
 END
 $$;
 
-SELECT m.nombre_malla, m.estado_malla, m.numero_ciclos, count(a.asignatura_id) AS asignaturas
+SELECT m.codigo_malla, m.estado_malla, m.numero_ciclos, count(a.asignatura_id) AS asignaturas
 FROM mallas AS m
 JOIN carreras AS c ON c.carrera_id = m.carrera_id
 LEFT JOIN asignaturas AS a ON a.malla_id = m.malla_id
 WHERE c.codigo_carrera = :'keep'
 GROUP BY m.malla_id
-ORDER BY m.estado_malla DESC, m.nombre_malla;
+ORDER BY m.estado_malla DESC, m.codigo_malla;
 
 COMMIT;

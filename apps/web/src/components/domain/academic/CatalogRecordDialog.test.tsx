@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { useState, type ComponentProps } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { createAcademicRecord } from "@/api/academic"
+import { getCatalogLibraries } from "@/api/libraryCatalog"
 import { ApiError } from "@/api/client"
 import { CatalogEditDialog } from "@/components/domain/academic/CatalogEditDialog"
 import { CatalogRecordDialog } from "@/components/domain/academic/CatalogRecordDialog"
@@ -10,6 +11,11 @@ import { buttonWithText, keepClosingDialogs } from "@/components/domain/academic
 import { flush, renderWithProviders } from "@/test/render"
 
 vi.mock("@/api/libraryCatalog", () => ({ getCatalogLibraries: vi.fn().mockResolvedValue([]) }))
+// jsdom cannot decode images
+vi.mock("@/lib/logoPrepare", () => ({
+  loadLogo: vi.fn().mockResolvedValue({ image: {}, transparent: true }),
+  prepareLogo: vi.fn().mockResolvedValue(new File(["png"], "logo.png", { type: "image/png" })),
+}))
 vi.mock("@/api/academic", async (importOriginal) => ({ ...(await importOriginal<object>()), createAcademicRecord: vi.fn() }))
 
 const pickers = vi.hoisted(() => ({ props: {} as Record<string, { value?: string; minValue?: string; onValueChange?: (value: string) => void }> }))
@@ -89,7 +95,7 @@ describe("academic catalog code fields", () => {
 
     const nameLabel = document.body.querySelector('label[for="catalog-name"]')
     const logoLabel = document.body.querySelector('label[for="faculty-logo"]')
-    expect(nameLabel).not.toBeNull()
+    expect(nameLabel?.textContent).toContain("Nombre de facultad")
     expect(document.body.querySelector("#catalog-campus")).toBeNull()
     expect(document.body.textContent).not.toMatch(/campus/i)
     expect(logoLabel).not.toBeNull()
@@ -169,7 +175,7 @@ const chooseNative = (index: number, value: string): void => {
 }
 
 const fillCareer = async (): Promise<void> => {
-  fireEvent.change(document.body.querySelector("#catalog-name")!, { target: { value: "Software" } })
+  fireEvent.change(document.body.querySelector("#catalog-career-name")!, { target: { value: "Software" } })
   fireEvent.change(document.body.querySelector("#catalog-code")!, { target: { value: "SW" } })
   fireEvent.change(document.body.querySelector("#catalog-cycle-count")!, { target: { value: "8" } })
   chooseNative(0, "01a1c5ba-2222-7000-8000-999999999999")
@@ -184,7 +190,7 @@ describe("salida del formulario de creación", () => {
     const onSaved = vi.fn()
     renderWithProviders(<Harness entity="carrera" onSaved={onSaved} />)
     await flush()
-    const name = (): HTMLInputElement => document.body.querySelector<HTMLInputElement>("#catalog-name")!
+    const name = (): HTMLInputElement => document.body.querySelector<HTMLInputElement>("#catalog-career-name")!
     await fillCareer()
     fireEvent.submit(name().closest("form")!)
     await flush()
@@ -205,7 +211,7 @@ describe("botón de crear y errores de campo", () => {
     const actor = userEvent.setup()
     renderWithProviders(<Harness entity="carrera" />)
     await flush()
-    fireEvent.change(document.body.querySelector("#catalog-name")!, { target: { value: "Software" } })
+    fireEvent.change(document.body.querySelector("#catalog-career-name")!, { target: { value: "Software" } })
     fireEvent.change(document.body.querySelector("#catalog-code")!, { target: { value: "SW" } })
     fireEvent.change(document.body.querySelector("#catalog-cycle-count")!, { target: { value: "8" } })
     await flush()
@@ -236,5 +242,49 @@ describe("botón de crear y errores de campo", () => {
 
     expect(document.body.textContent).not.toContain("Ya existe una carrera con ese código")
     expect(document.body.textContent).toContain("Revise el nombre")
+  })
+})
+
+describe("facultad nueva desde la carrera", () => {
+  const NEW_ID = "01a1c5ba-2222-7000-8000-000000000009"
+
+  it("se registra desde el desplegable y queda seleccionada sin perder lo escrito de la carrera", async () => {
+    URL.createObjectURL = vi.fn(() => "blob:logo")
+    URL.revokeObjectURL = vi.fn()
+    vi.mocked(getCatalogLibraries).mockResolvedValue([{ id: "BGEN", name: "MATRIZ" }])
+    vi.mocked(createAcademicRecord).mockReset().mockResolvedValue({ message: "Registro institucional creado.", id: NEW_ID })
+    const actor = userEvent.setup()
+    renderWithProviders(<Harness entity="carrera" />)
+    await flush()
+    fireEvent.change(document.body.querySelector("#catalog-career-name")!, { target: { value: "Software" } })
+
+    await actor.click(screen.getByRole("combobox", { name: /Facultad/ }))
+    await actor.click(screen.getByRole("option", { name: "Registrar nueva facultad" }))
+    await flush()
+    const faculty = screen.getByRole("dialog", { name: "Nueva facultad" })
+    expect(document.body.querySelectorAll("#catalog-name")).toHaveLength(1)
+    fireEvent.change(faculty.querySelector("#catalog-name")!, { target: { value: "Salud" } })
+    fireEvent.change(faculty.querySelector("#faculty-logo")!, { target: { files: [new File(["x"], "logo.png", { type: "image/png" })] } })
+    await flush()
+    for (let step = 0; step < 2; step += 1) {
+      fireEvent.submit(faculty.querySelector("form")!)
+      await flush()
+    }
+
+    expect(vi.mocked(createAcademicRecord).mock.calls.map(([entity]) => entity)).toEqual(["facultad"])
+    expect(screen.queryByRole("dialog", { name: "Nueva facultad" })).toBeNull()
+    expect(document.body.querySelector<HTMLInputElement>("#catalog-career-name")!.value).toBe("Software")
+    expect(screen.getByRole("combobox", { name: /Facultad/ }).textContent).toContain("Salud")
+
+    fireEvent.change(document.body.querySelector("#catalog-code")!, { target: { value: "SW" } })
+    fireEvent.change(document.body.querySelector("#catalog-cycle-count")!, { target: { value: "8" } })
+    chooseNative(1, "presencial")
+    await flush()
+    fireEvent.submit(document.body.querySelector("#catalog-career-name")!.closest("form")!)
+    await flush()
+
+    const [entity, payload] = vi.mocked(createAcademicRecord).mock.calls[1]!
+    expect(entity).toBe("carrera")
+    expect((payload as FormData).get("faculty_id")).toBe(NEW_ID)
   })
 })

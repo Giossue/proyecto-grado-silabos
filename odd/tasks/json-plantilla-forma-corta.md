@@ -48,11 +48,14 @@ Goal: the template JSON (Admin → Plantilla → Opciones avanzadas → Editar J
 
   User (2026-11-26): «pero no podemos usar español? o si osi necesitamos inglés?» → «ok hazlo».
 
+- S8 — Styles live only in `document`. The template has 115 inline `style="…"` in its HTML (e.g. `<th style="background:#C3D4EA;font-weight:bold">Autor</th>`). Remove those that just repeat what `document` already gives, so tables read `<th>Autor</th>`; the look of the preview, PDF and Word must not change. User (2026-11-26): «como manejamos los estilos y todo eso, en el json o qué?» → proposal «que los estilos vivan solo en document» → «ok, hagamoslo».
+
 ## Tasks
 
 - [x] T1 (S1–S6) delegated writer (reason: context backstop of the parent session) — commit: 1263c46. RED: 6 of 7 new tests in `templateShortForm.test.ts` failed (the full-form import test already passed); GREEN: all 7 pass.
 
-- [x] T2 (S7) delegated writer (context backstop); Risk item 1 (migration of stored data) → independent verifier — commit: pending. RED: 6 of 12 failed (two updated expectations, «unidades» export, «units» in a field document, Spanish catalog, «horas»; the «units» import test passed trivially until the rename and then failed when the alias was disabled); GREEN: 13 of 13 in `templateShortForm.test.ts`. Migration `20261126140000_lista_unidades` checked on a throwaway copy and applied to dev (see L5).
+- [x] T2 (S7) delegated writer (context backstop); Risk item 1 (migration of stored data) → independent verifier — commit: 45e2895 + 853ebb2 (signatura). RED: 6 of 12 failed (two updated expectations, «unidades» export, «units» in a field document, Spanish catalog, «horas»; the «units» import test passed trivially until the rename and then failed when the alias was disabled); GREEN: 13 of 13 in `templateShortForm.test.ts`. Migration `20261126140000_lista_unidades` checked on a throwaway copy and applied to dev (see L5).
+- [x] T3 (S8) delegated writer (context backstop); Risk item 1 (stored data migrated) and item 6 (Word output of plain headers) → independent verifier — commit: pending. RED: the DOCX plain-header test failed (no `<w:b w:val="1"/>`), the official export test failed (it still had `style=\"background:#C3D4EA;font-weight:bold\"`) and the web fixture test failed against the old fixture; GREEN: all pass (see L9).
 
 ## Log
 
@@ -99,3 +102,15 @@ Goal: the template JSON (Admin → Plantilla → Opciones avanzadas → Editar J
   - stale `huella_definicion_campo` for unidades (not a teacher field);
   - pending AI proposals would go stale (0 in dev);
   - old AI chat messages still say `units` (the import alias covers it).
+- L7 (2026-11-26) — T2 committed 45e2895; `call_number` → `signatura` 853ebb2. User asked for S8: «ok, hagamoslo».
+- L8 (2026-11-26) — The T3 writer stopped with a decision: Word headers are bold only through the inline style. User chose «Negrita por defecto (Recomendado)»: Word makes plain table headers bold (headers without their own background, when `document.colors.table_header_background` is set). The 67 `background:#C3D4EA;font-weight:bold` styles are removed. The other 48 styles stay (alignment, other colours, unidades headers with coloured text). The two Laravel Word goldens («plantilla», «horizontal») get their plain headers regenerated as bold.
+
+- L9 (2026-11-26, T3 writer) — Done (S8):
+  - Inventory of the 115 inline styles in `officialTemplate.json`: 67 `background:#C3D4EA;font-weight:bold` on `th` removed (they repeat the document header). Kept 48: 21 `background:#C3D4EA;text-align:center` and 1 `background:#C3D4EA;text-align:right` on the unidades `th` (alignment, plus their text is `#365F91`, which the Word header colour would overwrite), 21 `color:#365F91` spans, 4 `text-align:center` on `td`, and 1 `background:#4F81BD;color:#FFFFFF;font-weight:bold` (FACULTAD header).
+  - Word (`templateDocumentWord.ts`): a header without its own background is bold when `document.colors.table_header_background` is set, unless it has its own `bold`. The PDF is this DOCX through Gotenberg/LibreOffice. Web already showed `th` bold (browser default) with `--document-th-background`/`--document-th-color`.
+  - Laravel Word goldens regenerated: only `word/document.xml` of «plantilla» (2 plain headers «Columna», «Elección») and «horizontal» (8 plain headers «H1», «R», «Lateral», «A») gained `<w:b w:val="1"/><w:bCs w:val="1"/>`; no other byte changed and the other 3 cases are unchanged.
+  - Export: `style=` 117 → 50 (the export re-splits some spans, so it has 2 more than the seed's 115 → 48). An older JSON with the inline styles imports fine and keeps them as stored attributes.
+  - Shared fixtures `template-definition.json` and `block-conformance.json`: the 54 redundant block headers each set to `backgroundColor`/`bold` null. The configuration goldens (`template-`, `html-`, `block-`, `draft-golden.json`) are self-contained Laravel parity inputs, not read from the seed, so they stay.
+  - Migration `20261126150000_estilos_en_documento` (SQL only, recursive temp function, only for templates whose `text` equals `table_header_text`): headers whose background equals the template's `table_header_background`, with `bold: true`, no text colour, alignment or italic and no coloured text, get `backgroundColor`/`bold` null. Counts, identical on the throwaway copy (postgres:18, port 55497) and on dev: redundant headers plantilla 57 / definiciones 19 / valores 126 → 0/0/0; plain headers 0/0/0 → 57/19/126; the 22 aligned and 1 blue headers stay; rows 1/46/438 and 3 revisions unchanged; md5 of all text and of everything except those two attributes unchanged; `revisiones_silabo` md5 unchanged; `plantilla_modificada_en` stays 06:42:47.363.
+  - Not changed (outside the edit surface or out of scope): `repeatableTable.ts` still writes the header style for admin-designed tables; the AI resources `templateKnowledge.json` (6) and `escenarios.json` (8) still show it in examples.
+  - Checks: api vitest 159 files/2360 tests; web 176/1051; shared 17/156; tsc api and web 0 errors.
