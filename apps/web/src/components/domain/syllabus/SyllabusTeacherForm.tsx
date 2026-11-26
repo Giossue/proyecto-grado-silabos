@@ -7,7 +7,6 @@ import type { SyllabusDetail, SyllabusField } from "@/api/syllabi"
 import { FieldResponseEditor } from "@/components/domain/syllabus/FieldResponseEditor"
 import { FieldView } from "@/components/domain/syllabus/FieldView"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -133,12 +132,7 @@ export function SyllabusTeacherForm({
                             <span className="text-destructive" aria-hidden="true">
                               *
                             </span>
-                          ) : (
-                            <Badge variant="outline" className="font-normal">
-                              <Lock aria-hidden="true" />
-                              {responsibleLabel(field.quien_llena)}
-                            </Badge>
-                          )}
+                          ) : null}
                         </span>
                       </AccordionTrigger>
                     ) : null}
