@@ -128,7 +128,7 @@ describe("GET /plantilla.schema.json", () => {
     const expected = await readFile(path.join(process.cwd(), "src", "server", "configuration", "plantilla.schema.json"))
     expect(response.status).toBe(200)
     expect(Buffer.from(await response.arrayBuffer()).equals(expected)).toBe(true)
-    expect(JSON.parse(expected.toString("utf8")).title).toBe("Plantilla del sílabo (formato 2)")
+    expect(JSON.parse(expected.toString("utf8")).title).toBe("Plantilla del sílabo")
     const headers = headersOf(response)
     expect({ ...headers, "last-modified": undefined }).toEqual({
       "content-type": "application/schema+json",
