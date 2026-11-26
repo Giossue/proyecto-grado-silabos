@@ -43,6 +43,7 @@ import { layoutOf, layoutStyle, paperOf, sheetPixels, type DocumentLayout } from
 import { limitLabel } from "@/lib/fieldLimits"
 import { conditionLabel, conditionSources, newResponseId, responseIds, withNewResponseIds, withResponseId, type ConditionSource } from "@/lib/responseConditions"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
+import { drawnInDocument } from "@silabos/shared/lib/teacherFormation"
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import { templateEditorState } from "@/state/templateEditor"
@@ -192,7 +193,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const documentStyle = templateRuntime().definition?.document ?? null
   const readOnly = preview || previewing
   const source = previewing ? draftPreview : preview && !awaitingReload ? template.sections : draft
-  const sections: SheetEntry[] = source.map((section, index) => ({ section, fields: section.fields, landscape: section.orientation === "landscape", index }))
+  const sections: SheetEntry[] = source.map((section, index) => ({ section, fields: section.fields.filter(drawnInDocument), landscape: section.orientation === "landscape", index }))
   const sheets = sheetsOf(sections)
   const shownLayout = preview && !awaitingReload ? layoutOf(template.layout) : layoutDraft
   const shownTitle = preview && !awaitingReload ? template.titleBlock.text : titleDraft
@@ -201,7 +202,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const draftVersion = `${editSession}:${revision}`
   const problemsByTarget = draftProblemsByTarget(problems)
   const usedSectionKeys = source.map((section) => section.key)
-  const usedFieldKeys = sections.flatMap((entry) => entry.fields.map((field) => field.key))
+  const usedFieldKeys = source.flatMap((section) => section.fields.map((field) => field.key))
   const orderedFields = draft.flatMap((section) => section.fields)
   const usedResponseIds = responseIds(orderedFields.map((field) => field.content))
   const allSources = conditionSources(orderedFields)
@@ -554,7 +555,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     const section = draft.find((item) => item.id === sectionId)
     const current = section?.fields.find((item) => item.id === fieldId)
     if (!section || !current) return
-    const duplicated = value.key !== current.key && sections.some((entry) => entry.fields.some((field) => field.id !== fieldId && field.key === value.key))
+    const duplicated = value.key !== current.key && source.some((entry) => entry.fields.some((field) => field.id !== fieldId && field.key === value.key))
     if (duplicated) {
       setError("Esa plantilla ya está en el sílabo")
       return
@@ -1062,7 +1063,9 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                   ) : null}
 
                   <ol className="flex flex-col gap-3">
-                    {fields.map((field, fieldIndex) => {
+                    {fields.map((field) => {
+                      const fieldIndex = section.fields.indexOf(field)
+                      const lastShown = field === fields.at(-1)
                       const fieldProblems = !preview ? problemsByTarget.fields[field.id] ?? [] : []
                       return (
                         <li
@@ -1080,7 +1083,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                         >
                           {proposedField(field) ? <span className="absolute -top-2.5 right-2 z-10 rounded-full bg-warning px-2 py-0.5 font-sans text-xs font-medium text-warning-foreground" data-change-mark>Cambió</span> : null}
                           {!readOnly && fieldMarked(section.id, fieldIndex) ? <span data-drop-mark className="pointer-events-none absolute inset-x-0 -top-2 z-10 h-0.5 rounded-full bg-primary" aria-hidden="true" /> : null}
-                          {!readOnly && fieldIndex === fields.length - 1 && fieldMarked(section.id, fields.length) ? <span data-drop-mark className="pointer-events-none absolute inset-x-0 -bottom-2 z-10 h-0.5 rounded-full bg-primary" aria-hidden="true" /> : null}
+                          {!readOnly && lastShown && fieldMarked(section.id, section.fields.length) ? <span data-drop-mark className="pointer-events-none absolute inset-x-0 -bottom-2 z-10 h-0.5 rounded-full bg-primary" aria-hidden="true" /> : null}
                           {!readOnly ? (
                             <IconTooltip label={`Arrastrar el campo ${fieldName(field)}`}>
                               <Button
@@ -1101,7 +1104,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                             </IconTooltip>
                           ) : null}
                           {!readOnly && !locked ? <TemplateInsertPoint disabled={busy} actions={[{ key: "field", label: "Agregar campo" }]} position="top" gap="field" onInsert={() => addField(section.id, fieldIndex)} /> : null}
-                          {!readOnly && !locked && fieldIndex === fields.length - 1 ? (
+                          {!readOnly && !locked && lastShown ? (
                             <TemplateInsertPoint disabled={busy} actions={[{ key: "section", label: "Nueva sección" }, { key: "field", label: "Agregar campo" }]} position="bottom" gap="field" onInsert={(key) => insertAfterLastField(key, section.id, sectionIndex)} />
                           ) : null}
                           {readOnly ? (

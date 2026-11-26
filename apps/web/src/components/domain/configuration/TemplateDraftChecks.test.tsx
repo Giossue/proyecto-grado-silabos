@@ -141,7 +141,7 @@ describe("TemplateVisualBuilder: borrador revisado antes de guardar", () => {
   })
 
   it("muestra la vista previa del borrador sin guardar y vuelve a editar", async () => {
-    const sheets = [{ id: "x1", key: "uno", title: "Uno nuevo", orientation: "portrait" as const, fields: [{ id: "y1", key: "f1", label: "Primero", quien_llena: "carrera" as const, content: emptyDocument() }] }]
+    const sheets = [{ id: "x1", key: "uno", title: "Uno nuevo", orientation: "portrait" as const, fields: [{ id: "y1", key: "f1", label: "Primero", quien_llena: "carrera" as const, content: emptyDocument() }, { id: "y9", key: "formacion_docente", label: "Formación", quien_llena: "carrera" as const, content: emptyDocument() }] }]
     vi.mocked(templateApi.previewTemplateDraft).mockResolvedValue({ sections: [], sheets })
     await mountEditing()
     await rename()
@@ -152,6 +152,8 @@ describe("TemplateVisualBuilder: borrador revisado antes de guardar", () => {
     expect(templateApi.importTemplateJson).not.toHaveBeenCalled()
     expect([...body().querySelectorAll("h3[data-section-title]")].map((item) => item.textContent?.trim())).toEqual(["Uno nuevo"])
     expect(body().querySelector("[data-section-heading]")).toBeNull()
+    expect(body().querySelector('[data-field="y1"]')).toBeTruthy()
+    expect(body().querySelector('[data-field="y9"]')).toBeNull()
 
     await click(body().querySelector('button[aria-label="Volver a editar"]'))
     expect(body().querySelectorAll("[data-section-heading]")).toHaveLength(2)

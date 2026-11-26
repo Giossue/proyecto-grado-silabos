@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { drawnInDocument } from "@silabos/shared/lib/teacherFormation"
 import type { DocumentPresentation } from "@/api/syllabi"
 import { paginateSheet } from "@/components/domain/configuration/templatePagination"
 import { FreeTextContent } from "@/components/domain/syllabus/FreeTextContent"
@@ -118,7 +119,7 @@ export function SyllabusDocumentPreview({ presentation, sections, changed }: Syl
                     {section.title}
                   </h3>
                   <ol className="flex flex-col gap-3">
-                    {section.fields.map((field) => {
+                    {section.fields.filter(drawnInDocument).map((field) => {
                       const fieldChanged = isChanged(section.id, field)
                       const label = field.label.trim()
 

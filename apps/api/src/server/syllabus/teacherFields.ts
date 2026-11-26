@@ -1,3 +1,4 @@
+import { FORMATION_FIELD } from "@silabos/shared/lib/teacherFormation"
 import { Prisma } from "../../generated/prisma/client"
 import { definitionHash } from "../ficha/definitionHash"
 import { isPhpArray, list, phpJsonDecode, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
@@ -8,8 +9,8 @@ import { SYLLABUS_EXISTS, writtenBySql } from "./syllabusSql"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export { isTeacherField, teacherFieldKeys } from "../configuration/templatePresentation"
+export { FORMATION_FIELD }
 
-export const FORMATION_FIELD = "formacion_docente"
 
 const TEXT_ONLY: TemplateDefinition = { document: {}, variables: {}, blocks: {} }
 const LINE_ATTRS = { textAlign: "left" }

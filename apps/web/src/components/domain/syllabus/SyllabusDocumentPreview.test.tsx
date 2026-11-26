@@ -39,4 +39,17 @@ describe("SyllabusDocumentPreview", () => {
 
     unmount()
   })
+
+  it("no dibuja la formación del docente como bloque propio: ya va en la tabla de identificación", async () => {
+    const withFormation = [{ ...sections[0]!, fields: [...sections[0]!.fields, { id: "f9", key: "formacion_docente", label: "Formación y experiencia académica-investigativa", quien_llena: "carrera", value: paragraph("Magíster en Redes"), required: true, teacher_editable: true }] }] as unknown as SyllabusDetail["sections"]
+    const { container, unmount } = render(<SyllabusDocumentPreview presentation={presentation} sections={withFormation} />)
+    await flush()
+
+    expect(container.querySelector('[data-field="f9"]')).toBeNull()
+    expect(container.textContent).not.toContain("Formación y experiencia académica-investigativa")
+    expect(container.textContent).not.toContain("Magíster en Redes")
+    expect(container.querySelector('[data-field="f1"]')).toBeTruthy()
+
+    unmount()
+  })
 })

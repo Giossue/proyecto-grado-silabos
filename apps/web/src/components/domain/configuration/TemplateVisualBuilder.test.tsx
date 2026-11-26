@@ -391,4 +391,21 @@ describe("TemplateVisualBuilder", () => {
     await settle()
     expect(body().querySelector<HTMLInputElement>('[role="dialog"][data-state="open"] #template-edit-confirm')?.value).toBe("")
   })
+
+  it("no dibuja la formación del docente como bloque propio, ni en la vista ni al editar, y la conserva al guardar", async () => {
+    const formation = { id: "f9", key: "formacion_docente", label: "Formación y experiencia académica-investigativa", quien_llena: "carrera" as FieldResponsible, content: emptyDocument() }
+    const withFormation: Template = { ...template, sections: [{ ...template.sections[0]!, fields: [template.sections[0]!.fields[0]!, formation, template.sections[0]!.fields[1]!] }, template.sections[1]!] }
+    const viewing = await mountBuilder({ template: withFormation, presets }, { edit: false })
+    expect(body().querySelector('[data-field="f9"]')).toBeNull()
+    expect(body().querySelector('[data-field="f1"]')).toBeTruthy()
+    viewing.unmount()
+
+    await mountBuilder({ template: withFormation, presets })
+    expect(body().querySelector('[data-field="f9"]')).toBeNull()
+    expect(body().querySelectorAll("[data-field-editor]")).toHaveLength(2)
+    await typeInto("Nombre del campo Primero", "Primer campo")
+    await save()
+    expect(saved().sections[0]!.fields.map((item) => item.key)).toEqual(["f1", "formacion_docente", "f2"])
+    expect(saved().sections[0]!.fields[1]).toMatchObject({ key: "formacion_docente", label: "Formación y experiencia académica-investigativa", quien_llena: "carrera" })
+  })
 })

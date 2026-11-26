@@ -46,6 +46,7 @@ import { openRevisionPdf } from "@/lib/openPdf"
 import { syllabusConditions, visibleSections as withoutHiddenParts } from "@/lib/responseConditions"
 import { paths } from "@/lib/routes"
 import { isTeacherField } from "@/lib/syllabusForm"
+import { drawnInDocument, FORMATION_FIELD } from "@silabos/shared/lib/teacherFormation"
 import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { toast } from "@/lib/toast"
 import { handleUnauthorized } from "@/lib/unauthorized"
@@ -58,7 +59,6 @@ type CopySource = { id: string; parallel: string }
 
 const PAUSED_MESSAGE = "La convocatoria está en pausa. Podrá seguir editando cuando se reanude"
 const EDITABLE_STATES = ["borrador", "correccion_solicitada"]
-const FORMATION_FIELD = "formacion_docente"
 const NO_RESULTS: ValidationResult[] = []
 
 function useTracked<T>(initial: T): [T, (value: T) => void, { readonly current: T }] {
@@ -184,7 +184,7 @@ export default function TeacherSyllabusDetailPage() {
   const visibleSections = (syllabus?.sections ?? []).filter((section) => section.fields.some(isTeacherField))
   const activeSectionId = visibleSections.find((section) => section.id === chosenSectionId)?.id ?? visibleSections[0]?.id ?? ""
   const previewSections = useMemo(() => {
-    const sections = (syllabus?.sections ?? []).map((section) => ({ ...section, fields: section.fields.filter((field) => field.key !== FORMATION_FIELD) }))
+    const sections = (syllabus?.sections ?? []).map((section) => ({ ...section, fields: section.fields.filter(drawnInDocument) }))
 
     return withoutHiddenParts(sections, syllabusConditions(sections, (field) => (field.template ? responseDocument(field.template, field.value) : field.value)))
   }, [syllabus])
