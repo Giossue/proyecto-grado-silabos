@@ -1,6 +1,6 @@
 import type { DocumentNode } from '@silabos/shared/lib/templateDocument';
 import { blockFilledText } from '@/lib/blocks/runtime';
-import { FREE_TEXT_KIND, RESPONSE_NODE, responseAnswered, responseAttrs, responseLines, responseNeedsOptions } from '@silabos/shared/lib/responseKinds';
+import { FREE_TEXT_KIND, RESPONSE_NODE, responseAnswered, responseAttrs, responseLines } from '@silabos/shared/lib/responseKinds';
 
 export const cloneResponse = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -33,20 +33,17 @@ export const responseSlot = (cell: DocumentNode): boolean => {
         && inlines.every((inline) => inline.type === RESPONSE_NODE);
 };
 
-export const responseDocument = (template: DocumentNode, value?: DocumentNode | null, setup = false): DocumentNode => {
+export const responseDocument = (template: DocumentNode, value?: DocumentNode | null): DocumentNode => {
     if (!value || value.type !== template.type) return cloneResponse(template);
     if (template.type === 'tableHeader') return cloneResponse(template);
-    if (template.type === RESPONSE_NODE) {
-        const built = setup && responseNeedsOptions(responseAttrs(template)) && value.attrs?.kind === template.attrs?.kind;
-        return { ...cloneResponse(template), attrs: { ...template.attrs, ...(built ? { options: cloneResponse(value.attrs?.options ?? []) } : {}), value: cloneResponse(value.attrs?.value ?? template.attrs?.value ?? null) } };
-    }
+    if (template.type === RESPONSE_NODE) return { ...cloneResponse(template), attrs: { ...template.attrs, value: cloneResponse(value.attrs?.value ?? template.attrs?.value ?? null) } };
     if (blankResponse(template)) return { ...cloneResponse(template), content: cloneResponse(value.content ?? []) };
     if (template.type === 'documentBlock') return { ...cloneResponse(template), attrs: { ...template.attrs, value: cloneResponse(value.attrs?.value ?? template.attrs?.value ?? {}) } };
     const children = template.content ?? [];
     const count = template.type === 'table' && responseListTable(template) ? Math.max(children.length, value.content?.length ?? 0) : children.length;
     return children.length === 0 ? cloneResponse(template) : {
         ...cloneResponse(template),
-        content: Array.from({ length: count }, (_, index) => responseDocument(children[index] ?? children[children.length - 1]!, value.content?.[index], setup)),
+        content: Array.from({ length: count }, (_, index) => responseDocument(children[index] ?? children[children.length - 1]!, value.content?.[index])),
     };
 };
 

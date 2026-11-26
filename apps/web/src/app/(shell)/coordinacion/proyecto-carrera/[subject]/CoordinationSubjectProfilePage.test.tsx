@@ -19,10 +19,11 @@ vi.mock("@/api/career-academics", async (importOriginal) => ({
 vi.mock("@/components/ui/select", async () => (await import("@/components/domain/academic/curriculum/curriculumTestUtils")).selectStub)
 vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock("@/components/domain/syllabus/FreeTextEditor", () => ({
-  FreeTextEditor: ({ id, label, disabled, spaces, onValueChange }: { id: string; label: string; disabled?: boolean; spaces?: boolean; onValueChange: (value: unknown) => void }) => (
+  FreeTextEditor: ({ id, label, value, disabled, spaces, onValueChange }: { id: string; label: string; value?: unknown; disabled?: boolean; spaces?: boolean; onValueChange: (value: unknown) => void }) => (
     <button
       type="button"
       data-id={id}
+      data-document={JSON.stringify(value ?? null)}
       data-spaces={String(Boolean(spaces))}
       disabled={disabled}
       onClick={() => onValueChange({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Nuevo" }] }] })}
@@ -131,6 +132,35 @@ describe("Página del proyecto de carrera de una materia", () => {
 
     expect(saveSubjectProfile).toHaveBeenCalledWith("m2", { f1: written, f2: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Nuevo" }] }] } })
     expect(button("Guardar información")).toBeDisabled()
+  })
+
+  it("abre un campo Editable con texto como un solo editor con todo su contenido y guarda el texto editado", async () => {
+    const ethics: DocumentNode = { type: "doc", content: [
+      { type: "paragraph", content: [{ type: "text", text: "Se aplicará el código de ética de la universidad." }] },
+      { type: "paragraph", content: [{ type: "text", text: "Respuesta: " }, { type: "response", attrs: { kind: "una", options: [{ const: "o1", title: "Sí" }], value: null, id: "acepta" } }] },
+      { type: "paragraph" },
+    ] }
+    const edited: DocumentNode = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Nuevo" }] }] }
+    vi.mocked(getSubjectProfile).mockResolvedValue(profile({
+      fields: [{ id: "f3", key: "conducta_etica", label: "Conducta y comportamiento ético", section: "Ética", quien_llena: "carrera", content: ethics, template: ethics, position: 1 }],
+      values: {},
+    }))
+    vi.mocked(saveSubjectProfile).mockResolvedValue(profile({ fields: [], values: {} }))
+    await mountPage()
+
+    const editors = document.querySelectorAll('[data-id="ficha-f3"]')
+    expect(editors).toHaveLength(1)
+    expect(JSON.parse(editors[0]!.getAttribute("data-document")!)).toEqual(ethics)
+    expect(editors[0]).toHaveAttribute("data-spaces", "true")
+    expect(document.querySelector("fieldset textarea")).toBeNull()
+    expect(document.querySelector("fieldset")!.textContent).not.toContain("Se aplicará el código de ética")
+
+    fireEvent.click(editors[0]!)
+    await flush()
+    fireEvent.click(button("Guardar información"))
+    await flush()
+
+    expect(saveSubjectProfile).toHaveBeenCalledWith("m2", { f3: edited })
   })
 
   it("marca «Sin definir» el campo que nadie ha definido y su sección, y lo quita al escribir", async () => {

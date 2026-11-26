@@ -321,7 +321,7 @@ describe("POST admin/template/{template}/structure/sections/{section}/fields", (
   it("rolls back when an institutional field brings a response", async () => {
     const section = templates.template!.sections[1]
     const response = await read(storeField(request("POST", `sections/${section.id}/fields`, { key: "fija", quien_llena: "institucional", content }), TEMPLATE_ID, section.id, deps()))
-    expect(response).toEqual({ status: 422, text: invalid({ content: ["Un campo Institucional no lleva tipos de respuesta. Cambie quién lo llena o quite la respuesta."] }) })
+    expect(response).toEqual({ status: 422, text: invalid({ content: ["Un campo No editable no lleva tipos de respuesta. Hágalo Editable o quite la respuesta."] }) })
     expect(log).toEqual(["process", "begin", `lock ${TEMPLATE_ID}`, "rollback"])
     expect(inserted).toEqual([])
   })

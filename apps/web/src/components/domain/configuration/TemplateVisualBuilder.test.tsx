@@ -204,7 +204,7 @@ describe("TemplateVisualBuilder", () => {
     expect(saved().sections[0]!.fields[0]!.quien_llena).toBe("institucional")
   })
 
-  it("aplica una plantilla lista: solo copia su contenido y quién lo llena al campo", async () => {
+  it("aplica una plantilla lista: solo copia su contenido y si se puede editar al campo", async () => {
     await mountBuilder({ template, presets })
     await selectField("f1")
     await press(byLabel("Contenido predefinido"))

@@ -17,7 +17,6 @@ import { syllabusConditions } from "@/lib/responseConditions"
 import { fieldTitle, isTeacherField, teacherFormFields } from "@/lib/syllabusForm"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { cn } from "@/lib/utils"
-import { responsibleLabel } from "@/types/configuration"
 import { scrollBehavior } from "@/lib/motion"
 
 type Section = SyllabusDetail["sections"][number]
@@ -165,7 +164,7 @@ export function SyllabusTeacherForm({
                           <FieldView id={`field-${field.id}`} field={field} bare />
                           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
                             <Lock className="size-3.5" aria-hidden="true" />
-                            Bloqueado: este campo lo completa {responsibleLabel(field.quien_llena)}
+                            Bloqueado
                           </p>
                         </div>
                       )}

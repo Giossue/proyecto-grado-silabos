@@ -3,14 +3,10 @@
 import dynamic from "next/dynamic"
 import { Plus, Trash2 } from "lucide-react"
 import { Fragment, type ReactNode } from "react"
-import { TemplateResponseTool } from "@/components/domain/configuration/TemplateResponseTool"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { BlockForm } from "@/components/domain/syllabus/BlockForm"
 import { ResponseAnswer } from "@/components/domain/syllabus/ResponseAnswer"
-import { ResponseOptionsEditor } from "@/components/domain/syllabus/ResponseOptionsEditor"
-import { ResponseVariable } from "@/components/domain/syllabus/ResponseVariable"
 import { renderFreeText } from "@/components/domain/syllabus/freeTextRender"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -20,18 +16,13 @@ import { fieldCharacters, fitCharacters, textCharacters } from "@/lib/fieldLimit
 import { blankResponse, cloneResponse, replaceResponse, responseAt, responseDocument, responseListTable, responseText } from "@/lib/fieldResponses"
 import { onlyHiddenResponses, responseShown } from "@/lib/responseConditions"
 import {
-  RESPONSE_KINDS,
   RESPONSE_NODE,
-  responseAdjustable,
   responseAnswered,
   responseAttrs,
   responseLines,
-  responseNeedsOptions,
-  sameResponseOptions,
   withinResponse,
-  type ResponseOption,
 } from "@silabos/shared/lib/responseKinds"
-import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocument"
+import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { Skeleton } from "@/components/ui/skeleton"
 
 const FreeTextEditor = dynamic(() => import("@/components/domain/syllabus/FreeTextEditor").then((module) => module.FreeTextEditor), {
@@ -77,17 +68,6 @@ const hasResponse = (node: DocumentNode): boolean => blankResponse(node) || node
 
 const lineText = (node: DocumentNode): string => (node.content ?? []).map((part) => (part.type === "hardBreak" ? "\n" : (part.text ?? ""))).join("")
 
-const withOwnOptions = (document: DocumentNode, value: DocumentNode | null | undefined): DocumentNode => {
-  if (!value || value.type !== document.type) return document
-  if (document.type === RESPONSE_NODE) {
-    const own = responseAttrs(value)
-    return own.kind === responseAttrs(document).kind && responseAdjustable(responseAttrs(document)) && own.options.length > 0
-      ? { ...document, attrs: { ...document.attrs, options: own.options } }
-      : document
-  }
-  return document.content ? { ...document, content: document.content.map((child, index) => withOwnOptions(child, value.content?.[index])) } : document
-}
-
 const inline = (text: string): DocumentNode[] =>
   text.split("\n").flatMap((line, index) => [...(index > 0 ? [{ type: "hardBreak" }] : []), ...(line ? [{ type: "text", text: line }] : [])])
 
@@ -106,8 +86,12 @@ export function FieldResponseEditor({
   limit = null,
   onValueChange,
 }: FieldResponseEditorProps) {
-  const built = template ? responseDocument(template, value, career) : null
-  const document = template ? (career ? withOwnOptions(built!, value) : built) : value
+  if (career) {
+    return (
+      <FreeTextEditor id={id} label={label} value={value ?? template} disabled={disabled} allowTables={false} spaces onValueChange={(next) => onValueChange?.(next)} />
+    )
+  }
+  const document = template ? responseDocument(template, value) : value
   const used = limit === null ? 0 : fieldCharacters(template, document, answers ?? {})
   const budget = (): number | null => (limit === null ? null : limit - used)
   const keyOf = (path: number[]): string => `${id}-${path.join("-")}`
@@ -115,79 +99,10 @@ export function FieldResponseEditor({
   const update = (path: number[], next: DocumentNode): void => {
     if (!disabled && document) onValueChange?.(replaceResponse(document, path, next))
   }
-  // `empty` is the template's slot: in a row added by the user the template has no node at that path.
-  const placeSpace = (path: number[], empty: DocumentNode, node: DocumentNode): void => {
-    const blank = cloneResponse(empty)
-    update(path, blank.type === "paragraph" ? { ...blank, content: [node] } : { ...blank, content: [{ ...(blank.content?.[0] ?? { type: "paragraph" }), content: [node] }] })
-  }
-  const optionsEditor = (current: DocumentNode, path: number[], name: string): ReactNode => (
-    <ResponseOptionsEditor
-      value={responseAttrs(current).options}
-      label={`Opciones de ${name}`}
-      disabled={disabled}
-      onValueChange={(options: ResponseOption[]) => update(path, { ...current, attrs: { ...current.attrs, options } })}
-    />
-  )
-  /** The one button of a slot: it places a space for the teacher, changes it, or removes it when its type is unmarked. */
-  const spaceTool = (path: number[], empty: DocumentNode, at: number[] | null): ReactNode => (
-    <TemplateResponseTool
-      advanced={false}
-      label="Espacio para el docente"
-      hint=""
-      optionsHint="Escriba las opciones que podrá elegir el docente"
-      current={at ? responseAttrs(responseAt(document!, at)) : null}
-      disabled={disabled}
-      onInsert={(node) => (at ? update(at, node) : placeSpace(path, empty, node))}
-      onRemove={() => update(path, cloneResponse(empty))}
-    />
-  )
-  const templateSpace = (source: DocumentNode, current: DocumentNode, path: number[], name: string): ReactNode => {
-    const base = responseAttrs(source).options
-    const attrs = responseAttrs(current)
-    return (
-      <div key={keyOf(path)} className="flex min-w-0 flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-1">
-          <Badge variant="outline" className="w-fit font-normal" data-template-response="">
-            De la plantilla
-          </Badge>
-          {sameResponseOptions(attrs.options, base) ? null : (
-            <Badge variant="secondary" className="w-fit font-normal">
-              Opciones propias
-            </Badge>
-          )}
-          <TemplateResponseTool
-            advanced={false}
-            label="Opciones de la respuesta"
-            current={attrs}
-            fixed
-            templateOptions={base}
-            disabled={disabled}
-            onInsert={(node) => update(path, { ...current, attrs: node.attrs })}
-          />
-        </div>
-        <ResponseAnswer
-          attrs={attrs}
-          label={name}
-          disabled={disabled}
-          askFor={askFor}
-          onValueChange={(next) => update(path, { ...current, attrs: { ...current.attrs, value: next as never } })}
-        />
-      </div>
-    )
-  }
   const response = (source: DocumentNode, path: number[], name: string): ReactNode => {
     if (answers && !responseShown(source, answers)) return null
     const current = responseAt(document!, path)
-    if (career && responseAdjustable(responseAttrs(source))) return templateSpace(source, current, path, name)
-    if (career && responseNeedsOptions(responseAttrs(source))) {
-      return (
-        <div key={keyOf(path)} className="flex min-w-0 flex-col gap-2">
-          <Badge variant="secondary" className="w-fit font-normal">{`${RESPONSE_KINDS[responseAttrs(current).kind]?.label ?? "Respuesta"} (lo definió Administración)`}</Badge>
-          {optionsEditor(current, path, name)}
-        </div>
-      )
-    }
-    if (!career && responseAnswered(responseAttrs(source))) {
+    if (responseAnswered(responseAttrs(source))) {
       return (
         <span key={keyOf(path)} className="py-1 text-muted-foreground">
           {responseLines(responseAttrs(source)).join(", ")}
@@ -201,7 +116,7 @@ export function FieldResponseEditor({
         label={name}
         disabled={disabled}
         askFor={askFor}
-        budget={career ? null : budget()}
+        budget={budget()}
         onValueChange={(next) => update(path, { ...current, attrs: { ...current.attrs, value: next as never } })}
       />
     )
@@ -227,7 +142,7 @@ export function FieldResponseEditor({
     const current = responseAt(document!, path)
     const paragraph = source.type === "paragraph"
     const text = paragraph ? lineText(current) : (current.content ?? []).map(lineText).join("\n")
-    const room = career ? null : budget()
+    const room = budget()
     const own = textCharacters(current)
     const write = (raw: string): void => {
       const next = room === null ? raw : fitCharacters(raw, Math.max(own, own + room), false)
@@ -361,24 +276,6 @@ export function FieldResponseEditor({
 
   const blankSlot = (source: DocumentNode, path: number[], name: string): ReactNode => {
     const current = responseAt(document!, path)
-    if (career) {
-      // The slot holds the coordinator's text or a space for the teacher; both rows keep the same button in place, so its popover stays open.
-      const located = (node: DocumentNode, at: number[]): number[][] =>
-        node.type === RESPONSE_NODE ? [at] : (node.content ?? []).flatMap((child, index) => located(child, [...at, index]))
-      const spaces = nodesOfType(current, RESPONSE_NODE).length ? located(current, path) : []
-      const rows: Array<number[] | null> = spaces.length ? spaces : [null]
-      return (
-        <div key={keyOf(path)} className="flex min-w-0 flex-col gap-2">
-          {spaces.length && responseText(current).trim() ? <p className="text-sm text-muted-foreground">{responseText(current).trim()}</p> : null}
-          {rows.map((at, index) => (
-            <div key={index} className="flex min-w-0 items-start gap-1">
-              <div className="min-w-0 flex-1">{at ? <ResponseVariable attrs={responseAttrs(responseAt(document!, at))} /> : slot(source, path, name, false)}</div>
-              {spaceTool(path, source, at)}
-            </div>
-          ))}
-        </div>
-      )
-    }
     if (withinResponse(current)) return current.type === "paragraph" ? line(current, path, name) : <div className="flex flex-col gap-2">{nodes(current, path, name)}</div>
     return slot(source, path, name, false)
   }
@@ -431,8 +328,7 @@ export function FieldResponseEditor({
         value={value ?? template}
         disabled={disabled}
         allowTables={false}
-        spaces={career}
-        limit={career ? null : limit}
+        limit={limit}
         onValueChange={(next) => onValueChange?.(next)}
       />
     )

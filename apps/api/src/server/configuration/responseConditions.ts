@@ -94,6 +94,14 @@ export function shownResponses(document: unknown, answers: Answers): PhpRecord {
 export const USED_OPTION_REMOVED =
   "No puede quitar una opción que la plantilla usa para mostrar u ocultar otra parte del sílabo. Déjela o pida a Administración que cambie esa condición."
 
+export const USED_RESPONSE_REMOVED =
+  "No puede quitar una respuesta que la plantilla usa para mostrar u ocultar otra parte del sílabo. Déjela o pida a Administración que cambie esa condición."
+
+export function keepsUsedResponses(template: unknown, document: unknown, used: Map<string, string[]>): boolean {
+  const kept = new Set(conditionResponses(document).map((attrs) => attrs.id))
+  return conditionResponses(template).every((attrs) => typeof attrs.id !== "string" || !used.has(attrs.id) || kept.has(attrs.id))
+}
+
 export function usedOptions(fieldConditions: Record<string, PhpRecord>, documents: unknown[]): Map<string, string[]> {
   const conditions: { response: string; options: string[] }[] = Object.values(fieldConditions).map(shape)
   for (const document of documents) {

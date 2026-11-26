@@ -74,7 +74,7 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
     expect(activePanel().querySelector("#template-layout-margin_cm")).not.toBeNull()
   })
 
-  it("la pestaña Campo se abre sola al elegir un campo y reúne nombre, quién lo llena, reglas y acciones", async () => {
+  it("la pestaña Campo se abre sola al elegir un campo y reúne nombre, si se puede editar, reglas y acciones", async () => {
     await mountBuilder({ template, presets })
     expect(tabs()).not.toContain("Campo")
     expect(ribbon().querySelector("[data-contextual-slot]")!.textContent).toBe("Seleccione un campo")
@@ -82,7 +82,7 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
     await selectField("f1")
     expect(tabs()).toEqual(["Inicio", "Insertar", "Diseño", "Campo"])
     expect(tab("Campo")!.getAttribute("aria-selected")).toBe("true")
-    expect(groups(activePanel())).toEqual(["Nombre", "Quién lo llena", "Reglas", "Organizar"])
+    expect(groups(activePanel())).toEqual(["Nombre", "Edición", "Reglas", "Organizar"])
     expect(activePanel().querySelector<HTMLInputElement>("[data-field-name-input]")!.value).toBe("Primero")
     expect([...activePanel().querySelectorAll("[data-field-editability] [data-editability]")].map((item) => item.textContent!.trim())).toEqual(["No editable", "Editable"])
     expect(activePanel().querySelector('[data-editability="carrera"]')!.getAttribute("data-state")).toBe("on")
@@ -107,7 +107,7 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
   it("un campo No editable sin respuestas antes no muestra reglas, y sin tablas repetibles no hay grupo de tablas", async () => {
     await mountBuilder({ template, presets })
     await selectField("f2")
-    expect(groups(activePanel())).toEqual(["Nombre", "Quién lo llena", "Organizar"])
+    expect(groups(activePanel())).toEqual(["Nombre", "Edición", "Organizar"])
     expect(activePanel().querySelector('[data-editability="institucional"]')!.getAttribute("data-state")).toBe("on")
     expect(activePanel().querySelector("[data-field-limit-tool]")).toBeNull()
     expect(activePanel().querySelector("[data-field-condition-tool]")).toBeNull()
@@ -148,7 +148,7 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
     expect(ribbon().className).not.toContain("rounded")
   })
 
-  it("la pestaña Campo cambia nombre, quién lo llena y el límite, y se guarda igual que antes", async () => {
+  it("la pestaña Campo cambia nombre, si se puede editar y el límite, y se guarda igual que antes", async () => {
     await mountBuilder({ template, presets })
     await selectField("f1")
 

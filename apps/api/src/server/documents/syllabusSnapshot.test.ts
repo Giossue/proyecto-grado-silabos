@@ -5,6 +5,7 @@ import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import golden from "./__fixtures__/laravel-documents-golden.json"
 import { goldenTemplate, withFormation } from "../configuration/testing"
+import { careerResponse, fieldCarried } from "../configuration/templateRuntime"
 import { canonicalHash, canonicalJson } from "./canonicalJson"
 import type { ArchivedField } from "../syllabus/syllabusDetailQueries"
 import { buildSyllabusSnapshot, SNAPSHOT_VERSION, visibleSections, type SnapshotSource } from "./syllabusSnapshot"
@@ -98,6 +99,22 @@ describe("SyllabusSnapshot::build", () => {
     const snapshot = await buildSyllabusSnapshot(SYLLABUS, source())
     const stored = (snapshot.sections as { fields: { definition_id: string; document: unknown }[] }[]).flatMap((section) => section.fields).find((field) => field.definition_id === career.id)
     expect(JSON.stringify(stored?.document)).toContain("Respuesta guardada")
+  })
+
+  it("prints the text Coordinación edited in a career field together with the teacher's answer", async () => {
+    const template = goldenTemplate()
+    const field = template.sections.flatMap((section) => section.blocks.flatMap((block) => block.fields)).find((item) => item.key === "respuestas")!
+    const original = field.content as { type: string; content: Record<string, unknown>[] }
+    const edited = careerResponse(field.content, { ...original, content: [{ type: "paragraph", content: [{ type: "text", text: "Texto editado por la carrera" }] }, ...original.content] }, template.definition)
+    const answered = JSON.parse(JSON.stringify(edited).replace('"kind":"texto","options":[],"value":""', '"kind":"texto","options":[],"value":"Respuesta del docente"'))
+    values = new Map([[field.id, fieldCarried(edited, answered, template.definition)]])
+
+    const snapshot = await buildSyllabusSnapshot(SYLLABUS, source())
+
+    const printed = (snapshot.sections as { fields: { definition_id: string; value: unknown }[] }[]).flatMap((section) => section.fields).find((item) => item.definition_id === field.id)
+    expect(JSON.stringify(printed?.value)).toContain("Texto editado por la carrera")
+    expect(JSON.stringify(printed?.value)).toContain("Respuesta del docente")
+    expect(JSON.stringify(snapshot)).not.toContain('"edited"')
   })
 
   it("freezes the sections of the retired fields a syllabus still answers, like SyllabusDocumentFields::archivedSections", async () => {

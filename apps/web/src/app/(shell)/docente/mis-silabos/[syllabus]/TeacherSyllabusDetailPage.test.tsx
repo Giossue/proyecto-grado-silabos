@@ -296,7 +296,9 @@ describe("TeacherSyllabusDetailPage", () => {
     vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: detail })
     const page = mountPage()
     await flush()
-    expect(page.container.querySelector("#field-field-1")!.closest('[data-slot="accordion-item"]')!.textContent).toContain("Carrera")
+    const locked = page.container.querySelector("#field-field-1")!.closest('[data-slot="accordion-item"]')!
+    expect(locked.querySelector('[data-locked-field="field-1"]')!.lastElementChild!.textContent).toBe("Bloqueado")
+    expect(locked.textContent).not.toMatch(/lo completa|Carrera/)
     expect(editorIds(page)).toEqual(["input-field-2", "input-field-3"])
     expect(page.container.textContent).not.toContain("Viene del proyecto de carrera")
     page.unmount()
@@ -346,7 +348,11 @@ describe("TeacherSyllabusDetailPage", () => {
 
     expect(editorIds(page)).toHaveLength(0)
     expect(page.container.querySelector("#field-field-2")!.textContent).toContain("Texto institucional")
-    expect(page.container.querySelector('[data-locked-field="field-2"]')!.textContent).toContain("Bloqueado")
+    const locked = page.container.querySelector('[data-locked-field="field-2"]')!
+    expect(locked.textContent).toContain("Texto institucional")
+    expect(locked.lastElementChild!.textContent).toBe("Bloqueado")
+    expect(locked.lastElementChild!.querySelector("svg")).not.toBeNull()
+    expect(page.container.textContent).not.toMatch(/lo completa|Institucional|Carrera/)
     expect(buttonNamed(page, "Enviar")!.disabled).toBe(false)
   })
 

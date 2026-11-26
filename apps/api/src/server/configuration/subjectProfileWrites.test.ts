@@ -4,7 +4,11 @@ import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { GenerationRejected, purgeRequired } from "../syllabus/inProgressWorkHelpers"
 import type { PhpRecord } from "./phpValues"
+import { USED_OPTION_REMOVED, USED_RESPONSE_REMOVED } from "./responseConditions"
 import { showSubjectProfile } from "./subjectProfile"
+import { profileTemplates } from "./subjectProfileFields"
+import { teacherEditable, type TemplateField } from "./templatePresentation"
+import { fieldCarried, plainText } from "./templateRuntime"
 import { updateSubjectProfile, type SubjectProfileTx, type SubjectProfileWriteDeps } from "./subjectProfileWrites"
 import { fakeTemplateStore, fieldId, goldenFields, goldenTemplate, type FakeTemplateWorld } from "./testing"
 
@@ -14,13 +18,13 @@ const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 const OTHER_CAREER = "01a1c5bc-79ca-7331-8f0f-000000000009"
 const SUBJECT = "01a1c5bc-7a00-7000-8000-0000000000aa"
 const EMPTY_FORBIDDEN = '{"message":""}'
-const STRUCTURE = "Complete solo los espacios de respuesta. El texto, los encabezados y la estructura los define Administración."
 
 const index = (key: string) => goldenFields.findIndex((field) => field.key === key)
 const DESCRIPCION = fieldId(index("descripcion"))
 const OBJETIVO = fieldId(index("objetivo_general"))
 const RESPUESTAS = fieldId(index("respuestas"))
 const BIBLIOGRAFIA_INSTITUCIONAL = fieldId(index("firmas"))
+const CONDUCTA = fieldId(index("conducta_etica"))
 
 const text = (value: string): PhpRecord => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: value }] }] })
 const stored = (value: string): PhpRecord => ({ type: "doc", content: [{ type: "paragraph", attrs: { textAlign: "left" }, content: [{ type: "text", text: value }] }] })
@@ -142,13 +146,10 @@ describe("PUT academic/asignaturas/{asignatura}/ficha", () => {
     expect(log).toEqual([])
   })
 
-  it("rejects a value that is not a document or changes the fixed format, under the attribute of the field", async () => {
+  it("rejects a value that is not a document, under the attribute of the field", async () => {
     expect((await put({ values: { [DESCRIPCION]: { type: "html" } } })).json?.errors).toEqual({
       [`values.${DESCRIPCION}`]: ["El contenido debe ser un documento de texto, listas o tablas."],
     })
-    const respuestas = JSON.parse(goldenFields[index("respuestas")].expected.template) as PhpRecord
-    const changed = { ...respuestas, content: [{ type: "paragraph", content: [{ type: "text", text: "Otro texto" }] }, ...(respuestas.content as unknown[]).slice(1)] }
-    expect((await put({ values: { [RESPUESTAS]: changed } })).json?.errors).toEqual({ [`values.${RESPUESTAS}`]: [STRUCTURE] })
     expect(log.at(-1)).toBe("rollback")
     expect(templates.values).toEqual([])
   })
@@ -204,5 +205,245 @@ describe("PUT academic/asignaturas/{asignatura}/ficha", () => {
     const unknown = await put({ values: [] }, "01a1c5bc-7a00-7000-8000-0000000000ff")
     expect([unknown.status, unknown.text]).toEqual([404, '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a1c5bc-7a00-7000-8000-0000000000ff"}'])
     expect((await put({ values: [] }, "no-es-uuid")).status).toBe(404)
+  })
+})
+
+describe("Coordinación edita el texto de un campo Editable en el editor", () => {
+  const respuestas = (): PhpRecord => JSON.parse(goldenFields[index("respuestas")].expected.template) as PhpRecord
+  const paragraphs = (document: PhpRecord): PhpRecord[] => document.content as PhpRecord[]
+  const edited = (): PhpRecord => {
+    const [first, ...rest] = paragraphs(respuestas())
+    const [, response] = first.content as PhpRecord[]
+    return {
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "Texto propio de la carrera." }] },
+        { ...first, content: [{ type: "text", text: "¿Usa laboratorio? " }, response] },
+        ...rest,
+      ],
+    }
+  }
+  const storedValue = (): PhpRecord => templates.values.find((value) => value.fieldId === RESPUESTAS)?.value as PhpRecord
+  const textOf = (document: unknown): string => plainText(document, goldenTemplate().definition)
+  const context = () => ({ template: templates.template!, definition: templates.template!.definition, store: fakeTemplateStore(templates) })
+  const ANSWERS: Record<string, unknown> = { una: "si", varias: ["a"], texto: "Lo escribió el docente" }
+  const answered = (node: PhpRecord): PhpRecord => {
+    const attrs = node.attrs as PhpRecord | undefined
+    if (node.type === "response" && attrs && (attrs.kind !== "una" || attrs.id === "tiene")) return { ...node, attrs: { ...attrs, value: ANSWERS[attrs.kind as string] } }
+    return Array.isArray(node.content) ? { ...node, content: (node.content as PhpRecord[]).map(answered) } : node
+  }
+
+  it("guarda el texto editado de un campo Editable y conserva la respuesta que usa una condición", async () => {
+    const response = await put({ values: { [RESPUESTAS]: edited() } })
+
+    expect(response.status).toBe(200)
+    expect(textOf(storedValue())).toContain("Texto propio de la carrera.")
+    expect(textOf(storedValue())).toContain("¿Usa laboratorio?")
+    const responses = JSON.stringify(storedValue())
+    expect(responses).toContain('"id":"tiene"')
+    expect(responses).toContain('"showIf":{"response":"tiene","options":["si"]}')
+  })
+
+  it("no deja quitar una respuesta que usa una condición", async () => {
+    const [first, ...rest] = paragraphs(edited())
+    const removed = { type: "doc", content: [first, { type: "paragraph", content: [{ type: "text", text: "¿Usa laboratorio?" }] }, ...rest.slice(1)] }
+
+    const response = await put({ values: { [RESPUESTAS]: removed } })
+
+    expect(response.status).toBe(422)
+    expect(response.json?.errors).toEqual({ [`values.${RESPUESTAS}`]: [USED_RESPONSE_REMOVED] })
+    expect(templates.values).toEqual([])
+  })
+
+  it("al editar el texto tampoco deja quitar la opción que usa una condición", async () => {
+    const document = edited()
+    const second = paragraphs(document)[1]
+    const [label, response] = second.content as PhpRecord[]
+    const withoutSi = { ...second, content: [label, { ...response, attrs: { ...(response.attrs as PhpRecord), options: [{ const: "no", title: "No" }] } }] }
+
+    const result = await put({ values: { [RESPUESTAS]: { ...document, content: [paragraphs(document)[0], withoutSi, ...paragraphs(document).slice(2)] } } })
+
+    expect(result.status).toBe(422)
+    expect(result.json?.errors).toEqual({ [`values.${RESPUESTAS}`]: [USED_OPTION_REMOVED] })
+  })
+
+  it("no deja agregar un bloque que la plantilla no trae", async () => {
+    const block = { type: "documentBlock", attrs: { kind: "bibliografia", props: [], value: [] } }
+
+    const result = await put({ values: { [RESPUESTAS]: { ...edited(), content: [...paragraphs(edited()), block] } } })
+
+    expect(result.status).toBe(422)
+    expect(result.json?.errors).toEqual({ [`values.${RESPUESTAS}`]: ["Los bloques de este campo los define Administración: no los agregue ni los quite."] })
+  })
+
+  it("un campo No editable no se guarda desde Coordinación", async () => {
+    const message = "El proyecto de carrera incluye un campo que ya no existe en la plantilla."
+
+    const result = await put({ values: { [CONDUCTA]: text("Otro código de ética") } })
+
+    expect(result.status).toBe(422)
+    expect(result.json?.errors).toEqual({ values: [message] })
+    expect(templates.values).toEqual([])
+  })
+
+  it("cuando Administración cambia el texto de la plantilla, la materia conserva su versión editada", async () => {
+    await put({ values: { [RESPUESTAS]: edited() } })
+    const saved = storedValue()
+    const field = templates.template!.sections.flatMap((section) => section.blocks.flatMap((block) => block.fields)).find((item) => item.id === RESPUESTAS)!
+    const content = field.content as PhpRecord
+    const [first, ...rest] = content.content as PhpRecord[]
+    field.content = { ...content, content: [{ ...first, content: [{ type: "text", text: "Pregunta nueva de Administración: " }, ...(first.content as PhpRecord[]).slice(1)] }, ...rest] }
+
+    expect(storedValue()).toEqual(saved)
+    const setup = (await profileTemplates(context(), SUBJECT))[RESPUESTAS]
+    expect(textOf(setup)).toContain("Texto propio de la carrera.")
+    expect(textOf(setup)).not.toContain("Pregunta nueva de Administración")
+    const shown = (await (await showSubjectProfile(apiRequest(`/api/v1/academic/asignaturas/${SUBJECT}/ficha`, { cookie }), SUBJECT, deps())).json()) as { values: Record<string, unknown> }
+    expect(textOf(shown.values[RESPUESTAS])).toContain("Texto propio de la carrera.")
+  })
+
+  it("el docente recibe el texto editado fijo y su espacio abierto", async () => {
+    await put({ values: { [RESPUESTAS]: edited() } })
+
+    const setups = await profileTemplates(context(), SUBJECT)
+
+    expect(textOf(setups[RESPUESTAS])).toContain("Texto propio de la carrera.")
+    expect(teacherEditable({ id: RESPUESTAS, responsible: "carrera" } as TemplateField, setups)).toBe(true)
+    const definition = goldenTemplate().definition
+    expect(fieldCarried(setups[RESPUESTAS], answered(setups[RESPUESTAS]), definition)).toEqual(answered(setups[RESPUESTAS]))
+  })
+
+  it("lo que respondió el docente sigue cuando Coordinación cambia el texto fuera de los espacios", async () => {
+    await put({ values: { [RESPUESTAS]: respuestas() } })
+    const before = (await profileTemplates(context(), SUBJECT))[RESPUESTAS] ?? respuestas()
+    const teacher = answered(before)
+    await put({ values: { [RESPUESTAS]: edited() } })
+    const after = (await profileTemplates(context(), SUBJECT))[RESPUESTAS]
+
+    const carried = fieldCarried(after, teacher, goldenTemplate().definition) as PhpRecord
+
+    expect(textOf(carried)).toContain("Texto propio de la carrera.")
+    expect(textOf(carried)).toContain("Lo escribió el docente")
+    expect(JSON.stringify(carried)).toContain('"value":"si"')
+    expect(JSON.stringify(carried)).toContain('"value":["a"]')
+  })
+  const field = () => templates.template!.sections.flatMap((section) => section.blocks.flatMap((block) => block.fields)).find((item) => item.id === RESPUESTAS)!
+  const adminChanges = (change: (content: PhpRecord[]) => PhpRecord[]) => {
+    const current = field().content as PhpRecord
+    field().content = { ...current, content: change(structuredClone(current.content as PhpRecord[])) }
+  }
+  const slotted = (): PhpRecord => {
+    const document = respuestas()
+    const nodes = paragraphs(document)
+    const choice = (nodes[3].content as PhpRecord[])[0]
+    choice.attrs = { ...(choice.attrs as PhpRecord), options: [{ const: "o1", title: "Aula" }] }
+    const cell = ((nodes[4].content as PhpRecord[])[1].content as PhpRecord[])[0]
+    ;(cell.content as PhpRecord[])[0] = { type: "paragraph", content: [{ type: "text", text: "Escrito en la celda" }] }
+    return document
+  }
+  const setupJson = async (): Promise<string> => JSON.stringify((await profileTemplates(context(), SUBJECT))[RESPUESTAS] ?? null)
+
+  it("una materia que solo llenó espacios sigue el texto nuevo de la plantilla y conserva lo que llenó", async () => {
+    expect((await put({ values: { [RESPUESTAS]: slotted() } })).status).toBe(200)
+    expect(JSON.stringify(storedValue())).not.toContain('"edited"')
+
+    adminChanges(([first, ...rest]) => [{ ...first, content: [{ type: "text", text: "Pregunta NUEVA: " }, ...(first.content as PhpRecord[]).slice(1)] }, ...rest])
+
+    const setup = await setupJson()
+    expect(setup).toContain("Pregunta NUEVA: ")
+    expect(setup).not.toContain('"text":"Pregunta: "')
+    expect(setup).toContain("Escrito en la celda")
+    expect(setup).toContain('"title":"Aula"')
+  })
+
+  it("los cambios de Administración en las respuestas llegan a una materia que solo llenó espacios", async () => {
+    await put({ values: { [RESPUESTAS]: slotted() } })
+    const isText = (node: PhpRecord) => JSON.stringify(node).includes('"kind":"texto"')
+
+    adminChanges((content) => [...content, { type: "paragraph", content: [{ type: "response", attrs: { kind: "varias", options: [{ const: "z", title: "Nueva opción" }] } }] }])
+    expect(await setupJson()).toContain("Nueva opción")
+
+    adminChanges((content) => content.map((node) => (isText(node) ? { ...node, content: [{ ...(node.content as PhpRecord[])[0], attrs: { ...((node.content as PhpRecord[])[0].attrs as PhpRecord), required: true } }] } : node)))
+    const required = JSON.parse(await setupJson()) as PhpRecord
+    const texto = JSON.stringify(paragraphs(required).find(isText))
+    expect(texto).not.toContain('"required":false')
+
+    adminChanges((content) => content.filter((node) => !isText(node)))
+    const removed = await setupJson()
+    expect(removed).not.toContain('"kind":"texto"')
+    expect(removed).toContain("Escrito en la celda")
+  })
+
+  it("la copia editada queda marcada en el servidor, conserva su texto y no muestra la marca al docente ni a Coordinación", async () => {
+    await put({ values: { [RESPUESTAS]: edited() } })
+    expect((storedValue().attrs as PhpRecord | undefined)?.edited).toBe(true)
+
+    adminChanges(([first, ...rest]) => [{ ...first, content: [{ type: "text", text: "Pregunta NUEVA: " }, ...(first.content as PhpRecord[]).slice(1)] }, ...rest])
+
+    const setup = await setupJson()
+    expect(setup).toContain("Texto propio de la carrera.")
+    expect(setup).not.toContain("Pregunta NUEVA")
+    expect(setup).not.toContain('"edited"')
+    const shown = await (await showSubjectProfile(apiRequest(`/api/v1/academic/asignaturas/${SUBJECT}/ficha`, { cookie }), SUBJECT, deps())).text()
+    expect(shown).toContain("Texto propio de la carrera.")
+    expect(shown).not.toContain('"edited"')
+  })
+
+  it("el navegador no puede marcar una copia como editada", async () => {
+    await put({ values: { [RESPUESTAS]: { ...slotted(), attrs: { edited: true } } } })
+    expect(JSON.stringify(storedValue())).not.toContain('"edited"')
+
+    adminChanges(([first, ...rest]) => [{ ...first, content: [{ type: "text", text: "Pregunta NUEVA: " }, ...(first.content as PhpRecord[]).slice(1)] }, ...rest])
+
+    expect(await setupJson()).toContain("Pregunta NUEVA: ")
+  })
+
+  it("llenar el espacio que se agrega a un campo con texto y sin espacios es llenar un espacio, no editar", async () => {
+    const SIN_ESPACIOS = fieldId(index("sin_espacios"))
+    const target = templates.template!.sections.flatMap((section) => section.blocks.flatMap((block) => block.fields)).find((item) => item.id === SIN_ESPACIOS)!
+    target.responsible = "carrera"
+    const filled = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Solo texto" }] }, { type: "paragraph", content: [{ type: "text", text: "Lo llenó la carrera" }] }] }
+
+    expect((await put({ values: { [SIN_ESPACIOS]: filled } })).status).toBe(200)
+    const saved = templates.values.find((value) => value.fieldId === SIN_ESPACIOS)!.value as PhpRecord
+    expect(JSON.stringify(saved)).toContain("Lo llenó la carrera")
+    expect(saved.attrs).toBeUndefined()
+  })
+  const TABLES_FIXED = "Las tablas de este campo las define Administración: escriba dentro de sus celdas, sin quitar ni agregar filas o columnas."
+  const withTable = (change: (table: PhpRecord) => PhpRecord | null): PhpRecord => {
+    const document = edited()
+    return { ...document, content: paragraphs(document).flatMap((node) => (node.type === "table" ? [change(structuredClone(node))].filter((item): item is PhpRecord => item !== null) : [node])) }
+  }
+  const rowsOf = (table: PhpRecord): PhpRecord[] => table.content as PhpRecord[]
+  const cellsOf = (row: PhpRecord): PhpRecord[] => row.content as PhpRecord[]
+
+  it.each([
+    ["quitar la tabla", () => withTable(() => null)],
+    ["agregar una fila", () => withTable((table) => ({ ...table, content: [...rowsOf(table), structuredClone(rowsOf(table)[1])] }))],
+    ["quitar una columna", () => withTable((table) => ({ ...table, content: rowsOf(table).map((row) => ({ ...row, content: cellsOf(row).slice(0, 1) })) }))],
+    ["combinar celdas", () => withTable((table) => {
+      const [header, ...rest] = rowsOf(table)
+      const [first] = cellsOf(header)
+      return { ...table, content: [{ ...header, content: [{ ...first, attrs: { ...(first.attrs as PhpRecord), colspan: 2 } }] }, ...rest] }
+    })],
+  ])("al editar el texto no deja %s de la plantilla", async (_, value) => {
+    const result = await put({ values: { [RESPUESTAS]: value() } })
+
+    expect(result.status).toBe(422)
+    expect(result.json?.errors).toEqual({ [`values.${RESPUESTAS}`]: [TABLES_FIXED] })
+    expect(templates.values).toEqual([])
+  })
+
+  it("al editar el texto deja escribir dentro de las celdas de la tabla", async () => {
+    const value = withTable((table) => {
+      const [header, row] = rowsOf(table)
+      const [first, second] = cellsOf(row)
+      return { ...table, content: [header, { ...row, content: [{ ...first, content: [{ type: "paragraph", content: [{ type: "text", text: "Dentro de la celda" }] }] }, second] }] }
+    })
+
+    const result = await put({ values: { [RESPUESTAS]: value } })
+
+    expect(result.status).toBe(200)
+    expect(JSON.stringify(storedValue())).toContain("Dentro de la celda")
   })
 })

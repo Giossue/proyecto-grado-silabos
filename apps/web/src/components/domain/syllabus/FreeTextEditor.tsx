@@ -71,6 +71,32 @@ const OneSpace = Extension.create({
   ],
 })
 
+type ShapeNode = { type: { name: string }; attrs: Record<string, unknown>; descendants: (visit: (node: ShapeNode) => boolean | void) => void }
+
+// Tables and blocks that come with the template keep their shape; only what is written inside the cells changes.
+const fixedShape = (document: ShapeNode): string => {
+  const parts: unknown[] = []
+  document.descendants((node) => {
+    if (node.type.name === "documentBlock") parts.push(["block", node.attrs.kind, node.attrs.props])
+    if (["table", "tableRow"].includes(node.type.name)) parts.push(node.type.name)
+    if (["tableCell", "tableHeader"].includes(node.type.name)) {
+      parts.push([node.type.name, node.attrs.colspan ?? 1, node.attrs.rowspan ?? 1])
+      return false
+    }
+  })
+  return JSON.stringify(parts)
+}
+
+const ProtectedTables = Extension.create({
+  name: "protectedTables",
+  addProseMirrorPlugins: () => [
+    new Plugin({
+      filterTransaction: (transaction, state) =>
+        !transaction.docChanged || Boolean(transaction.getMeta("preventUpdate")) || fixedShape(transaction.doc as unknown as ShapeNode) === fixedShape(state.doc as unknown as ShapeNode),
+    }),
+  ],
+})
+
 type LimitStorage = { limit: number | null }
 type SlashStorage = { handle: ((event: KeyboardEvent) => boolean) | null }
 
@@ -98,7 +124,7 @@ const storageOf = (editor: Editor): { characterLimit: LimitStorage; slashKeys: S
 type ExtensionOptions = { bare: boolean; align: boolean; spaces: boolean; blocks: "configure" | "fill"; labels: Record<string, string> }
 
 const editorExtensions = ({ bare, align, spaces, blocks, labels }: ExtensionOptions) => [
-  ...(spaces ? [OneSpace] : []),
+  ...(spaces ? [OneSpace, ProtectedTables] : []),
   StarterKit.configure({ document: false, heading: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false, link: false, strike: false, ...(bare ? { trailingNode: false } : {}) }),
   ...(align ? [TextAlign.configure({ types: ["paragraph"], alignments: ["left", "center", "right", "justify"] })] : []),
   TextStyle,
@@ -305,7 +331,7 @@ export function FreeTextEditor({
               <Table2 aria-hidden="true" />
             </ToolButton>
           ) : null}
-          {editor.isActive("table") ? (
+          {editor.isActive("table") && !spaces ? (
             <>
               <Separator />
               <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => editor.chain().focus().addRowAfter().run()}>

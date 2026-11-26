@@ -28,7 +28,7 @@ export { FIELD_LIMIT_INVALID, KEY_PATTERN, RESPONSIBLES }
 const FIELD_LIMIT_ONLY_CAREER = "Solo un campo editable (Carrera) puede tener límite de caracteres."
 const ROOT_KEYS = DEFINITION_KEYS
 const SOURCE_KINDS = ["una", "varias"]
-const INSTITUTIONAL_RESPONSES = "Un campo Institucional no lleva tipos de respuesta. Cambie quién lo llena o quite la respuesta."
+const INSTITUTIONAL_RESPONSES = "Un campo No editable no lleva tipos de respuesta. Hágalo Editable o quite la respuesta."
 
 
 export type DraftProblem = { path: string; message: string; blocking: boolean }

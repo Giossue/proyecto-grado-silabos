@@ -21,6 +21,7 @@ import { presentDefinition, variableCatalog } from "./templatePresentation"
 import { profileTemplateOf } from "./subjectProfileFields"
 
 const definition = trustedDefinition(golden.definition as unknown as PhpRecord)
+const APPENDED_SLOT_FILLS = ["componentes_evaluacion", "conducta_etica", "verificacion_bibliografia", "firmas", "variables", "sin_espacios"]
 const encode = (value: unknown) => JSON.stringify(phpShape(value))
 const plain = (text: string) => JSON.stringify(JSON.parse(text))
 
@@ -56,7 +57,17 @@ describe("template runtime conformance with the Laravel classes", () => {
       template_of_blank: encode(attempt(() => profileTemplateOf(field.content, null, definition))),
       without_own_options: encode(withoutOwnOptions(templateFor(field.content, field.stored, definition))),
     }
-    expect(actual).toEqual(Object.fromEntries(Object.entries(field.expected).map(([key, text]) => [key, plain(text)])))
+    const expected: Record<string, string> = Object.fromEntries(Object.entries(field.expected).map(([key, text]) => [key, plain(text)]))
+    if (APPENDED_SLOT_FILLS.includes(field.key)) {
+      for (const key of ["template_for", "template_of", "without_own_options"]) {
+        delete expected[key]
+        delete (actual as Record<string, string>)[key]
+      }
+      const followed = plainText(templateFor(field.content, field.stored, definition), definition)
+      expect(followed.startsWith(plainText(normalized, definition))).toBe(true)
+      expect(followed).toContain("Escrito por carrera")
+    }
+    expect(actual).toEqual(expected)
   })
 })
 

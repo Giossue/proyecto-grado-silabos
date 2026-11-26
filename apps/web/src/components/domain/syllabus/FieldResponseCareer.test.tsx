@@ -1,5 +1,6 @@
 import { fireEvent, render } from "@testing-library/react"
 import type { ComponentProps } from "react"
+import { CellSelection } from "@tiptap/pm/tables"
 import { describe, expect, it, vi } from "vitest"
 import { FieldResponseEditor } from "@/components/domain/syllabus/FieldResponseEditor"
 import { setTemplateRuntime } from "@/lib/blocks/runtime"
@@ -49,81 +50,45 @@ const option = async (index: number, value: string): Promise<void> => {
   await flush()
 }
 
-describe("El coordinador escribe un campo Carrera y deja espacios para el docente", () => {
-  it("en un espacio escribe texto que le llega fijo al docente", () => {
-    const { container, last } = mountSetup(template())
-    expect(container.textContent).toContain("Estrategias de la asignatura")
-    fireEvent.change(container.querySelectorAll("textarea")[0]!, { target: { value: "Clases activas" } })
-    expect(last().content![1]).toEqual({ type: "paragraph", content: [{ type: "text", text: "Clases activas" }] })
-    expect(last().content![0]).toEqual(template().content![0])
+describe("El coordinador edita en un solo editor todo el campo Editable", () => {
+  const editorReady = async (container: HTMLElement): Promise<void> => {
+    await flush()
+    await vi.waitFor(() => expect(container.querySelector('[aria-label="Negrita"]')).not.toBeNull())
+  }
+  const content = (container: HTMLElement): Element => container.querySelector(".free-text-editor__content")!
+
+  it("el texto de la plantilla, la tabla y los espacios salen dentro del mismo editor, sin texto fijo aparte ni cuadros", async () => {
+    const { container } = mountSetup(template([{ type: "response", attrs: { kind: "una", options: [{ const: "o1", title: "Aula" }], value: null } }]))
+    await editorReady(container)
+
+    expect(container.querySelectorAll(".free-text-editor")).toHaveLength(1)
+    expect(content(container).textContent).toContain("Estrategias de la asignatura")
+    expect(content(container).textContent).toContain("Técnica")
+    expect(content(container).querySelector(".document-response")).not.toBeNull()
+    expect(content(container).getAttribute("contenteditable")).toBe("true")
+    expect(container.querySelector("textarea")).toBeNull()
+    expect(container.querySelector("[data-template-response]")).toBeNull()
   })
 
-  it("una celda queda como espacio al elegir el tipo, se ve como en el cuadro de texto y se ajusta con el mismo botón", async () => {
-    const { container, last, update } = mountSetup(template())
-    expect(spaceButtons(container)).toHaveLength(3)
-    await openSpace(container, 1)
-    expect(kinds().map((button) => button.textContent?.trim())).toEqual(["Texto libre", "Elegir una", "Elegir varias"])
-    expect(checkedKinds()).toEqual([])
-    expect(insertButton()).toBeNull()
-    expect(document.querySelector("[data-response-more]")).toBeNull()
-    expect(document.body.textContent).not.toContain("solo responde")
-
-    await pick("Elegir una")
-    const cell = (): DocumentNode => last().content![2]!.content![1]!.content![0]!
-    expect(cell().content![0]!.content).toEqual([{ type: "response", attrs: { kind: "una", options: [], value: null } }])
-    update({ value: last() })
-    await flush()
-    // The popover stays open: the options are written there, as in the text box.
-    expect(kinds()).toHaveLength(3)
-    await option(1, "Taller")
-    expect(cell().content![0]!.content).toEqual([{ type: "response", attrs: { kind: "una", options: [{ const: "o1", title: "Taller" }], value: null } }])
-    update({ value: last() })
-    await flush()
-
-    const space = container.querySelector("[data-career-space]")!
-    expect([...space.querySelectorAll(".document-response__option")].map((item) => [item.textContent, item.getAttribute("data-mark")])).toEqual([["Taller", "radio"]])
-    expect(spaceButtons(container)).toHaveLength(3)
-    expect(container.textContent).not.toContain("Espacio para el docente:")
-    expect(container.querySelector('input[aria-label="Opción 1"]')).toBeNull()
-    expect(container.querySelector('button[aria-label^="Quitar el espacio"]')).toBeNull()
-
-    await pick("Elegir una")
-    expect(last()).toEqual(template())
-  })
-
-  it("al abrir el botón de una celda con espacio muestra su tipo y sus opciones", async () => {
-    const stored = template()
-    stored.content![2]!.content![1]!.content![0] = cellOf("tableCell", [{ type: "response", attrs: { kind: "varias", options: [{ const: "o1", title: "Foro" }], value: [] } }])
+  it("abre lo que la materia ya guardó, no lo que trae la plantilla", async () => {
+    const stored: DocumentNode = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Estrategias propias de la carrera" }] }] }
     const { container } = mountSetup(template(), stored)
-    expect(container.querySelector("[data-career-space] .document-response__option")!.getAttribute("data-mark")).toBe("checkbox")
-    await openSpace(container, 1)
+    await editorReady(container)
 
-    expect(checkedKinds()).toEqual(["Elegir varias"])
-    expect(document.querySelector<HTMLInputElement>('input[aria-label="Opción 1"]')!.value).toBe("Foro")
+    expect(content(container).textContent).toContain("Estrategias propias de la carrera")
+    expect(content(container).textContent).not.toContain("Estrategias de la asignatura")
   })
 
-  it("en una fila agregada también se puede poner y quitar un espacio", async () => {
-    const stored = template()
-    stored.content![2]!.content!.push(structuredClone(stored.content![2]!.content![1]!))
-    const { container, last, update } = mountSetup(template(), stored)
-    expect(spaceButtons(container)).toHaveLength(5)
-    await openSpace(container, 3)
-    await pick("Texto libre")
-    const added = (): DocumentNode => last().content![2]!.content![2]!.content![0]!
-    expect(added().content![0]!.content).toEqual([{ type: "response", attrs: { kind: "texto", options: [], value: "" } }])
-
-    update({ value: last() })
-    await flush()
-    await openSpace(container, 3)
-    await pick("Texto libre")
-    expect(added()).toEqual(cellOf("tableCell"))
-  })
-
-  it("deja un espacio de texto libre en un párrafo al elegirlo", async () => {
+  it("al poner un espacio entrega el documento entero, con el texto de la plantilla", async () => {
     const { container, last } = mountSetup(template())
-    await openSpace(container, 0)
-    await pick("Texto libre")
-    expect(last().content![1]!.content).toEqual([{ type: "response", attrs: { kind: "texto", options: [], value: "" } }])
+    await editorReady(container)
+    fireEvent.click(container.querySelector('[role="toolbar"] button[aria-label="Espacio para el docente"]')!)
+    await flush()
+    await pick("Elegir una")
+
+    expect(nodesOfType(last(), "text").map((node) => node.text)).toContain("Estrategias de la asignatura")
+    expect(nodesOfType(last(), "table")).toHaveLength(1)
+    expect(responsesOf(last())).toEqual([{ kind: "una", options: [], value: null }])
   })
 
   it("en el editor de texto el espacio se coloca al elegir el tipo y cambia en tiempo real, sin duplicarse", async () => {
@@ -147,17 +112,79 @@ describe("El coordinador escribe un campo Carrera y deja espacios para el docent
     expect(kinds()).toHaveLength(0)
   })
 
-  it("una respuesta que fijó Administración conserva su tipo y solo recibe las opciones que faltan", () => {
-    const { container, last } = mountSetup(template([{ type: "response", attrs: { kind: "una", options: [], value: null } }]))
-    expect(container.textContent).toContain("Elegir una (lo definió Administración)")
-    fireEvent.change(container.querySelector('input[aria-label="Opción 1"]')!, { target: { value: "Presencial" } })
-    expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "una", options: [{ const: "o1", title: "Presencial" }], value: null })
+  it("bloqueado no deja escribir ni poner espacios", async () => {
+    const { container } = mountSetup(template(), null, true)
+    await editorReady(container)
+    expect(content(container).getAttribute("contenteditable")).toBe("false")
+    expect(container.querySelector<HTMLButtonElement>('[role="toolbar"] button[aria-label="Espacio para el docente"]')!.disabled).toBe(true)
+  })
+})
+
+describe("En el proyecto de carrera las tablas de la plantilla quedan protegidas", () => {
+  type Editor = import("@tiptap/core").Editor
+  const mountTable = async () => {
+    const view = mountSetup(template())
+    await flush()
+    await vi.waitFor(() => expect(view.container.querySelector('[aria-label="Negrita"]')).not.toBeNull())
+    const editor = (view.container.querySelector(".free-text-editor__content") as unknown as { editor: Editor }).editor
+    const position = (type: string): number => {
+      let found = -1
+      editor.state.doc.descendants((node, at) => {
+        if (found < 0 && node.type.name === type) found = at
+      })
+      return found
+    }
+    const inCell = (): number => position("tableCell") + 2
+    return { ...view, editor, position, inCell }
+  }
+  const tablesIn = (document_: DocumentNode): DocumentNode[] => nodesOfType(document_, "table")
+
+  it("no deja quitar la tabla y el documento queda igual", async () => {
+    const { editor, position } = await mountTable()
+    const before = JSON.stringify(editor.getJSON())
+    const at = position("table")
+    editor.view.dispatch(editor.state.tr.delete(at, at + editor.state.doc.nodeAt(at)!.nodeSize))
+    await flush()
+
+    expect(JSON.stringify(editor.getJSON())).toBe(before)
   })
 
-  it("bloqueado no deja escribir ni poner espacios", () => {
-    const { container } = mountSetup(template(), null, true)
-    expect(spaceButtons(container).every((button) => button.disabled)).toBe(true)
-    expect([...container.querySelectorAll("textarea")].every((area) => area.disabled)).toBe(true)
+  it("no deja agregar ni quitar filas o columnas, ni combinar celdas", async () => {
+    const { editor, inCell } = await mountTable()
+    const before = JSON.stringify(editor.getJSON())
+    for (const change of ["addRowAfter", "deleteRow", "addColumnAfter", "deleteColumn"] as const) {
+      editor.chain().setTextSelection(inCell())[change]().run()
+      await flush()
+      expect(JSON.stringify(editor.getJSON())).toBe(before)
+    }
+    expect(tablesIn(editor.getJSON() as DocumentNode)[0]!.content).toHaveLength(2)
+
+    const cells: number[] = []
+    editor.state.doc.descendants((node, at) => {
+      if (node.type.name === "tableCell") cells.push(at)
+    })
+    editor.view.dispatch(editor.state.tr.setSelection(CellSelection.create(editor.state.doc, cells[0]!, cells[1]!)))
+    editor.commands.mergeCells()
+    await flush()
+    expect(JSON.stringify(editor.getJSON())).toBe(before)
+  })
+
+  it("deja escribir dentro de una celda", async () => {
+    const { editor, inCell, last } = await mountTable()
+    editor.chain().setTextSelection(inCell()).insertContent("Taller grupal").run()
+    await flush()
+
+    expect(nodesOfType(tablesIn(last())[0]!, "text").map((node) => node.text)).toContain("Taller grupal")
+  })
+
+  it("no muestra las herramientas que cambian la forma de la tabla", async () => {
+    const { container, editor, inCell } = await mountTable()
+    editor.chain().focus().setTextSelection(inCell()).run()
+    await flush()
+    const labels = [...container.querySelectorAll('[role="toolbar"] button')].map((button) => button.getAttribute("aria-label") ?? button.textContent?.trim())
+
+    for (const tool of ["Insertar tabla", "+ Fila", "− Fila", "+ Columna", "− Columna", "Combinar", "Separar", "Quitar tabla"]) expect(labels).not.toContain(tool)
+    expect(container.textContent).not.toContain("Agregar fila")
   })
 })
 
@@ -274,60 +301,5 @@ describe("El docente llena solo los espacios de un campo Carrera", () => {
     expect(container.querySelector('button[aria-label="Elegir en Métodos"]')).toBeNull()
     fireEvent.change(container.querySelector('textarea[aria-label="Métodos"]')!, { target: { value: "Lecturas" } })
     expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "texto", options: [], value: "Lecturas" })
-  })
-})
-
-describe("El coordinador ajusta las opciones de una respuesta de la plantilla en su materia", () => {
-  const base = [{ const: "o1", title: "Aula" }, { const: "o2", title: "Laboratorio" }]
-  const placed = (options = base, value: unknown = null, extra: Record<string, unknown> = {}): DocumentNode => ({ type: "response", attrs: { kind: "una", options, value, ...extra } as never })
-  const openOptions = async (container: HTMLElement): Promise<void> => {
-    fireEvent.click(container.querySelector('button[aria-label="Opciones de la respuesta"]')!)
-    await flush()
-  }
-
-  it("la marca «De la plantilla» y el cuadro solo deja cambiar las opciones, no el tipo, y no trae «Más opciones»", async () => {
-    const { container, last } = mountSetup(template([placed(base, null, { display: "desplegable" })]))
-    expect(container.querySelector("[data-template-response]")!.textContent).toBe("De la plantilla")
-    await openOptions(container)
-    expect(kinds().every((button) => button.disabled || button.getAttribute("data-disabled") !== null)).toBe(true)
-    expect(document.querySelector("[data-response-fixed]")?.textContent).toContain("Administración")
-    expect(document.querySelector("[data-response-more]")).toBeNull()
-    expect(document.body.textContent).not.toContain("Más opciones")
-    expect(document.body.textContent).not.toContain("Estas opciones las fija Administración")
-    expect(document.querySelector("[data-response-reset]")).toBeNull()
-    expect(insertButton()).toBeNull()
-    await option(2, "Taller")
-    expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "una", options: [{ const: "o1", title: "Aula" }, { const: "o2", title: "Taller" }], value: null, display: "desplegable" })
-  })
-
-  it("muestra las opciones propias de la materia y las restablece a las de la plantilla, soltando lo elegido que ya no existe", async () => {
-    const own = [{ const: "o1", title: "Aula" }, { const: "o3", title: "Campo" }]
-    const { container, last } = mountSetup(template([placed()]), template([placed(own, "o3", { customOptions: true })]))
-    expect(container.textContent).toContain("Opciones propias")
-    await openOptions(container)
-    expect(document.querySelector<HTMLInputElement>('input[aria-label="Opción 2"]')!.value).toBe("Campo")
-    fireEvent.click(document.querySelector<HTMLButtonElement>("[data-response-reset]")!)
-    await flush()
-    expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "una", options: base, value: null })
-  })
-
-  it("cambiar las opciones se aplica al escribir y conserva lo elegido aunque la opción quede un momento vacía", async () => {
-    const { container, last, update } = mountSetup(template([placed()]), template([placed(base, "o2")]))
-    await openOptions(container)
-    await option(2, "")
-    expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "una", options: [base[0]], value: null })
-    update({ value: last() })
-    await flush()
-    await option(2, "Taller")
-    expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "una", options: [{ const: "o1", title: "Aula" }, { const: "o2", title: "Taller" }], value: "o2" })
-  })
-
-  it("sin ninguna opción no aplica el cambio y lo dice", async () => {
-    const { container, last } = mountSetup(template([placed()]))
-    await openOptions(container)
-    await option(1, "")
-    await option(2, "")
-    expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "una", options: [base[1]], value: null })
-    expect(document.body.textContent).toContain("Escriba al menos una opción")
   })
 })

@@ -9,7 +9,7 @@ import { validateSchema } from "../http/schemaValidation"
 import { requestBoolean } from "../syllabus/inProgressWorkHelpers"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { isPhpArray, phpEquals, type PhpRecord } from "./phpValues"
-import { keepsUsedOptions, USED_OPTION_REMOVED, usedOptions } from "./responseConditions"
+import { keepsUsedOptions, keepsUsedResponses, USED_OPTION_REMOVED, USED_RESPONSE_REMOVED, usedOptions } from "./responseConditions"
 import { defaultSubjectProfileDeps, mayManageSubjectProfile, type SubjectProfileDeps, subjectProfileResponse, writableProfileContext } from "./subjectProfile"
 import { profileFields } from "./subjectProfileFields"
 import { createSubjectProfileWriteDeps } from "./subjectProfileWriteStore"
@@ -60,6 +60,7 @@ async function saveValues(tx: SubjectProfileTx, session: AppSession, subjectId: 
     if (field === undefined) throw new Missing(MODELS.field, fieldId)
     const raw = toRuntime(values[fieldId])
     const document = isPhpArray(raw) ? careerResponse(field.content, raw, context.definition, `values.${fieldId}`) : null
+    if (document !== null && used.size > 0 && !keepsUsedResponses(field.content, document, used)) rejectWith({ [`values.${fieldId}`]: [USED_RESPONSE_REMOVED] })
     if (document !== null && used.size > 0 && !keepsUsedOptions(document, used)) rejectWith({ [`values.${fieldId}`]: [USED_OPTION_REMOVED] })
     if (document === null || phpEquals(document, responseTemplate(normalizeFieldDocument(field.content, context.definition)))) {
       await tx.deleteValue(subjectId, fieldId)

@@ -66,7 +66,7 @@ describe("Límite de caracteres en el editor de la plantilla", () => {
     expect(payload().sections[0]!.fields[1]).not.toHaveProperty("max_length")
   })
 
-  it("al volver No editable un campo con límite cambia quién lo llena y se le quita el límite", async () => {
+  it("al volver No editable un campo con límite se le quita el límite", async () => {
     const { payload } = await mountBuilder({ template: template(800) })
     await selectField("f1")
     await responsible("No editable")

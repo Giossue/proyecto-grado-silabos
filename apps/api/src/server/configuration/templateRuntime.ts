@@ -808,7 +808,8 @@ export function matches(template: unknown, value: unknown, mode: "answer" | "car
       phpIdentical(given(at(template, "attrs"), "props") ?? [], given(at(value, "attrs"), "props") ?? [])
     )
   }
-  if (!phpIdentical(given(template, "attrs") ?? [], given(value, "attrs") ?? [])) return false
+  const appendedSlot = nodeType(template) === "paragraph" && given(template, "attrs") === null && blank(template)
+  if (!appendedSlot && !phpIdentical(given(template, "attrs") ?? [], given(value, "attrs") ?? [])) return false
   if (blank(template)) return mode === "career" ? careerOnly(value) : answerOnly(value)
   let expected = content(template)
   const actual = content(value)
@@ -891,18 +892,154 @@ export function assertEnoughOptions(node: unknown): void {
   for (const child of isPhpArray(at(node, "content")) ? list(at(node, "content")) : []) assertEnoughOptions(child)
 }
 
+function sameResponse(template: unknown, value: unknown): boolean {
+  return (
+    given(template, "kind") === given(value, "kind") &&
+    phpIdentical(chosenSettings(template), chosenSettings(value)) &&
+    phpIdentical(given(template, CONDITION_ID), given(value, CONDITION_ID)) &&
+    phpIdentical(given(template, CONDITION_ATTR), given(value, CONDITION_ATTR))
+  )
+}
+
+function pairedResponses(source: unknown, document: PhpRecord, pair: (from: unknown, node: PhpRecord) => PhpRecord): PhpRecord {
+  const candidates = foundResponses(source)
+  const taken = new Set<number>()
+  const visit = (node: PhpRecord): PhpRecord => {
+    if (nodeType(node) === RESPONSE_NODE) {
+      const attrs = given(node, "attrs") ?? []
+      const found = candidates.findIndex((candidate, index) => !taken.has(index) && sameResponse(candidate, attrs))
+      if (found >= 0) taken.add(found)
+      return pair(found >= 0 ? candidates[found] : null, node)
+    }
+    return isList(node.content) ? { ...node, content: node.content.map((child) => visit(record(child))) } : node
+  }
+  return visit(document)
+}
+
+function fromTemplate(template: unknown, node: PhpRecord, saving: boolean): PhpRecord {
+  return { ...node, attrs: stampCondition(template, ownOptions(template, record(given(node, "attrs") ?? []), saving)) }
+}
+
+function editedResponses(template: PhpRecord, document: PhpRecord, saving: boolean, sealing: boolean): PhpRecord {
+  return pairedResponses(template, document, (from, node) => {
+    if (from !== null) return fromTemplate(from, node, saving)
+    return sealing ? record(withoutLogic(unanswered(node))) : node
+  })
+}
+
+function blocksOf(node: unknown): unknown[] {
+  if (nodeType(node) === "documentBlock") return [[given(at(node, "attrs"), "kind") ?? "", given(at(node, "attrs"), "props") ?? []]]
+  return content(node).flatMap(blocksOf)
+}
+
+function variablesOf(node: unknown): unknown[] {
+  if (nodeType(node) === "variable") return [given(at(node, "attrs"), "id")]
+  return content(node).flatMap(variablesOf)
+}
+
+function trailingBlanks(node: unknown): number {
+  const children = content(node)
+  let count = 0
+  while (count < children.length && nodeType(children[children.length - 1 - count]) === "paragraph" && blank(children[children.length - 1 - count])) count++
+  return count
+}
+
+function withoutExtraTail(template: PhpRecord, document: PhpRecord): PhpRecord {
+  const children = [...content(document)]
+  for (let extra = trailingBlanks(document) - trailingBlanks(template); extra > 0 && children.length > 1; extra--) children.pop()
+  return { ...document, content: children }
+}
+
+function tablesOf(node: unknown): unknown[] {
+  if (nodeType(node) === "table") {
+    return [content(node).map((row) => content(row).map((cell) => [nodeType(cell), given(at(cell, "attrs"), "colspan") ?? 1, given(at(cell, "attrs"), "rowspan") ?? 1]))]
+  }
+  return content(node).flatMap(tablesOf)
+}
+
+const TABLES_FIXED = "Las tablas de este campo las define Administración: escriba dentro de sus celdas, sin quitar ni agregar filas o columnas."
+const BLOCKS_FIXED = "Los bloques de este campo los define Administración: no los agregue ni los quite."
+const VARIABLES_FIXED = "Use solo los datos del sistema que ya trae este campo en la plantilla."
+
+function assertCareerEdit(template: PhpRecord, document: PhpRecord, attribute: string, saving: boolean): void {
+  if (!phpIdentical(blocksOf(template), blocksOf(document))) fail(BLOCKS_FIXED, attribute)
+  if (!phpEquals(tablesOf(template), tablesOf(document))) fail(TABLES_FIXED, attribute)
+  const known = variablesOf(template)
+  if (saving && variablesOf(document).some((id) => !known.includes(id))) fail(VARIABLES_FIXED, attribute)
+}
+
+const EDITED = "edited"
+
+function editedCopy(stored: unknown): boolean {
+  return isPhpArray(stored) && at(at(stored, "attrs"), EDITED) === true
+}
+
+function slotsFrom(template: PhpRecord, value: PhpRecord): PhpRecord {
+  const type = nodeType(template)
+  if (type !== nodeType(value) || ["tableHeader", "documentBlock", RESPONSE_NODE].includes(type)) return template
+  if (blank(template)) return careerOnly(value) && given(value, "content") !== null ? { ...template, content: value.content } : template
+  const expected = [...content(template)]
+  const actual = content(value)
+  if (expected.length === 0) return template
+  if (type === "table" && listTable(template)) {
+    const row = expected.pop()
+    while (expected.length < Math.max(actual.length, content(template).length)) expected.push(row)
+    if (expected.length !== actual.length) return template
+    return { ...template, content: expected.map((child, index) => slotsFrom(record(child), record(actual[index]))) }
+  }
+  const pairs = aligned(expected, actual)
+  return { ...template, content: expected.map((child, index) => (pairs[index] === null ? child : slotsFrom(record(child), record(pairs[index])))) }
+}
+
+function fits(template: unknown, value: unknown): boolean {
+  if (nodeType(template) !== nodeType(value)) return false
+  if (blank(template)) return careerOnly(value)
+  return ["paragraph", "tableHeader"].includes(nodeType(template)) ? matches(template, value, "career") : true
+}
+
+function aligned(expected: unknown[], actual: unknown[]): (unknown | null)[] {
+  const lengths = Array.from({ length: expected.length + 1 }, () => new Array<number>(actual.length + 1).fill(0))
+  for (let i = 1; i <= expected.length; i++) {
+    for (let j = 1; j <= actual.length; j++) {
+      lengths[i][j] = Math.max(lengths[i - 1][j], lengths[i][j - 1], fits(expected[i - 1], actual[j - 1]) ? lengths[i - 1][j - 1] + 1 : 0)
+    }
+  }
+  const pairs: (unknown | null)[] = expected.map(() => null)
+  let i = expected.length
+  let j = actual.length
+  while (i > 0 && j > 0) {
+    if (fits(expected[i - 1], actual[j - 1]) && lengths[i][j] === lengths[i - 1][j - 1] + 1) {
+      pairs[i - 1] = actual[j - 1]
+      i--
+      j--
+    } else if (lengths[i][j - 1] >= lengths[i - 1][j]) j--
+    else i--
+  }
+  return pairs
+}
+
+function followCurrent(template: PhpRecord, stored: PhpRecord): PhpRecord {
+  const followed = pairedResponses(stored, slotsFrom(template, stored), (from, node) => (from === null ? node : fromTemplate(given(node, "attrs") ?? [], { ...node, attrs: from }, false)))
+  return matches(template, followed, "career") ? followed : template
+}
+
 export function careerResponse(definitionContent: unknown, value: unknown, definition: TemplateDefinition, attribute = "value", saving = true): PhpRecord {
   if (saving) within(attribute, () => assertEnoughOptions(value))
   const document = normalizeFieldDocument(value, definition, attribute)
   const template = responseTemplate(normalizeFieldDocument(definitionContent, definition))
   if (blank(document)) return template
-  if (!responsesEnabled(definition)) return withoutBlankLines(document)
+  if (!responsesEnabled(definition)) {
+    const written = withoutBlankLines(document)
+    if (saving) assertCareerEdit(template, written, attribute, saving)
+    return written
+  }
   const shaped = saving ? record(withoutOwnOptions(document)) : document
   const adopted = within(attribute, () => adopt(template, shaped, saving))
-  if (!matches(template, adopted, "career")) {
-    fail("Complete solo los espacios de respuesta. El texto, los encabezados y la estructura los define Administración.", attribute)
-  }
-  return seal(template, adopted)
+  if (matches(template, adopted, "career")) return seal(template, adopted)
+  if (!saving && !editedCopy(value)) return seal(template, followCurrent(template, shaped))
+  assertCareerEdit(template, shaped, attribute, saving)
+  const edited = withoutExtraTail(template, within(attribute, () => editedResponses(template, shaped, saving, true)))
+  return saving ? { ...edited, attrs: { [EDITED]: true } } : edited
 }
 
 function careerDocument(definitionContent: unknown, value: unknown, definition: TemplateDefinition): PhpRecord {
@@ -947,6 +1084,10 @@ export function fieldCarried(template: unknown, value: unknown, definition: Temp
     if (error instanceof TemplateValidationError) return template
     throw error
   }
+  const paired = pairedResponses(normalizeFieldDocument(value, definition), document, (from, node) =>
+    from === null || responseAnswered(given(node, "attrs") ?? []) ? node : { ...node, attrs: carryResponse(record(given(node, "attrs") ?? []), from) },
+  )
+  if (matches(current, paired, "answer")) return paired
   return matches(current, document, "answer") ? document : template
 }
 
@@ -972,7 +1113,10 @@ export function followTemplate(definitionContent: unknown, stored: unknown, defi
   if (!isDocument(stored)) return null
   const document = normalizeFieldDocument(stored, definition)
   if (!responsesEnabled(definition)) return document
-  return adopt(responseTemplate(normalizeFieldDocument(definitionContent, definition)), document, false)
+  const template = responseTemplate(normalizeFieldDocument(definitionContent, definition))
+  const adopted = adopt(template, document, false)
+  if (matches(template, adopted, "career")) return adopted
+  return editedCopy(stored) ? editedResponses(template, document, false, false) : followCurrent(template, document)
 }
 
 export function writable(definitionContent: unknown, definition: TemplateDefinition): boolean {

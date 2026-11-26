@@ -46,7 +46,7 @@ describe("avance del proyecto de carrera de una materia", () => {
 })
 
 // A field nobody can decide would keep the convocation closed for good.
-describe("con la plantilla oficial, todo campo de Carrera se puede definir", () => {
+describe("con la plantilla oficial, todo campo Editable se puede definir", () => {
   const template = officialTemplate()
   const official = (values: ReturnType<typeof writtenCareerFields>) => ({ template, definition: template.definition, store: fakeTemplateStore({ template, values }) })
   const pieces = [

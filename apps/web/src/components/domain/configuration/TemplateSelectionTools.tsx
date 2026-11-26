@@ -76,7 +76,7 @@ export function TemplateSelectionTools({ selection, locked, busy, targets, child
           <TemplateFieldNameInput field={selection.field} disabled={locked} className="w-44" onName={onName} />
         </TemplateRibbonGroup>
         <TemplateRibbonDivider />
-        <TemplateRibbonGroup label="Quién lo llena">
+        <TemplateRibbonGroup label="Edición">
           <TemplateEditabilityToggle field={selection.field} disabled={locked} onResponsible={onResponsible} />
         </TemplateRibbonGroup>
         {children ? (

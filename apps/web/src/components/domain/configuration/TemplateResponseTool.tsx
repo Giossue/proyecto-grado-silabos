@@ -142,7 +142,7 @@ export function TemplateResponseTool({
   const standalone = editor === undefined
   // Live, a field closed by «Texto libre» takes no typing, but its type can still be changed here.
   const ready = !disabled && allowed && (standalone || (editor !== null && editor !== undefined && !editor.isDestroyed && (live || editor.isEditable)))
-  const tooltip = allowed ? label : `${label}: no va en campos Institucionales`
+  const tooltip = allowed ? label : `${label}: no va en campos No editables`
   const settingNames = responseSettingNames(kind)
   const resettable = fixed && templateOptions !== null && !sameResponseOptions(options, templateOptions)
 

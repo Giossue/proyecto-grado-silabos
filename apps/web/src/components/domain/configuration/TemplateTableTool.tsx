@@ -12,7 +12,7 @@ type TemplateTableToolProps = { allowed: boolean; disabled?: boolean; text?: str
 
 export function TemplateTableTool({ allowed, disabled = false, text, tables, onCreate, onEdit }: TemplateTableToolProps) {
   const { afterClose, onCloseAutoFocus } = useAfterMenuClose()
-  const tooltip = allowed ? "Tabla repetible" : "Tabla repetible: no va en campos Institucionales"
+  const tooltip = allowed ? "Tabla repetible" : "Tabla repetible: no va en campos No editables"
 
   return (
     <MenuTooltip label={tooltip}>
