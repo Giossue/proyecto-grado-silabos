@@ -1,7 +1,7 @@
 "use client"
 
 import type { Editor } from "@tiptap/core"
-import { ChevronDown, ListChecks, RotateCcw } from "lucide-react"
+import { ChevronDown, ListChecks, RotateCcw, type LucideIcon } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { Controller, useWatch } from "react-hook-form"
 import type { z } from "zod"
@@ -44,6 +44,7 @@ type TemplateResponseToolProps = {
   allowed?: boolean
   disabled?: boolean
   label?: string
+  icon?: LucideIcon
   hint?: string
   optionsHint?: string
   current?: ResponseAttrs | null
@@ -96,6 +97,7 @@ export function TemplateResponseTool({
   allowed = true,
   disabled = false,
   label = "Tipo de respuesta",
+  icon: Icon = ListChecks,
   hint = "Quien llena el campo solo responde: no cambia el tipo ni las opciones",
   optionsHint = "Si las deja vacías, Coordinación las escribe en cada materia",
   current = null,
@@ -290,7 +292,7 @@ export function TemplateResponseTool({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button type="button" variant="ghost" size="icon-sm" aria-label={label} disabled={!ready} onMouseDown={(event) => event.preventDefault()}>
-            <ListChecks aria-hidden="true" />
+            <Icon aria-hidden="true" />
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="max-h-(--overlay-max-height) w-96 overflow-y-auto">

@@ -7,7 +7,7 @@ import TextAlign from "@tiptap/extension-text-align"
 import { Color, TextStyle } from "@tiptap/extension-text-style"
 import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
-import { Bold, Braces, ChevronDown, Italic, List, ListOrdered, Plus, Table2, Underline } from "lucide-react"
+import { Bold, Braces, ChevronDown, Italic, List, ListOrdered, Plus, Settings, Table2, Underline } from "lucide-react"
 import { useEffect, useImperativeHandle, useMemo, useState, type ReactNode, type Ref } from "react"
 import { TemplateResponseTool } from "@/components/domain/configuration/TemplateResponseTool"
 import { IconTooltip } from "@/components/domain/IconTooltip"
@@ -294,7 +294,7 @@ export function FreeTextEditor({
   }
 
   return (
-    <div className={cn("free-text-editor flex min-w-0 flex-col", bare ? "bg-transparent" : "rounded-md border border-border bg-background")} data-disabled={disabled || undefined}>
+    <div className={cn("free-text-editor flex min-w-0 flex-col", spaces && "free-text-editor--app", bare ? "bg-transparent" : "rounded-md border border-border bg-background")} data-disabled={disabled || undefined}>
       {editor && toolbar ? (
         <div role="toolbar" aria-label={`Formato de ${label}`} className="flex flex-wrap items-center gap-1 border-b p-1.5">
           <ToolButton label="Negrita" pressed={editor.isActive("bold")} disabled={readOnly} onClick={() => editor.chain().focus().toggleBold().run()}>
@@ -320,7 +320,8 @@ export function FreeTextEditor({
                 advanced={false}
                 editor={editor}
                 disabled={disabled}
-                label="Espacio para el docente"
+                label="Configurar campo"
+                icon={Settings}
                 hint=""
                 optionsHint="Escriba las opciones que podrá elegir el docente"
               />

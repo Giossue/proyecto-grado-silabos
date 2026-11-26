@@ -106,3 +106,36 @@
 .free-text-editor .document-response__option[data-mark="radio"]::before {
   border-radius: 9999px;
 }
+
+.free-text-editor--app .free-text-editor__content table {
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 0.375rem);
+}
+
+.free-text-editor--app .free-text-editor__content td,
+.free-text-editor--app .free-text-editor__content th {
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  color: var(--foreground) !important;
+  background: var(--background) !important;
+}
+
+.free-text-editor--app .free-text-editor__content th {
+  background: var(--muted) !important;
+  color: var(--muted-foreground) !important;
+  font-weight: 500;
+  text-align: left;
+}
+
+.free-text-editor--app .free-text-editor__content tr > :last-child {
+  border-right: 0;
+}
+
+.free-text-editor--app .free-text-editor__content tr:last-child > * {
+  border-bottom: 0;
+}

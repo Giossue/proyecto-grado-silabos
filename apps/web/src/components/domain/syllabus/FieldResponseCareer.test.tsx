@@ -33,7 +33,7 @@ const mountWith = (props: Props) => {
 }
 const mountSetup = (source: DocumentNode, value: DocumentNode | null = null, disabled = false) => mountWith({ id: "campo", label: "Métodos", template: source, value, career: true, disabled })
 const kinds = (): HTMLButtonElement[] => [...document.querySelectorAll<HTMLButtonElement>('[role="radio"]')]
-const spaceButtons = (container: HTMLElement): HTMLButtonElement[] => [...container.querySelectorAll<HTMLButtonElement>('button[aria-label="Espacio para el docente"]')]
+const spaceButtons = (container: HTMLElement): HTMLButtonElement[] => [...container.querySelectorAll<HTMLButtonElement>('button[aria-label="Configurar campo"]')]
 const openSpace = async (container: HTMLElement, index: number): Promise<void> => {
   fireEvent.click(spaceButtons(container)[index]!)
   await flush()
@@ -82,7 +82,7 @@ describe("El coordinador edita en un solo editor todo el campo Editable", () => 
   it("al poner un espacio entrega el documento entero, con el texto de la plantilla", async () => {
     const { container, last } = mountSetup(template())
     await editorReady(container)
-    fireEvent.click(container.querySelector('[role="toolbar"] button[aria-label="Espacio para el docente"]')!)
+    fireEvent.click(container.querySelector('[role="toolbar"] button[aria-label="Configurar campo"]')!)
     await flush()
     await pick("Elegir una")
 
@@ -95,7 +95,7 @@ describe("El coordinador edita en un solo editor todo el campo Editable", () => 
     const { container, last } = mountSetup({ type: "doc", content: [{ type: "paragraph" }] })
     await flush()
     await vi.waitFor(() => expect(container.querySelector('[aria-label="Negrita"]')).not.toBeNull())
-    fireEvent.click(container.querySelector('[role="toolbar"] button[aria-label="Espacio para el docente"]')!)
+    fireEvent.click(container.querySelector('[role="toolbar"] button[aria-label="Configurar campo"]')!)
     await flush()
     expect(checkedKinds()).toEqual([])
     expect(document.body.textContent).not.toContain("solo responde")
@@ -116,7 +116,7 @@ describe("El coordinador edita en un solo editor todo el campo Editable", () => 
     const { container } = mountSetup(template(), null, true)
     await editorReady(container)
     expect(content(container).getAttribute("contenteditable")).toBe("false")
-    expect(container.querySelector<HTMLButtonElement>('[role="toolbar"] button[aria-label="Espacio para el docente"]')!.disabled).toBe(true)
+    expect(container.querySelector<HTMLButtonElement>('[role="toolbar"] button[aria-label="Configurar campo"]')!.disabled).toBe(true)
   })
 })
 
@@ -196,7 +196,7 @@ describe("El campo completo del coordinador admite un solo tipo de respuesta", (
     const view = mountSetup(blank, value)
     await flush()
     await vi.waitFor(() => expect(view.container.querySelector('[aria-label="Negrita"]')).not.toBeNull())
-    const tool = (): HTMLButtonElement => view.container.querySelector<HTMLButtonElement>('[role="toolbar"] button[aria-label="Espacio para el docente"]')!
+    const tool = (): HTMLButtonElement => view.container.querySelector<HTMLButtonElement>('[role="toolbar"] button[aria-label="Configurar campo"]')!
     const toggleTool = async (): Promise<void> => {
       fireEvent.click(tool())
       await flush()
