@@ -35,6 +35,14 @@ describe("Editor de documentos compartido", () => {
     expect(container.querySelector('[aria-label="Insertar dato del sistema"]')).not.toBeNull()
   })
 
+  it("keeps the text focused when a format button is pressed, so the next keystroke reaches the text", async () => {
+    const { container } = mountEditor(doc("Linea"))
+    await flush()
+    for (const label of ["Negrita", "Cursiva", "Subrayado", "Lista con viñetas", "Lista numerada", "Insertar tabla"]) {
+      expect(fireEvent.mouseDown(container.querySelector(`[aria-label="${label}"]`)!), label).toBe(false)
+    }
+  })
+
   it("actualiza el nombre accesible del contenido cuando cambia la etiqueta", async () => {
     const element = (label: string) => <FreeTextEditor id="libre" label={label} value={null} variables={variables} />
     const view = render(element("Contenido de Campo sin nombre"))

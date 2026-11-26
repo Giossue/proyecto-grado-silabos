@@ -104,7 +104,7 @@ function Separator() {
 function ToolButton({ label, pressed, disabled, onClick, children }: { label: string; pressed?: boolean; disabled: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <IconTooltip label={label}>
-      <Button type="button" variant="ghost" size="icon-sm" aria-label={label} aria-pressed={pressed} disabled={disabled} onClick={onClick}>
+      <Button type="button" variant="ghost" size="icon-sm" aria-label={label} aria-pressed={pressed} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={onClick}>
         {children}
       </Button>
     </IconTooltip>
