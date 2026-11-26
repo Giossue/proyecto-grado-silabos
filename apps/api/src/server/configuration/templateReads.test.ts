@@ -136,7 +136,7 @@ describe("GET admin/template/{template}/json", () => {
       })
       .join(",")
     const expected =
-      `{"$schema":"https://silabos.ueb.edu.ec/plantilla.schema.json","version":2,"response_policy":"protected",` +
+      `{"$schema":"https://silabos.ueb.edu.ec/plantilla.schema.json","response_policy":"protected",` +
       `"document":${JSON.stringify(definition.document)},"variables":${JSON.stringify(definition.variables)},"blocks":{${blocks}},` +
       `"required_sections":${JSON.stringify(definition.required_sections)},"library_sections":${JSON.stringify(definition.library_sections)},"teacher_fields":[],` +
       `"presets":${JSON.stringify(presets)},"sections":[${sections}]}`
@@ -146,7 +146,7 @@ describe("GET admin/template/{template}/json", () => {
     expect(response.status).toBe(200)
     const body = JSON.parse(response.text) as Record<string, unknown>
     const wanted = JSON.parse(expected) as Record<string, unknown>
-    expect(Object.keys(body)).toEqual(["$schema", "versión", "politica_respuestas", "documento", "variables", "tablas", "secciones_obligatorias", "secciones_biblioteca", "campos_docente", "contenidos_predefinidos", "secciones"])
+    expect(Object.keys(body)).toEqual(["$schema", "politica_respuestas", "documento", "variables", "tablas", "secciones_obligatorias", "secciones_biblioteca", "campos_docente", "contenidos_predefinidos", "secciones"])
     expect({ ...body, tablas: null }).toEqual({ ...templateInSpanish(wanted), tablas: null })
     const asImported = (payload: Record<string, unknown>) => new DraftRequest(prepareDraft(toRuntime(payload) as Record<string, unknown>), goldenTemplate().definition).definition()
     expect(asImported(wanted)).toEqual(asImported(body))

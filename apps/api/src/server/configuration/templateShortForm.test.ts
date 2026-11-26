@@ -346,13 +346,14 @@ describe("template styles live in document", () => {
 })
 
 describe("the whole template JSON in Spanish", () => {
-  const ROOT = ["$schema", "versión", "politica_respuestas", "documento", "variables", "tablas", "secciones_obligatorias", "secciones_biblioteca", "campos_docente", "contenidos_predefinidos", "secciones"]
+  const ROOT = ["$schema", "politica_respuestas", "documento", "variables", "tablas", "secciones_obligatorias", "secciones_biblioteca", "campos_docente", "contenidos_predefinidos", "secciones"]
 
   it("writes every key and enumerated value in Spanish, as in the agreed example", () => {
     const payload = exported()
 
     expect(Object.keys(payload)).toEqual(ROOT)
-    expect(payload["versión"]).toBe(2)
+    expect(payload).not.toHaveProperty("versión")
+    expect(payload).not.toHaveProperty("version")
     expect(payload.politica_respuestas).toBe("protegida")
     expect(payload.documento).toEqual({
       papel: "carta",

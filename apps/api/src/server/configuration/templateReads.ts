@@ -82,7 +82,6 @@ export function teacherPreviewOf(template: SyllabusTemplate): Response {
   }
 }
 
-const EXPORT_FORMAT_VERSION = 2
 
 function schemaUrl(request: Request): string {
   return `${requestRoot(request)}/plantilla.schema.json`
@@ -134,7 +133,6 @@ export function templateExport(request: Request, template: SyllabusTemplate, def
   const blocks = Object.fromEntries(Object.entries(definition.blocks).map(([kind, block]) => [kind, exportedBlock(kind, record(block), variables)]))
   return templateInSpanish({
     $schema: schemaUrl(request),
-    version: EXPORT_FORMAT_VERSION,
     ...(definition.response_policy === "protected" ? { response_policy: "protected" } : {}),
     document: definition.document,
     variables: definition.variables,

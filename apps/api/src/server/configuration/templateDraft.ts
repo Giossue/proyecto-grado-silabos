@@ -97,7 +97,8 @@ function definingErrors<T>(work: () => T): T {
 }
 
 export function prepareDraft(raw: PhpRecord): PhpRecord {
-  const input = templateFromAnyLanguage(raw)
+  const translated = templateFromAnyLanguage(raw)
+  const input = "version" in translated ? translated : { version: FORMAT_VERSION, ...translated }
   const sections = input.sections
   if (!isPhpArray(sections)) return input
   const prepared = entries(sections).map(([index, section]): [string, unknown] => {

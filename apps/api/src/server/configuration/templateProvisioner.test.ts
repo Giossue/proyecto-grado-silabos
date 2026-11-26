@@ -191,6 +191,8 @@ describe("PUT /api/v1/admin/template/{template}/json", () => {
     const put = async (body: unknown) => read(await importTemplateJson(send("PUT", `/api/v1/admin/template/${TEMPLATE_ID}/json`, body), TEMPLATE_ID, deps()))
 
     expect(await put(spanish)).toEqual({ status: 200, text: '{"message":"Plantilla importada desde el JSON."}' })
+    const { "versión": _ignored, ...withoutVersion } = spanish
+    expect(await put(withoutVersion)).toEqual({ status: 200, text: '{"message":"Plantilla importada desde el JSON."}' })
     expect(documents.at(-1)?.[0]).toMatchObject({ key: "datos", title: "Datos", orientation: "landscape" })
 
     const wrongVersion = await put({ ...spanish, "versión": 3 })

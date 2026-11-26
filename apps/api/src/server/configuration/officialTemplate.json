@@ -1,6 +1,5 @@
 {
     "$schema": "./plantilla.schema.json",
-    "versión": 2,
     "politica_respuestas": "protegida",
     "documento": {
         "papel": "carta",

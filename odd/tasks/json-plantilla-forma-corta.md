@@ -143,3 +143,9 @@ Goal: the template JSON (Admin → Plantilla → Opciones avanzadas → Editar J
   - Only other reader of the JSON: `templateProvisioner.test.ts` (now `secciones`/`clave`/`campos`). Seeding, the provisioner, `snapshotDocuments`, `templateStore` and the AI tools use `officialDefinition`/`officialSections`, whose outputs are unchanged; no AI resource reads the seed.
   - Not changed (outside the edit surface): `docs/sistema.md` still says the rule names are «tomadas de `officialTemplate.json`»; they now come from `ruleCatalog.json`.
   - Checks: api vitest 160 files/2369 tests; api tsc 0 errors; web configuration and admin/plantilla 12 files/102 tests.
+- L14 (2026-11-26) — T5 committed 4fbdbdc. User: «podemos quitar lo de versiones, porque no le veo utilidad». Done inline:
+  - the export and the seed no longer write `versión`;
+  - `prepareDraft` defaults a missing version to the full format 2, so the builder and the AI, which always send version 1, are unchanged;
+  - JSON files carrying `versión: 2` keep importing, and 3 is still rejected;
+  - the schema no longer requires it.
+  RED: 3 tests; GREEN: API 2369/2369.
