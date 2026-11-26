@@ -152,7 +152,7 @@ export function parallelsSchema({ subjectExists, userExists }: { subjectExists?:
       subject_id: requiredField("materia", [is.uuid(), ...(subjectExists ? [is.existing(subjectExists)] : [])]),
       codes: requiredField("códigos de paralelo", [is.array(), is.min(1), is.max(PARALLEL_CODES_MAX)]),
       shift: requiredField("jornada", [is.string(), is.oneOf(SHIFTS)]),
-      user_id: requiredField("usuario", [is.uuid(), ...(userExists ? [is.existing(userExists, "Elija un docente activo con el correo verificado.")] : [])], {
+      user_id: requiredField("usuario", [is.uuid(), ...(userExists ? [is.existing(userExists, "Elija un docente activo.")] : [])], {
         requiredMessage: "Seleccione el docente del paralelo.",
       }),
     })

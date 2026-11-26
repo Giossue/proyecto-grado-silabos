@@ -209,7 +209,7 @@ export async function coordinatorSetup(careerId: string | null, readiness: Coord
       step(
         "teachers",
         "Registrar a los docentes",
-        "Cree sus cuentas. Cada docente debe activar la suya antes de poder asignarlo a un paralelo.",
+        "Cree sus cuentas. Puede asignarles paralelos aunque todavía no hayan activado la suya.",
         await setup.careerHasActiveTeacher(careerId),
       ),
       step(

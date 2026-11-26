@@ -21,7 +21,7 @@ const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i
 const OPEN_MALLA = Prisma.sql`exists (select mallas.malla_id from mallas where mallas.malla_id = asignaturas.malla_id and mallas.estado_malla <> ${"cerrada"})`
 
 const ACTIVE_ASSIGNMENT = (parallelId: string) => Prisma.sql`asignaciones_paralelo.paralelo_id = ${parallelId}::uuid and asignaciones_paralelo.asignacion_paralelo_activa = true`
-const ELIGIBLE_USER = Prisma.sql`usuarios.usuario_activo = true and usuarios.correo_verificado_en is not null`
+const ELIGIBLE_USER = Prisma.sql`usuarios.usuario_activo = true`
 const SUBJECT_IN_MALLA = (subject: Prisma.Sql, mallaId: string) =>
   Prisma.sql`exists (select asignaturas.asignatura_id from asignaturas where asignaturas.asignatura_id = ${subject} and asignaturas.malla_id = ${mallaId}::uuid)`
 const SUBJECT_SELECTION = Prisma.sql`asignaturas.codigo_asignatura, asignaturas.nombre_asignatura, asignaturas.ciclo_asignatura,

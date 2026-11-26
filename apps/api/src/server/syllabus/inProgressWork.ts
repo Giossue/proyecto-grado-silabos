@@ -686,7 +686,7 @@ export class InProgressWork {
           (select count(*)::int from asignaciones_paralelo asignacion where asignacion.paralelo_id = paralelo.paralelo_id and asignacion.asignacion_paralelo_activa = true
             and exists (select 1 from asignaciones_rol rol where rol.asignacion_rol_id = asignacion.asignacion_rol_id and rol.asignacion_rol_activa = true
               and rol.rol = 'docente' and rol.carrera_id = ${careerId}::uuid
-              and exists (select 1 from usuarios usuario where usuario.usuario_id = rol.usuario_id and usuario.usuario_activo = true and usuario.correo_verificado_en is not null))) as teachers
+              and exists (select 1 from usuarios usuario where usuario.usuario_id = rol.usuario_id and usuario.usuario_activo = true))) as teachers
         from paralelos paralelo
           inner join asignaturas asignatura on asignatura.asignatura_id = paralelo.asignatura_id
           inner join carreras carrera on carrera.carrera_id = asignatura.carrera_id

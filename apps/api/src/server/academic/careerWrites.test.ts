@@ -365,10 +365,10 @@ describe("POST /api/v1/coordination/academic/asignacion_docente", () => {
     expect(grants.filter((grant) => grant.userId === golden.userId && grant.role === "docente").map((grant) => grant.active)).toEqual([false])
   })
 
-  it("refuses a teacher without a verified role in the career and an institutional coordinator", async () => {
+  it("refuses a person who is not an active teacher of the career and an institutional coordinator", async () => {
     grants[0].eligible = false
     expect((await create("asignacion_docente", { user_id: TEACHER, parallel_id: PARALLEL })).json?.errors).toEqual({
-      user_id: ["El docente debe verificar su correo antes de recibir una asignación."],
+      user_id: ["La persona no es docente activo de esta carrera. Revise «Docentes»."],
     })
     grants.push({ id: "01a2bbbb-0000-7000-8000-000000000001", userId: golden.userId, careerId: "", role: "administrador", active: true, eligible: true })
     expect((await create("asignacion_docente", { user_id: golden.userId, parallel_id: PARALLEL })).json?.errors).toEqual({
@@ -474,7 +474,7 @@ describe("POST /api/v1/coordination/academic/parallels", () => {
     expect((await storeParallels({ subject_id: SUBJECT, codes: [], shift: "noche", user_id: "01a2cccc-0000-7000-8000-000000000001" })).json?.errors).toEqual({
       codes: ["El campo códigos de paralelo es obligatorio."],
       shift: ["El valor seleccionado en jornada no es válido."],
-      user_id: ["Elija un docente activo con el correo verificado."],
+      user_id: ["Elija un docente activo."],
     })
     expect((await storeParallels({ subject_id: SUBJECT, codes: ["a", "Z"], shift: "matutina", user_id: TEACHER })).json?.errors).toEqual({
       codes: ["Ya existe el paralelo A para esta materia."],
@@ -485,7 +485,7 @@ describe("POST /api/v1/coordination/academic/parallels", () => {
   it("a teacher of another career rolls back the parallels", async () => {
     grants[0].careerId = OTHER_CAREER
     expect((await storeParallels({ subject_id: SUBJECT, codes: ["B", "C"], shift: "matutina", user_id: TEACHER })).json?.errors).toEqual({
-      user_id: ["El docente debe verificar su correo antes de recibir una asignación."],
+      user_id: ["La persona no es docente activo de esta carrera. Revise «Docentes»."],
     })
     expect(log.at(-1)).toBe("rollback")
   })

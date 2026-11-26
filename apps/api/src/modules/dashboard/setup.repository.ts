@@ -54,7 +54,7 @@ export class PrismaSetupRepository implements SetupRepository {
 
   async careerHasActiveTeacher(careerId: string): Promise<boolean> {
     const teacher = await this.prisma.asignaciones_rol.findFirst({
-      where: { asignacion_rol_activa: true, rol: "docente", carrera_id: careerId, usuarios: { is: { usuario_activo: true, correo_verificado_en: { not: null } } } },
+      where: { asignacion_rol_activa: true, rol: "docente", carrera_id: careerId, usuarios: { is: { usuario_activo: true } } },
       select: { asignacion_rol_id: true },
     })
     return teacher !== null

@@ -179,6 +179,8 @@ export function accountTx(db: Db): AccountTx {
     deleteSessions: (userId) => db.$executeRaw`delete from "sesiones_usuario" where "sesiones_usuario"."user_id" = ${userId}`,
     async hasActivity(userId) {
       const traces = [
+        // Notices cannot be deleted (trigger proteger_notificacion), so an account with any is kept.
+        () => Prisma.sql`select "notificacion_id" from "notificaciones" where "notificaciones"."usuario_id" = ${userId}`,
         () => Prisma.sql`select "asignacion_paralelo_id" from "asignaciones_paralelo" where "asignaciones_paralelo"."asignacion_rol_id" in ${grantsOf(userId)}`,
         () => Prisma.sql`select "revision_silabo_id" from "revisiones_silabo" where "revisiones_silabo"."enviado_por" = ${userId}`,
         () => Prisma.sql`select "exportacion_silabo_id" from "exportaciones_silabo" where "exportaciones_silabo"."solicitado_por" = ${userId}`,
@@ -189,7 +191,6 @@ export function accountTx(db: Db): AccountTx {
       return false
     },
     async purgeAccount(userId) {
-      await db.$executeRaw`delete from "notificaciones" where "notificaciones"."usuario_id" = ${userId}`
       await db.$executeRaw`delete from "sesiones_usuario" where "sesiones_usuario"."user_id" = ${userId}`
       await db.$executeRaw`delete from "asignaciones_rol" where "asignaciones_rol"."usuario_id" = ${userId}`
       await db.$executeRaw`delete from "usuarios" where "usuarios"."usuario_id" = ${userId}`

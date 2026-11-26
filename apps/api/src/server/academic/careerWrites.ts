@@ -207,7 +207,7 @@ async function teacherRole(tx: CareerWriteTx, userId: string, careerId: string):
     else if (!grant.active) throw invalid("user_id", "El docente está inactivo en esta carrera. Reactívelo en Docentes antes de asignarle un paralelo.")
   }
   const roleId = await tx.eligibleTeacherRole(userId, careerId)
-  if (roleId === null) throw invalid("user_id", "El docente debe verificar su correo antes de recibir una asignación.")
+  if (roleId === null) throw invalid("user_id", "La persona no es docente activo de esta carrera. Revise «Docentes».")
   return roleId
 }
 

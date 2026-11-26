@@ -234,7 +234,6 @@ export class AcademicStructurePrismaRepository implements AcademicStructureRepos
     const found = await this.prisma.usuarios.findMany({
       where: {
         usuario_activo: true,
-        correo_verificado_en: { not: null },
         OR: [
           { asignaciones_rol: { some: roleScope(careerId, ["docente"]) } },
           // A coordinator may teach without the teacher role yet, unless it was deactivated here.

@@ -7,7 +7,7 @@ const CAREER = "01a1c5bc-0000-7000-8000-0000000000c1"
 const user = (id: string) => ({ id, name: id, email: `${id}@ueb.edu.ec`, verified: true, invited: false })
 
 describe("teacherUsers", () => {
-  it("offers active teachers and coordinators who were never deactivated as teachers here", async () => {
+  it("offers active teachers, even before they activate the account, and coordinators never deactivated as teachers", async () => {
     const findMany = vi.fn(async () => [{ usuario_id: "u", nombre_usuario: "Ana", correo_electronico: "ana@ueb.edu.ec" }])
     const repository = new AcademicStructurePrismaRepository({ usuarios: { findMany } } as unknown as PrismaService)
 
@@ -18,7 +18,6 @@ describe("teacherUsers", () => {
       expect.objectContaining({
         where: {
           usuario_activo: true,
-          correo_verificado_en: { not: null },
           OR: [
             { asignaciones_rol: active("docente") },
             { AND: [{ asignaciones_rol: active("coordinador") }, { asignaciones_rol: { none: { carrera_id: CAREER, rol: "docente" } } }] },

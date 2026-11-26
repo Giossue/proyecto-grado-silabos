@@ -71,7 +71,6 @@ export function TeacherSelect({ teachers, label, value, onValueChange, id, requi
             </CommandGroup>
           </CommandList>
         </Command>
-        <p className="border-t px-3 py-2 text-xs text-muted-foreground">Solo aparecen los docentes que ya activaron su cuenta</p>
       </PopoverContent>
     </Popover>
   )

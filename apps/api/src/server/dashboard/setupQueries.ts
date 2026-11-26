@@ -13,7 +13,7 @@ const PROCESS_ALIVE = Prisma.sql`exists (select convocatorias_universidad.convoc
 
 function activeTeacher(careerId: string): Prisma.Sql {
   return Prisma.sql`asignaciones_rol.asignacion_rol_activa = true and asignaciones_rol.rol = 'docente' and asignaciones_rol.carrera_id = ${careerId}::uuid
-    and usuarios.usuario_activo = true and usuarios.correo_verificado_en is not null`
+    and usuarios.usuario_activo = true`
 }
 
 async function total(query: PromiseLike<{ total: number }[]>): Promise<number> {

@@ -114,10 +114,10 @@ describe("TeacherSelect", () => {
     expect(options()).toHaveLength(2)
   })
 
-  it("explica que solo aparecen los docentes que ya activaron su cuenta", async () => {
+  it("no dice que haga falta activar la cuenta para aparecer", async () => {
     renderWithProviders(<Harness onChange={vi.fn()} />)
     await open()
 
-    expect(document.body.textContent).toContain("Solo aparecen los docentes que ya activaron su cuenta")
+    expect(document.body.textContent).not.toContain("activaron su cuenta")
   })
 })
