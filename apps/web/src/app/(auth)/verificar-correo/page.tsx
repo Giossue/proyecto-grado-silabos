@@ -32,10 +32,11 @@ export default function VerifyEmailPage() {
   }
 
   const closeSession = async (): Promise<void> => {
-    await logout()
+    const result = await logout()
     sessionState.clear()
     clearIntendedRoute()
-    router.replace(paths.login)
+    if (result?.logout_url) window.location.assign(result.logout_url)
+    else router.replace(paths.login)
   }
 
   return (
