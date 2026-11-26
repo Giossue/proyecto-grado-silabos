@@ -143,11 +143,11 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 - **Límites de intentos:** guardados en Redis, con las cabeceras `X-RateLimit-*`.
 - **Documentación:** Swagger UI en `/api/docs` y el documento OpenAPI en `/api/docs-json` (puerto de la API). Muestra todas las rutas de la API.
 
-**124 endpoints** en total.
+**121 endpoints** en total.
 
 | Área | Endpoints | Qué cubre |
 |---|---|---|
-| `authentication` | 11 | Ingreso y salida, activación de cuenta, recuperar y restablecer contraseña por correo, perfil, accesibilidad, sesiones abiertas |
+| `authentication` | 8 | Ingreso y salida, activación de cuenta, recuperar y restablecer contraseña por correo, perfil y accesibilidad |
 | `session`, `active-role` | 2 | Sesión actual y cambio de rol o carrera activa |
 | `admin` | 43 | Facultades, carreras y períodos (con importación desde Excel), usuarios y roles (con importación), procesos del período (abrir, pausar, reanudar, prórroga, impacto, finalizar), ajustes del sistema (correo, IA, catálogo, firmas), plantilla (estructura, campos, bloques, formato, logo, vista previa del docente, JSON) y asistente de IA |
 | `coordination` | 35 | Malla (asignaturas, requisitos, disposición, configuración, importación), materias programadas, paralelos y asignación docente, docentes (con importación), periodo académico de la carrera, proyecto de carrera (ficha en Excel), revisiones (comparar versiones, pedir corrección, aprobar con firma), historial y documentos de apoyo |

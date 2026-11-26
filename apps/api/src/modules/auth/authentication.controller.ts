@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, HttpCode, Inject, Optional, Param, Post, Put, Req } from "@nestjs/common"
+import { Controller, HttpCode, Inject, Optional, Post, Put, Req } from "@nestjs/common"
 import {
   ApiAcceptedResponse,
   ApiBadRequestResponse,
@@ -9,7 +9,6 @@ import {
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
@@ -21,13 +20,11 @@ import type { ApiRequest } from "../../common/http/web-request"
 import type { WebReply } from "../../common/http/web-reply"
 import { login, logout } from "../../server/identity/authentication"
 import { activateAccount, resetPassword, sendResetLink } from "../../server/identity/passwordRecovery"
-import { destroyOtherSessions, destroySession, resendOwnActivation, updateAccessibility, updateProfile } from "../../server/identity/selfService"
-import { activeSessions } from "../../server/identity/sessions"
+import { resendOwnActivation, updateAccessibility, updateProfile } from "../../server/identity/selfService"
 import {
   AccessibilityDto,
   AccountActivationDto,
   LoginDto,
-  PasswordConfirmationDto,
   PasswordResetDto,
   ProfileDto,
   RecoveryLinkDto,
@@ -139,36 +136,5 @@ export class AuthenticationController {
   @ApiUnprocessableEntityResponse(VALIDATION)
   updateAccessibility(@Req() request: ApiRequest): Promise<WebReply> {
     return identityReply(request, (web) => updateAccessibility(web, this.deps.set.writes))
-  }
-
-  @Get("sessions")
-  @ApiCookieAuth(SESSION_COOKIE)
-  @ApiOperation({ summary: "Lista las sesiones abiertas de la cuenta." })
-  @ApiOkResponse({ description: "Sesiones con dispositivo, IP, última actividad y cuál es la actual." })
-  @ApiUnauthorizedResponse(GUEST)
-  sessions(@Req() request: ApiRequest): Promise<WebReply> {
-    return identityReply(request, (web) => activeSessions(web, this.deps.set.activeSessions))
-  }
-
-  @Delete("sessions/others")
-  @ApiCookieAuth(SESSION_COOKIE)
-  @ApiOperation({ summary: "Cierra las demás sesiones tras confirmar la contraseña actual." })
-  @ApiBody({ type: PasswordConfirmationDto })
-  @ApiOkResponse({ description: "Número de sesiones cerradas." })
-  @ApiUnauthorizedResponse(GUEST)
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  destroyOtherSessions(@Req() request: ApiRequest): Promise<WebReply> {
-    return identityReply(request, (web) => destroyOtherSessions(web, this.deps.set.writes))
-  }
-
-  @Delete("sessions/:session")
-  @ApiCookieAuth(SESSION_COOKIE)
-  @ApiParam({ name: "session" })
-  @ApiOperation({ summary: "Cierra una sesión distinta de la actual." })
-  @ApiOkResponse({ description: "Sesión cerrada.", type: MessageDto })
-  @ApiUnauthorizedResponse(GUEST)
-  @ApiUnprocessableEntityResponse({ description: "La sesión actual se cierra desde «Cerrar sesión».", type: MessageDto })
-  destroySession(@Req() request: ApiRequest, @Param("session") session: string): Promise<WebReply> {
-    return identityReply(request, (web) => destroySession(web, session, this.deps.set.writes))
   }
 }

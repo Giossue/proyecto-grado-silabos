@@ -17,14 +17,13 @@ import { createRateLimiter, type RateLimiter } from "../../server/http/throttle"
 import { leaveActiveRole, login, logout, selectActiveRole, type AuthenticationDeps, type CredentialStore } from "../../server/identity/authentication"
 import { activateAccount, resetPassword, sendResetLink, type Invitation, type RecoveryDeps, type RecoveryRepository, type RecoveryStore } from "../../server/identity/passwordRecovery"
 import { showSession, type ProfileRepository, type SessionDeps } from "../../server/identity/session"
-import { activeSessions, type ActiveSessionDeps, type ActiveSessionStore } from "../../server/identity/sessions"
 import type { QueuedMail } from "../../server/mail/mailables"
 import { FallbackModule } from "../fallback/fallback.module"
 import { AuthModule } from "./auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "./auth.tokens"
 import { contentHeaders, cookieHeader, jarWith, live, nestRaw, normalizedCookie, rawOf, served, webRequest, type Call, type Raw } from "./identity-equivalence.testing"
 import { IDENTITY_RUNTIME, type IdentityRuntime } from "./identity.runtime"
-import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY } from "./identity.tokens"
+import { ACCOUNT_REPOSITORY, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY } from "./identity.tokens"
 
 const USER = "0193a3c2-1111-7000-8000-000000000001"
 const UNVERIFIED = "0193a3c2-1111-7000-8000-000000000002"
@@ -48,7 +47,6 @@ type State = {
   attempts: AttemptLimiter
   runtime: IdentityRuntime
   profiles: ProfileRepository
-  activeSessions: ActiveSessionStore
   credentials: CredentialStore
   recovery: RecoveryRepository
   passwords: Record<string, string>
@@ -88,12 +86,6 @@ async function freshState(): Promise<State> {
       if (!row) return null
       return { name: String(row.name), email: String(row.email), accessibility: null }
     },
-  }
-  state.activeSessions = {
-    sessions: async (id) =>
-      world.db.session
-        .filter((row) => row.userId === id)
-        .map((row) => ({ id: String(row.id), ip: (row.ipAddress as string | null) ?? null, agent: (row.userAgent as string | null) ?? null, lastActivity: NOW })),
   }
   state.credentials = {
     findActiveUserByEmail: async (email) => {
@@ -162,7 +154,6 @@ function legacyDeps(state: State) {
     dummyHash: runtime.dummyHash,
   }
   const session: SessionDeps = { bridge, profiles: state.profiles, today: runtime.today, timezone: runtime.timezone }
-  const sessions: ActiveSessionDeps = { bridge, store: state.activeSessions }
   const recovery: RecoveryDeps = {
     runtime: runtimeOf(bridge),
     store: state.recovery,
@@ -173,7 +164,7 @@ function legacyDeps(state: State) {
     production: runtime.production,
     sendMail: runtime.sendMail,
   }
-  return { authentication, session, sessions, recovery }
+  return { authentication, session, recovery }
 }
 
 const ROUTES: [string, string, (web: Request, deps: ReturnType<typeof legacyDeps>) => Promise<Response>][] = [
@@ -182,7 +173,6 @@ const ROUTES: [string, string, (web: Request, deps: ReturnType<typeof legacyDeps
   ["POST", "/api/v1/authentication/account-activation", (web, deps) => activateAccount(web, deps.recovery)],
   ["POST", "/api/v1/authentication/password-recovery", (web, deps) => sendResetLink(web, deps.recovery)],
   ["POST", "/api/v1/authentication/password-reset", (web, deps) => resetPassword(web, deps.recovery)],
-  ["GET", "/api/v1/authentication/sessions", (web, deps) => activeSessions(web, deps.sessions)],
   ["GET", "/api/v1/session", (web, deps) => showSession(web, deps.session)],
   ["PUT", "/api/v1/active-role", (web, deps) => selectActiveRole(web, deps.authentication)],
   ["DELETE", "/api/v1/active-role", (web, deps) => leaveActiveRole(web, deps.authentication)],
@@ -288,8 +278,6 @@ beforeAll(async () => {
     .useValue(live(() => state.runtime))
     .overrideProvider(PROFILE_REPOSITORY)
     .useValue(live(() => state.profiles))
-    .overrideProvider(ACTIVE_SESSION_STORE)
-    .useValue(live(() => state.activeSessions))
     .overrideProvider(CREDENTIAL_STORE)
     .useValue(live(() => state.credentials))
     .overrideProvider(RECOVERY_REPOSITORY)
@@ -307,7 +295,7 @@ afterAll(async () => {
 })
 
 describe("identity routes served by Nest answer exactly like the route handlers they replace", () => {
-  it("signs in, shows the session, switches and leaves the role, lists the sessions and signs out", async () => {
+  it("signs in, shows the session, switches and leaves the role and signs out", async () => {
     const answers = await expectSame(async (client) => {
       await client.send(signIn())
       await client.send({ method: "GET", path: "/api/v1/session" })
@@ -315,12 +303,11 @@ describe("identity routes served by Nest answer exactly like the route handlers 
       await client.send({ method: "PUT", path: "/api/v1/active-role", body: { role_assignment_id: "0193a3c2-9999-7000-8000-000000000009" } })
       await client.send({ method: "PUT", path: "/api/v1/active-role", body: {} })
       await client.send({ method: "DELETE", path: "/api/v1/active-role" })
-      await client.send({ method: "GET", path: "/api/v1/authentication/sessions" })
       await client.send({ method: "POST", path: "/api/v1/authentication/logout" })
       await client.send({ method: "GET", path: "/api/v1/session" })
       await client.send({ method: "POST", path: "/api/v1/authentication/logout" })
     })
-    expect(answers.map((answer) => answer.status)).toEqual([200, 200, 200, 404, 422, 200, 200, 204, 401, 401])
+    expect(answers.map((answer) => answer.status)).toEqual([200, 200, 200, 404, 422, 200, 204, 401, 401])
     expect(answers[0].cookies.some((cookie) => cookie.startsWith("silabos-ueb.session_token=<value>"))).toBe(true)
   })
 
@@ -351,14 +338,13 @@ describe("identity routes served by Nest answer exactly like the route handlers 
     const answers = await expectSame(async (client) => {
       await client.send({ method: "GET", path: "/api/v1/session" })
       await client.send({ method: "PUT", path: "/api/v1/active-role", body: { role_assignment_id: ROLE } })
-      await client.send({ method: "GET", path: "/api/v1/authentication/sessions" })
       await client.send(signIn(UNVERIFIED_EMAIL))
       await client.send({ method: "GET", path: "/api/v1/session" })
       await client.send({ method: "PUT", path: "/api/v1/active-role", body: { role_assignment_id: UNVERIFIED_ROLE } })
       await client.send({ method: "DELETE", path: "/api/v1/active-role" })
       await client.send({ method: "GET", path: "/api/v1/session", origin: null })
     })
-    expect(answers.map((answer) => answer.status)).toEqual([401, 401, 401, 200, 200, 403, 403, 401])
+    expect(answers.map((answer) => answer.status)).toEqual([401, 401, 200, 200, 403, 403, 401])
   })
 
   it("signs in a user who had confirmed two-factor authentication in one step, the same way", async () => {
@@ -379,6 +365,9 @@ describe("identity routes served by Nest answer exactly like the route handlers 
     ["POST", "/api/v1/authentication/two-factor/confirm"],
     ["POST", "/api/v1/authentication/two-factor/recovery-codes"],
     ["POST", "/api/v1/authentication/two-factor/challenge"],
+    ["GET", "/api/v1/authentication/sessions"],
+    ["DELETE", "/api/v1/authentication/sessions/others"],
+    ["DELETE", "/api/v1/authentication/sessions/abc"],
   ])("answers the removed %s %s with 404 like any unknown route", async (method, path) => {
     const answers = await expectSame(async (client) => {
       await client.send(signIn())

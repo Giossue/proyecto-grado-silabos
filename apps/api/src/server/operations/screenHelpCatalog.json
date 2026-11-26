@@ -5,7 +5,7 @@
     },
     "/admin/configuracion/seguridad": {
         "title": "Seguridad",
-        "content": "Si no recuerda su contraseña, pida un enlace por correo para crear otra.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y restablezca la contraseña."
+        "content": "Si no recuerda su contraseña, pida un enlace por correo para crear otra. Al cambiarla, se cierra la sesión en todos los dispositivos."
     },
     "/admin/configuracion/sistema": {
         "title": "Sistema",
@@ -45,7 +45,7 @@
     },
     "/biblioteca/configuracion/seguridad": {
         "title": "Seguridad",
-        "content": "Si no recuerda su contraseña, pida un enlace por correo para crear otra.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y restablezca la contraseña."
+        "content": "Si no recuerda su contraseña, pida un enlace por correo para crear otra. Al cambiarla, se cierra la sesión en todos los dispositivos."
     },
     "/biblioteca/historial": {
         "title": "Historial de biblioteca",
@@ -73,7 +73,7 @@
     },
     "/coordinacion/configuracion/seguridad": {
         "title": "Seguridad",
-        "content": "Si no recuerda su contraseña, pida un enlace por correo para crear otra.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y restablezca la contraseña."
+        "content": "Si no recuerda su contraseña, pida un enlace por correo para crear otra. Al cambiarla, se cierra la sesión en todos los dispositivos."
     },
     "/coordinacion/docentes": {
         "title": "Docentes de la carrera",
@@ -129,7 +129,7 @@
     },
     "/docente/configuracion/seguridad": {
         "title": "Seguridad",
-        "content": "Si no recuerda su contraseña, pida un enlace por correo para crear otra.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y restablezca la contraseña."
+        "content": "Si no recuerda su contraseña, pida un enlace por correo para crear otra. Al cambiarla, se cierra la sesión en todos los dispositivos."
     },
     "/docente/documentos-apoyo": {
         "title": "Documentos de apoyo",

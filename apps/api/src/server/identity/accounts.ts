@@ -49,8 +49,7 @@ export interface AccountTx {
   invalidateInvitations(userId: string, now: number): Promise<void>
   insertInvitation(invitation: { userId: string; hash: string; expiresAt: number; issuerId: string; createdAt: number }): Promise<void>
   latestInvitationIssuer(userId: string): Promise<Account | null>
-  deleteSessions(userId: string, exceptId: string | null): Promise<number>
-  deleteSession(id: string, userId: string): Promise<void>
+  deleteSessions(userId: string): Promise<number>
   hasActivity(userId: string): Promise<boolean>
   purgeAccount(userId: string): Promise<void>
   careerLocked(careerId: string): Promise<boolean>
@@ -169,8 +168,8 @@ export async function createManagedUser(ctx: ActionContext, data: NewAccount): P
   return user
 }
 
-export async function revokeSessions(ctx: Pick<ActionContext, "tx">, userId: string, exceptId: string | null): Promise<number> {
-  return ctx.tx.deleteSessions(userId, exceptId)
+export async function revokeSessions(ctx: Pick<ActionContext, "tx">, userId: string): Promise<number> {
+  return ctx.tx.deleteSessions(userId)
 }
 
 async function ensureMayDeactivate(ctx: ActionContext, target: { id: string }): Promise<void> {
@@ -188,7 +187,7 @@ export async function setUserStatus(ctx: ActionContext, target: { id: string }, 
   if (!active) await ensureMayDeactivate(ctx, target)
   await ctx.tx.setActive(target.id, active)
   if (!active) {
-    await revokeSessions(ctx, target.id, null)
+    await revokeSessions(ctx, target.id)
     await ctx.tx.closeParallelAssignments(target.id)
     for (const coordination of await ctx.tx.lockEffectiveCoordinations(target.id)) await ctx.tx.setGrantActive(coordination.id, false)
   }
@@ -220,7 +219,7 @@ export async function removeUserRole(ctx: ActionContext, target: { id: string },
     for (const id of await ctx.tx.lockActiveParallelAssignments(assignment.id)) await ctx.tx.deleteParallelAssignment(id)
   }
   await ctx.tx.setGrantActive(assignment.id, false)
-  await ctx.tx.deleteSessions(target.id, null)
+  await ctx.tx.deleteSessions(target.id)
 }
 
 export async function deleteManagedUser(ctx: ActionContext, target: { id: string }): Promise<void> {
@@ -283,7 +282,7 @@ export async function removeCareerTeacher(ctx: ActionContext, target: { id: stri
   for (const id of parallels) await tx.deleteParallelAssignment(id)
   await tx.setGrantActive(grant.id, false)
   if ((await tx.effectiveRoles(target.id)).length === 0) {
-    await revokeSessions(ctx, target.id, null)
+    await revokeSessions(ctx, target.id)
     await tx.invalidateInvitations(target.id, ctx.now)
   }
   return parallels.length

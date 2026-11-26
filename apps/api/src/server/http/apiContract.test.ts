@@ -60,8 +60,8 @@ function samplePaths(route: ApiRoute): string[][] {
 describe("API contract", () => {
   const rows = API_ROUTES.flatMap((route) => route.methods.map((method) => ({ method, route })))
 
-  it("is the committed route list, without the audit, report, two-factor, password change and teacher formation routes removed from the system", () => {
-    expect(rows.length).toBe(194)
+  it("is the committed route list, without the audit, report, two-factor, password change, teacher formation and open sessions routes removed from the system", () => {
+    expect(rows.length).toBe(190)
     expect(REMOVED_ROUTES.filter((uri) => API_ROUTES.some((route) => route.uri === uri))).toEqual([])
   })
 

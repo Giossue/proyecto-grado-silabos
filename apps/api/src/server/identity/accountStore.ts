@@ -179,13 +179,7 @@ export function accountTx(db: Db): AccountTx {
       if (!row || row.issuerId === null) return null
       return first<Account>(db, Prisma.sql`${ACCOUNT} where "usuarios"."usuario_id" = ${row.issuerId} limit ${1}`)
     },
-    deleteSessions: (userId, exceptId) =>
-      exceptId === null
-        ? db.$executeRaw`delete from "sesiones_usuario" where "sesiones_usuario"."user_id" = ${userId}`
-        : db.$executeRaw`delete from "sesiones_usuario" where ("sesiones_usuario"."user_id" = ${userId} and "sesiones_usuario"."id" <> ${exceptId})`,
-    async deleteSession(id, userId) {
-      await db.$executeRaw`delete from "sesiones_usuario" where ("sesiones_usuario"."id" = ${id} and "sesiones_usuario"."user_id" = ${userId})`
-    },
+    deleteSessions: (userId) => db.$executeRaw`delete from "sesiones_usuario" where "sesiones_usuario"."user_id" = ${userId}`,
     async hasActivity(userId) {
       const traces = [
         () => Prisma.sql`select "asignacion_paralelo_id" from "asignaciones_paralelo" where "asignaciones_paralelo"."asignacion_rol_id" in ${grantsOf(userId)}`,

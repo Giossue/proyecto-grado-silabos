@@ -76,24 +76,6 @@
   ],
   "expected": null
  },
- "sessions": {
-  "queries": [
-   {
-    "sql": "select id, ip_address, user_agent, extract(epoch from updated_at)::bigint as last_activity from sesiones_usuario where user_id = $1::uuid and expires_at > now() order by updated_at desc, id asc",
-    "params": [
-     "0193a3c2-1111-7000-8000-000000000001"
-    ]
-   }
-  ],
-  "expected": [
-   {
-    "id": "s-1",
-    "ip": "203.0.113.5",
-    "agent": "Firefox/1",
-    "lastActivity": 1800000000
-   }
-  ]
- },
  "findActiveUserByEmail": {
   "queries": [
    {

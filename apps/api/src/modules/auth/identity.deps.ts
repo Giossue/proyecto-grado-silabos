@@ -7,14 +7,12 @@ import type { IdentityWriteDeps } from "../../server/identity/accountWrites"
 import type { AuthenticationDeps, CredentialStore } from "../../server/identity/authentication"
 import type { RecoveryDeps, RecoveryRepository } from "../../server/identity/passwordRecovery"
 import type { ProfileRepository, SessionDeps } from "../../server/identity/session"
-import type { ActiveSessionDeps, ActiveSessionStore } from "../../server/identity/sessions"
 import { AUTH_BRIDGE, RATE_LIMITER } from "./auth.tokens"
 import { IDENTITY_RUNTIME, type IdentityRuntime } from "./identity.runtime"
-import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY } from "./identity.tokens"
+import { ACCOUNT_REPOSITORY, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY } from "./identity.tokens"
 
 export type IdentityStores = {
   profiles: ProfileRepository
-  activeSessions: ActiveSessionStore
   credentials: CredentialStore
   recovery: RecoveryRepository
   accounts: AccountRepository
@@ -22,7 +20,6 @@ export type IdentityStores = {
 
 export type IdentityDepsSet = {
   session: SessionDeps
-  activeSessions: ActiveSessionDeps
   authentication: AuthenticationDeps
   recovery: RecoveryDeps
   writes: IdentityWriteDeps
@@ -32,7 +29,6 @@ export function identityDepsOf(bridge: BridgeDeps, limiter: RateLimiter, runtime
   const clock = { today: runtime.today, timezone: runtime.timezone }
   return {
     session: { bridge, profiles: stores.profiles, ...clock },
-    activeSessions: { bridge, store: stores.activeSessions },
     authentication: {
       bridge,
       auth: runtime.auth,
@@ -60,7 +56,6 @@ export function identityDepsOf(bridge: BridgeDeps, limiter: RateLimiter, runtime
       accounts: stores.accounts,
       services: runtime.services,
       limiter,
-      verifyPassword: runtime.verifyPassword,
       session: { profiles: stores.profiles, ...clock },
     },
   }
@@ -75,11 +70,10 @@ export class IdentityDeps {
     @Inject(RATE_LIMITER) limiter: RateLimiter,
     @Inject(IDENTITY_RUNTIME) runtime: IdentityRuntime,
     @Inject(PROFILE_REPOSITORY) profiles: ProfileRepository,
-    @Inject(ACTIVE_SESSION_STORE) activeSessions: ActiveSessionStore,
     @Inject(CREDENTIAL_STORE) credentials: CredentialStore,
     @Inject(RECOVERY_REPOSITORY) recovery: RecoveryRepository,
     @Inject(ACCOUNT_REPOSITORY) accounts: AccountRepository,
   ) {
-    this.set = identityDepsOf(bridge, limiter, runtime, { profiles, activeSessions, credentials, recovery, accounts })
+    this.set = identityDepsOf(bridge, limiter, runtime, { profiles, credentials, recovery, accounts })
   }
 }

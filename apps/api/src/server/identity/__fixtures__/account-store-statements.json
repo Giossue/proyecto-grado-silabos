@@ -349,24 +349,6 @@
    ]
   }
  ],
- "deleteSessionsExcept": [
-  {
-   "text": "delete from \"sesiones_usuario\" where (\"sesiones_usuario\".\"user_id\" = $1 and \"sesiones_usuario\".\"id\" <> $2)",
-   "values": [
-    "01a1c5ba-10b4-7129-925f-c28a9489323c",
-    "s-1"
-   ]
-  }
- ],
- "deleteSession": [
-  {
-   "text": "delete from \"sesiones_usuario\" where (\"sesiones_usuario\".\"id\" = $1 and \"sesiones_usuario\".\"user_id\" = $2)",
-   "values": [
-    "s-1",
-    "01a1c5ba-10b4-7129-925f-c28a9489323c"
-   ]
-  }
- ],
  "hasActivity": [
   {
    "text": "select \"asignacion_paralelo_id\" from \"asignaciones_paralelo\" where \"asignaciones_paralelo\".\"asignacion_rol_id\" in (select \"asignacion_rol_id\" from \"asignaciones_rol\" where \"asignaciones_rol\".\"usuario_id\" = $1) limit $2",

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import { destroyOtherSessions, destroySession, resendOwnActivation, updateAccessibility, updateProfile } from "./selfService"
-import { account, ACTOR, ACTOR_ROLE, CAREER, COOKIE, FORBIDDEN, harness, jsonRequest, NOW, SESSION_ID } from "./testing"
+import { resendOwnActivation, updateAccessibility, updateProfile } from "./selfService"
+import { account, ACTOR, ACTOR_ROLE, CAREER, FORBIDDEN, harness, jsonRequest, NOW } from "./testing"
 
 const ISSUER = "01a1c5bc-3333-7000-8000-000000000001"
 
@@ -108,46 +108,5 @@ describe("POST /api/v1/authentication/account-activation/resend", () => {
     expect((await post(test)).status).toBe(202)
     expect(test.identity.invitations[1]).toMatchObject({ issuerId: ISSUER })
     expect(test.identity.mails.map((mail) => mail.to)).toEqual(["admin@silabos.test"])
-  })
-})
-
-describe("DELETE /api/v1/authentication/sessions/{session}", () => {
-  const remove = (test: ReturnType<typeof harness>, id: string) => destroySession(jsonRequest(`/api/v1/authentication/sessions/${id}`, "DELETE", undefined), id, test.deps)
-
-  it("closes another session of the same account", async () => {
-    const test = harness()
-    test.identity.sessions.push({ id: "otra-sesion", userId: ACTOR })
-    expect(await (await remove(test, "otra-sesion")).text()).toBe('{"message":"La sesión seleccionada fue cerrada."}')
-    expect(test.identity.sessions.map((row) => row.id)).toEqual([SESSION_ID])
-  })
-
-  it("refuses to close the current session", async () => {
-    const test = harness()
-    const response = await remove(test, SESSION_ID)
-    expect(response.status).toBe(422)
-    expect(await response.text()).toBe('{"message":"La sesión actual se cierra desde la opción Cerrar sesión."}')
-  })
-})
-
-describe("DELETE /api/v1/authentication/sessions/others", () => {
-  const remove = (test: ReturnType<typeof harness>, body: unknown, cookie = COOKIE) =>
-    destroyOtherSessions(jsonRequest("/api/v1/authentication/sessions/others", "DELETE", body, { cookie }), test.deps)
-
-  it("checks the current password and closes the other sessions of this account", async () => {
-    const test = harness()
-    expect((await (await remove(test, { current_password: "otra" })).json()).errors).toEqual({ current_password: ["La contraseña actual no es correcta."] })
-    test.identity.sessions.push({ id: "uno", userId: ACTOR }, { id: "dos", userId: ACTOR }, { id: "ajena", userId: "otra-cuenta" })
-    const response = await remove(test, { current_password: "secreto-actual" })
-    expect(await response.json()).toEqual({ message: "Se cerraron 2 sesiones adicionales.", closed_sessions: 2 })
-    expect(test.identity.sessions.map((row) => row.id)).toEqual([SESSION_ID, "ajena"])
-    expect(response.headers.getSetCookie()).toEqual([])
-  })
-
-  it("answers 401 without a live session and closes nothing", async () => {
-    const test = harness()
-    test.bridge.sessions.clear()
-    const response = await remove(test, { current_password: "secreto-actual" })
-    expect(response.status).toBe(401)
-    expect(test.identity.sessions.map((row) => row.userId)).toEqual([ACTOR])
   })
 })

@@ -11,13 +11,13 @@ import { unmatchedRoute } from "../../server/http/router"
 import { destroyManagedUser, removeManagedUserRole, resendManagedUserActivation, storeManagedUser, updateManagedUser } from "../../server/identity/accountWrites"
 import { importUsers, userImportTemplate, type IdentityImportDeps, type IdentityImportStore } from "../../server/identity/imports"
 import { managedUsers, type ManagedUserRepository } from "../../server/identity/managedUsers"
-import { destroyOtherSessions, destroySession, resendOwnActivation, updateAccessibility, updateProfile } from "../../server/identity/selfService"
-import { account, ACTOR, CAREER, COOKIE, grant, harness, NOW, OTHER_CAREER, SESSION_ID, type Harness } from "../../server/identity/testing"
+import { resendOwnActivation, updateAccessibility, updateProfile } from "../../server/identity/selfService"
+import { account, ACTOR, CAREER, COOKIE, grant, harness, NOW, OTHER_CAREER, type Harness } from "../../server/identity/testing"
 import { AuthModule } from "../auth/auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
 import { contentHeaders, live, nestRaw, rawOf, served, webRequest, type Call, type Raw } from "../auth/identity-equivalence.testing"
 import { IDENTITY_RUNTIME, type IdentityRuntime } from "../auth/identity.runtime"
-import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY } from "../auth/identity.tokens"
+import { ACCOUNT_REPOSITORY, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY } from "../auth/identity.tokens"
 import { FallbackModule } from "../fallback/fallback.module"
 import { UsersModule } from "./users.module"
 import { IDENTITY_IMPORT_STORE, MANAGED_USER_REPOSITORY } from "./users.deps"
@@ -26,7 +26,6 @@ const PENDING = "01a1c5bc-79ca-7331-8f0f-000000000001"
 const TEACHER = "01a1c5bc-79ca-7331-8f0f-000000000002"
 const TEACHER_GRANT = "01a1c5bc-79ca-7331-8f0f-000000000003"
 const MISSING = "01a1c5bc-79ca-7331-8f0f-000000000009"
-const OTHER_SESSION = "OtraSesionOtraSesionOtraSesionOtraSesion"
 const USERS = ["Nombres", "Apellidos", "Correo", "Rol", "Carrera"]
 
 type State = Harness & { runtime: IdentityRuntime; users: ManagedUserRepository; store: IdentityImportStore }
@@ -40,7 +39,6 @@ function freshState(test: Harness): State {
   )
   test.identity.grants.push(grant({ id: TEACHER_GRANT, userId: TEACHER, role: "docente", careerId: CAREER }))
   test.identity.invitations.push({ userId: PENDING, hash: "h", expiresAt: NOW - 10, issuerId: ACTOR, createdAt: NOW - 100, usedAt: null, invalidatedAt: null })
-  test.identity.sessions.push({ id: OTHER_SESSION, userId: ACTOR })
   const { identity, deps } = test
   const users: ManagedUserRepository = {
     async page(_filters, page, perPage) {
@@ -67,7 +65,7 @@ function freshState(test: Harness): State {
   const runtime: IdentityRuntime = {
     auth: unused as never,
     attempts: {} as never,
-    verifyPassword: deps.verifyPassword,
+    verifyPassword: unused,
     hashPassword: unused,
     dummyHash: unused,
     production: () => false,
@@ -87,8 +85,6 @@ const ROUTES: [string, RegExp, (web: Request, state: State, params: string[]) =>
   ["PUT", /^\/api\/v1\/authentication\/profile$/, (web, state) => updateProfile(web, state.deps)],
   ["PUT", /^\/api\/v1\/authentication\/accessibility$/, (web, state) => updateAccessibility(web, state.deps)],
   ["POST", /^\/api\/v1\/authentication\/account-activation\/resend$/, (web, state) => resendOwnActivation(web, state.deps)],
-  ["DELETE", /^\/api\/v1\/authentication\/sessions\/others$/, (web, state) => destroyOtherSessions(web, state.deps)],
-  ["DELETE", /^\/api\/v1\/authentication\/sessions\/([^/]+)$/, (web, state, [id]) => destroySession(web, id, state.deps)],
   ["GET", /^\/api\/v1\/admin\/users$/, (web, state) => managedUsers(web, { bridge: state.deps.bridge, users: state.users })],
   ["POST", /^\/api\/v1\/admin\/users$/, (web, state) => storeManagedUser(web, state.deps)],
   ["POST", /^\/api\/v1\/admin\/users\/import$/, (web, state) => importUsers(web, importDeps(state))],
@@ -194,8 +190,6 @@ beforeAll(async () => {
     .useValue(live(() => state.users))
     .overrideProvider(IDENTITY_IMPORT_STORE)
     .useValue(live(() => state.store))
-    .overrideProvider(ACTIVE_SESSION_STORE)
-    .useValue({})
     .overrideProvider(CREDENTIAL_STORE)
     .useValue({})
     .overrideProvider(RECOVERY_REPOSITORY)
@@ -209,8 +203,6 @@ beforeAll(async () => {
 afterAll(async () => {
   await app?.close()
 })
-
-const sessionIdPath = (id: string) => `/api/v1/authentication/sessions/${encodeURIComponent(id)}`
 
 describe("account self-service served by Nest answers exactly like the route handlers it replaces", () => {
   it("updates the profile and the accessibility with the same session answers", async () => {
@@ -248,21 +240,8 @@ describe("account self-service served by Nest answers exactly like the route han
       { method: "POST", path: "/api/v1/authentication/account-activation/resend" },
     )
     expect(pending.map((answer) => answer.status)).toEqual([403, 403, 202, 202, 202, 429])
-    const disabled = await expectSame(inactive, { method: "GET", path: "/api/v1/admin/users" }, { method: "DELETE", path: sessionIdPath(OTHER_SESSION) })
-    expect(disabled.map((answer) => answer.status)).toEqual([403, 401])
-  })
-
-  it("closes one session, refuses the current one and closes the others after the password", async () => {
-    const answers = await expectSame(
-      asAdmin,
-      { method: "DELETE", path: sessionIdPath(SESSION_ID) },
-      { method: "DELETE", path: sessionIdPath(OTHER_SESSION) },
-      { method: "DELETE", path: "/api/v1/authentication/sessions/others", body: { current_password: "otra" } },
-      { method: "DELETE", path: "/api/v1/authentication/sessions/others", body: {} },
-      { method: "DELETE", path: "/api/v1/authentication/sessions/others", body: { current_password: ["secreto-actual"] } },
-      { method: "DELETE", path: "/api/v1/authentication/sessions/others", body: { current_password: "secreto-actual" } },
-    )
-    expect(answers.map((answer) => answer.status)).toEqual([422, 200, 422, 422, 500, 200])
+    const disabled = await expectSame(inactive, { method: "GET", path: "/api/v1/admin/users" })
+    expect(disabled.map((answer) => answer.status)).toEqual([403])
   })
 })
 

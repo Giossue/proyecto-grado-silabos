@@ -87,12 +87,14 @@ test.describe("route guards", () => {
 })
 
 test.describe.serial("account security", () => {
-  test("the security screen offers the reset link and the open sessions only", async ({ browser }, testInfo) => {
+  test("the security screen offers only the reset link, without an accordion", async ({ browser }, testInfo) => {
     const owner = await browser.newContext({ baseURL: testInfo.project.use.baseURL, storageState: storageStateOf("teacher3") })
     const page = await owner.newPage()
     await page.goto("/docente/configuracion/seguridad")
+    await expect(page.getByRole("heading", { name: "Contraseña" })).toBeVisible()
     await expect(page.getByRole("button", { name: "Enviar enlace" })).toBeVisible()
-    await expect(page.getByRole("button", { name: /^Sesiones abiertas/ })).toBeVisible()
+    await expect(page.locator('[data-slot="accordion"]')).toHaveCount(0)
+    await expect(page.getByText("Sesiones abiertas")).toHaveCount(0)
     await expect(page.getByRole("button", { name: /^Verificación en dos pasos/ })).toHaveCount(0)
     await expect(page.getByRole("button", { name: "Actualizar contraseña" })).toHaveCount(0)
     await owner.close()

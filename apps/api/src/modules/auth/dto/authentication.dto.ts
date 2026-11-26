@@ -1,5 +1,5 @@
 import { accessibilitySchema, profileSchema } from "@silabos/shared/schemas/account"
-import { accountActivationSchema, activeRoleSchema, loginSchema, passwordConfirmationSchema, passwordResetSchema, recoveryLinkSchema } from "@silabos/shared/schemas/auth"
+import { accountActivationSchema, activeRoleSchema, loginSchema, passwordResetSchema, recoveryLinkSchema } from "@silabos/shared/schemas/auth"
 import { createZodDto } from "nestjs-zod"
 import { documented } from "./documented"
 
@@ -16,6 +16,3 @@ export class AccountActivationDto extends createZodDto(documented(accountActivat
 export class ProfileDto extends createZodDto(documented(profileSchema())) {}
 
 export class AccessibilityDto extends createZodDto(documented(accessibilitySchema)) {}
-
-
-export class PasswordConfirmationDto extends createZodDto(documented(passwordConfirmationSchema())) {}

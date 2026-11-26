@@ -11,8 +11,6 @@ import { flush, renderWithProviders } from "@/test/render"
 vi.mock("next/navigation", () => import("@/test/nextNavigation"))
 vi.mock("@/api/session", () => ({
   requestPasswordRecovery: vi.fn(),
-  getDeviceSessions: vi.fn(),
-  closeOtherDeviceSessions: vi.fn(),
 }))
 vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock("@/layouts/settings/Layout", () => ({ SettingsLayout: ({ children }: { children?: ReactNode }) => <div>{children}</div> }))
@@ -96,12 +94,17 @@ describe("Seguridad: restablecer la contraseña por correo", () => {
     expect(dialog()?.textContent).toContain("Servicio de correo no disponible")
   })
 
-  it("ya no ofrece cambiar la contraseña ni la verificación en dos pasos", async () => {
+  it("muestra solo el bloque «Contraseña», sin acordeón ni sesiones abiertas", async () => {
     await renderPage()
 
+    expect(document.body.querySelector('[data-slot="accordion"]')).toBeNull()
+    expect(document.body.querySelector("[aria-expanded]")).toBeNull()
+    expect(document.body.querySelector("h2")?.textContent).toBe("Contraseña")
+    expect(document.body.textContent).toContain("Pida un enlace por correo para crear otra")
+    expect(pageButton("Enviar enlace")).toBeTruthy()
     expect(document.body.querySelector("#current_password")).toBeNull()
     expect(document.body.textContent).not.toContain("Actualizar contraseña")
     expect(document.body.textContent).not.toContain("Verificación en dos pasos")
-    expect(document.body.textContent).toContain("Sesiones abiertas")
+    expect(document.body.textContent).not.toContain("Sesiones abiertas")
   })
 })

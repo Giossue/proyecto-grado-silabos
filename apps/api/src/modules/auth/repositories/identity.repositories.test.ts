@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest"
 import type { Prisma } from "../../../generated/prisma/client"
 import type { PrismaService } from "../../../prisma/prisma.service"
 import oracle from "./__fixtures__/identity-oracle.json"
-import { activeSessionStoreOn } from "./active-sessions.repository"
 import { credentialStoreOn } from "./credentials.repository"
 import { profileRepositoryOn } from "./profile.repository"
 import type { RawExecutor } from "./raw-executor"
@@ -52,12 +51,6 @@ describe("identity repositories on Prisma send the same SQL and map the rows lik
     const row = { nombre_usuario: "ANA", correo_electronico: "ana@silabos.test", preferencias_accesibilidad_usuario: { text_size: "130" } }
     await same("profile", [row], (executor) => profileRepositoryOn(executor).find(USER))
     await same("profileMissing", [], (executor) => profileRepositoryOn(executor).find(USER))
-  })
-
-  it("lists the open sessions, with the epoch the driver returns as text or as a bigint", async () => {
-    const pg = { id: "s-1", ip_address: "203.0.113.5", user_agent: "Firefox/1", last_activity: "1800000000" }
-    const sessions = await same("sessions", [{ ...pg, last_activity: 1800000000n }], (executor) => activeSessionStoreOn(executor).sessions(USER))
-    expect(sessions).toEqual([{ id: "s-1", ip: "203.0.113.5", agent: "Firefox/1", lastActivity: 1800000000 }])
   })
 
   it("finds active credentials", async () => {

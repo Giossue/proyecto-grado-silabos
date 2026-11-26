@@ -168,13 +168,10 @@ function fakeTx(world: FakeIdentity): AccountTx {
       const issuer = latest ? find(latest.issuerId) : undefined
       return issuer ? view(issuer) : null
     },
-    async deleteSessions(userId, exceptId) {
+    async deleteSessions(userId) {
       const before = world.sessions.length
-      world.sessions = world.sessions.filter((row) => row.userId !== userId || row.id === exceptId)
+      world.sessions = world.sessions.filter((row) => row.userId !== userId)
       return before - world.sessions.length
-    },
-    async deleteSession(id, userId) {
-      world.sessions = world.sessions.filter((row) => !(row.id === id && row.userId === userId))
     },
     hasActivity: async (userId) => world.activity.includes(userId),
     async purgeAccount(userId) {
@@ -234,7 +231,6 @@ export function harness(role: { id?: string; role: string; careerId: string | nu
       queueMail: async (mail) => void identity.mails.push(mail),
     },
     limiter: createRateLimiter(),
-    verifyPassword: async (plain) => plain === "secreto-actual",
     session: {
       profiles: {
         find: async (userId) => {

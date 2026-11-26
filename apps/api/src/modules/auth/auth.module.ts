@@ -12,8 +12,7 @@ import { AUTH_BRIDGE, RATE_LIMITER } from "./auth.tokens"
 import { AuthenticationController } from "./authentication.controller"
 import { IdentityDeps } from "./identity.deps"
 import { defaultIdentityRuntime, IDENTITY_RUNTIME } from "./identity.runtime"
-import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY, SESSION_STORE } from "./identity.tokens"
-import { activeSessionStoreOn } from "./repositories/active-sessions.repository"
+import { ACCOUNT_REPOSITORY, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY, SESSION_STORE } from "./identity.tokens"
 import { credentialStoreOn } from "./repositories/credentials.repository"
 import { profileRepositoryOn } from "./repositories/profile.repository"
 import { recoveryRepositoryOn } from "./repositories/recovery.repository"
@@ -35,7 +34,6 @@ function authBridge(store: SessionStore, prisma: PrismaService) {
   providers: [
     prismaBacked(SESSION_STORE, sessionStoreOn),
     prismaBacked(PROFILE_REPOSITORY, profileRepositoryOn),
-    prismaBacked(ACTIVE_SESSION_STORE, activeSessionStoreOn),
     prismaBacked(CREDENTIAL_STORE, credentialStoreOn),
     prismaBacked(RECOVERY_REPOSITORY, recoveryRepositoryOn),
     prismaBacked(ACCOUNT_REPOSITORY, createAccountRepository),

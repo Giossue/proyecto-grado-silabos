@@ -58,31 +58,6 @@
   },
   {
     "methods": [
-      "GET",
-      "HEAD"
-    ],
-    "uri": "api/v1/authentication/sessions",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "DELETE"
-    ],
-    "uri": "api/v1/authentication/sessions/others",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "DELETE"
-    ],
-    "uri": "api/v1/authentication/sessions/{session}",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
       "PUT"
     ],
     "uri": "api/v1/active-role",

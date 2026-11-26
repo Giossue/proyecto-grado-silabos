@@ -42,7 +42,6 @@ export type IdentityWriteDeps = {
   accounts: AccountRepository
   services: AccountServices
   limiter: RateLimiter
-  verifyPassword: (plain: string, hash: string) => Promise<boolean | null>
   session: Pick<SessionDeps, "profiles" | "today" | "timezone">
 }
 

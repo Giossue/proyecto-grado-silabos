@@ -18,7 +18,6 @@ export type Session = {
   institution?: { today: string; timezone: string };
 };
 
-export type DeviceSession = { id: string; ip_address: string | null; device: string; last_activity: string; current: boolean };
 
 export const getSession = () => api<Session>('/session');
 export const login = (email: string, password: string): Promise<Session> =>
@@ -42,13 +41,6 @@ export const activateAccount = (token: string, password: string, passwordConfirm
     body: JSON.stringify({ token, password, password_confirmation: passwordConfirmation }),
   });
 export const resendActivation = () => api<{ message: string }>('/authentication/account-activation/resend', { method: 'POST' });
-export const getDeviceSessions = () => api<{ sessions: DeviceSession[] }>('/authentication/sessions');
-export const closeDeviceSession = (sessionId: string) =>
-  api<{ message: string }>(`/authentication/sessions/${sessionId}`, { method: 'DELETE' });
-export const closeOtherDeviceSessions = (currentPassword: string) =>
-  api<{ message: string; closed_sessions: number }>('/authentication/sessions/others', {
-    method: 'DELETE', body: JSON.stringify({ current_password: currentPassword }),
-  });
 export type LogoutResult = { logout_url: string } | undefined;
 export type AuthProviders = { keycloak: boolean };
 
