@@ -5,7 +5,7 @@ import type { BridgeDeps } from "../auth/types"
 import { apiJson } from "../http/responses"
 import { configuredFacultyUrl } from "../configuration/institutionalLogos"
 import type { StoredLogo } from "../shared/logoStore"
-import { baseOptions, CONVOCATION_LOCK_REASON, forbidden } from "./structure"
+import { baseOptions, CONVOCATION_LOCK_REASON, forbidden, studyModalityLabel } from "./structure"
 
 export type GovernanceProcess = { id: string; periodId: string; state: string }
 export type GovernanceFaculty = { id: string; name: string; libraries: unknown; active: boolean; logo: StoredLogo | null }
@@ -90,7 +90,7 @@ async function governancePayload(request: Request, deps: GovernanceDeps): Promis
         faculty_id: career.facultyId,
         coordinator: career.coordinator,
         modality: career.modality,
-        modality_label: career.modality,
+        modality_label: studyModalityLabel(career.modality),
         code: career.code,
         name: career.name,
         active: career.active,

@@ -96,7 +96,7 @@ function editability(session: AppSession, syllabus: DetailSyllabus, today: strin
   const allowed = syllabus.state === "sin_iniciar" ? mayStart(session, syllabus, today) : mayEdit(session, syllabus, today)
   if (allowed) return { allowed, fields: { editable: true, edit_block_reason: null, edit_blocked_by_convocation: false } }
   const editableState = ["sin_iniciar", "borrador", "correccion_solicitada"].includes(syllabus.state)
-  const closed = syllabus.convocationState === "cerrada"
+  const closed = syllabus.convocationState === "cerrado"
   const running = isRunning(syllabus)
   const late = today > syllabus.dueOn
   const reason = !editableState
@@ -152,7 +152,7 @@ export async function syllabusPayload(
     snapshot = { ...snapshot, template_variables: signedDocumentVariables(snapshot, { ...facts, submittedAt: latest.submittedAt, approval: latest.approval, signatures }) }
   }
   const context = record(syllabus.context)
-  if (snapshot === null && syllabus.convocationState === "cerrada" && isPhpArray(context.closed_document)) snapshot = record(context.closed_document)
+  if (snapshot === null && syllabus.convocationState === "cerrado" && isPhpArray(context.closed_document)) snapshot = record(context.closed_document)
   const unsentForm = snapshot !== null && !REVIEWED_STATES.includes(syllabus.state)
   let frozen = snapshot === null ? null : presentSnapshot(snapshot)
   if (unsentForm && frozen !== null) frozen = { ...frozen, sections: await readOnlyForm(frozen.sections, current, (ids) => deps.store.fieldContents(ids)) }

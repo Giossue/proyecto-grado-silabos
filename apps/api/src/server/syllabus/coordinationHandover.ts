@@ -63,7 +63,7 @@ async function undoDecisions(executor: Executor, afterCommit: AfterCommit, sylla
 export async function returnApprovals(executor: Executor, afterCommit: AfterCommit, careerId: string, load: (where: Prisma.Sql) => Promise<WorkSyllabus[]>): Promise<string[]> {
   const syllabi = await load(Prisma.sql`silabos.estado_silabo in ('en_revision', 'aprobado') and exists (select 1 from convocatorias_carreras convocatoria
     where convocatoria.convocatoria_carrera_id = silabos.convocatoria_carrera_id and convocatoria.carrera_id = ${careerId}::uuid
-      and convocatoria.estado_convocatoria_carrera != 'cerrada'
+      and convocatoria.estado_convocatoria_carrera != 'cerrado'
       and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id))`)
   const returned: string[] = []
   for (const { syllabus, revisionId } of await decidedHandovers(executor, syllabi)) {

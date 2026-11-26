@@ -50,7 +50,7 @@ export interface ConvocationRepository {
 export type ConvocationDeps = { bridge: BridgeDeps; convocations: ConvocationRepository; now: () => number }
 
 const PER_PAGE = 20
-const CONVOCATION_STATES = ["sin_iniciar", "preparacion", "abierta", "pausada", "cerrada"]
+const CONVOCATION_STATES = ["sin_iniciar", "preparacion", "abierto", "pausado", "cerrado"]
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
 export function defaultConvocationDeps(prisma: PrismaService): ConvocationDeps {
@@ -171,7 +171,7 @@ export async function pauseConvocationFor(session: AppSession, convocation: Conv
       const state = await tx.lockConvocation(convocation.id)
       if (state === null) throw new Missing(MODELS.convocation, convocation.id)
       if (state !== CONVOCATION_OPEN) throw new StateChanged()
-      await tx.updateState(convocation.id, "pausada")
+      await tx.updateState(convocation.id, "pausado")
     })
   } catch (error) {
     if (error instanceof StateChanged) return validationError({ convocation: ["Solo un periodo académico abierto puede pausarse."] })

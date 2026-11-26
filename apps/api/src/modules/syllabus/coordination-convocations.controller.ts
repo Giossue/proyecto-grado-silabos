@@ -26,7 +26,7 @@ export class CoordinationConvocationsController {
   @Get()
   @Authenticated(ACTIVE_ROLE)
   @ApiQuery({ name: "q", required: false })
-  @ApiQuery({ name: "state", required: false, enum: ["all", "sin_iniciar", "preparacion", "abierta", "pausada", "cerrada"] })
+  @ApiQuery({ name: "state", required: false, enum: ["all", "sin_iniciar", "preparacion", "abierto", "pausado", "cerrado"] })
   @ApiQuery({ name: "page", required: false, type: Number })
   @ApiOkResponse({ description: "Procesos institucionales con el periodo académico de la carrera del rol activo, de 20 en 20." })
   @ApiUnprocessableEntityResponse(VALIDATION)

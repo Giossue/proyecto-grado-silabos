@@ -13,7 +13,7 @@ import type { SubjectProfileTx, SubjectProfileWriteDeps } from "./subjectProfile
 
 export async function careerDataLocked(db: Db, careerId: string): Promise<boolean> {
   const [row] = await db.$queryRaw<{ locked: boolean }[]>`select exists (select 1 from convocatorias_carreras convocatoria where convocatoria.carrera_id = ${careerId}::uuid
-        and convocatoria.estado_convocatoria_carrera = 'abierta'
+        and convocatoria.estado_convocatoria_carrera = 'abierto'
         and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
           and proceso.estado_convocatoria_universidad in ('abierto', 'pausado'))) as locked`
   return row?.locked === true

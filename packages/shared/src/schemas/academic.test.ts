@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import { schemaErrors } from "./issues"
-import { careerSchema, facultySchema, parallelsSchema, periodSchema, requirementSchema, subjectSchema } from "./academic"
+import { careerSchema, facultySchema, parallelsSchema, periodSchema, requirementSchema, STUDY_MODALITIES, studyModalityLabel, subjectSchema } from "./academic"
 
 const UUID = "01a1c5ba-2222-7000-8000-999999999999"
 
@@ -21,10 +21,20 @@ describe("academic schemas", () => {
 
   it("validate a career with its unique code", async () => {
     const schema = careerSchema({ facultyExists: async () => true, codeAvailable: async () => false, updating: false })
-    expect(await schemaErrors(schema, { faculty_id: UUID, modality: "Presencial", code: "ADM", nombre: "Administración", cycle_count: 31 })).toEqual({
+    expect(await schemaErrors(schema, { faculty_id: UUID, modality: "presencial", code: "ADM", nombre: "Administración", cycle_count: 31 })).toEqual({
       code: ["Ya existe una carrera con ese código."],
       cycle_count: ["El campo cantidad de ciclos no debe ser mayor que 30."],
     })
+  })
+
+  it("store study modalities as technical values and show them with their labels", async () => {
+    const schema = careerSchema({ facultyExists: async () => true, codeAvailable: async () => true, updating: false })
+    const career = { faculty_id: UUID, code: "ADM", nombre: "Administración", cycle_count: 10 }
+    expect(STUDY_MODALITIES).toEqual(["presencial", "semipresencial", "en_linea", "a_distancia", "hibrida"])
+    expect(STUDY_MODALITIES.map(studyModalityLabel)).toEqual(["Presencial", "Semipresencial", "En línea", "A distancia", "Híbrida"])
+    expect(studyModalityLabel(null)).toBeNull()
+    expect(await schemaErrors(schema, { ...career, modality: "en_linea" })).toEqual({})
+    expect(Object.keys(await schemaErrors(schema, { ...career, modality: "En línea" }))).toEqual(["modality"])
   })
 
   it("validate period dates, and the order of the dates when editing", async () => {

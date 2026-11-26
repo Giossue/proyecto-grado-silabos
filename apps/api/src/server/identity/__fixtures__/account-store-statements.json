@@ -273,7 +273,7 @@
     "borrador",
     "en_revision",
     "correccion_solicitada",
-    "abierta"
+    "abierto"
    ]
   },
   {
@@ -407,7 +407,7 @@
    "text": "select \"convocatoria_carrera_id\" from \"convocatorias_carreras\" where (\"convocatorias_carreras\".\"carrera_id\" = $1 and \"convocatorias_carreras\".\"estado_convocatoria_carrera\" = $2 and exists (select \"convocatoria_universidad_id\" from \"convocatorias_universidad\" where (\"convocatorias_carreras\".\"convocatoria_universidad_id\" = \"convocatorias_universidad\".\"convocatoria_universidad_id\" and \"convocatorias_universidad\".\"estado_convocatoria_universidad\" in ($3, $4)))) limit $5",
    "values": [
     "01a1c5ba-10b4-7129-925f-c28a9489323d",
-    "abierta",
+    "abierto",
     "abierto",
     "pausado",
     1

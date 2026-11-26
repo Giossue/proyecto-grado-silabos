@@ -87,12 +87,12 @@ export function ConvocationActions({ convocation, blockedReason, onChanged }: Co
         <Play data-icon="inline-start" aria-hidden="true" />
         Abrir periodo académico
       </Button>
-    ) : convocation.state === "abierta" ? (
+    ) : convocation.state === "abierto" ? (
       <Button type="button" onClick={() => select("pausar")}>
         <Pause data-icon="inline-start" aria-hidden="true" />
         Pausar periodo académico
       </Button>
-    ) : convocation.state === "pausada" ? (
+    ) : convocation.state === "pausado" ? (
       <Button type="button" disabled={!convocation.process_open} onClick={() => select("reanudar")}>
         <Play data-icon="inline-start" aria-hidden="true" />
         Reanudar periodo académico

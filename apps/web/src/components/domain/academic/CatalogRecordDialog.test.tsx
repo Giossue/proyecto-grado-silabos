@@ -26,7 +26,7 @@ const options = {
   faculties: [{ id: "01a1c5ba-2222-7000-8000-999999999999", nombre: "Ciencias" }],
   careers: [],
   periods: [],
-  modalityOptions: [{ value: "Presencial", label: "Presencial" }],
+  modalityOptions: [{ value: "presencial", label: "Presencial" }],
   shiftOptions: [],
   currentCurricula: [],
   activeSubjects: [],
@@ -37,7 +37,7 @@ const options = {
 
 const editBase = {
   faculties: [],
-  modalityOptions: [{ value: "Presencial", label: "Presencial" }],
+  modalityOptions: [{ value: "presencial", label: "Presencial" }],
   showTrigger: false,
   open: true,
 }
@@ -173,7 +173,7 @@ const fillCareer = async (): Promise<void> => {
   fireEvent.change(document.body.querySelector("#catalog-code")!, { target: { value: "SW" } })
   fireEvent.change(document.body.querySelector("#catalog-cycle-count")!, { target: { value: "8" } })
   chooseNative(0, "01a1c5ba-2222-7000-8000-999999999999")
-  chooseNative(1, "Presencial")
+  chooseNative(1, "presencial")
   await flush()
 }
 

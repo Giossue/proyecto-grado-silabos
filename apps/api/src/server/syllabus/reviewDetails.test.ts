@@ -118,7 +118,7 @@ beforeEach(() => {
     id: SYLLABUS,
     state: "en_revision",
     careerId: CAREER,
-    convocationState: "abierta",
+    convocationState: "abierto",
     processState: "abierto",
     dueOn: "2026-12-01",
     currentTeacher: false,
@@ -175,7 +175,7 @@ describe("GET coordination/reviews/{revision}", () => {
   })
 
   it("orders a resubmission after a coordination correction and blocks decisions while the convocation is paused", async () => {
-    syllabus = { ...syllabus, convocationState: "pausada" }
+    syllabus = { ...syllabus, convocationState: "pausado" }
     revisions = [revision(), revision({ id: SECOND, number: 2, submittedAt: 1795100000 })]
     history = [
       entry({ correction: { stage: "coordinacion", at: "2026-11-19T12:00:00+00:00", by: "Coordinadora", justification: "Ajuste la bibliografía." } }),

@@ -101,7 +101,7 @@ function facts(overrides: Partial<DetailSyllabus> = {}): DetailSyllabus {
     id: SYLLABUS,
     state: "borrador",
     careerId: CAREER,
-    convocationState: "abierta",
+    convocationState: "abierto",
     processState: "abierto",
     dueOn: "2099-12-31",
     currentTeacher: true,
@@ -151,7 +151,7 @@ function freshState(): State {
       [REVISION, revision(REVISION, 1, { campos: { objetivo: "Antes" } })],
       [LATER_REVISION, revision(LATER_REVISION, 2, { campos: { objetivo: "Después" } })],
     ]),
-    convocationState: "pausada",
+    convocationState: "pausado",
     processState: "abierto",
     approved: false,
     approval: { approvedAt: "2026-11-20T10:00:00+00:00", approvedBy: "Coordinadora" },
@@ -402,7 +402,7 @@ function deps() {
     payload: async () => ({}),
     store: recorder("submissions", {
       syllabus: syllabusOf,
-      schedule: async () => ({ convocationState: "abierta", processState: state.processState, startsOn: "2026-10-01", dueOn: state.facts?.dueOn ?? "2099-12-31" }),
+      schedule: async () => ({ convocationState: "abierto", processState: state.processState, startsOn: "2026-10-01", dueOn: state.facts?.dueOn ?? "2099-12-31" }),
       revisionByKey: async () => null,
       snapshot: async (id: string) => {
         note("submissions.snapshot", id)
@@ -633,19 +633,19 @@ const statuses = (answers: Answer[]) => answers.map((answer) => answer.status)
 describe("the syllabus flow served by Nest answers exactly like the route handlers it replaces", () => {
   describe("coordination convocations", () => {
     it("lists, shows, pauses and resumes with the same answers and writes", async () => {
-      scenario = () => ({ ...asCoordinator(), convocationState: "abierta", lock: { state: "abierta", processState: "abierto", version: 1 } })
+      scenario = () => ({ ...asCoordinator(), convocationState: "abierto", lock: { state: "abierto", processState: "abierto", version: 1 } })
       const answers = await expectSame(
-        { method: "GET", path: "/api/v1/coordination/convocations?q=2026&state=abierta&page=1" },
+        { method: "GET", path: "/api/v1/coordination/convocations?q=2026&state=abierto&page=1" },
         { method: "GET", path: `/api/v1/coordination/convocations/${CONVOCATION}` },
         { method: "POST", path: `/api/v1/coordination/convocations/${CONVOCATION}/pausar` },
       )
       expect(statuses(answers)).toEqual([200, 200, 200])
-      scenario = () => ({ ...asCoordinator(), convocationState: "pausada", lock: { state: "pausada", processState: "abierto", version: 1 } })
+      scenario = () => ({ ...asCoordinator(), convocationState: "pausado", lock: { state: "pausado", processState: "abierto", version: 1 } })
       expect(statuses(await expectSame({ method: "POST", path: `/api/v1/coordination/convocations/${CONVOCATION}/reanudar` }))).toEqual([200])
     })
 
     it("answers validation, state changes and missing convocations the same way", async () => {
-      scenario = () => ({ ...asCoordinator(), convocationState: "abierta", lock: { state: "pausada", processState: "abierto", version: 1 } })
+      scenario = () => ({ ...asCoordinator(), convocationState: "abierto", lock: { state: "pausado", processState: "abierto", version: 1 } })
       const answers = await expectSame(
         { method: "GET", path: "/api/v1/coordination/convocations?state=otro&q[]=x" },
         { method: "POST", path: `/api/v1/coordination/convocations/${CONVOCATION}/pausar` },
@@ -655,7 +655,7 @@ describe("the syllabus flow served by Nest answers exactly like the route handle
         { method: "POST", path: `/api/v1/coordination/convocations/${MISSING}/reanudar` },
       )
       expect(statuses(answers)).toEqual([422, 422, 403, 404, 404, 404])
-      scenario = () => ({ ...asCoordinator(), convocationState: "pausada", lock: { state: "pausada", processState: "pausado", version: 1 } })
+      scenario = () => ({ ...asCoordinator(), convocationState: "pausado", lock: { state: "pausado", processState: "pausado", version: 1 } })
       expect(statuses(await expectSame({ method: "POST", path: `/api/v1/coordination/convocations/${CONVOCATION}/reanudar` }))).toEqual([422])
     })
 
@@ -730,7 +730,7 @@ describe("the syllabus flow served by Nest answers exactly like the route handle
       )
       expect(statuses(answers)).toEqual([422, 422, 422, 404])
       expect(text(answers[2])).toContain("La revisión dejó de estar disponible para solicitar corrección.")
-      scenario = () => ({ ...asCoordinator(), facts: facts({ state: "en_revision", convocationState: "pausada" }) })
+      scenario = () => ({ ...asCoordinator(), facts: facts({ state: "en_revision", convocationState: "pausado" }) })
       expect(statuses(await expectSame({ method: "POST", path: `/api/v1/coordination/reviews/${REVISION}/request-correction`, body: { justification: "La bibliografía no cumple." } }))).toEqual([403])
     })
 

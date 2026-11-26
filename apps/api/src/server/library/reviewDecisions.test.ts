@@ -121,7 +121,7 @@ beforeEach(() => {
     id: SYLLABUS,
     state: "en_revision",
     careerId: CAREER,
-    convocationState: "abierta",
+    convocationState: "abierto",
     processState: "abierto",
     dueOn: "2026-12-01",
     currentTeacher: false,
@@ -173,9 +173,9 @@ describe("POST library/reviews/{r}/verify", () => {
     world.assignments = [makeAssignment({ role: "bibliotecario", careerId: null, careerLabel: null })]
     expect((await verify({ signature: "texto" })).json).toMatchObject({ errors: { signature: ["El campo firma electrónica debe ser una lista."] } })
     expect((await verify({ signature: { cms: "x" } })).json).toEqual({ message: "La firma no es válida.", errors: { signature: ["La firma no es válida."] } })
-    syllabus = { ...syllabus, convocationState: "cerrada" }
+    syllabus = { ...syllabus, convocationState: "cerrado" }
     expect(await verify({ signature: { statement: STATEMENT, cms: "firma-valida" } })).toMatchObject({ status: 403, text: ABORTED })
-    syllabus = { ...syllabus, convocationState: "abierta", hasLibrarySubmission: false }
+    syllabus = { ...syllabus, convocationState: "abierto", hasLibrarySubmission: false }
     expect((await verify({})).text).toBe(ABORTED)
     expect(log).toEqual([])
   })
@@ -236,9 +236,9 @@ describe("POST library/reviews/{r}/comments", () => {
   })
 
   it("explains why a closed or paused convocation cannot be returned and who may not decide", async () => {
-    syllabus = { ...syllabus, convocationState: "cerrada" }
+    syllabus = { ...syllabus, convocationState: "cerrado" }
     expect(await comment({ reasons: ["codigo_incorrecto"] })).toMatchObject({ status: 403, json: { message: CLOSED } })
-    syllabus = { ...syllabus, convocationState: "abierta", hasLibrarySubmission: false }
+    syllabus = { ...syllabus, convocationState: "abierto", hasLibrarySubmission: false }
     expect((await comment({ reasons: ["codigo_incorrecto"] })).text).toBe(FORBIDDEN)
     syllabus = { ...syllabus, hasLibrarySubmission: true }
     lockedBlock = PAUSED

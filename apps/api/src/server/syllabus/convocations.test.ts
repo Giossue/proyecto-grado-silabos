@@ -90,11 +90,11 @@ beforeEach(() => {
   }
   listCalls = []
   rows = [
-    { processId: PROCESS, processState: "abierto", period: "2026-2", convocationId: CONVOCATION, convocationState: "abierta", syllabiCount: 7 },
+    { processId: PROCESS, processState: "abierto", period: "2026-2", convocationId: CONVOCATION, convocationState: "abierto", syllabiCount: 7 },
     { processId: "cd000000-0000-4000-8000-000000000002", processState: "cerrado", period: "2026-1", convocationId: null, convocationState: null, syllabiCount: 0 },
   ]
-  record = { id: CONVOCATION, careerId: CAREER, career: "Software", state: "abierta", processState: "abierto", period: "2026-2", startsOn: "2026-11-10", dueOn: "2026-12-10" }
-  lockedState = "abierta"
+  record = { id: CONVOCATION, careerId: CAREER, career: "Software", state: "abierto", processState: "abierto", period: "2026-2", startsOn: "2026-11-10", dueOn: "2026-12-10" }
+  lockedState = "abierto"
   syllabi = []
   log = []
 })
@@ -107,7 +107,7 @@ describe("GET /api/v1/coordination/convocations", () => {
     const json = JSON.parse(text)
     expect(json.filters).toEqual({ q: "2026", state: null })
     expect(json.convocations.data).toEqual([
-      { id: CONVOCATION, process_id: PROCESS, name: "2026-2", state: "abierta", process_state: "abierto", period: "2026-2", template: "Plantilla institucional de sílabo", syllabi_count: 7 },
+      { id: CONVOCATION, process_id: PROCESS, name: "2026-2", state: "abierto", process_state: "abierto", period: "2026-2", template: "Plantilla institucional de sílabo", syllabi_count: 7 },
       { id: null, process_id: "cd000000-0000-4000-8000-000000000002", name: "2026-1", state: "sin_iniciar", process_state: "cerrado", period: "2026-1", template: "Plantilla institucional de sílabo", syllabi_count: 0 },
     ])
     expect(text).toBe(JSON.stringify(json))
@@ -139,7 +139,7 @@ describe("GET /api/v1/coordination/convocations/{convocation}", () => {
     expect(json.convocation).toMatchObject({
       id: CONVOCATION,
       name: "Software · 2026-2",
-      state: "abierta",
+      state: "abierto",
       process: { name: "2026-2", state: "abierto" },
       period: "2026-2",
       template: "Plantilla institucional de sílabo",
@@ -170,20 +170,20 @@ describe("POST /api/v1/coordination/convocations/{convocation}/pausar", () => {
     const { status, text } = await pause()
     expect(status).toBe(200)
     expect(text).toBe(JSON.stringify({ message: "Periodo académico en pausa. Los docentes de la carrera no editan ni envían; la malla queda editable." }))
-    expect(log).toEqual(["begin", `lock:${CONVOCATION}`, `state:${CONVOCATION}:pausada`, "commit"])
+    expect(log).toEqual(["begin", `lock:${CONVOCATION}`, `state:${CONVOCATION}:pausado`, "commit"])
   })
 
   it("forbids pausing a convocation that is not open or belongs to another career", async () => {
-    record = { ...(record as ConvocationRecord), state: "pausada" }
+    record = { ...(record as ConvocationRecord), state: "pausado" }
     expect((await pause()).text).toBe(FORBIDDEN)
-    record = { ...(record as ConvocationRecord), state: "abierta" }
+    record = { ...(record as ConvocationRecord), state: "abierto" }
     world.assignments = [makeAssignment({ role: "coordinador", careerId: "c0000000-0000-4000-8000-000000000009" })]
     expect((await pause()).text).toBe(FORBIDDEN)
     expect(log).toEqual([])
   })
 
   it("rejects the pause when another session changed the state first", async () => {
-    lockedState = "cerrada"
+    lockedState = "cerrado"
     const { status, json } = await pause()
     expect(status).toBe(422)
     expect(json).toEqual({ message: "Solo un periodo académico abierto puede pausarse.", errors: { convocation: ["Solo un periodo académico abierto puede pausarse."] } })

@@ -122,7 +122,7 @@ beforeEach(() => {
     id: SYLLABUS,
     state: "en_revision",
     careerId: CAREER,
-    convocationState: "abierta",
+    convocationState: "abierto",
     processState: "abierto",
     dueOn: "2026-12-01",
     currentTeacher: false,
@@ -232,7 +232,7 @@ describe("POST coordination/reviews/{revision}/approve", () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: "c0000000-0000-4000-8000-000000000002" })]
     expect(await approve(signature())).toEqual({ status: 403, text: FORBIDDEN })
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
-    syllabus = { ...syllabus, convocationState: "pausada" }
+    syllabus = { ...syllabus, convocationState: "pausado" }
     expect(await approve(signature())).toEqual({ status: 403, text: `{"message":"${PAUSED}"}` })
     expect(approvals).toEqual([])
   })

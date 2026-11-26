@@ -183,11 +183,11 @@ const both = [
 
 describe("the dashboard served by Nest answers exactly like the route handlers it replaces", () => {
   it.each([
-    ["a teacher with an open syllabus", (current: State) => void (current.teacherSyllabi = [{ convocation: { id: CONVOCATION, state: "abierta" }, process: process(), dueAt: 1_800_000_000 }])],
+    ["a teacher with an open syllabus", (current: State) => void (current.teacherSyllabi = [{ convocation: { id: CONVOCATION, state: "abierto" }, process: process(), dueAt: 1_800_000_000 }])],
     ["a teacher after a finalized process", (current: State) => {
       current.inProgress = null
       current.latest = process({ state: "cerrado" })
-      current.finalized = { id: CONVOCATION, state: "cerrada" }
+      current.finalized = { id: CONVOCATION, state: "cerrado" }
     }],
     ["a teacher during a pause", (current: State) => void (current.inProgress = process({ state: "pausado" }))],
     ["a coordinator", (current: State) => {

@@ -36,8 +36,8 @@ export async function lockedDecisionBlock(executor: Db, syllabusId: string, lock
         and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id)
       limit 1 ${lock ? Prisma.sql`for share of convocatoria` : Prisma.empty}`,
   )
-  if (!state || !["abierta", "pausada"].includes(state.state)) return CLOSED
-  if (state.state === "pausada") return "El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude."
+  if (!state || !["abierto", "pausado"].includes(state.state)) return CLOSED
+  if (state.state === "pausado") return "El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude."
   if (state.process_state === "pausado") return "Administración pausó el periodo académico: las revisiones se retoman cuando se reanude."
   return null
 }

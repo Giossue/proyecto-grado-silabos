@@ -106,7 +106,7 @@ model asignaturas {
   horas_autonomas                                                        Decimal?                @db.Decimal(6, 2)
   orden_asignatura_en_ciclo                                              Int                     @default(0) @db.SmallInt
   unidad_curricular_asignatura                                           String?                 @db.VarChar(30)
-  modalidad_asignatura                                                   modalidad_estudio?
+  modalidad_asignatura                                                   String?                 @db.VarChar(20)
   carrera_id                                                             String                  @db.Uuid
   genera_silabo_asignatura                                               Boolean                 @default(true)
   creado_en                                                              DateTime                @default(now()) @db.Timestamptz(6)
@@ -146,7 +146,7 @@ model carreras {
   codigo_carrera         String                   @unique(map: "carreras_codigo_carrera_unica") @db.VarChar(80)
   nombre_carrera         String                   @db.VarChar(180)
   carrera_activa         Boolean                  @default(true)
-  modalidad_carrera      modalidad_estudio?
+  modalidad_carrera      String?                  @db.VarChar(20)
   numero_ciclos          Int                      @db.SmallInt
   creado_en              DateTime                 @default(now()) @db.Timestamptz(6)
   actualizado_en         DateTime                 @default(now()) @db.Timestamptz(6)
@@ -643,12 +643,4 @@ view docentes_vigentes_silabo {
   paralelo_id            String @db.Uuid
 
   @@unique([silabo_id, asignacion_paralelo_id])
-}
-
-enum modalidad_estudio {
-  Presencial
-  Semipresencial
-  En_l_nea       @map("En línea")
-  A_distancia    @map("A distancia")
-  H_brida        @map("Híbrida")
 }

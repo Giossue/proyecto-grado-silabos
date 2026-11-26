@@ -74,7 +74,7 @@ const draft = (overrides: Partial<DetailSyllabus> = {}): DetailSyllabus => ({
   id: SYLLABUS,
   state: "borrador",
   careerId: CAREER,
-  convocationState: "abierta",
+  convocationState: "abierto",
   processState: "abierto",
   dueOn: "2026-12-01",
   currentTeacher: true,
@@ -214,9 +214,9 @@ describe("GET teacher/syllabi/{syllabus}", () => {
   })
 
   it.each([
-    [{ convocationState: "pausada" }, "El periodo académico está en pausa. Podrá seguir editando cuando se reanude.", true],
+    [{ convocationState: "pausado" }, "El periodo académico está en pausa. Podrá seguir editando cuando se reanude.", true],
     [{ processState: "pausado" }, "El periodo académico está en pausa. Podrá seguir editando cuando se reanude.", true],
-    [{ convocationState: "cerrada" }, "El periodo académico está cerrado: el sílabo queda solo para consulta.", true],
+    [{ convocationState: "cerrado" }, "El periodo académico está cerrado: el sílabo queda solo para consulta.", true],
     [{ dueOn: "2026-11-22" }, "El plazo de entrega venció. Pida una prórroga a Administración.", true],
   ])("explains why the convocation blocks editing (%o)", async (overrides, reason, byConvocation) => {
     syllabus = draft(overrides)

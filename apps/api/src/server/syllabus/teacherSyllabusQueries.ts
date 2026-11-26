@@ -96,7 +96,7 @@ export function createTeacherSyllabusRepository(executor: Db): TeacherSyllabusRe
       const [row] = await rowsOf<{ found: boolean }>(
         executor,
         Prisma.sql`select exists (select 1 from convocatorias_carreras convocatoria
-          where ${careerIs(Prisma.raw("convocatoria.carrera_id"), careerId)} and convocatoria.estado_convocatoria_carrera in ('abierta', 'pausada')
+          where ${careerIs(Prisma.raw("convocatoria.carrera_id"), careerId)} and convocatoria.estado_convocatoria_carrera in ('abierto', 'pausado')
             and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id)) as found`,
       )
       return row?.found === true

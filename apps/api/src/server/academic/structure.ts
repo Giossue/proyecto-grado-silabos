@@ -3,7 +3,7 @@ import { fromController } from "../auth/controllerResponse"
 import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { phpIsNumeric } from "@silabos/shared/schemas/php"
-import { CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES } from "@silabos/shared/schemas/academic"
+import { CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES, studyModalityLabel } from "@silabos/shared/schemas/academic"
 import { apiJson } from "../http/responses"
 import { unmatchedRoute, routeAllows } from "../http/router"
 import { resolveCareerScope } from "./careerScope"
@@ -12,7 +12,7 @@ export const FORBIDDEN = "No tiene permiso para hacer esto."
 export const CONVOCATION_LOCK_REASON = "Periodo académico activo"
 const UUID = /^[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}$/
 
-export { CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES }
+export { CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES, studyModalityLabel }
 
 const FIXED_FIELDS = [
   { key: "acd", label: "ACD", type: "entero", system_key: "horas_ac", position: 1, totalizable: true },
@@ -91,7 +91,7 @@ export function forbidden(): Response {
 }
 
 export function modalityOptions(): { value: string; label: string }[] {
-  return STUDY_MODALITIES.map((value) => ({ value, label: value }))
+  return STUDY_MODALITIES.map((value) => ({ value, label: studyModalityLabel(value) as string }))
 }
 
 export function shiftOptions(): { value: string; label: string }[] {
@@ -151,7 +151,7 @@ function subjectPayload(subject: SubjectRecord): Record<string, unknown> {
     organization_unit: subject.organizationUnit,
     organization_unit_label: subject.organizationUnit === null ? null : (CURRICULAR_UNITS[subject.organizationUnit] ?? null),
     modality: subject.modality,
-    modality_label: subject.modality,
+    modality_label: studyModalityLabel(subject.modality),
     credits: subject.credits,
     total_hours: subject.totalHours,
     active: subject.active,
@@ -192,7 +192,7 @@ export async function curriculumBuilder(
     career: {
       id: career.id,
       name: career.name,
-      modality: career.modality === null ? null : { value: career.modality, label: career.modality },
+      modality: career.modality === null ? null : { value: career.modality, label: studyModalityLabel(career.modality) as string },
     },
     curriculum: {
       id: career.id,

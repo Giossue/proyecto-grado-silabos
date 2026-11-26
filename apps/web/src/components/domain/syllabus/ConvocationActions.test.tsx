@@ -49,7 +49,7 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const openConvocation: CoordinationConvocation = { process_id: "p-1", period: "2026-2027", convocation_id: "c-1", can_open: false, state: "abierta", process_open: true }
+const openConvocation: CoordinationConvocation = { process_id: "p-1", period: "2026-2027", convocation_id: "c-1", can_open: false, state: "abierto", process_open: true }
 
 describe("ConvocationActions", () => {
   it("al pausar avisa que tampoco se revisan los sílabos enviados", async () => {

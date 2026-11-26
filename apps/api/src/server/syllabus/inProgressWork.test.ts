@@ -103,7 +103,7 @@ describe("InProgressWork locking", () => {
 
   it("reopens a process locking its convocations before its syllabi and restoring their states", async () => {
     const { db, statements } = recordingDb((text) => {
-      if (text.startsWith("select convocatoria_carrera_id::text as id, estado_previo_cierre_convocatoria_carrera")) return [{ id: CONVOCATION, previous: "abierta" }]
+      if (text.startsWith("select convocatoria_carrera_id::text as id, estado_previo_cierre_convocatoria_carrera")) return [{ id: CONVOCATION, previous: "abierto" }]
       if (text.startsWith("select convocatoria_carrera_id::text as id from convocatorias_carreras")) return [{ id: CONVOCATION }]
       if (text.startsWith("select silabos.silabo_id::text as id")) return [{ ...syllabusRow, context: '{"closed_document":{}}' }]
       return []
@@ -168,7 +168,7 @@ describe("InProgressWork academic context", () => {
       $executeRaw: async () => 1,
     } as unknown as Db
     const built = await new InProgressWork(db, () => {}).contextOf(PARALLEL, PERIOD)
-    expect(built?.context.scheduled_subject).toEqual({ period: "2026-1", teaching_weeks: 16, modality: "presencial" })
+    expect(built?.context.scheduled_subject).toEqual({ period: "2026-1", teaching_weeks: 16, modality: "Presencial" })
     expect(built?.context.subject).toMatchObject({ prerequisites: ["M0"] })
     expect(built?.context.subject).not.toHaveProperty("corequisites")
     expect(queries.join(" ")).not.toMatch(/campus|tipo_requisito/)

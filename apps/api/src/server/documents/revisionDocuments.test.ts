@@ -65,7 +65,7 @@ beforeEach(() => {
     id: SYLLABUS,
     state: "aprobado",
     careerId: CAREER,
-    convocationState: "abierta",
+    convocationState: "abierto",
     processState: "abierto",
     dueOn: "2026-12-01",
     currentTeacher: false,

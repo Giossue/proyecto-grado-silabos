@@ -87,7 +87,7 @@ export class GovernancePrismaRepository implements GovernanceRepository {
     const found = await this.prisma.convocatorias_carreras.findMany({
       where: {
         carrera_id: { in: careerIds },
-        estado_convocatoria_carrera: { not: "cerrada" },
+        estado_convocatoria_carrera: { not: "cerrado" },
         convocatorias_universidad: { estado_convocatoria_universidad: { not: "cerrado" } },
       },
       select: { carrera_id: true },

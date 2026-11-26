@@ -36,8 +36,8 @@ type Deadline = Record<string, unknown>
 const PROCESS_PAUSED = "pausado"
 const PROCESS_CLOSED = "cerrado"
 const PROCESS_OPEN = "abierto"
-const CONVOCATION_PAUSED = "pausada"
-const CONVOCATION_CLOSED = "cerrada"
+const CONVOCATION_PAUSED = "pausado"
+const CONVOCATION_CLOSED = "cerrado"
 const CONVOCATION_PREPARATION = "preparacion"
 
 function daysBetween(from: string, to: string): number {

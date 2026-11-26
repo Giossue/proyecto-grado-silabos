@@ -116,7 +116,7 @@ function detailSyllabus(overrides: Partial<DetailSyllabus> = {}): DetailSyllabus
     id: SYLLABUS,
     state: "en_revision",
     careerId: CAREER,
-    convocationState: "abierta",
+    convocationState: "abierto",
     processState: "abierto",
     dueOn: "2026-12-01",
     currentTeacher: false,
@@ -491,7 +491,7 @@ describe("library reviews served by Nest answer exactly like the route handlers 
     ["a revision that left the library", (current) => void (current.decision.stage = "coordinacion")],
     ["a newer revision", (current) => void (current.decision.latest = "70000000-0000-4000-8000-000000000002")],
     ["a decision paused under the lock", (current) => void (current.decision.lockedBlock = PAUSED)],
-    ["a closed convocation", (current) => void (current.syllabus = detailSyllabus({ convocationState: "cerrada" }))],
+    ["a closed convocation", (current) => void (current.syllabus = detailSyllabus({ convocationState: "cerrado" }))],
     ["a syllabus without library submission", (current) => void (current.syllabus = detailSyllabus({ hasLibrarySubmission: false }))],
     ["a syllabus that disappeared under the lock", (current) => void (current.decision.locked = null)],
     ["a submission that disappeared under the lock", (current) => void (current.decision.submission = null)],
@@ -521,8 +521,8 @@ describe("library reviews served by Nest answer exactly like the route handlers 
   })
 
   it.each<[string, (current: State) => void]>([
-    ["a closed convocation", (current) => void (current.syllabus = detailSyllabus({ convocationState: "cerrada" }))],
-    ["a paused convocation", (current) => void (current.syllabus = detailSyllabus({ convocationState: "pausada" }))],
+    ["a closed convocation", (current) => void (current.syllabus = detailSyllabus({ convocationState: "cerrado" }))],
+    ["a paused convocation", (current) => void (current.syllabus = detailSyllabus({ convocationState: "pausado" }))],
     ["a syllabus without library submission", (current) => void (current.syllabus = detailSyllabus({ hasLibrarySubmission: false }))],
     ["a decision paused under the lock", (current) => void (current.decision.lockedBlock = PAUSED)],
     ["a revision already returned", (current) => void (current.decision.lockedRevision = { id: REVISION, number: 2, correctionRequested: true })],

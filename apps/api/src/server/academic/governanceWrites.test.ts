@@ -113,7 +113,7 @@ const update = (entity: string, id: string, body: unknown) =>
   send("PATCH", `/api/v1/admin/academic/${entity}/${id}`, body, (request) => updateGovernanceRecord(request, entity, id, deps()))
 const status = (entity: string, id: string, body: unknown) =>
   send("PATCH", `/api/v1/admin/academic/${entity}/${id}/status`, body, (request) => setGovernanceStatus(request, entity, id, deps()))
-const careerBody = { faculty_id: FACULTY, modality: "Presencial", code: "SW-8", nombre: "Software" }
+const careerBody = { faculty_id: FACULTY, modality: "presencial", code: "SW-8", nombre: "Software" }
 
 beforeEach(() => {
   world = {
@@ -133,7 +133,7 @@ beforeEach(() => {
     [FACULTY, { id: FACULTY, name: "Facultad de Ciencias", libraries: "[]", active: true }],
     [OTHER_FACULTY, { id: OTHER_FACULTY, name: "Facultad Nueva", libraries: '["UEB"]', active: true }],
   ])
-  careers = new Map([[CAREER, { id: CAREER, facultyId: FACULTY, code: "SW-8", name: "Software", modality: "Presencial", active: true, roles: false, inProgress: false }]])
+  careers = new Map([[CAREER, { id: CAREER, facultyId: FACULTY, code: "SW-8", name: "Software", modality: "presencial", active: true, roles: false, inProgress: false }]])
   periods = new Map([[PERIOD, { id: PERIOD, code: "Noviembre-Marzo 2026-2027", startsOn: "2026-11-02", endsOn: "2027-03-12", weeks: 16, running: false }]])
 })
 
@@ -210,14 +210,14 @@ describe("faculties with their logo", () => {
 
 describe("POST /api/v1/admin/academic/{entity}", () => {
   it("the administrator creates a career with its code and cycle count", async () => {
-    const response = await create("carrera", { faculty_id: FACULTY, modality: "Presencial", code: "SW-10", nombre: "Software nueva", cycle_count: "8" })
+    const response = await create("carrera", { faculty_id: FACULTY, modality: "presencial", code: "SW-10", nombre: "Software nueva", cycle_count: "8" })
     expect(response.status).toBe(201)
     expect(response.text).toBe(`{"message":"Registro institucional creado.","id":"${NEW_ID}"}`)
-    expect(created).toEqual([{ facultyId: FACULTY, modality: "Presencial", code: "SW-10", name: "Software nueva", cycleCount: 8 }])
+    expect(created).toEqual([{ facultyId: FACULTY, modality: "presencial", code: "SW-10", name: "Software nueva", cycleCount: 8 }])
   })
 
   it("rejects a career without code or cycle count, a taken code and an inactive faculty", async () => {
-    expect((await create("carrera", { faculty_id: FACULTY, modality: "Presencial", nombre: "X" })).json?.errors).toEqual({
+    expect((await create("carrera", { faculty_id: FACULTY, modality: "presencial", nombre: "X" })).json?.errors).toEqual({
       code: ["El campo código es obligatorio."],
       cycle_count: ["El campo cantidad de ciclos es obligatorio."],
     })
@@ -264,12 +264,12 @@ describe("POST /api/v1/admin/academic/{entity}", () => {
 
 describe("PATCH /api/v1/admin/academic/{entity}/{record}", () => {
   it("updates only what changed in a career and keeps its syllabi in sync", async () => {
-    const response = await update("carrera", CAREER, { ...careerBody, faculty_id: OTHER_FACULTY, modality: "En línea", nombre: "Software renovada" })
+    const response = await update("carrera", CAREER, { ...careerBody, faculty_id: OTHER_FACULTY, modality: "en_linea", nombre: "Software renovada" })
     expect(response.text).toBe('{"message":"Datos institucionales actualizados."}')
     expect(log).toEqual([
       "begin",
       `guard:false:${CAREER}:null`,
-      `update:carrera:${CAREER}:${JSON.stringify({ facultad_id: OTHER_FACULTY, nombre_carrera: "Software renovada", modalidad_carrera: "En línea" })}`,
+      `update:carrera:${CAREER}:${JSON.stringify({ facultad_id: OTHER_FACULTY, nombre_carrera: "Software renovada", modalidad_carrera: "en_linea" })}`,
       `sync:false:${CAREER}`,
       "commit",
     ])
@@ -339,11 +339,11 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}/status", () => {
 
 describe("career and period forms sent as multipart, as the admin screens send them", () => {
   it("creates a career from multipart form data without asking Laravel", async () => {
-    const response = await sendForm("POST", "/api/v1/admin/academic/carrera", { faculty_id: FACULTY, modality: "Presencial", nombre: "Software nueva", code: "SW-10", cycle_count: "8" }, null, (request) =>
+    const response = await sendForm("POST", "/api/v1/admin/academic/carrera", { faculty_id: FACULTY, modality: "presencial", nombre: "Software nueva", code: "SW-10", cycle_count: "8" }, null, (request) =>
       createGovernanceRecord(request, "carrera", deps()),
     )
     expect(response).toEqual({ status: 201, text: `{"message":"Registro institucional creado.","id":"${NEW_ID}"}` })
-    expect(created).toEqual([{ facultyId: FACULTY, modality: "Presencial", code: "SW-10", name: "Software nueva", cycleCount: 8 }])
+    expect(created).toEqual([{ facultyId: FACULTY, modality: "presencial", code: "SW-10", name: "Software nueva", cycleCount: 8 }])
   })
 
   it("updates a career from a multipart form with the spoofed PATCH method", async () => {

@@ -181,7 +181,7 @@ describe("POST /api/v1/admin/academic/careers/import", () => {
     expect(await created.text()).toBe(
       '{"rows":[{"line":2,"values":{"facultad":"FACULTAD DE CIENCIAS ADMINISTRATIVAS","modalidad":"en linea","codigo":"NC-1","nombre":"Carrera Uno","ciclos":"10"},"errors":[]}],"valid":true,"created":1}',
     )
-    expect(state.careers[1]).toMatchObject({ code: "NC-1", name: "Carrera Uno", cycles: 10, columns: { facultyId: FACULTY, modality: "En línea" } })
+    expect(state.careers[1]).toMatchObject({ code: "NC-1", name: "Carrera Uno", cycles: 10, columns: { facultyId: FACULTY, modality: "en_linea" } })
   })
 
   it("reports taken and repeated codes with the row of the first one", async () => {
@@ -285,6 +285,7 @@ describe("POST /api/v1/coordination/academic/curriculum-import", () => {
       ["IMP-002", "Programación II", "2", "Unidad profesional", "", "48,5", "32", "64", "3", "IMP-001; sw-b1-001"],
     ])
     expect(await json(await curriculum(file, { confirm: "1" }))).toMatchObject({ valid: true, created: 2 })
+    expect(state.subjects.find((subject) => subject.code === "IMP-001")!.columns).toMatchObject({ modalidad_asignatura: "presencial" })
     const second = state.subjects.find((subject) => subject.code === "IMP-002")!
     expect(second.columns).toMatchObject({ horas_docencia: 48.5, unidad_curricular_asignatura: "profesional", modalidad_asignatura: null, genera_silabo_asignatura: true })
     expect(state.requirements.map((row) => [row.subjectId, row.extra])).toEqual([

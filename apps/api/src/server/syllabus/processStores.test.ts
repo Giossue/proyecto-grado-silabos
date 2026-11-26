@@ -118,14 +118,14 @@ describe("closing transaction statements", () => {
 
 describe("convocation transaction statements", () => {
   it("locks the career convocation for update", async () => {
-    const { db, statements } = recordingDb(() => [{ state: "abierta" }])
-    expect(await convocationTx(db).lockConvocation(CONVOCATION)).toBe("abierta")
+    const { db, statements } = recordingDb(() => [{ state: "abierto" }])
+    expect(await convocationTx(db).lockConvocation(CONVOCATION)).toBe("abierto")
     expect(statements[0]).toMatch(/limit 1 for update$/)
   })
 
   it("locks the process and then only the convocation row of the joined write query", async () => {
     const { db, statements } = recordingDb((query) =>
-      query.text.includes("from convocatorias_carreras") ? [{ id: CONVOCATION, careerId: "c", careerLabel: "Software", state: "abierta", processState: "abierto", dueAt: "1800000000" }] : [{ id: PROCESS, state: "abierto", periodId: "p" }],
+      query.text.includes("from convocatorias_carreras") ? [{ id: CONVOCATION, careerId: "c", careerLabel: "Software", state: "abierto", processState: "abierto", dueAt: "1800000000" }] : [{ id: PROCESS, state: "abierto", periodId: "p" }],
     )
     const tx = convocationWriteTx(db, noop, 1_800_000_000)
     await tx.lockProcess(PROCESS)

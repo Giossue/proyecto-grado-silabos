@@ -42,7 +42,7 @@ const row = (overrides: Partial<Row> = {}): Row => ({
   id: TARGET,
   state: "sin_iniciar",
   careerId: CAREER,
-  convocationState: "abierta",
+  convocationState: "abierto",
   processState: "abierto",
   dueOn: "2026-12-11",
   currentTeacher: true,
@@ -258,7 +258,7 @@ describe("POST teacher/syllabi/{syllabus}/start", () => {
   it("only lets the current teacher start an unstarted draft of a running convocation before its deadline", async () => {
     rows.set(TARGET, row({ state: "borrador" }))
     expect(await start()).toMatchObject({ status: 403, text: EMPTY_FORBIDDEN })
-    rows.set(TARGET, row({ convocationState: "pausada" }))
+    rows.set(TARGET, row({ convocationState: "pausado" }))
     expect(await start()).toMatchObject({ status: 403, text: EMPTY_FORBIDDEN })
     rows.set(TARGET, row({ dueOn: "2026-11-22" }))
     expect(await start()).toMatchObject({ status: 403, text: EMPTY_FORBIDDEN })

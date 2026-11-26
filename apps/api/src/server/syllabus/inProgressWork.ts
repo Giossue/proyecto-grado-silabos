@@ -1,4 +1,5 @@
 import { MODELS } from "../http/models"
+import { studyModalityLabel } from "@silabos/shared/schemas/academic"
 import { failServerError, Missing } from "../http/failures"
 import { randomUUID } from "node:crypto"
 import { Prisma } from "../../generated/prisma/client"
@@ -60,7 +61,7 @@ export function inProgressFilter(scope: WorkScope = {}): Prisma.Sql {
   if (scope.subjectIds != null) conditions.push(forSubjects(scope.subjectIds))
   const convocation: Prisma.Sql[] = [
     Prisma.sql`convocatoria_curso.convocatoria_carrera_id = silabos.convocatoria_carrera_id`,
-    Prisma.sql`convocatoria_curso.estado_convocatoria_carrera in ('abierta', 'pausada')`,
+    Prisma.sql`convocatoria_curso.estado_convocatoria_carrera in ('abierto', 'pausado')`,
     Prisma.sql`exists (select 1 from convocatorias_universidad proceso_curso where proceso_curso.convocatoria_universidad_id = convocatoria_curso.convocatoria_universidad_id
       and proceso_curso.estado_convocatoria_universidad in ('abierto', 'pausado'))`,
   ]
@@ -335,7 +336,7 @@ export class InProgressWork {
     dataSet(context, "parallel.id", parallel.id)
     dataSet(context, "parallel.code", parallel.code)
     dataSet(context, "parallel.shift", parallel.shift)
-    dataSet(context, "scheduled_subject.modality", parallel.modality)
+    dataSet(context, "scheduled_subject.modality", studyModalityLabel(parallel.modality))
     await this.saveContext(syllabus, context)
   }
 
@@ -703,7 +704,7 @@ export class InProgressWork {
     return {
       ...subject,
       parallel: { id: parallel.id, code: parallel.code, shift: parallel.shift },
-      scheduled_subject: { period: period.code, teaching_weeks: period.weeks === null ? null : Number(period.weeks), modality: parallel.modality },
+      scheduled_subject: { period: period.code, teaching_weeks: period.weeks === null ? null : Number(period.weeks), modality: studyModalityLabel(parallel.modality) },
     }
   }
 

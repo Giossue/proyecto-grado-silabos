@@ -21,7 +21,7 @@ const OTHER = "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const SHIFTS = '"shiftOptions":[{"value":"matutina","label":"Matutina"},{"value":"vespertina","label":"Vespertina"},{"value":"nocturna","label":"Nocturna"}]'
 const MODALITIES =
-  '[{"value":"Presencial","label":"Presencial"},{"value":"Semipresencial","label":"Semipresencial"},{"value":"En línea","label":"En línea"},{"value":"A distancia","label":"A distancia"},{"value":"Híbrida","label":"Híbrida"}]'
+  '[{"value":"presencial","label":"Presencial"},{"value":"semipresencial","label":"Semipresencial"},{"value":"en_linea","label":"En línea"},{"value":"a_distancia","label":"A distancia"},{"value":"hibrida","label":"Híbrida"}]'
 const BASE_OPTIONS = `"faculties":[],"careers":[],"periods":[],"modalityOptions":${MODALITIES},${SHIFTS},"currentCurricula":[],"activeSubjects":[],"scheduledSubjects":[]`
 
 let world: FakeWorld
@@ -41,7 +41,7 @@ function subject(overrides: Partial<SubjectRecord> = {}): SubjectRecord {
     cycle: 1,
     position: 0,
     organizationUnit: "basica",
-    modality: "Presencial",
+    modality: "presencial",
     credits: "3.00",
     totalHours: 144,
     hoursAc: "48.00",
@@ -91,7 +91,7 @@ beforeEach(() => {
     assignments: [],
   }
   asRole("coordinador")
-  careers = new Map([[CAREER, { id: CAREER, name: "Software", modality: "Presencial", cycleCount: 4 }]])
+  careers = new Map([[CAREER, { id: CAREER, name: "Software", modality: "presencial", cycleCount: 4 }]])
   lock = null
   subjects = [subject()]
   calls = []
@@ -132,7 +132,7 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
       '{"id":"creditos","label":"CRED","value":3},{"id":"horas_totales","label":"TOTAL","value":144}]'
     const first =
       '{"id":"01a1c5bc-7cbf-7091-860c-63a02b91e998","code":"SW-B1-001","name":"Algoritmos","cycle":1,"position":0,"organization_unit":"basica","organization_unit_label":"Unidad básica",' +
-      '"modality":"Presencial","modality_label":"Presencial","credits":"3.00","total_hours":144,"active":true,"generates_syllabus":true,' +
+      '"modality":"presencial","modality_label":"Presencial","credits":"3.00","total_hours":144,"active":true,"generates_syllabus":true,' +
       '"system_values":{"horas_ac":"48.00","horas_pae":"48.00","horas_aa":"48.00","creditos":"3.00","horas_totales":144},' +
       '"display_fields":[{"id":"horas_ac","label":"ACD","value":"48.00"},{"id":"horas_pae","label":"APE","value":"48.00"},{"id":"horas_aa","label":"AA","value":"48.00"},{"id":"creditos","label":"CRED","value":"3.00"},{"id":"horas_totales","label":"TOTAL","value":144}]}'
     const second =
@@ -143,7 +143,7 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
     expect(await read(response)).toEqual({
       status: 200,
       text:
-        `{"career":{"id":"${CAREER}","name":"Software","modality":{"value":"Presencial","label":"Presencial"}},` +
+        `{"career":{"id":"${CAREER}","name":"Software","modality":{"value":"presencial","label":"Presencial"}},` +
         `"curriculum":{"id":"${CAREER}","cycle_count":4,"editable":true,"lock_reason":null,"lock":null},` +
         `${fixed},${totals},"subjects":[${first},${second}],` +
         `"requirements":[{"id":"r-1","subject_id":"01a1c5bc-7d0a-7172-b554-6ae09a4da972","requirement_id":"01a1c5bc-7cbf-7091-860c-63a02b91e998"}],` +
@@ -262,7 +262,7 @@ describe("GET /api/v1/coordination/academic/teacher-assignments", () => {
 
 describe("reads through /api/v1/admin/careers/{career}/academic", () => {
   beforeEach(() => {
-    careers.set(OTHER, { id: OTHER, name: "Redes", modality: "Presencial", cycleCount: 8 })
+    careers.set(OTHER, { id: OTHER, name: "Redes", modality: "presencial", cycleCount: 8 })
   })
 
   it("gives the administrator the curriculum and teacher assignments of the requested career", async () => {

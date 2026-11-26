@@ -76,8 +76,8 @@ export async function templateChangedSince(executor: Executor, reference: "pausa
 export async function processSyllabusCounts(executor: Executor, processId: string, toReopen: boolean): Promise<Record<string, number>> {
   const counts: Record<string, number> = Object.fromEntries(EMPTY_COUNTS.map((state) => [state, 0]))
   const scope = toReopen
-    ? Prisma.sql`convocatorias_carreras.estado_convocatoria_carrera = 'cerrada' and convocatorias_carreras.estado_previo_cierre_convocatoria_carrera is not null`
-    : Prisma.sql`convocatorias_carreras.estado_convocatoria_carrera in ('abierta', 'pausada')`
+    ? Prisma.sql`convocatorias_carreras.estado_convocatoria_carrera = 'cerrado' and convocatorias_carreras.estado_previo_cierre_convocatoria_carrera is not null`
+    : Prisma.sql`convocatorias_carreras.estado_convocatoria_carrera in ('abierto', 'pausado')`
   const rows = await rowsOf<{ state: string; total: number }>(
     executor,
     Prisma.sql`select silabos.estado_silabo as state, count(*)::int as total from silabos
@@ -93,7 +93,7 @@ export async function adaptProcessToTemplate(work: InProgressWork, processId: st
   const convocations = await rowsOf<{ id: string }>(
     executor,
     Prisma.sql`select convocatoria_carrera_id::text as id from convocatorias_carreras where convocatoria_universidad_id = ${processId}::uuid
-      and estado_convocatoria_carrera in ('abierta', 'pausada')
+      and estado_convocatoria_carrera in ('abierto', 'pausado')
       and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)
       order by convocatoria_carrera_id asc for update`,
   )
@@ -120,7 +120,7 @@ export async function convocationsToReopen(executor: Executor, processId: string
   const rows = await rowsOf<{ id: string }>(
     executor,
     Prisma.sql`select convocatoria_carrera_id::text as id from convocatorias_carreras where convocatoria_universidad_id = ${processId}::uuid
-      and estado_convocatoria_carrera = 'cerrada' and estado_previo_cierre_convocatoria_carrera is not null
+      and estado_convocatoria_carrera = 'cerrado' and estado_previo_cierre_convocatoria_carrera is not null
       and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)
       order by convocatoria_carrera_id asc for update`,
   )
@@ -132,7 +132,7 @@ export async function reopenProcess(work: InProgressWork, processId: string): Pr
   const convocations = await rowsOf<{ id: string; previous: string }>(
     executor,
     Prisma.sql`select convocatoria_carrera_id::text as id, estado_previo_cierre_convocatoria_carrera as previous from convocatorias_carreras
-      where convocatoria_universidad_id = ${processId}::uuid and estado_convocatoria_carrera = 'cerrada' and estado_previo_cierre_convocatoria_carrera is not null
+      where convocatoria_universidad_id = ${processId}::uuid and estado_convocatoria_carrera = 'cerrado' and estado_previo_cierre_convocatoria_carrera is not null
       and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)
       order by convocatoria_carrera_id asc for update`,
   )
@@ -144,7 +144,7 @@ export async function reopenProcess(work: InProgressWork, processId: string): Pr
       await executor.$executeRaw(Prisma.sql`update silabos set datos_academicos_silabo = ${JSON.stringify(phpShape(context))}::jsonb where silabo_id = ${syllabus.id}::uuid`)
     }
   }
-  const reopened = convocations.filter((row) => row.previous === "abierta").map((row) => row.id)
+  const reopened = convocations.filter((row) => row.previous === "abierto").map((row) => row.id)
   if (ids.length > 0) {
     await executor.$executeRaw(Prisma.sql`update convocatorias_carreras set estado_convocatoria_carrera = estado_previo_cierre_convocatoria_carrera, estado_previo_cierre_convocatoria_carrera = null
       where convocatoria_carrera_id in (${uuidList(ids)})

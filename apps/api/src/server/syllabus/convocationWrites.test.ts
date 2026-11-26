@@ -104,11 +104,11 @@ beforeEach(() => {
     users: [recipient(TEACHER, { name: "Ana Pérez", email: "ana@ueb.edu.ec" }), recipient(OTHER_TEACHER, { name: "Luis Mora", email: "luis@ueb.edu.ec" })],
     periods: new Map([[`convocatoria:${CONVOCATION}`, PERIOD]]),
   })
-  record = { id: CONVOCATION, careerId: CAREER, career: "Software", state: "pausada", processState: "abierto", period: "2026-2", startsOn: "2026-11-10", dueOn: "2026-12-10" }
+  record = { id: CONVOCATION, careerId: CAREER, career: "Software", state: "pausado", processState: "abierto", period: "2026-2", startsOn: "2026-11-10", dueOn: "2026-12-10" }
   openProcesses = new Set([PROCESS])
   process = { id: PROCESS, state: "abierto", periodId: PERIOD }
   existing = false
-  locked = { id: CONVOCATION, careerId: CAREER, careerLabel: "Software", state: "pausada", processState: "abierto", dueAt: DUE_AT }
+  locked = { id: CONVOCATION, careerId: CAREER, careerLabel: "Software", state: "pausado", processState: "abierto", dueAt: DUE_AT }
   blockers = []
   problem = null
   generation = 3
@@ -130,7 +130,7 @@ describe("POST /api/v1/coordination/convocations", () => {
       `create:${CAREER}:${PROCESS}`,
       `lock:convocation:${CONVOCATION}`,
       `generate:${CONVOCATION}:{}`,
-      `state:${CONVOCATION}:abierta`,
+      `state:${CONVOCATION}:abierto`,
       "commit",
     ])
     const message = "Se abrió el periodo académico de Software; la entrega vence el 10 de diciembre de 2026, 23:59."
@@ -193,7 +193,7 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
     expect(response.text).toBe(
       JSON.stringify({ message: "Periodo académico reanudado. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla queda protegida." }),
     )
-    expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierta`, "commit"])
+    expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierto`, "commit"])
     const at = "20270115080000123"
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
       [TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${TEACHER}:${at}`, "Se reanudó el periodo académico", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
@@ -205,22 +205,22 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
   it("resumes even when nothing new was generated", async () => {
     generation = 0
     expect((await resume()).status).toBe(200)
-    expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierta`, "commit"])
+    expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierto`, "commit"])
   })
 
   it("is forbidden unless the coordinator of the career resumes a paused convocation", async () => {
-    record = { ...(record as ConvocationRecord), state: "abierta" }
+    record = { ...(record as ConvocationRecord), state: "abierto" }
     expect((await resume()).text).toBe(FORBIDDEN)
-    record = { ...(record as ConvocationRecord), state: "pausada" }
+    record = { ...(record as ConvocationRecord), state: "pausado" }
     world.assignments = [makeAssignment({ role: "coordinador", careerId: "c0000000-0000-4000-8000-000000000009" })]
     expect((await resume()).text).toBe(FORBIDDEN)
     expect(log).toEqual([])
   })
 
   it("rejects under the lock when the state changed or Administration paused the process", async () => {
-    locked = { ...(locked as LockedConvocation), state: "abierta" }
+    locked = { ...(locked as LockedConvocation), state: "abierto" }
     expect((await resume()).json?.errors).toEqual({ convocation: ["Solo un periodo académico pausado puede reanudarse."] })
-    locked = { ...(locked as LockedConvocation), state: "pausada", processState: "pausado" }
+    locked = { ...(locked as LockedConvocation), state: "pausado", processState: "pausado" }
     expect((await resume()).json?.errors).toEqual({
       convocation: ["El proceso institucional no está abierto; el periodo académico se reanudará cuando Administración lo reanude."],
     })

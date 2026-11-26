@@ -24,7 +24,7 @@ export function draftStartTx(executor: Executor): DraftStartTx {
         Prisma.sql`select silabos.silabo_id::text as id from silabos inner join paralelos paralelo on paralelo.paralelo_id = silabos.paralelo_id
           where silabos.silabo_id != ${syllabusId}::uuid and silabos.iniciado_en is not null and paralelo.asignatura_id = ${subjectId}::uuid
             and exists (select 1 from convocatorias_carreras cerrada where cerrada.convocatoria_carrera_id = silabos.convocatoria_carrera_id
-              and cerrada.estado_convocatoria_carrera = 'cerrada'
+              and cerrada.estado_convocatoria_carrera = 'cerrado'
               and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = cerrada.convocatoria_universidad_id))
             and ${writtenBySql(userId)} and ${SYLLABUS_EXISTS}
             and (${templateModifiedAt}::timestamptz is null or ${templateModifiedAt}::timestamptz <= silabos.iniciado_en)

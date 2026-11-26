@@ -37,7 +37,7 @@ const summary = (convocationId: string | null): Dashboard => ({
   metrics: [],
   setup: { title: "Antes de empezar", intro: "", done: 4, total: 5, steps: ["curriculum", "scheduled_subjects", "parallels", "teachers", "convocation"].map((key) => ({ key, label: key, hint: key === "convocation" ? "Complete la ficha de 2 materia(s) en Proyecto de carrera." : "", done: key !== "convocation", action: null })) },
   deadline: { period: "2026-2027", starts_at: "2026-10-26", due_at: "2026-10-30", state: "active", days_until_start: 0, days_until_due: 3, convocation_id: convocationId, paused_by: null, classes_ended: false, career_pending: false },
-  coordination_convocation: { process_id: "p1", period: "2026-2027", convocation_id: convocationId, can_open: convocationId === null, state: convocationId ? "abierta" : null, process_open: true },
+  coordination_convocation: { process_id: "p1", period: "2026-2027", convocation_id: convocationId, can_open: convocationId === null, state: convocationId ? "abierto" : null, process_open: true },
 })
 
 const mountPage = () => renderWithProviders(<CoordinationReviewsPage />)
@@ -50,7 +50,7 @@ describe("CoordinationReviewsPage", () => {
     vi.mocked(getDashboard).mockResolvedValue(summary("c1"))
     vi.mocked(getConvocation).mockReset().mockResolvedValue({
       convocation: {
-        id: "c1", name: "Software", state: "abierta", process: { name: "P", state: "abierto" }, period: "2026-2027", template: "Oficial", start_date: null, draft_deadline: null,
+        id: "c1", name: "Software", state: "abierto", process: { name: "P", state: "abierto" }, period: "2026-2027", template: "Oficial", start_date: null, draft_deadline: null,
         counts: { total: 2, not_started: 1, draft: 0, in_review: 1, approved: 0 },
         syllabi: [{ id: "s2", subject: "Programación Orientada a Objetos", code: "SW-B2-006", state: "sin_iniciar", iniciado_en: null, parallels: ["A"], teachers: ["Eduardo Narvaez"] }],
       },

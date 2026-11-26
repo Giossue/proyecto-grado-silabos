@@ -98,7 +98,7 @@ const draft = (overrides: Partial<DetailSyllabus> = {}): DetailSyllabus => ({
   id: SYLLABUS,
   state: "borrador",
   careerId: CAREER,
-  convocationState: "abierta",
+  convocationState: "abierto",
   processState: "abierto",
   dueOn: "2026-12-01",
   currentTeacher: true,
@@ -140,7 +140,7 @@ beforeEach(() => {
   }
   notices = notificationWorld({ users: [recipient(LIBRARIAN)], subjects: new Map([[SYLLABUS, "Biología"]]) })
   syllabus = draft()
-  schedule = { convocationState: "abierta", processState: "abierto", startsOn: "2026-11-01", dueOn: "2026-12-01" }
+  schedule = { convocationState: "abierto", processState: "abierto", startsOn: "2026-11-01", dueOn: "2026-12-01" }
   keyed = null
   signedRoles = []
   snapshot = () => structuredClone(SNAPSHOT)
@@ -168,7 +168,7 @@ describe("POST teacher/syllabi/{s}/signing-statement", () => {
     world.assignments = [makeAssignment({ careerId: CAREER })]
     syllabus = draft({ currentTeacher: false })
     expect((await statementOf({ version_bloqueo: 7 })).status).toBe(403)
-    syllabus = draft({ convocationState: "pausada" })
+    syllabus = draft({ convocationState: "pausado" })
     expect((await statementOf({ version_bloqueo: 7 })).status).toBe(403)
     syllabus = draft({ state: "aprobado" })
     expect((await statementOf({ version_bloqueo: 7 })).status).toBe(403)

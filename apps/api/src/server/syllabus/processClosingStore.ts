@@ -45,10 +45,10 @@ function closingTx(executor: Db): ClosingTx {
         where silabo_id = ${syllabusId}::uuid`)
     },
     async closeConvocations(processId) {
-      await executor.$executeRaw`update convocatorias_carreras set estado_convocatoria_carrera = ${"cerrada"},
+      await executor.$executeRaw`update convocatorias_carreras set estado_convocatoria_carrera = ${"cerrado"},
         estado_previo_cierre_convocatoria_carrera = convocatorias_carreras.estado_convocatoria_carrera
         where (convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid
-          and convocatorias_carreras.estado_convocatoria_carrera in (${"abierta"}, ${"pausada"}) and ${PROCESS_ALIVE})`
+          and convocatorias_carreras.estado_convocatoria_carrera in (${"abierto"}, ${"pausado"}) and ${PROCESS_ALIVE})`
     },
   }
 }

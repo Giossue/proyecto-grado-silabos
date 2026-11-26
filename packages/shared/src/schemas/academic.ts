@@ -1,7 +1,18 @@
 import { z } from "zod"
 import { attributeName, checkItems, is, itemsAt, nullableField, requiredField, sometimesField, type Check } from "./fields"
 
-export const STUDY_MODALITIES = ["Presencial", "Semipresencial", "En línea", "A distancia", "Híbrida"]
+export const STUDY_MODALITY_LABELS: Record<string, string> = {
+  presencial: "Presencial",
+  semipresencial: "Semipresencial",
+  en_linea: "En línea",
+  a_distancia: "A distancia",
+  hibrida: "Híbrida",
+}
+export const STUDY_MODALITIES = Object.keys(STUDY_MODALITY_LABELS)
+
+export function studyModalityLabel(value: string | null): string | null {
+  return value === null ? null : (STUDY_MODALITY_LABELS[value] ?? value)
+}
 export const CURRICULAR_UNITS: Record<string, string> = {
   basica: "Unidad básica",
   profesional: "Unidad profesional",

@@ -110,7 +110,7 @@ beforeEach(() => {
     id: SYLLABUS,
     state: "en_revision",
     careerId: CAREER,
-    convocationState: "abierta",
+    convocationState: "abierto",
     processState: "abierto",
     dueOn: "2026-12-01",
     currentTeacher: false,
@@ -202,11 +202,11 @@ describe("POST /api/v1/coordination/reviews/{revision}/request-correction", () =
   })
 
   it("answers 403 with the block while the career is paused or the convocation is closed, before validating", async () => {
-    syllabus = { ...syllabus, convocationState: "pausada" }
+    syllabus = { ...syllabus, convocationState: "pausado" }
     expect(await post({ justification: "x" })).toMatchObject({ status: 403, text: JSON.stringify({ message: PAUSED }) })
-    syllabus = { ...syllabus, convocationState: "cerrada" }
+    syllabus = { ...syllabus, convocationState: "cerrado" }
     expect((await post({ justification: JUSTIFICATION })).text).toBe(JSON.stringify({ message: CLOSED }))
-    syllabus = { ...syllabus, convocationState: "abierta", processState: "pausado" }
+    syllabus = { ...syllabus, convocationState: "abierto", processState: "pausado" }
     expect((await post({ justification: JUSTIFICATION })).json).toEqual({
       message: "Administración pausó el periodo académico: las revisiones se retoman cuando se reanude.",
     })
@@ -297,9 +297,9 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
   })
 
   it("answers 403 with the block while paused or closed, before validating", async () => {
-    syllabus = { ...syllabus, convocationState: "pausada" }
+    syllabus = { ...syllabus, convocationState: "pausado" }
     expect((await reset({ reason: "no" })).text).toBe(JSON.stringify({ message: PAUSED }))
-    syllabus = { ...syllabus, convocationState: "cerrada" }
+    syllabus = { ...syllabus, convocationState: "cerrado" }
     expect((await reset({ reason: REASON })).text).toBe(JSON.stringify({ message: CLOSED }))
     expect(log).toEqual([])
   })

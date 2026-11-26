@@ -31,7 +31,7 @@ export function ProcessLockAlert({ lock, title, message, hideAction, icon, banne
   const reason = ((): string | null => {
     if (why) return why
     if (message || !lock) return null
-    const open = "abierta"
+    const open = "abierto"
     if (lock.scope === "process") {
       return `Hay un periodo académico ${open}. No puede editar la plantilla mientras siga abierto, porque los docentes ya están llenando sus sílabos con ella. Para editarla, pause el periodo académico. Al reanudar, si la plantilla cambió, se pedirá confirmación y los sílabos de este período se adaptarán a ella: se conserva lo escrito y los enviados o aprobados vuelven a borrador. Los de períodos anteriores no se tocan`
     }

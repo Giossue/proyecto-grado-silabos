@@ -15,7 +15,7 @@ const RETIRED = "01a1c5bc-7cbf-7091-860c-63a02b91e990"
 const RETIRED_WITH_PARALLEL = "01a1c5bc-7cbf-7091-860c-63a02b91e991"
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const MODALITIES =
-  '[{"value":"Presencial","label":"Presencial"},{"value":"Semipresencial","label":"Semipresencial"},{"value":"En línea","label":"En línea"},{"value":"A distancia","label":"A distancia"},{"value":"Híbrida","label":"Híbrida"}]'
+  '[{"value":"presencial","label":"Presencial"},{"value":"semipresencial","label":"Semipresencial"},{"value":"en_linea","label":"En línea"},{"value":"a_distancia","label":"A distancia"},{"value":"hibrida","label":"Híbrida"}]'
 const SHIFTS = '[{"value":"matutina","label":"Matutina"},{"value":"vespertina","label":"Vespertina"},{"value":"nocturna","label":"Nocturna"}]'
 
 let world: FakeWorld
@@ -27,7 +27,7 @@ let marks: { syllabus: string[]; teacher: string[]; sent: string[]; started: str
 let templates: FakeTemplateWorld
 
 function subject(overrides: Partial<ScheduledSubjectRecord>): ScheduledSubjectRecord {
-  return { id: ALGORITHMS, code: "SW-B1-001", name: "Algoritmos", cycle: 1, active: true, generatesSyllabus: true, modality: "Presencial", ...overrides }
+  return { id: ALGORITHMS, code: "SW-B1-001", name: "Algoritmos", cycle: 1, active: true, generatesSyllabus: true, modality: "presencial", ...overrides }
 }
 
 const academic = (): AcademicStructureRepository => ({
@@ -73,7 +73,7 @@ beforeEach(() => {
     assignments: [],
   }
   asRole("coordinador")
-  careers = new Map([[CAREER, { id: CAREER, name: "Software", modality: "Presencial", cycleCount: 4 }]])
+  careers = new Map([[CAREER, { id: CAREER, name: "Software", modality: "presencial", cycleCount: 4 }]])
   lock = null
   parallels = []
   subjects = []
@@ -157,7 +157,7 @@ describe("GET /api/v1/admin/careers/{career}/academic/scheduled-subjects", () =>
   const read = (careerId: string) => scheduledSubjects(apiRequest(`/api/v1/admin/careers/${careerId}/academic/scheduled-subjects`, { cookie }), deps(), careerId)
 
   beforeEach(() => {
-    careers.set(OTHER, { id: OTHER, name: "Redes", modality: "Presencial", cycleCount: 8 })
+    careers.set(OTHER, { id: OTHER, name: "Redes", modality: "presencial", cycleCount: 8 })
   })
 
   it("lists the requested career for the administrator", async () => {

@@ -33,11 +33,11 @@ describe("careerWriteTx subject columns", () => {
       horas_autonomas: null,
       orden_asignatura_en_ciclo: 2,
       unidad_curricular_asignatura: "basica",
-      modalidad_asignatura: "Presencial",
+      modalidad_asignatura: "presencial",
       genera_silabo_asignatura: true,
     })
     expect(statements[0].text).toContain('insert into "asignaturas"')
-    expect(statements[0].values).toEqual(expect.arrayContaining(["MAT-1", "Cálculo", 1, "3.00", 2, "basica", "Presencial", true, "01a1c5ba-10b4-7129-925f-c28a9489323c"]))
+    expect(statements[0].values).toEqual(expect.arrayContaining(["MAT-1", "Cálculo", 1, "3.00", 2, "basica", "presencial", true, "01a1c5ba-10b4-7129-925f-c28a9489323c"]))
     expect(statements[0].text).not.toContain('"total_horas_asignatura"')
   })
 

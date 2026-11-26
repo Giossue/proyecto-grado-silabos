@@ -68,7 +68,7 @@ async function openConvocation(tx: ConvocationWriteTx, convocationId: string): P
   const problem = await tx.templateProblem("convocation")
   if (problem !== null) reject({ convocation: [problem] })
   await tx.generateConvocation(convocation.id)
-  await tx.updateState(convocation.id, "abierta")
+  await tx.updateState(convocation.id, "abierto")
   const message = `Se abrió el periodo académico de ${convocation.careerLabel}; la entrega vence el ${notificationDate(convocation.dueAt)}.`
   for (const [teacherId, count] of await tx.teacherSyllabusCounts([convocation.id])) {
     await storeInternalNotifications(tx.notifications, {
@@ -146,17 +146,17 @@ export async function resumeConvocation(request: Request, id: string, deps: Conv
 
 export async function resumeConvocationFor(request: Request, session: AppSession, convocation: ConvocationRecord, deps: ConvocationWriteDeps): Promise<Response> {
   const original = request.clone()
-  if (!isCoordinatorOf(session, convocation.careerId) || convocation.state !== "pausada") return forbidden()
+  if (!isCoordinatorOf(session, convocation.careerId) || convocation.state !== "pausado") return forbidden()
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
       const locked = await tx.lockConvocation(convocation.id)
       if (locked === null) throw new Missing(MODELS.convocation, convocation.id)
-      if (locked.state !== "pausada") reject({ convocation: ["Solo un periodo académico pausado puede reanudarse."] })
+      if (locked.state !== "pausado") reject({ convocation: ["Solo un periodo académico pausado puede reanudarse."] })
       if (locked.processState !== "abierto") {
         reject({ convocation: ["El proceso institucional no está abierto; el periodo académico se reanudará cuando Administración lo reanude."] })
       }
       await tx.generateConvocation(locked.id)
-      await tx.updateState(locked.id, "abierta")
+      await tx.updateState(locked.id, "abierto")
       await notifyConvocationResumed(tx, locked, timestampMs(deps.nowMs()))
     })
     return apiJson({ message: "Periodo académico reanudado. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla queda protegida." })

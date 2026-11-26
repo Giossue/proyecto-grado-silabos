@@ -96,7 +96,7 @@ export class AcademicStructurePrismaRepository implements AcademicStructureRepos
       from convocatorias_carreras
       inner join convocatorias_universidad on convocatorias_universidad.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id
       left join periodos_academicos on periodos_academicos.periodo_academico_id = convocatorias_universidad.periodo_academico_id
-      where convocatorias_carreras.carrera_id = ${careerId}::uuid and convocatorias_carreras.estado_convocatoria_carrera = 'abierta'
+      where convocatorias_carreras.carrera_id = ${careerId}::uuid and convocatorias_carreras.estado_convocatoria_carrera = 'abierto'
         and convocatorias_universidad.estado_convocatoria_universidad in ('abierto', 'pausado')
       limit 1`
     return row ? { period: row.period, institutionalPause: row.state === "pausado", deliveryOn: row.delivery_on } : null

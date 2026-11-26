@@ -100,7 +100,7 @@ export function governanceWriteTx(db: Db, afterCommit: AfterCommit, now: number,
     periodRunning: (periodId) =>
       convocationExists(
         db,
-        Prisma.sql`convocatoria.estado_convocatoria_carrera = ${"abierta"}`,
+        Prisma.sql`convocatoria.estado_convocatoria_carrera = ${"abierto"}`,
         processWhere(Prisma.sql`proceso.estado_convocatoria_universidad = ${"abierto"}`),
         processWhere(Prisma.sql`proceso.periodo_academico_id = ${periodId}::uuid`),
       ),
@@ -114,7 +114,7 @@ export function governanceWriteTx(db: Db, afterCommit: AfterCommit, now: number,
       convocationExists(
         db,
         Prisma.sql`convocatoria.carrera_id = ${id}::uuid`,
-        Prisma.sql`convocatoria.estado_convocatoria_carrera <> ${"cerrada"}`,
+        Prisma.sql`convocatoria.estado_convocatoria_carrera <> ${"cerrado"}`,
         processWhere(Prisma.sql`proceso.estado_convocatoria_universidad <> ${"cerrado"}`),
       ),
     async retireCareerUsers(id) {

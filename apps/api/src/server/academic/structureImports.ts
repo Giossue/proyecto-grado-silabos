@@ -14,7 +14,7 @@ import { insertCareerSubject } from "./careerWrites"
 import type { CurriculumTx } from "./curriculumWrites"
 import { addRequirement, curriculumMutation } from "./curriculumWrites"
 import type { GovernanceWriteTx } from "./governanceWrites"
-import { CURRICULAR_UNITS, STUDY_MODALITIES } from "./structure"
+import { CURRICULAR_UNITS, STUDY_MODALITIES, studyModalityLabel } from "./structure"
 
 export const CAREER_COLUMNS = { facultad: "Facultad", modalidad: "Modalidad", codigo: "Código de carrera", nombre: "Nombre de la carrera", ciclos: "Número de ciclos" }
 
@@ -91,6 +91,17 @@ function curriculumCareer(session: AppSession, deps: StructureImportDeps, reques
   )
 }
 
+const MODALITY_LABELS = STUDY_MODALITIES.map((modality) => studyModalityLabel(modality) as string)
+
+function modalityLookup(): PhpMap<string> {
+  const modalities = new PhpMap<string>()
+  for (const modality of STUDY_MODALITIES) {
+    modalities.set(importKey(studyModalityLabel(modality) as string), modality)
+    modalities.set(importKey(modality), modality)
+  }
+  return modalities
+}
+
 export function unitFromText(text: string): string | null {
   const lower = text.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, "").toLowerCase()
   if (lower === "") return null
@@ -122,7 +133,7 @@ export async function careerImportTemplate(request: Request, deps: StructureImpo
   if (session instanceof Response) return session
   if (!mayImportCareers(session)) return forbiddenWith(CAREERS_FORBIDDEN)
   const faculties = (await deps.store.activeFaculties()).map((faculty) => faculty.name)
-  return templateResponse(Object.values(CAREER_COLUMNS), [{ column: 0, options: faculties }, { column: 1, options: STUDY_MODALITIES }], CAREER_NOTES, "plantilla-carreras.xlsx", deps)
+  return templateResponse(Object.values(CAREER_COLUMNS), [{ column: 0, options: faculties }, { column: 1, options: MODALITY_LABELS }], CAREER_NOTES, "plantilla-carreras.xlsx", deps)
 }
 
 export async function curriculumImportTemplate(request: Request, deps: StructureImportDeps, requestedCareerId: string | null = null): Promise<Response> {
@@ -135,7 +146,7 @@ export async function curriculumImportTemplate(request: Request, deps: Structure
     Object.values(CURRICULUM_COLUMNS),
     [
       { column: keys.indexOf("unidad"), options: Object.values(CURRICULAR_UNITS) },
-      { column: keys.indexOf("modalidad"), options: STUDY_MODALITIES },
+      { column: keys.indexOf("modalidad"), options: MODALITY_LABELS },
       { column: keys.indexOf("genera_silabo"), options: [YES, NO] },
     ],
     CURRICULUM_NOTES,
@@ -149,8 +160,7 @@ type CareerPayload = { faculty_id: string | null; modality: string | null; code:
 async function checkCareers(rows: ImportRow[], deps: StructureImportDeps): Promise<{ checked: CheckedRow[]; payloads: CareerPayload[] }> {
   const faculties = new PhpMap<string>()
   for (const faculty of await deps.store.facultiesForImport()) faculties.set(importKey(faculty.name), faculty.id)
-  const modalities = new PhpMap<string>()
-  for (const modality of STUDY_MODALITIES) modalities.set(importKey(modality), modality)
+  const modalities = modalityLookup()
   const taken = new PhpMap<true>()
   for (const code of await deps.store.careerCodes()) taken.set(importKey(code), true)
   const seen = new PhpMap<number>()
@@ -233,8 +243,7 @@ async function checkCurriculum(
     fileCodes.set(importKey(row.values.codigo), row.line)
   }
   const cycles = PhpMap.merge(storedCycles, fileCycles)
-  const modalities = new PhpMap<string>()
-  for (const modality of STUDY_MODALITIES) modalities.set(importKey(modality), modality)
+  const modalities = modalityLookup()
   const seen = new PhpMap<number>()
   const checked: CheckedRow[] = []
   const payloads: CurriculumPayload[] = []

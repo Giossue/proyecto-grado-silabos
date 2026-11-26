@@ -72,7 +72,7 @@ beforeEach(() => {
     id: SYLLABUS,
     state: "borrador",
     careerId: CAREER,
-    convocationState: "abierta",
+    convocationState: "abierto",
     processState: "abierto",
     dueOn: "2027-01-20",
     currentTeacher: true,
@@ -152,7 +152,7 @@ describe("POST teacher/syllabi/{syllabus}/validate", () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
     expect(await validate()).toMatchObject({ status: 403, text: '{"message":""}' })
     world.assignments = [makeAssignment({ role: "docente", careerId: CAREER })]
-    facts = { ...facts!, convocationState: "pausada" }
+    facts = { ...facts!, convocationState: "pausado" }
     expect((await validate()).status).toBe(403)
   })
 
@@ -164,7 +164,7 @@ describe("POST teacher/syllabi/{syllabus}/validate", () => {
       id: SYLLABUS,
       state: "borrador",
       careerId: CAREER,
-      convocationState: "abierta",
+      convocationState: "abierto",
       processState: "abierto",
       dueOn: "2027-01-20",
       currentTeacher: true,

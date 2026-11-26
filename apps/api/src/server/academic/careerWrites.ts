@@ -199,7 +199,7 @@ async function teacherRole(tx: CareerWriteTx, userId: string, careerId: string):
 }
 
 function openConvocation(convocation: CareerConvocation | null): string | null {
-  return convocation !== null && convocation.state === "abierta" && convocation.processState === "abierto" ? convocation.id : null
+  return convocation !== null && convocation.state === "abierto" && convocation.processState === "abierto" ? convocation.id : null
 }
 
 async function assignTeacher(tx: CareerWriteTx, context: CareerContext, parallelId: string, userId: string, confirmed: boolean, convocationId: string | null): Promise<void> {

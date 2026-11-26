@@ -5,8 +5,8 @@ export const ROLE_COORDINATOR = "coordinador"
 export const ROLE_LIBRARIAN = "bibliotecario"
 export const ROLE_ADMINISTRATOR = "administrador"
 export const EDITABLE_STATES = ["borrador", "correccion_solicitada"]
-export const CONVOCATION_OPEN = "abierta"
-export const CONVOCATION_PAUSED = "pausada"
+export const CONVOCATION_OPEN = "abierto"
+export const CONVOCATION_PAUSED = "pausado"
 export const PROCESS_OPEN = "abierto"
 export const PROCESS_PAUSED = "pausado"
 

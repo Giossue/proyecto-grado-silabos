@@ -109,7 +109,7 @@ export function processWriteTx(executor: Db, afterCommit: AfterCommit, now: numb
         executor,
         Prisma.sql`select convocatorias_carreras.convocatoria_carrera_id::text as id, ${careerLabelSql("carreras")} as "careerLabel"
           from convocatorias_carreras inner join carreras on carreras.carrera_id = convocatorias_carreras.carrera_id
-          where (convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid and convocatorias_carreras.estado_convocatoria_carrera = ${"abierta"} and ${PROCESS_ALIVE})`,
+          where (convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid and convocatorias_carreras.estado_convocatoria_carrera = ${"abierto"} and ${PROCESS_ALIVE})`,
       )
     },
     async updateState(processId, state) {

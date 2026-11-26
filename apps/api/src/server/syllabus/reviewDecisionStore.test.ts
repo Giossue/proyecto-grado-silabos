@@ -19,7 +19,7 @@ const compact = (query: Prisma.Sql) => query.text.replace(/\s+/g, " ")
 
 describe("lockedDecisionBlock", () => {
   it("locks the institutional process for share before the career convocation", async () => {
-    const { db, queries } = fakeDb(decisionRows("abierta"))
+    const { db, queries } = fakeDb(decisionRows("abierto"))
     expect(await lockedDecisionBlock(db, SYLLABUS)).toBeNull()
     expect(queries).toHaveLength(3)
     expect(compact(queries[0])).not.toMatch(/for (share|update)/)
@@ -30,13 +30,13 @@ describe("lockedDecisionBlock", () => {
   })
 
   it("reads without locks when asked and keeps the closed, paused and process-paused answers", async () => {
-    const plain = fakeDb(decisionRows("abierta"))
+    const plain = fakeDb(decisionRows("abierto"))
     await lockedDecisionBlock(plain.db, SYLLABUS, false)
     expect(plain.queries).toHaveLength(2)
     expect(plain.queries.map(compact).join(" ")).not.toMatch(/for share/)
-    expect(await lockedDecisionBlock(fakeDb(decisionRows("cerrada")).db, SYLLABUS)).toBe("El periodo académico está cerrado: la revisión queda solo para consulta y no admite decisiones.")
-    expect(await lockedDecisionBlock(fakeDb(decisionRows("pausada")).db, SYLLABUS)).toBe("El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude.")
-    expect(await lockedDecisionBlock(fakeDb(decisionRows("abierta", "pausado")).db, SYLLABUS)).toBe(
+    expect(await lockedDecisionBlock(fakeDb(decisionRows("cerrado")).db, SYLLABUS)).toBe("El periodo académico está cerrado: la revisión queda solo para consulta y no admite decisiones.")
+    expect(await lockedDecisionBlock(fakeDb(decisionRows("pausado")).db, SYLLABUS)).toBe("El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude.")
+    expect(await lockedDecisionBlock(fakeDb(decisionRows("abierto", "pausado")).db, SYLLABUS)).toBe(
       "Administración pausó el periodo académico: las revisiones se retoman cuando se reanude.",
     )
     expect(await lockedDecisionBlock(fakeDb(() => []).db, SYLLABUS)).toBe("El periodo académico está cerrado: la revisión queda solo para consulta y no admite decisiones.")

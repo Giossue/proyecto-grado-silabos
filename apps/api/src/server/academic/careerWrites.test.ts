@@ -67,7 +67,7 @@ function subjectRow(id: string, careerId: string, overrides: Partial<SubjectRow[
       horas_autonomas: "48.00",
       orden_asignatura_en_ciclo: 0,
       unidad_curricular_asignatura: "basica",
-      modalidad_asignatura: "Presencial",
+      modalidad_asignatura: "presencial",
       genera_silabo_asignatura: true,
       ...overrides,
     },
@@ -267,11 +267,11 @@ describe("POST /api/v1/coordination/academic/asignatura", () => {
   })
 
   it("takes an explicit position, a null position as the first one and the modality and syllabus switch as sent", async () => {
-    await create("asignatura", { ...subjectBody, position: 5, modality: "En línea", generates_syllabus: "0" })
+    await create("asignatura", { ...subjectBody, position: 5, modality: "en_linea", generates_syllabus: "0" })
     await create("asignatura", { ...subjectBody, code: "SW-702", position: null, cycle: "3" })
     const inserted = log.filter((line) => line.startsWith("insert-subject")).map((line) => JSON.parse(line.slice(line.indexOf("{"))) as Record<string, unknown>)
     expect(inserted.map((row) => [row.orden_asignatura_en_ciclo, row.modalidad_asignatura, row.genera_silabo_asignatura, row.ciclo_asignatura])).toEqual([
-      [5, "En línea", false, 1],
+      [5, "en_linea", false, 1],
       [0, null, true, "3"],
     ])
   })
@@ -373,7 +373,7 @@ describe("PATCH /api/v1/coordination/academic/asignatura/{record}", () => {
       nombre: "Algoritmos II",
       cycle: 2,
       organization_unit: "basica",
-      modality: "Presencial",
+      modality: "presencial",
       creditos: "3",
       horas_ac: 48,
       horas_pae: "40.5",
@@ -389,7 +389,7 @@ describe("PATCH /api/v1/coordination/academic/asignatura/{record}", () => {
   })
 
   it("writes nothing when nothing changes and only the changed columns otherwise", async () => {
-    const same = { code: "SW-B1-001", nombre: "Algoritmos", cycle: "1", organization_unit: "basica", modality: "Presencial", creditos: 3, horas_ac: "48", horas_pae: "48.00", horas_aa: 48 }
+    const same = { code: "SW-B1-001", nombre: "Algoritmos", cycle: "1", organization_unit: "basica", modality: "presencial", creditos: 3, horas_ac: "48", horas_pae: "48.00", horas_aa: 48 }
     expect((await update("asignatura", SUBJECT, same)).status).toBe(200)
     expect(log.filter((line) => line.startsWith("update-subject"))).toEqual([])
     expect((await update("asignatura", SUBJECT, { ...same, organization_unit: "profesional", modality: null, position: 2 })).status).toBe(200)
@@ -475,7 +475,7 @@ describe("a parallel that appears while the career convocation is open", () => {
   const CONVOCATION = "01a1c5bc-8000-7000-8000-000000000001"
 
   it("receives its syllabus right away when it is created", async () => {
-    convocation = { id: CONVOCATION, state: "abierta", processState: "abierto" }
+    convocation = { id: CONVOCATION, state: "abierto", processState: "abierto" }
     expect((await storeParallels({ subject_id: SUBJECT, codes: ["B", "C"], shift: "vespertina", user_id: TEACHER })).json).toEqual({ message: "2 paralelos creados dentro de su carrera." })
     expect(log).toEqual([
       "begin",
@@ -494,7 +494,7 @@ describe("a parallel that appears while the career convocation is open", () => {
   })
 
   it("receives its syllabus right away when it gets its teacher", async () => {
-    convocation = { id: CONVOCATION, state: "abierta", processState: "abierto" }
+    convocation = { id: CONVOCATION, state: "abierto", processState: "abierto" }
     expect((await create("asignacion_docente", { user_id: TEACHER, parallel_id: PARALLEL })).text).toBe(CREATED)
     expect(log).toEqual(["begin", `guard:false:${CAREER}:${SUBJECT}`, `assign:${TEACHER_ROLE}:${PARALLEL}`, `restart:${PARALLEL}`, `generate:${CONVOCATION}:${PARALLEL}`, "commit"])
     log = []
@@ -512,10 +512,10 @@ describe("a parallel that appears while the career convocation is open", () => {
   })
 
   it.each([
-    ["a paused convocation", { state: "pausada", processState: "abierto" }],
-    ["a paused institutional process", { state: "abierta", processState: "pausado" }],
+    ["a paused convocation", { state: "pausado", processState: "abierto" }],
+    ["a paused institutional process", { state: "abierto", processState: "pausado" }],
     ["a convocation in preparation", { state: "preparacion", processState: "abierto" }],
-    ["a finalized convocation", { state: "cerrada", processState: "cerrado" }],
+    ["a finalized convocation", { state: "cerrado", processState: "cerrado" }],
   ])("waits with %s, as before", async (_, states) => {
     convocation = { id: CONVOCATION, ...states }
     expect((await storeParallels({ subject_id: SUBJECT, codes: ["B"], shift: "vespertina", user_id: TEACHER })).json).toEqual({ message: "1 paralelos creados dentro de su carrera." })
@@ -530,7 +530,7 @@ describe("a parallel that appears while the career convocation is open", () => {
   })
 
   it("rolls the syllabus back with the parallel when the assignment fails", async () => {
-    convocation = { id: CONVOCATION, state: "abierta", processState: "abierto" }
+    convocation = { id: CONVOCATION, state: "abierto", processState: "abierto" }
     grants[0].careerId = OTHER_CAREER
     await storeParallels({ subject_id: SUBJECT, codes: ["B"], shift: "matutina", user_id: TEACHER })
     expect(log.some((entry) => entry.startsWith("generate:"))).toBe(false)

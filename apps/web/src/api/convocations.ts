@@ -1,6 +1,6 @@
 import { api } from '@/api/client';
 
-export type ConvocationState = 'sin_iniciar' | 'preparacion' | 'abierta' | 'pausada' | 'cerrada';
+export type ConvocationState = 'sin_iniciar' | 'preparacion' | 'abierto' | 'pausado' | 'cerrado';
 
 export type ConvocationDetail = {
   convocation: {

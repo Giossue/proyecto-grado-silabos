@@ -106,7 +106,7 @@ const syllabusFacts = (overrides: Partial<SyllabusFacts> = {}): SyllabusFacts =>
   id: SYLLABUS,
   state: "en_revision",
   careerId: CAREER,
-  convocationState: "abierta",
+  convocationState: "abierto",
   processState: "abierto",
   dueOn: "2026-12-10",
   currentTeacher: false,

@@ -114,7 +114,7 @@ const deletionTx: DeletionTx = {
 const templates = { template: async () => null, subjectValues: async () => [], valuesForSubjects: async () => [], liveFields: async () => [] }
 
 const structureRepository = {
-  activeCareer: async (id: string) => (id === CAREER ? { id, name: "Software", modality: "Presencial", cycleCount: 8 } : null),
+  activeCareer: async (id: string) => (id === CAREER ? { id, name: "Software", modality: "presencial", cycleCount: 8 } : null),
   careerLock: async () => null,
   curriculumSubjects: async () => [
     { id: SUBJECT, code: "SW-101", name: "Programación", cycle: 1, position: 1, organizationUnit: "basica", modality: null, credits: "3.00", totalHours: 144, hoursAc: "48.00", hoursPae: "48.00", hoursAa: "48.00", active: true, generatesSyllabus: true },
@@ -134,7 +134,7 @@ const fakes = {
     governance: {
       processes: async () => [],
       faculties: async () => [{ id: FACULTY, name: "Ciencias", libraries: ["biblioteca"], active: true, logo: null }],
-      careers: async () => [{ id: CAREER, facultyId: FACULTY, coordinator: null, modality: "Presencial", code: "SW", name: "Software", active: true }],
+      careers: async () => [{ id: CAREER, facultyId: FACULTY, coordinator: null, modality: "presencial", code: "SW", name: "Software", active: true }],
       periods: async () => [{ id: "p-1", code: "2026-1", startsOn: "2026-04-01", endsOn: "2026-08-31", teachingWeeks: 16 }],
       facultiesWithActiveCareers: async () => [FACULTY],
       careersInRunningConvocation: async () => [],
@@ -177,7 +177,7 @@ const fakes = {
       parallelsWithTeacher: async () => [PARALLEL],
       parallelsWithSentSyllabus: async () => [],
       parallelsWithStartedSyllabus: async () => [],
-      careerSubjects: async () => [{ id: SUBJECT, code: "SW-101", name: "Programación", cycle: 1, active: true, generatesSyllabus: true, modality: "Presencial" }],
+      careerSubjects: async () => [{ id: SUBJECT, code: "SW-101", name: "Programación", cycle: 1, active: true, generatesSyllabus: true, modality: "presencial" }],
     },
   }),
   careerWrites: () => ({

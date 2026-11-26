@@ -125,7 +125,7 @@ beforeEach(() => {
     id: SYLLABUS,
     state: "borrador",
     careerId: CAREER,
-    convocationState: "abierta",
+    convocationState: "abierto",
     processState: "abierto",
     dueOn: "2027-01-20",
     currentTeacher: true,
@@ -317,9 +317,9 @@ describe("PATCH /api/v1/teacher/syllabi/{syllabus}/fields/{field}", () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
     expect((await patch({ version_bloqueo: 3, value: "PV-16 no autorizado" })).text).toBe(FORBIDDEN)
     world.assignments = [makeAssignment({ role: "docente", careerId: CAREER })]
-    facts = { ...(facts as DraftSyllabus), convocationState: "pausada" }
+    facts = { ...(facts as DraftSyllabus), convocationState: "pausado" }
     expect((await patch({ version_bloqueo: 3, value: doc("x") })).status).toBe(403)
-    facts = { ...(facts as DraftSyllabus), convocationState: "abierta", processState: "pausado" }
+    facts = { ...(facts as DraftSyllabus), convocationState: "abierto", processState: "pausado" }
     expect((await patch({ version_bloqueo: 3, value: doc("x") })).status).toBe(403)
     facts = { ...(facts as DraftSyllabus), processState: "abierto" }
     today = "2027-01-21"

@@ -174,8 +174,8 @@ beforeEach(() => {
 describe("dashboard deadline", () => {
   it("shows the teacher the nearest open deadline", async () => {
     teacherSyllabi = [
-      { convocation: { id: "late", state: "abierta" }, process: process({ dueOn: "2026-12-10" }), dueAt: 2000 },
-      { convocation: { id: CONVOCATION, state: "abierta" }, process: process(), dueAt: 1000 },
+      { convocation: { id: "late", state: "abierto" }, process: process({ dueOn: "2026-12-10" }), dueAt: 2000 },
+      { convocation: { id: CONVOCATION, state: "abierto" }, process: process(), dueAt: 1000 },
     ]
     const response = await call(dashboardDeadline, "/api/v1/dashboard/deadline")
     expect(response.status).toBe(200)
@@ -186,25 +186,25 @@ describe("dashboard deadline", () => {
   })
 
   it("names who paused, and tells upcoming and overdue apart", async () => {
-    teacherSyllabi = [{ convocation: { id: CONVOCATION, state: "pausada" }, process: process(), dueAt: 1 }]
+    teacherSyllabi = [{ convocation: { id: CONVOCATION, state: "pausado" }, process: process(), dueAt: 1 }]
     expect((await call(dashboardDeadline, "/api/v1/dashboard/deadline")).json).toEqual({ deadline: deadline({ state: "paused", paused_by: "coordinacion", convocation_id: CONVOCATION }) })
-    teacherSyllabi = [{ convocation: { id: CONVOCATION, state: "abierta" }, process: process({ state: "pausado" }), dueAt: 1 }]
+    teacherSyllabi = [{ convocation: { id: CONVOCATION, state: "abierto" }, process: process({ state: "pausado" }), dueAt: 1 }]
     expect((await call(dashboardDeadline, "/api/v1/dashboard/deadline")).json?.deadline).toMatchObject({ state: "paused", paused_by: "administracion" })
-    teacherSyllabi = [{ convocation: { id: CONVOCATION, state: "abierta" }, process: process(), dueAt: 1 }]
+    teacherSyllabi = [{ convocation: { id: CONVOCATION, state: "abierto" }, process: process(), dueAt: 1 }]
     expect((await call(dashboardDeadline, "/api/v1/dashboard/deadline", "2026-10-20")).json?.deadline).toMatchObject({ state: "upcoming", days_until_start: 12, days_until_due: 41 })
     expect((await call(dashboardDeadline, "/api/v1/dashboard/deadline", "2027-03-16")).json?.deadline).toMatchObject({ state: "overdue", days_until_due: 0, classes_ended: true })
   })
 
   it("shows the teacher a pause, then the last finalized process, without syllabi", async () => {
-    convocation = { id: CONVOCATION, state: "pausada" }
+    convocation = { id: CONVOCATION, state: "pausado" }
     expect((await call(dashboardDeadline, "/api/v1/dashboard/deadline")).json).toEqual({
       deadline: deadline({ state: "paused", paused_by: "coordinacion", convocation_id: CONVOCATION }),
     })
-    convocation = { id: CONVOCATION, state: "abierta" }
+    convocation = { id: CONVOCATION, state: "abierto" }
     expect((await call(dashboardDeadline, "/api/v1/dashboard/deadline")).json).toEqual({ deadline: null })
     inProgress = null
     latest = process({ state: "cerrado" })
-    finalized = { id: CONVOCATION, state: "cerrada" }
+    finalized = { id: CONVOCATION, state: "cerrado" }
     expect((await call(dashboardDeadline, "/api/v1/dashboard/deadline")).json).toEqual({ deadline: deadline({ state: "closed", convocation_id: CONVOCATION }) })
     finalized = null
     expect((await call(dashboardDeadline, "/api/v1/dashboard/deadline")).json).toEqual({ deadline: null })
@@ -214,7 +214,7 @@ describe("dashboard deadline", () => {
     asRole("coordinador")
     expect((await call(dashboardDeadline, "/api/v1/dashboard/deadline")).json).toEqual({ deadline: deadline({ career_pending: true }) })
     expect(calls).toContain(`convocation:c-1:${PROCESS}`)
-    convocation = { id: CONVOCATION, state: "abierta" }
+    convocation = { id: CONVOCATION, state: "abierto" }
     expect((await call(dashboardDeadline, "/api/v1/dashboard/deadline")).json).toEqual({ deadline: deadline({ convocation_id: CONVOCATION }) })
     latest = null
     expect((await call(dashboardDeadline, "/api/v1/dashboard/deadline")).json).toEqual({ deadline: null })
@@ -365,12 +365,12 @@ describe("dashboard", () => {
 
   it("shows Coordination its open convocation and no checklist action once opened", async () => {
     asRole("coordinador")
-    convocation = { id: CONVOCATION, state: "abierta" }
+    convocation = { id: CONVOCATION, state: "abierto" }
     const body = (await call(dashboardIndex, "/api/v1/dashboard")).json as unknown as DashboardBody
     expect(body.setup.done).toBe(5)
     expect(body.setup.steps[5]).toMatchObject({ done: true, action: null, hint: "Administración debe cargar el logo de la facultad." })
     expect(body.deadline).toEqual(deadline({ convocation_id: CONVOCATION }))
-    expect(body.coordination_convocation).toEqual({ process_id: PROCESS, period: "2026-2", convocation_id: CONVOCATION, can_open: false, state: "abierta", process_open: true })
+    expect(body.coordination_convocation).toEqual({ process_id: PROCESS, period: "2026-2", convocation_id: CONVOCATION, can_open: false, state: "abierto", process_open: true })
   })
 
   it("waits for Administration without a process in progress", async () => {

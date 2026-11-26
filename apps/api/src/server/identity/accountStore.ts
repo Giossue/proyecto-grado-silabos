@@ -149,7 +149,7 @@ export function accountTx(db: Db): AccountTx {
     async syllabiInProgress(userId) {
       const found = await rows<{ careerId: string; total: bigint | number }>(
         db,
-        Prisma.sql`select "carreras"."carrera_id" as "careerId", count(distinct "silabos"."silabo_id") as "total" from "docentes_vigentes_silabo" inner join "silabos" on "silabos"."silabo_id" = "docentes_vigentes_silabo"."silabo_id" inner join "convocatorias_carreras" on "convocatorias_carreras"."convocatoria_carrera_id" = "silabos"."convocatoria_carrera_id" inner join "carreras" on "carreras"."carrera_id" = "convocatorias_carreras"."carrera_id" where ("docentes_vigentes_silabo"."usuario_id" = ${userId} and "silabos"."estado_silabo" in (${"borrador"}, ${"en_revision"}, ${"correccion_solicitada"}) and "convocatorias_carreras"."estado_convocatoria_carrera" = ${"abierta"}) group by "carreras"."carrera_id"`,
+        Prisma.sql`select "carreras"."carrera_id" as "careerId", count(distinct "silabos"."silabo_id") as "total" from "docentes_vigentes_silabo" inner join "silabos" on "silabos"."silabo_id" = "docentes_vigentes_silabo"."silabo_id" inner join "convocatorias_carreras" on "convocatorias_carreras"."convocatoria_carrera_id" = "silabos"."convocatoria_carrera_id" inner join "carreras" on "carreras"."carrera_id" = "convocatorias_carreras"."carrera_id" where ("docentes_vigentes_silabo"."usuario_id" = ${userId} and "silabos"."estado_silabo" in (${"borrador"}, ${"en_revision"}, ${"correccion_solicitada"}) and "convocatorias_carreras"."estado_convocatoria_carrera" = ${"abierto"}) group by "carreras"."carrera_id"`,
       )
       const result: { careerLabel: string; total: number }[] = []
       for (const row of found) result.push({ careerLabel: (await careerLabelOf(db, row.careerId)) ?? "", total: Number(row.total) })
@@ -198,7 +198,7 @@ export function accountTx(db: Db): AccountTx {
       hasRows(
         rows(
           db,
-          Prisma.sql`select "convocatoria_carrera_id" from "convocatorias_carreras" where ("convocatorias_carreras"."carrera_id" = ${careerId} and "convocatorias_carreras"."estado_convocatoria_carrera" = ${"abierta"} and exists (select "convocatoria_universidad_id" from "convocatorias_universidad" where ("convocatorias_carreras"."convocatoria_universidad_id" = "convocatorias_universidad"."convocatoria_universidad_id" and "convocatorias_universidad"."estado_convocatoria_universidad" in (${"abierto"}, ${"pausado"})))) limit ${1}`,
+          Prisma.sql`select "convocatoria_carrera_id" from "convocatorias_carreras" where ("convocatorias_carreras"."carrera_id" = ${careerId} and "convocatorias_carreras"."estado_convocatoria_carrera" = ${"abierto"} and exists (select "convocatoria_universidad_id" from "convocatorias_universidad" where ("convocatorias_carreras"."convocatoria_universidad_id" = "convocatorias_universidad"."convocatoria_universidad_id" and "convocatorias_universidad"."estado_convocatoria_universidad" in (${"abierto"}, ${"pausado"})))) limit ${1}`,
         ),
       ),
   }

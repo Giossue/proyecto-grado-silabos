@@ -114,7 +114,7 @@ export class FinalizedChangeNotice {
         from convocatorias_carreras convocatoria
           inner join convocatorias_universidad proceso on proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
           inner join periodos_academicos periodo on periodo.periodo_academico_id = proceso.periodo_academico_id
-        where convocatoria.convocatoria_universidad_id in (${uuidList(reopenable)}) and convocatoria.estado_convocatoria_carrera = 'cerrada'
+        where convocatoria.convocatoria_universidad_id in (${uuidList(reopenable)}) and convocatoria.estado_convocatoria_carrera = 'cerrado'
           and convocatoria.estado_previo_cierre_convocatoria_carrera is not null ${careers}
         order by convocatoria.convocatoria_carrera_id asc`,
     )
