@@ -157,8 +157,7 @@ screenTours['/admin/estructura-academica/:section'] = screenTours['/admin/estruc
 /** Pantallas que tienen todos los roles. */
 const sharedScreens: Record<string, TourStep[]> = {
   'configuracion/perfil': [
-    step('[data-tour="profile-form"]', 'Sus datos', 'Cambie su nombre. El correo solo se puede cambiar antes de activar la cuenta', 'top'),
-    step('[data-tour="profile-readonly"]', 'Sus datos', 'Si su nombre o correo están mal, pida el cambio a Administración', 'top'),
+    step('[data-tour="profile-readonly"]', 'Sus datos', 'Su nombre y correo, solo para consulta. Si están mal, Administración los corrige en Usuarios', 'top'),
   ],
   'configuracion/seguridad': [
     step('[data-tour="security-reset"]', 'Por correo', 'Si no recuerda su contraseña, le enviamos un enlace para crear otra', 'top'),

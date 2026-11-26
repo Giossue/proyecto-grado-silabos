@@ -22,19 +22,18 @@ type MallaDialogProps = {
   onSaved: (message: string, mallaId: string) => void
 }
 
-type MallaForm = { name: string; resolution: string; cycle_count: string; state: string }
+type MallaForm = { name: string; cycle_count: string; state: string }
 
 const CREATE_SCHEMA = mallaSchema({ updating: false })
 const EDIT_SCHEMA = mallaSchema({ updating: true })
 
 const formValues = (malla: Malla | null): MallaForm => ({
   name: malla?.name ?? "",
-  resolution: malla?.resolution ?? "",
   cycle_count: "",
   state: malla?.state ?? "",
 })
 
-/** Creates a malla (name, optional resolution, cycles, state) or edits name, resolution and state; cycles are configured in the editor. */
+/** Creates a malla (name, cycles, state) or edits name and state; cycles are configured in the editor. */
 export function MallaDialog({ open, onOpenChange, malla, onSaved }: MallaDialogProps) {
   const editing = malla !== null
   const form = useSchemaForm(editing ? EDIT_SCHEMA : CREATE_SCHEMA, { defaultValues: formValues(malla) })
@@ -45,14 +44,13 @@ export function MallaDialog({ open, onOpenChange, malla, onSaved }: MallaDialogP
   useOpened(open, () => form.reset(formValues(malla)))
 
   const submit = async (values: MallaForm, close: () => void): Promise<void> => {
-    const resolution = values.resolution.trim() === "" ? null : values.resolution.trim()
     const state = values.state as MallaState
     try {
       if (malla === null) {
-        const result = await createMalla({ name: values.name.trim(), resolution, cycle_count: Number(values.cycle_count), state })
+        const result = await createMalla({ name: values.name.trim(), cycle_count: Number(values.cycle_count), state })
         onSaved(result.message, result.id)
       } else {
-        const result = await updateMalla(malla.id, { name: values.name.trim(), resolution, state })
+        const result = await updateMalla(malla.id, { name: values.name.trim(), state })
         onSaved(result.message, malla.id)
       }
       close()
@@ -67,7 +65,7 @@ export function MallaDialog({ open, onOpenChange, malla, onSaved }: MallaDialogP
       onOpenChange={onOpenChange}
       triggerLabel={editing ? "Editar malla" : "Nueva malla"}
       title={editing ? "Datos de la malla" : "Nueva malla"}
-      description={editing ? "Cambie el nombre, la resolución o el estado. Los ciclos se configuran al editar la malla" : "Una carrera puede tener varias mallas; solo una está vigente"}
+      description={editing ? "Cambie el nombre o el estado. Los ciclos se configuran al editar la malla" : "Una carrera puede tener varias mallas vigentes"}
       showTrigger={false}
       narrow
     >
@@ -85,12 +83,6 @@ export function MallaDialog({ open, onOpenChange, malla, onSaved }: MallaDialogP
               </FieldLabel>
               <Input id="malla-name" maxLength={180} aria-required="true" aria-invalid={fieldErrors("name") !== undefined} {...form.register("name")} />
               <FieldError errors={fieldErrors("name")} />
-            </Field>
-            <Field data-invalid={fieldErrors("resolution") !== undefined}>
-              <FieldLabel htmlFor="malla-resolution">Resolución</FieldLabel>
-              <Input id="malla-resolution" maxLength={180} aria-invalid={fieldErrors("resolution") !== undefined} {...form.register("resolution")} />
-              <FieldDescription>Opcional, por ejemplo la resolución que aprobó la malla</FieldDescription>
-              <FieldError errors={fieldErrors("resolution")} />
             </Field>
             {editing ? null : (
               <Field data-invalid={fieldErrors("cycle_count") !== undefined}>
@@ -121,7 +113,7 @@ export function MallaDialog({ open, onOpenChange, malla, onSaved }: MallaDialogP
                   </NativeSelectOption>
                 ))}
               </NativeSelect>
-              <FieldDescription>Al marcarla vigente, la malla vigente anterior pasa a en transición</FieldDescription>
+              <FieldDescription>Las mallas vigentes generan sílabos; una malla cerrada deja de generarlos</FieldDescription>
               <FieldError errors={fieldErrors("state")} />
             </Field>
             <FormDialogActions close={close} processing={isSubmitting} icon={editing ? Save : BookPlus} label={editing ? "Guardar malla" : "Crear malla"} />

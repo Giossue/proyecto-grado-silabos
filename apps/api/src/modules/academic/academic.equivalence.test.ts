@@ -129,7 +129,7 @@ const structureRepository = {
   teacherUsers: async () => [{ id: golden.userId, name: "Ana", email: "ana@ueb.edu.ec" }],
 }
 
-const mallaRecord = { id: MALLA, careerId: CAREER, name: "Malla SW", resolution: null, cycleCount: 8, state: "vigente", subjectCount: 1 }
+const mallaRecord = { id: MALLA, careerId: CAREER, name: "Malla SW", cycleCount: 8, state: "vigente", subjectCount: 1 }
 const mallaRepository = {
   mallas: async (careerId: string) => (careerId === CAREER ? [mallaRecord] : []),
   malla: async (careerId: string, id: string) => (careerId === CAREER && id === MALLA ? mallaRecord : null),

@@ -37,8 +37,8 @@ vi.mock("@/components/domain/academic/curriculum/MallaDialog", () => ({
 }))
 
 const MALLAS = [
-  { id: "malla-9", name: "Malla SW-9", resolution: null, cycle_count: 3, state: "vigente" as const, subject_count: 6 },
-  { id: "malla-8", name: "Malla SW-8", resolution: null, cycle_count: 4, state: "en_transicion" as const, subject_count: 7 },
+  { id: "malla-9", name: "Malla SW-9", cycle_count: 3, state: "vigente" as const, subject_count: 6 },
+  { id: "malla-8", name: "Malla SW-8", cycle_count: 4, state: "cerrada" as const, subject_count: 7 },
 ]
 
 const curriculum = (editable = true, malla = MALLAS[0]): Curriculum =>
@@ -150,7 +150,7 @@ describe("CoordinationAcademicStructurePage, varias mallas", () => {
     fireEvent.click(selector.querySelector('[data-value="malla-8"]')!)
     await flush()
     expect(getCurriculum).toHaveBeenLastCalledWith("malla-8", null)
-    expect(document.querySelector('[data-tour="malla-selector"]')!.textContent).toContain("En transición")
+    expect(document.querySelector('[data-tour="malla-selector"]')!.textContent).toContain("Cerrada")
     expect(document.querySelector('[data-testid="import"]')!.getAttribute("data-malla")).toBe("malla-8")
   })
 

@@ -13,14 +13,14 @@ describe("esqueletos de paneles, ajustes y estructura académica", () => {
     expect(steps.slice(1).every((step) => !step.classList.contains("ring-1") && step.querySelector(".size-3") !== null)).toBe(true)
   })
 
-  it.each([
-    ["profile", true, 2, false],
-    ["profile", false, 2, true],
-  ] as const)("dibuja el ajuste %s (solo lectura: %s) con %i campos y guardar: %s", (settingsSection, readonly, fields, save) => {
-    const { container } = render(<LoadingSkeleton variant="settings" settingsSection={settingsSection} readonly={readonly} />)
+  it("dibuja el perfil solo para consulta: cabecera fija, 2 campos, su ayuda y sin guardar ni flecha de acordeón", () => {
+    const { container } = render(<LoadingSkeleton variant="settings" settingsSection="profile" />)
 
-    expect(container.querySelectorAll('[data-skeleton="settings-field"]')).toHaveLength(fields)
-    expect(container.querySelector('[data-skeleton="settings-save"]') !== null).toBe(save)
+    expect(container.querySelector('[data-skeleton="settings-profile-header"]')).not.toBeNull()
+    expect(container.querySelectorAll('[data-skeleton="settings-field"]')).toHaveLength(2)
+    expect(container.querySelector('[data-skeleton="settings-identity-help"]')).not.toBeNull()
+    expect(container.querySelector('[data-skeleton="settings-save"]')).toBeNull()
+    expect(container.querySelector('[data-skeleton="settings-accordion-item"]')).toBeNull()
   })
 
   it("dibuja la malla por niveles con sus materias, sin controles enfocables", () => {

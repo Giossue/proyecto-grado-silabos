@@ -63,7 +63,7 @@ describe("academic schemas", () => {
     })
   })
 
-  it("validate a new malla: name unique in the career, optional resolution, cycles and state", async () => {
+  it("validate a new malla: name unique in the career, cycles and state", async () => {
     const taken = mallaSchema({ nameAvailable: async () => false, updating: false })
     expect(await schemaErrors(taken, { name: "Malla 2025", cycle_count: 0, state: "abierta" })).toEqual({
       name: ["Ya existe una malla con ese nombre en esta carrera."],
@@ -76,14 +76,26 @@ describe("academic schemas", () => {
       state: ["El campo estado es obligatorio."],
     })
     const free = mallaSchema({ nameAvailable: async () => true, updating: false })
-    expect(await schemaErrors(free, { name: "Malla 2025", resolution: null, cycle_count: 9, state: "vigente" })).toEqual({})
-    expect(MALLA_STATE_LABELS).toEqual({ vigente: "Vigente", en_transicion: "En transición", cerrada: "Cerrada" })
+    expect(await schemaErrors(free, { name: "Malla 2025", cycle_count: 9, state: "vigente" })).toEqual({})
+  })
+
+  it("a malla is only vigente or cerrada", async () => {
+    const schema = mallaSchema({ nameAvailable: async () => true, updating: false })
+    expect(await schemaErrors(schema, { name: "Malla 2025", cycle_count: 9, state: "en_transicion" })).toEqual({ state: ["El valor seleccionado en estado no es válido."] })
+    expect(await schemaErrors(schema, { name: "Malla 2025", cycle_count: 9, state: "cerrada" })).toEqual({})
+    expect(MALLA_STATE_LABELS).toEqual({ vigente: "Vigente", cerrada: "Cerrada" })
+  })
+
+  it("a malla has no resolution: the field is ignored, not validated", async () => {
+    const schema = mallaSchema({ nameAvailable: async () => true, updating: true })
+    expect(await schemaErrors(schema, { resolution: "R".repeat(500) })).toEqual({})
+    expect(Object.keys(schema.shape)).not.toContain("resolution")
   })
 
   it("validate a malla edit: every field optional, no cycle count", async () => {
     const schema = mallaSchema({ nameAvailable: async () => true, updating: true })
     expect(await schemaErrors(schema, {})).toEqual({})
-    expect(await schemaErrors(schema, { state: "cerrada", resolution: "RCU-2025-001" })).toEqual({})
+    expect(await schemaErrors(schema, { state: "cerrada" })).toEqual({})
     expect(await schemaErrors(schema, { name: "", state: "x" })).toEqual({ name: ["El campo nombre es obligatorio."], state: ["El valor seleccionado en estado no es válido."] })
   })
 

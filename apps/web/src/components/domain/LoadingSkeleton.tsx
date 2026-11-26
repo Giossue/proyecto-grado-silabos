@@ -55,7 +55,6 @@ export type LoadingSkeletonProps = {
   sidebar?: boolean
   workspaceCount?: number
   reviewStage?: "coordination" | "library"
-  readonly?: boolean
   settingsSection?: SettingsSection
   metrics?: boolean
 }
@@ -83,7 +82,6 @@ function LoadingBody({
   sidebar = false,
   workspaceCount = 3,
   reviewStage,
-  readonly = false,
   settingsSection,
 }: LoadingSkeletonProps) {
   const tableProps = {
@@ -176,7 +174,7 @@ function LoadingBody({
 
   if (variant === "setup") return <SetupLoadingSkeleton steps={5} />
 
-  if (variant === "settings") return <SettingsLoadingSkeleton section={settingsSection} readonly={readonly} rows={rows} />
+  if (variant === "settings") return <SettingsLoadingSkeleton section={settingsSection} rows={rows} />
 
   if (variant === "academic-structure") return <AcademicLoadingSkeleton mode={mode} rows={rows} />
 

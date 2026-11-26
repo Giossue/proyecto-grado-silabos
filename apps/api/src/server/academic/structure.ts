@@ -33,7 +33,7 @@ const SYSTEM_LABELS: Record<string, string> = {
 /** `cycleCount` is the cycle count of the career's vigente malla (0 when it has none). */
 export type CareerRecord = { id: string; name: string; modality: string | null; cycleCount: number }
 
-export type MallaRecord = { id: string; careerId: string; name: string; resolution: string | null; cycleCount: number; state: string; subjectCount: number }
+export type MallaRecord = { id: string; careerId: string; name: string; cycleCount: number; state: string; subjectCount: number }
 
 export interface MallaReadRepository {
   mallas(careerId: string): Promise<MallaRecord[]>

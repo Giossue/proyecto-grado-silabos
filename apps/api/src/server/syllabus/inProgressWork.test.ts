@@ -151,7 +151,7 @@ describe("InProgressWork generation", () => {
 
 describe("InProgressWork generation across mallas", () => {
   const CURRENT = "0195e7a0-0000-7000-8000-0000000000a1"
-  const TRANSITION = "0195e7a0-0000-7000-8000-0000000000a2"
+  const SECOND = "0195e7a0-0000-7000-8000-0000000000a2"
   const subjectRow = (id: string, malla: string, name: string) => ({
     id, code: id.slice(-2), name, cycle: 1, position: 1, unit: null, credits: "2.00", hours_ac: "1.00", hours_pae: "1.00", hours_aa: "1.00",
     career_id: CAREER, career_code: "SW", career_name: "Software", curriculum_id: `${malla}-id`, curriculum_name: malla, cycle_count: 4, faculty_id: null, faculty: null, faculty_logo: null,
@@ -160,7 +160,7 @@ describe("InProgressWork generation across mallas", () => {
   function generationDb(parallels: { id: string; subject_id: string; subject: string }[]) {
     const queries: string[] = []
     const syllabi: Prisma.Sql[] = []
-    const subjects: Record<string, unknown> = { [CURRENT]: subjectRow(CURRENT, "Malla SW-9", "Redes"), [TRANSITION]: subjectRow(TRANSITION, "Malla SW-8", "Cálculo") }
+    const subjects: Record<string, unknown> = { [CURRENT]: subjectRow(CURRENT, "Malla SW-9", "Redes"), [SECOND]: subjectRow(SECOND, "Malla SW-8", "Cálculo") }
     const reply = (query: Prisma.Sql): unknown[] => {
       const text = query.text.replace(/\s+/g, " ").trim()
       queries.push(text)
@@ -184,10 +184,10 @@ describe("InProgressWork generation across mallas", () => {
     return { work, queries, syllabi }
   }
 
-  it("generates syllabi for the subjects of the vigente and the en_transicion mallas, recording each one's malla", async () => {
+  it("generates syllabi only for subjects of a malla that is not closed (every vigente one), recording each syllabus's malla", async () => {
     const { work, queries, syllabi } = generationDb([
       { id: "0195e7a0-0000-7000-8000-0000000000b1", subject_id: CURRENT, subject: "Redes" },
-      { id: "0195e7a0-0000-7000-8000-0000000000b2", subject_id: TRANSITION, subject: "Cálculo" },
+      { id: "0195e7a0-0000-7000-8000-0000000000b2", subject_id: SECOND, subject: "Cálculo" },
     ])
     expect(await work.generateConvocation(CONVOCATION)).toBe(2)
     const parallels = queries.find((text) => text.startsWith("select paralelo.paralelo_id::text as id")) ?? ""

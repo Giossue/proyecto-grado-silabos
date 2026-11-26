@@ -30,7 +30,7 @@ export function convocationBlockers(readiness: CoordinatorReadiness): string[] {
   const blockers: string[] = []
   if (readiness.process !== null && !readiness.deadlineOpen) blockers.push("El plazo de entrega del periodo académico ya venció. Administración debe prorrogarlo.")
   if (!readiness.facultyLogoReady) blockers.push("Administración debe cargar el logo de la facultad antes de que Coordinación abra el periodo académico.")
-  if (!readiness.curriculumReady) blockers.push("La carrera no tiene materias en una malla vigente o en transición. Registre la malla con sus materias.")
+  if (!readiness.curriculumReady) blockers.push("La carrera no tiene materias en la malla vigente. Registre la malla con sus materias.")
   if (readiness.scheduledTotal === 0) blockers.push("Falta registrar paralelos de las materias de la carrera.")
   const withoutParallel = readiness.scheduledTotal - readiness.scheduledWithParallels
   if (withoutParallel > 0) blockers.push(withoutParallel === 1 ? "Falta 1 materia sin paralelo." : `Faltan ${withoutParallel} materias sin paralelo.`)

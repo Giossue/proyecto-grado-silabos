@@ -84,7 +84,7 @@ function deps() {
   }
 }
 
-const malla = (id: string, careerId: string, name: string, state: string, cycleCount: number): MallaRecord => ({ id, careerId, name, resolution: null, cycleCount, state, subjectCount: 0 })
+const malla = (id: string, careerId: string, name: string, state: string, cycleCount: number): MallaRecord => ({ id, careerId, name, cycleCount, state, subjectCount: 0 })
 
 function get(path: string): Request {
   return apiRequest(path, { cookie })
@@ -106,7 +106,7 @@ beforeEach(() => {
   }
   asRole("coordinador")
   careers = new Map([[CAREER, { id: CAREER, name: "Software", modality: "presencial", cycleCount: 4 }]])
-  mallas = [malla(MALLA, CAREER, "Malla SW", "vigente", 4), malla(OLD_MALLA, CAREER, "Malla SW-8", "en_transicion", 9), malla(OTHER_MALLA, OTHER, "Malla RED", "vigente", 8)]
+  mallas = [malla(MALLA, CAREER, "Malla SW", "vigente", 4), malla(OLD_MALLA, CAREER, "Malla SW-8", "cerrada", 9), malla(OTHER_MALLA, OTHER, "Malla RED", "vigente", 8)]
   lock = null
   subjects = [subject()]
   calls = []
@@ -178,7 +178,7 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
     careers.set(CAREER, { id: CAREER, name: "Software", modality: null, cycleCount: 4 })
     const text = await (await curriculumBuilder(get(`/api/v1/coordination/academic/curriculum/${OLD_MALLA}`), OLD_MALLA, deps())).text()
     expect(text).toContain(
-      `"career":{"id":"${CAREER}","name":"Software","modality":null},"malla":{"id":"${OLD_MALLA}","name":"Malla SW-8","state":"en_transicion"},"curriculum":{"id":"${OLD_MALLA}","cycle_count":9,"editable":false,"lock_reason":"Periodo académico activo",` +
+      `"career":{"id":"${CAREER}","name":"Software","modality":null},"malla":{"id":"${OLD_MALLA}","name":"Malla SW-8","state":"cerrada"},"curriculum":{"id":"${OLD_MALLA}","cycle_count":9,"editable":false,"lock_reason":"Periodo académico activo",` +
         '"lock":{"scope":"convocation","period":"Noviembre-Marzo 2026-2027","institutional_pause":true,"delivery_on":"2026-12-10"}}',
     )
     expect(text).toContain(

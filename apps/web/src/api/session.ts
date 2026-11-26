@@ -47,8 +47,3 @@ export const getAuthProviders = () => api<AuthProviders>('/authentication/provid
 export const leaveActiveRole = () => api<Session>('/active-role', { method: 'DELETE' });
 export const selectActiveRole = (roleAssignmentId: string) =>
   api<Session>('/active-role', { method: 'PUT', body: JSON.stringify({ role_assignment_id: roleAssignmentId }) });
-export const updateProfile = (name: string, email: string) =>
-  api<Session>('/authentication/profile', {
-    method: 'PUT',
-    body: JSON.stringify({ nombre: name, correo_electronico: email }),
-  });

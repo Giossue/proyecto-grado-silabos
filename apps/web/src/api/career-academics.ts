@@ -167,9 +167,9 @@ export type TeacherAssignments = {
 export const getCurriculum = (mallaId: string, scope: string | null = null) =>
   api<Curriculum>(careerAcademicPath(`/curriculum/${mallaId}`, scope));
 
-export type MallaPayload = { name: string; resolution: string | null; cycle_count: number; state: MallaState };
+export type MallaPayload = { name: string; cycle_count: number; state: MallaState };
 
-/** Mallas of the career, vigente first, then en transición and cerradas. */
+/** Mallas of the career, vigente first, then the cerradas. */
 export const getMallas = (scope: string | null = null) =>
   api<{ mallas: Malla[] }>(careerAcademicPath("/mallas", scope)).then((result) => result.mallas);
 

@@ -48,7 +48,7 @@ export function governanceWriteTx(db: Db, afterCommit: AfterCommit, now: number,
       const id = uuid7()
       await db.$executeRaw`insert into carreras (carrera_id, facultad_id, codigo_carrera, nombre_carrera, carrera_activa, modalidad_carrera)
         values (${id}::uuid, ${data.facultyId}::uuid, ${data.code}, ${data.name}, true, ${data.modality})`
-      await insertMalla(db, id, { name: `Malla ${data.code}`, resolution: null, cycleCount: data.cycleCount, state: "vigente" })
+      await insertMalla(db, id, { name: `Malla ${data.code}`, cycleCount: data.cycleCount, state: "vigente" })
       return id
     },
     async createFaculty(data) {

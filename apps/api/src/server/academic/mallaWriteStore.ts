@@ -7,14 +7,13 @@ import { MALLAS_TABLE, insertColumns, updateColumns } from "./columnSql"
 import type { MallaData, MallaDeps, MallaTx } from "./mallas"
 import type { MallaRecord } from "./structure"
 
-type MallaRow = { id: string; career_id: string; name: string; resolution: string | null; cycle_count: number; state: string; subject_count: number }
+type MallaRow = { id: string; career_id: string; name: string; cycle_count: number; state: string; subject_count: number }
 
 function toMalla(row: MallaRow): MallaRecord {
   return {
     id: row.id,
     careerId: row.career_id,
     name: row.name,
-    resolution: row.resolution,
     cycleCount: Number(row.cycle_count),
     state: row.state,
     subjectCount: Number(row.subject_count),
@@ -29,7 +28,6 @@ export async function insertMalla(db: Db, careerId: string, data: MallaData): Pr
       malla_id: Prisma.sql`${id}::uuid`,
       carrera_id: Prisma.sql`${careerId}::uuid`,
       nombre_malla: data.name,
-      resolucion_malla: data.resolution,
       numero_ciclos: data.cycleCount,
       estado_malla: data.state,
     }),
@@ -39,20 +37,12 @@ export async function insertMalla(db: Db, careerId: string, data: MallaData): Pr
 
 export function mallaTx(db: Db): MallaTx {
   return {
-    async lockCareer(careerId) {
-      await db.$queryRaw`select carreras.carrera_id from carreras where carreras.carrera_id = ${careerId}::uuid for update`
-    },
     async lockMalla(careerId, mallaId) {
       const [row] = await db.$queryRaw<MallaRow[]>`select mallas.malla_id::text as id, mallas.carrera_id::text as career_id, mallas.nombre_malla as name,
-          mallas.resolucion_malla as resolution, mallas.numero_ciclos as cycle_count, mallas.estado_malla as state,
+          mallas.numero_ciclos as cycle_count, mallas.estado_malla as state,
           (select count(*)::int from asignaturas where asignaturas.malla_id = mallas.malla_id) as subject_count
         from mallas where mallas.malla_id = ${mallaId}::uuid and mallas.carrera_id = ${careerId}::uuid limit 1 for update of mallas`
       return row ? toMalla(row) : null
-    },
-    async demoteVigente(careerId, exceptId) {
-      await db.$executeRaw`update mallas set estado_malla = ${"en_transicion"}
-        where mallas.carrera_id = ${careerId}::uuid and mallas.estado_malla = ${"vigente"}
-          ${exceptId === null ? Prisma.empty : Prisma.sql`and mallas.malla_id <> ${exceptId}::uuid`}`
     },
     insertMalla: (careerId, data) => insertMalla(db, careerId, data),
     async updateMalla(mallaId, columns) {

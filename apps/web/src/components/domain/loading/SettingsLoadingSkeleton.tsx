@@ -6,11 +6,10 @@ export type SettingsSection = "profile" | "system" | "email"
 
 type SettingsLoadingSkeletonProps = {
   section?: SettingsSection
-  readonly?: boolean
   rows?: number
 }
 
-export function SettingsLoadingSkeleton({ section = "profile", readonly = false, rows = 4 }: SettingsLoadingSkeletonProps) {
+export function SettingsLoadingSkeleton({ section = "profile", rows = 4 }: SettingsLoadingSkeletonProps) {
   if (section === "system") {
     return (
       <div className="-mt-2 flex min-w-0 flex-col" data-settings-section="system">
@@ -72,33 +71,32 @@ export function SettingsLoadingSkeleton({ section = "profile", readonly = false,
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-12" data-settings-section={section}>
-      <div className="flex min-w-0 flex-col gap-6" data-skeleton="settings-profile-form">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <Skeleton className="h-6 w-16 max-w-full" />
-          <Skeleton className="h-5 w-72 max-w-full" />
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-6">
-          {range(2).map((field) => (
-            <div key={field} className="flex min-w-0 flex-col gap-2" data-skeleton="settings-field">
-              <Skeleton className="h-3.5 w-36 max-w-full" />
-              <Skeleton className={cn("h-9 w-full", !readonly && "mt-1")} />
-              {section === "profile" && !readonly && field === 2 ? <Skeleton className="h-5 w-96 max-w-full" /> : null}
-            </div>
-          ))}
-
-          {section === "profile" && readonly ? (
-            <div className="flex min-w-0 flex-col gap-1" data-skeleton="settings-identity-help">
-              <Skeleton className="h-5 w-full" />
-              <Skeleton className="h-5 w-2/3 sm:hidden" />
-            </div>
-          ) : null}
-
-          {!readonly ? <Skeleton className="h-9 w-25 max-w-full" data-skeleton="settings-save" /> : null}
+    <div className="-mt-2 flex min-w-0 flex-col" data-settings-section={section}>
+      <div className="flex min-w-0 items-center gap-3 py-4" data-skeleton="settings-profile-header">
+        <Skeleton className="size-4 shrink-0" />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div className="flex h-5 items-center">
+            <Skeleton className="h-4 w-32 max-w-full" />
+          </div>
+          <div className="flex h-5 items-center">
+            <Skeleton className="h-4 w-52 max-w-full" />
+          </div>
         </div>
       </div>
 
+      <div className="flex min-w-0 flex-col gap-6 px-1 pt-2 pb-2">
+        {range(2).map((field) => (
+          <div key={field} className="flex min-w-0 flex-col gap-2" data-skeleton="settings-field">
+            <Skeleton className="h-3.5 w-36 max-w-full" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        ))}
+
+        <div className="flex min-w-0 flex-col gap-1" data-skeleton="settings-identity-help">
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-2/3 sm:hidden" />
+        </div>
+      </div>
     </div>
   )
 }

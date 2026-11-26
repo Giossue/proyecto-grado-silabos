@@ -43,13 +43,13 @@ export class CoordinationAcademicController {
   constructor(@Inject(AcademicDeps) private readonly deps: AcademicDeps) {}
 
   @Get("mallas")
-  @ApiOperation({ summary: "Mallas de la carrera: vigente, en transición y cerradas, con ciclos y número de materias." })
+  @ApiOperation({ summary: "Mallas de la carrera: las vigentes y las cerradas, con ciclos y número de materias." })
   mallas(@Req() request: ApiRequest): Promise<WebReply> {
     return handled(request, (web) => listMallas(web, this.deps.mallas()))
   }
 
   @Post("mallas")
-  @ApiOperation({ summary: "Crea una malla; si se crea vigente, la malla vigente anterior pasa a en transición." })
+  @ApiOperation({ summary: "Crea una malla vigente o cerrada; una carrera puede tener varias mallas vigentes." })
   @ApiBody({ type: MallaDto })
   @ApiUnprocessableEntityResponse(VALIDATION)
   createMalla(@Req() request: ApiRequest): Promise<WebReply> {
@@ -63,8 +63,8 @@ export class CoordinationAcademicController {
 
   @Patch("mallas/:malla")
   @ApiOperation({
-    summary: "Edita nombre, resolución o estado de la malla.",
-    description: "Hacerla vigente pasa la vigente anterior a en transición. No se cierra si sus materias tienen sílabos en un periodo académico abierto.",
+    summary: "Edita el nombre o el estado de la malla.",
+    description: "Hacerla vigente no cambia las demás mallas. No se cierra si sus materias tienen sílabos en un periodo académico abierto.",
   })
   @ApiParam({ name: "malla", format: "uuid" })
   @ApiBody({ type: MallaUpdateDto })

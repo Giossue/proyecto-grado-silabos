@@ -85,16 +85,15 @@ export function periodSchema({ startsOn, creating }: { startsOn: unknown; creati
 
 export const curriculumConfigurationSchema = z.object({ cycle_count: requiredField("cantidad de ciclos", [is.integer(), is.min(1), is.max(CYCLE_LIMIT)]) })
 
-export const MALLA_STATE_LABELS: Record<string, string> = { vigente: "Vigente", en_transicion: "En transición", cerrada: "Cerrada" }
+export const MALLA_STATE_LABELS: Record<string, string> = { vigente: "Vigente", cerrada: "Cerrada" }
 export const MALLA_STATES = Object.keys(MALLA_STATE_LABELS)
 
-/** A career's curriculum (malla). Creating asks for its cycles; editing changes name, resolution or state only. */
+/** A career's curriculum (malla). Creating asks for its cycles; editing changes name or state only. */
 export function mallaSchema({ nameAvailable, updating }: { nameAvailable?: Exists; updating: boolean }) {
   const name = [is.string(), is.max(NAME_MAX), ...(nameAvailable ? [is.unique(nameAvailable, "Ya existe una malla con ese nombre en esta carrera.")] : [])]
   const state = [is.string(), is.oneOf(MALLA_STATES)]
   return z.object({
     name: updating ? sometimesField("nombre", name, { required: true }) : requiredField("nombre", name),
-    resolution: nullableField("resolución", [is.string(), is.max(NAME_MAX)]),
     ...(updating ? {} : { cycle_count: requiredField("cantidad de ciclos", [is.integer(), is.min(1), is.max(CYCLE_LIMIT)]) }),
     state: updating ? sometimesField("estado", state, { required: true }) : requiredField("estado", state),
   })

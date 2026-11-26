@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import type { Malla, MallaState } from "@/types/academic"
 import { MALLA_STATE_LABELS } from "@silabos/shared/schemas/academic"
 
-const STATE_VARIANTS: Record<MallaState, "success" | "warning" | "neutral"> = { vigente: "success", en_transicion: "warning", cerrada: "neutral" }
+const STATE_VARIANTS: Record<MallaState, "success" | "neutral"> = { vigente: "success", cerrada: "neutral" }
 
 export function MallaStateBadge({ state }: { state: MallaState }) {
   return <Badge variant={STATE_VARIANTS[state]}>{MALLA_STATE_LABELS[state] ?? state}</Badge>
@@ -47,7 +47,6 @@ export function MallaToolbar({ mallas, selected, onSelect, onCreate, onEdit }: M
         <MallaStateBadge state={selected.state} />
         <span className="text-sm text-muted-foreground">
           {selected.cycle_count === 1 ? "1 ciclo" : `${selected.cycle_count} ciclos`}
-          {selected.resolution ? ` · ${selected.resolution}` : ""}
         </span>
       </div>
       <div className="flex gap-2 sm:ml-auto">

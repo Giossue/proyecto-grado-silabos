@@ -7,7 +7,7 @@ export function careerLabelSql(alias: string): Prisma.Sql {
     then ${career}.nombre_carrera || ' · ' || coalesce(${career}.codigo_carrera, '') else ${career}.nombre_carrera end)`
 }
 
-/** True when the subject (table alias) belongs to a malla that is not closed: subjects of a closed malla never get new syllabi nor count as pending. */
+/** True when the subject (table alias) belongs to a malla that is not closed, i.e. any of the career's vigente mallas (estado_malla is only vigente or cerrada; a career may have several vigente mallas): subjects of a closed malla never get new syllabi nor count as pending. */
 export function openCurriculum(subject: string): Prisma.Sql {
   return Prisma.sql`exists (select 1 from mallas malla_abierta where malla_abierta.malla_id = ${Prisma.raw(subject)}.malla_id and malla_abierta.estado_malla <> 'cerrada')`
 }

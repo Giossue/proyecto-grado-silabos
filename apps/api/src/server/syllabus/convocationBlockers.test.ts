@@ -19,7 +19,7 @@ const ready: CoordinatorReadiness = {
 
 describe("convocation blockers", () => {
   it("asks for subjects in a malla that is not closed when the career has none", () => {
-    expect(convocationBlockers({ ...ready, curriculumReady: false })).toEqual(["La carrera no tiene materias en una malla vigente o en transición. Registre la malla con sus materias."])
+    expect(convocationBlockers({ ...ready, curriculumReady: false })).toEqual(["La carrera no tiene materias en la malla vigente. Registre la malla con sus materias."])
   })
 
   it("keeps counting the subjects without parallel and the career project as before", () => {

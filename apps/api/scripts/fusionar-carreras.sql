@@ -4,8 +4,8 @@
 --   psql "$DATABASE_URL" -v keep=SW-9 -v absorb=SW-8 -f apps/api/scripts/fusionar-carreras.sql
 --
 -- What it does, in one transaction:
---   1. Every malla of the absorbed career moves to the kept career. A 'vigente' malla becomes
---      'en_transicion' when the kept career already has a 'vigente' one; a malla whose name
+--   1. Every malla of the absorbed career moves to the kept career and keeps its state (a career
+--      may have several 'vigente' mallas); a malla whose name
 --      collides gets the suffix " (<absorb>)". Subjects follow their malla through the
 --      ON UPDATE CASCADE composite FK asignaturas(malla_id, carrera_id) -> mallas.
 --   2. convocatorias_carreras: when the kept career already takes part in the same university
@@ -63,13 +63,7 @@ BEGIN
       AND EXISTS (SELECT 1 FROM mallas AS k WHERE k.carrera_id = v_keep AND k.nombre_malla = m.nombre_malla);
 
     UPDATE mallas AS m
-    SET carrera_id = v_keep,
-        estado_malla = CASE
-            WHEN m.estado_malla = 'vigente'
-                 AND EXISTS (SELECT 1 FROM mallas AS k WHERE k.carrera_id = v_keep AND k.estado_malla = 'vigente')
-            THEN 'en_transicion'
-            ELSE m.estado_malla
-        END
+    SET carrera_id = v_keep
     WHERE m.carrera_id = v_absorb;
 
     -- 2. Career participation in university convocatorias.

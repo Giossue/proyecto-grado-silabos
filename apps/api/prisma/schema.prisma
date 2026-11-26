@@ -350,7 +350,6 @@ model mallas {
   malla_id                    String               @id @db.Uuid
   carrera_id                  String               @db.Uuid
   nombre_malla                String               @db.VarChar(180)
-  resolucion_malla            String?              @db.VarChar(180)
   numero_ciclos               Int                  @db.SmallInt
   estado_malla                String               @db.VarChar(20)
   periodo_academico_inicio_id String?              @db.Uuid
@@ -362,7 +361,6 @@ model mallas {
 
   @@unique([malla_id, carrera_id], map: "mallas_malla_id_carrera_id_unica")
   @@unique([carrera_id, nombre_malla], map: "mallas_carrera_id_nombre_malla_unica")
-  @@unique([carrera_id], map: "mallas_carrera_id_vigente_unica", where: raw("((estado_malla)::text = 'vigente'::text)"))
   @@index([periodo_academico_inicio_id])
 }
 

@@ -7,10 +7,6 @@ import { sessionState } from "@/state/session"
 import { flush, renderWithProviders } from "@/test/render"
 
 vi.mock("next/navigation", () => import("@/test/nextNavigation"))
-vi.mock("@/api/session", () => ({
-  updateProfile: vi.fn(),
-  resendActivation: vi.fn(),
-}))
 vi.mock("@/layouts/settings/Layout", () => ({ SettingsLayout: ({ children }: { children?: ReactNode }) => <div>{children}</div> }))
 
 const session: Session = {
@@ -44,7 +40,7 @@ describe("carga de Configuración", () => {
     expect(document.body.querySelector('[data-test="update-profile-button"]')).toBeNull()
   })
 
-  it("presenta directamente el perfil editable cuando su sesión ya está disponible", () => {
+  it("presenta directamente el perfil de consulta del administrador cuando su sesión ya está disponible", () => {
     sessionState.replace({
       ...session,
       user: { ...session.user, can_edit_identity: true },
@@ -53,7 +49,8 @@ describe("carga de Configuración", () => {
     renderWithProviders(<ProfilePage />)
 
     expect(section("profile")).toBeNull()
-    expect(document.body.querySelector<HTMLInputElement>("#name")!.value).toBe(session.user.name)
-    expect(document.body.querySelector('[data-test="update-profile-button"]')).not.toBeNull()
+    expect(document.body.querySelector<HTMLInputElement>("#readonly-name")!.value).toBe(session.user.name)
+    expect(document.body.querySelector<HTMLInputElement>("#readonly-name")!.disabled).toBe(true)
+    expect(document.body.querySelector('[data-test="update-profile-button"]')).toBeNull()
   })
 })

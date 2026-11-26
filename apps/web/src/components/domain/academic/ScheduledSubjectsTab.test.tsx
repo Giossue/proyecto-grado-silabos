@@ -68,7 +68,7 @@ describe("ScheduledSubjectsTab", () => {
     ],
   }
 
-  it("muestra la malla de cada materia cuando la carrera tiene dos mallas abiertas", () => {
+  it("muestra la malla de cada materia cuando la carrera tiene dos mallas vigentes", () => {
     mountTab(twoMallas)
 
     expect(rowOf("Cálculo").querySelectorAll("td")[1]!.textContent).toBe("CálculoMalla SW-8")

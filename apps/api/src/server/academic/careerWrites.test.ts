@@ -30,7 +30,7 @@ const OLD_MALLA = "01a1c5bc-9000-7000-8000-000000000002"
 const OTHER_MALLA = "01a1c5bc-9000-7000-8000-000000000003"
 const MALLAS: Record<string, { careerId: string; cycleCount: number; state: string }> = {
   [MALLA]: { careerId: "01a1c5bc-79ca-7331-8f0f-66d63f61c699", cycleCount: 4, state: "vigente" },
-  [OLD_MALLA]: { careerId: "01a1c5bc-79ca-7331-8f0f-66d63f61c699", cycleCount: 9, state: "en_transicion" },
+  [OLD_MALLA]: { careerId: "01a1c5bc-79ca-7331-8f0f-66d63f61c699", cycleCount: 9, state: "cerrada" },
   [OTHER_MALLA]: { careerId: "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9", cycleCount: 4, state: "vigente" },
 }
 const CURRENT_ASSIGNMENT = "01a1c5bc-7d03-7162-95e7-db49fd8d2773"
@@ -494,16 +494,11 @@ describe("POST /api/v1/coordination/academic/parallels", () => {
   })
 
   it("a subject of a closed malla receives no parallels", async () => {
-    MALLAS[OLD_MALLA].state = "cerrada"
     subjects.set(OTHER_SUBJECT, subjectRow(OTHER_SUBJECT, CAREER, {}, OLD_MALLA))
-    try {
-      expect((await storeParallels({ subject_id: OTHER_SUBJECT, codes: ["B"], shift: "matutina", user_id: TEACHER })).json?.errors).toEqual({
-        subject_id: ["El valor seleccionado en materia no es válido."],
-      })
-      expect(log).toEqual([])
-    } finally {
-      MALLAS[OLD_MALLA].state = "en_transicion"
-    }
+    expect((await storeParallels({ subject_id: OTHER_SUBJECT, codes: ["B"], shift: "matutina", user_id: TEACHER })).json?.errors).toEqual({
+      subject_id: ["El valor seleccionado en materia no es válido."],
+    })
+    expect(log).toEqual([])
   })
 
   it("only a subject of the coordinator's career receives parallels", async () => {

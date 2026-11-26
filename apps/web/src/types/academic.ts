@@ -187,13 +187,12 @@ export type CurriculumBuilderSubject = {
   }[];
 };
 
-export type MallaState = "vigente" | "en_transicion" | "cerrada";
+export type MallaState = "vigente" | "cerrada";
 
 /** A curriculum (malla) of a career; a career has at most one vigente malla. */
 export type Malla = {
   id: string;
   name: string;
-  resolution: string | null;
   cycle_count: number;
   state: MallaState;
   subject_count: number;
