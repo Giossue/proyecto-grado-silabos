@@ -296,7 +296,7 @@ describe("TeacherSyllabusDetailPage", () => {
     vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: detail })
     const page = mountPage()
     await flush()
-    const locked = page.container.querySelector("#field-field-1")!.closest('[data-slot="accordion-item"]')!
+    const locked = page.container.querySelector("#field-field-1")!.closest("[data-field-key]")!
     expect(locked.querySelector('[data-locked-field="field-1"]')!.lastElementChild!.textContent).toBe("Bloqueado")
     expect(locked.textContent).not.toMatch(/lo completa|Carrera/)
     expect(editorIds(page)).toEqual(["input-field-2", "input-field-3"])
@@ -304,23 +304,16 @@ describe("TeacherSyllabusDetailPage", () => {
     page.unmount()
   })
 
-  it("cada campo es un acordeón que arranca abierto y se cierra y se vuelve a abrir", async () => {
+  it("los campos del docente se ven siempre abiertos, sin acordeones", async () => {
     const detail = syllabus("borrador", "docente")
     detail.sections[0]!.fields.push(field("field-2", "docente", { label: "Bibliografía" }))
     vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: detail })
     const page = mountPage()
     await flush()
-    const items = () => [...page.container.querySelectorAll('[data-slot="accordion-item"]')]
-    const state = (index: number): string | null => items()[index]!.getAttribute("data-state")
 
-    expect(items()).toHaveLength(2)
-    expect([state(0), state(1)]).toEqual(["open", "open"])
-
-    await click(items()[1]!.querySelector('[data-slot="accordion-trigger"]')!)
-    expect([state(0), state(1)]).toEqual(["open", "closed"])
-
-    await click(items()[1]!.querySelector('[data-slot="accordion-trigger"]')!)
-    expect(state(1)).toBe("open")
+    expect(page.container.querySelectorAll('.teacher-form [data-slot="accordion-item"], .teacher-form [data-slot="accordion-trigger"]')).toHaveLength(0)
+    expect(page.container.querySelectorAll(".teacher-form [data-field-key]")).toHaveLength(2)
+    expect(editorIds(page)).toEqual(["input-field-1", "input-field-2"])
     page.unmount()
   })
 
@@ -331,9 +324,9 @@ describe("TeacherSyllabusDetailPage", () => {
     const page = mountPage()
     await flush()
 
-    const item = page.container.querySelector('[data-slot="accordion-item"]')!
-    expect(item.querySelector('[data-slot="accordion-trigger"]')).toBeNull()
-    expect(item.getAttribute("data-state")).toBe("open")
+    const item = page.container.querySelector("[data-field-key]")!
+    expect(item.querySelector("h3")).toBeNull()
+    expect(item.querySelector("#input-field-1")).not.toBeNull()
     page.unmount()
   })
 

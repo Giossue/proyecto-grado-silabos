@@ -144,7 +144,6 @@ export default function TeacherSyllabusDetailPage() {
   const [copySource, setCopySource] = useState<CopySource | null>(null)
   const [saveFailed, setSaveFailed] = useState(false)
   const [editedHere, setEditedHere] = useState(false)
-  const [collapsedFields, setCollapsedFields] = useState<Set<string>>(() => new Set())
   const [chosenSectionId, setChosenSectionId] = useState<string | null>(null)
   const [previewHint] = useState(() => isSyllabusPreview(syllabusId))
   const [submitKey] = useState(attemptKey)
@@ -205,8 +204,6 @@ export default function TeacherSyllabusDetailPage() {
 
   const applyValidation = (results: ValidationResult[]): void => {
     setValidationResults(results)
-    const failing = new Set(results.map((result) => result.field_id))
-    setCollapsedFields((current) => ([...current].some((id) => failing.has(id)) ? new Set([...current].filter((id) => !failing.has(id))) : current))
   }
 
   const clearFieldValidation = (fieldId: string): void => {
@@ -390,9 +387,6 @@ export default function TeacherSyllabusDetailPage() {
   }
 
   const goToPart = (fieldId: string | null): void => {
-    if (fieldId) {
-      flushSync(() => setCollapsedFields((current) => (current.has(fieldId) ? new Set([...current].filter((id) => id !== fieldId)) : current)))
-    }
     const sections = syllabusRef.current?.sections ?? []
     const owner = fieldId ? sections.find((section) => section.fields.some((field) => field.id === fieldId)) : null
     if (owner && canEditNow()) flushSync(() => setChosenSectionId(owner.id))
@@ -638,8 +632,6 @@ export default function TeacherSyllabusDetailPage() {
                     onValueChange={updateValue}
                     active={activeSectionId}
                     onActiveChange={setChosenSectionId}
-                    collapsed={collapsedFields}
-                    onCollapsedChange={setCollapsedFields}
                   />
                 ) : (
                   <SyllabusDocumentPreview presentation={syllabus.presentation} sections={previewSections} />

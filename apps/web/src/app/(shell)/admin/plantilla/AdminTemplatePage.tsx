@@ -43,7 +43,6 @@ export default function AdminTemplatePage() {
   const [teacherSections, setTeacherSections] = useState<SyllabusDetail["sections"] | null>(null)
   const [teacherError, setTeacherError] = useState<string | null>(null)
   const [teacherSection, setTeacherSection] = useState("")
-  const [teacherCollapsed, setTeacherCollapsed] = useState<Set<string>>(() => new Set())
   const [unsaved, setUnsaved] = useState(false)
   const [editing, setEditing] = useState(false)
   const builder = useRef<TemplateVisualBuilderHandle>(null)
@@ -207,8 +206,6 @@ export default function AdminTemplatePage() {
             sections={teacherSections}
             active={teacherSection}
             onActiveChange={setTeacherSection}
-            collapsed={teacherCollapsed}
-            onCollapsedChange={setTeacherCollapsed}
             onValueChange={tryValue}
           />
         </>

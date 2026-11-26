@@ -6,7 +6,6 @@ import { flushSync } from "react-dom"
 import type { SyllabusDetail, SyllabusField } from "@/api/syllabi"
 import { FieldResponseEditor } from "@/components/domain/syllabus/FieldResponseEditor"
 import { FieldView } from "@/components/domain/syllabus/FieldView"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -28,8 +27,6 @@ export type SyllabusTeacherFormProps = {
   onValueChange?: (field: SyllabusField, value: DocumentNode) => void
   active?: string
   onActiveChange?: (id: string) => void
-  collapsed?: Set<string>
-  onCollapsedChange?: (collapsed: Set<string>) => void
 }
 
 const NO_ERRORS = (): string[] => []
@@ -44,21 +41,13 @@ export function SyllabusTeacherForm({
   onValueChange,
   active,
   onActiveChange,
-  collapsed,
-  onCollapsedChange,
 }: SyllabusTeacherFormProps) {
   const [localActive, setLocalActive] = useState("")
-  const [localCollapsed, setLocalCollapsed] = useState<Set<string>>(() => new Set())
   const activeSectionId = active ?? localActive
-  const closed = collapsed ?? localCollapsed
 
   const setActive = (id: string): void => {
     if (active === undefined) setLocalActive(id)
     onActiveChange?.(id)
-  }
-  const setClosed = (next: Set<string>): void => {
-    if (collapsed === undefined) setLocalCollapsed(next)
-    onCollapsedChange?.(next)
   }
 
   const conditions = syllabusConditions(sections, documentOf)
@@ -73,15 +62,6 @@ export function SyllabusTeacherForm({
   const goToSection = (id: string): void => {
     flushSync(() => setActive(id))
     document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: scrollBehavior(), block: "start" })
-  }
-  const openFields = (section: Section): string[] => section.fields.map((field) => field.id).filter((id) => !closed.has(id))
-  const setOpenFields = (section: Section, open: string[]): void => {
-    const next = new Set(closed)
-    for (const { id } of section.fields) {
-      if (open.includes(id)) next.delete(id)
-      else next.add(id)
-    }
-    setClosed(next)
   }
   const written = (field: SyllabusField): number => fieldCharacters(field.template ?? null, documentOf(field), conditions.answers)
 
@@ -116,26 +96,24 @@ export function SyllabusTeacherForm({
             {section.description ? <p className="text-sm text-muted-foreground">{section.description}</p> : null}
           </header>
           <FieldGroup>
-            <Accordion type="multiple" className="-mx-1" value={openFields(section)} onValueChange={(open) => setOpenFields(section, open)}>
+            <div className="flex flex-col divide-y">
               {shownFields(section).map((field) => {
                 const fieldErrors = errors(field.id)
                 const limit = field.max_length ?? null
                 const count = limit ? written(field) : 0
                 return (
-                  <AccordionItem key={field.id} value={field.id} data-field-key={field.key}>
+                  <div key={field.id} data-field-key={field.key} className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
                     {field.label.trim() ? (
-                      <AccordionTrigger className="items-center px-1 hover:no-underline">
-                        <span className="flex flex-wrap items-center gap-2">
+                      <h3 className="flex flex-wrap items-center gap-2">
                           <span className="text-base font-semibold">{fieldTitle(field, section)}</span>
                           {isTeacherField(field) ? (
                             <span className="text-destructive" aria-hidden="true">
                               *
                             </span>
                           ) : null}
-                        </span>
-                      </AccordionTrigger>
+                      </h3>
                     ) : null}
-                    <AccordionContent className="flex flex-col gap-3 px-1 pt-1">
+                    <div className="flex flex-col gap-3">
                       {isTeacherField(field) ? (
                         <Field id={`field-${field.id}`} data-invalid={fieldErrors.length > 0 || (Boolean(limit) && count > limit!)}>
                           <FieldLabel htmlFor={`input-${field.id}`} required className="sr-only">
@@ -169,11 +147,11 @@ export function SyllabusTeacherForm({
                         </div>
                       )}
                       <FieldError errors={fieldErrors} />
-                    </AccordionContent>
-                  </AccordionItem>
+                    </div>
+                  </div>
                 )
               })}
-            </Accordion>
+            </div>
           </FieldGroup>
         </section>
       ))}
