@@ -144,11 +144,11 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 - **Límites de intentos:** guardados en Redis, con las cabeceras `X-RateLimit-*`.
 - **Documentación:** Swagger UI en `/api/docs` y el documento OpenAPI en `/api/docs-json` (puerto de la API). Muestra todas las rutas de la API.
 
-**146 endpoints** en total.
+**145 endpoints** en total.
 
 | Área | Endpoints | Qué cubre |
 |---|---|---|
-| `authentication` | 8 | Ingreso y salida, activación de cuenta, recuperar y restablecer contraseña por correo, perfil y accesibilidad |
+| `authentication` | 7 | Ingreso y salida, activación de cuenta, recuperar y restablecer contraseña por correo y perfil |
 | `session`, `active-role` | 2 | Sesión actual y cambio de rol o carrera activa |
 | `admin` | 43 | Facultades, carreras y períodos (con importación desde Excel), usuarios y roles (con importación), procesos del período (abrir, pausar, reanudar, prórroga, impacto, finalizar), ajustes del sistema (correo, IA, catálogo, firmas), plantilla (estructura, campos, bloques, formato, logo, vista previa del docente, JSON) y asistente de IA |
 | `admin/careers/:career` | 25 | Las mismas rutas de malla, materias programadas, paralelos, asignación docente, docentes y proyecto de carrera de `coordination`, para la carrera indicada. Solo Administración; no incluyen revisar ni aprobar sílabos |
@@ -319,6 +319,7 @@ Lee `STORAGE_PATH` (carpetas `private` y `public`) y usa las variables `S3_*`; e
   - navegación con teclado, lectores de pantalla y movimiento reducido;
   - tema claro u oscuro según el sistema;
   - tablas ordenables;
+  - opciones de accesibilidad (alto contraste, tamaño del texto, sin animaciones y modo dislexia) guardadas solo en el navegador, sin pasar por el servidor;
   - diseño adaptable a celular.
 
 ---
