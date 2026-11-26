@@ -4,12 +4,17 @@ import path from "node:path"
 import { Client } from "pg"
 import { scratchDir } from "./accounts"
 
-const databaseUrl = (): string => {
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL
+export const localSetting = (name: string): string | undefined => {
+  if (process.env[name]) return process.env[name]
   const env = fs.readFileSync(path.resolve(__dirname, "../../../../../.env.local"), "utf8")
-  const line = env.split("\n").find((entry) => entry.startsWith("DATABASE_URL="))
-  if (!line) throw new Error("DATABASE_URL must be set to run the E2E suite.")
-  return line.slice("DATABASE_URL=".length).trim()
+  const line = env.split("\n").find((entry) => entry.startsWith(`${name}=`))
+  return line?.slice(name.length + 1).trim()
+}
+
+const databaseUrl = (): string => {
+  const url = localSetting("DATABASE_URL")
+  if (!url) throw new Error("DATABASE_URL must be set to run the E2E suite.")
+  return url
 }
 
 export async function query<T extends Record<string, unknown>>(text: string, values: unknown[] = []): Promise<T[]> {
