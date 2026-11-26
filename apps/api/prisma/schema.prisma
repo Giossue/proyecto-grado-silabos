@@ -241,16 +241,6 @@ model documentos_apoyo {
   @@index([subido_por], map: "documentos_apoyo_subido_por_index")
 }
 
-model dos_factores_usuario {
-  id                        String    @id
-  secret                    String
-  backup_codes              String
-  user_id                   String    @unique(map: "dos_factores_usuario_user_id_unique") @db.Uuid
-  verified                  Boolean   @default(true)
-  failed_verification_count Int       @default(0)
-  locked_until              DateTime? @db.Timestamptz(6)
-  usuarios                  usuarios  @relation(fields: [user_id], references: [usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "dos_factores_usuario_user_id_usuarios_usuario_id_fk")
-}
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model envios_biblioteca {
@@ -588,7 +578,6 @@ model usuarios {
   asignaciones_rol                                                                 asignaciones_rol[]
   cuentas_usuario                                                                  cuentas_usuario[]
   documentos_apoyo                                                                 documentos_apoyo[]
-  dos_factores_usuario                                                             dos_factores_usuario?
   envios_biblioteca                                                                envios_biblioteca[]
   exportaciones_silabo                                                             exportaciones_silabo[]
   firmas_silabo                                                                    firmas_silabo[]
