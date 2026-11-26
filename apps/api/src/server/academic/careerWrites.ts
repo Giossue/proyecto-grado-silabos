@@ -30,7 +30,7 @@ export const SUBJECT_COLUMNS = [
 
 export type SubjectColumn = (typeof SUBJECT_COLUMNS)[number]
 export type SubjectValue = string | number | boolean | null
-export type SubjectRow = { id: string; careerId: string; totalHours: number | null; columns: Record<SubjectColumn, SubjectValue> }
+export type SubjectRow = { id: string; careerId: string; columns: Record<SubjectColumn, SubjectValue> }
 export type ParallelRow = { id: string; subjectId: string; code: string; shift: string }
 export type CareerConvocation = { id: string; state: string; processState: string }
 

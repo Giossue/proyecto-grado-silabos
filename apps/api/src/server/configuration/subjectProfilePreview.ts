@@ -15,6 +15,7 @@ import { defaultSubjectProfileDeps, mayManageSubjectProfile, profileContext, typ
 import { syllabusSectionPayload, templatePresentationOf, type TemplateField } from "./templatePresentation"
 import { TemplateValidationError } from "./templateRuntime"
 import { unmatchedRoute, modelNotFound, routeAllows } from "../http/router"
+import { subjectTotalHours } from "../academic/subjectHours"
 
 export type SubjectContextRow = {
   id: string
@@ -24,7 +25,6 @@ export type SubjectContextRow = {
   position: number | null
   unit: string | null
   credits: string | null
-  total_hours: number | null
   hours_ac: string | null
   hours_pae: string | null
   hours_aa: string | null
@@ -68,7 +68,7 @@ export function subjectAcademicContext(subject: SubjectContextRow, requirements:
       position: subject.position,
       organization_unit: subject.unit === null ? null : (CURRICULAR_UNITS[subject.unit] ?? null),
       credits: subject.credits,
-      total_hours: subject.total_hours,
+      total_hours: subjectTotalHours(subject.hours_ac, subject.hours_pae, subject.hours_aa),
       hours_ac: subject.hours_ac,
       hours_pae: subject.hours_pae,
       hours_aa: subject.hours_aa,
@@ -80,7 +80,7 @@ export function subjectAcademicContext(subject: SubjectContextRow, requirements:
 export async function loadSubjectContext(db: Db, subjectId: string): Promise<PhpRecord | null> {
   const [subject] = await db.$queryRaw<SubjectContextRow[]>`select asignatura.asignatura_id::text as id, asignatura.codigo_asignatura as code, asignatura.nombre_asignatura as name,
         asignatura.ciclo_asignatura as cycle, asignatura.orden_asignatura_en_ciclo as position, asignatura.unidad_curricular_asignatura as unit,
-        to_char(asignatura.creditos_asignatura, 'FM999999990.00') as credits, asignatura.total_horas_asignatura as total_hours,
+        to_char(asignatura.creditos_asignatura, 'FM999999990.00') as credits,
         to_char(asignatura.horas_docencia, 'FM999999990.00') as hours_ac, to_char(asignatura.horas_practicas, 'FM999999990.00') as hours_pae,
         to_char(asignatura.horas_autonomas, 'FM999999990.00') as hours_aa,
         carrera.carrera_id::text as career_id, carrera.codigo_carrera as career_code, carrera.nombre_carrera as career_name,

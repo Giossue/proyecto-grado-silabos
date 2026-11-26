@@ -56,7 +56,6 @@ function subjectRow(id: string, careerId: string, overrides: Partial<SubjectRow[
   return {
     id,
     careerId,
-    totalHours: 144,
     active: true,
     columns: {
       codigo_asignatura: "SW-B1-001",

@@ -2,7 +2,7 @@ import { Prisma } from "../../generated/prisma/client"
 import { type Db, inTransaction } from "../../prisma/db"
 import type { PrismaService } from "../../prisma/prisma.service"
 import { fromEpoch, hasRows, iso8601, jsonbValue, jsonText } from "../../prisma/sql"
-import { phpJsonDecode, phpShape, record, type PhpRecord } from "../configuration/phpValues"
+import { isRecord, phpJsonDecode, phpShape, phpString, record, type PhpRecord } from "../configuration/phpValues"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
 import { loadTemplate } from "../shared/templateStore"
 
@@ -68,7 +68,9 @@ export interface AssistantStore {
 export const OPEN_STATES = ["pendiente", "en_ejecucion"]
 
 const MESSAGE = Prisma.sql`select m.mensaje_ia_plantilla_id::text as id, m.plantilla_id::text as "templateId", m.usuario_id::text as "userId",
-  ${jsonText(Prisma.raw("m.contenido_mensaje"))} as content, ${iso8601(Prisma.raw("m.enviado_en"))} as "sentAt", ${iso8601(Prisma.raw("m.ocultado_en"))} as "hiddenAt"
+  ${jsonText(Prisma.raw("m.contenido_mensaje"))} as content, m.rol as role, m.estado as state, m.codigo_error as "errorCode",
+  ${iso8601(Prisma.raw("m.completado_en"))} as "completedAt", m.clave_idempotencia as "idempotencyKey",
+  ${iso8601(Prisma.raw("m.enviado_en"))} as "sentAt", ${iso8601(Prisma.raw("m.ocultado_en"))} as "hiddenAt"
   from mensajes_ia_plantilla m`
 
 const PROPOSAL = Prisma.sql`select p.propuesta_ia_plantilla_id::text as id, p.plantilla_id::text as "templateId", p.mensaje_ia_plantilla_id::text as "messageId",
@@ -77,12 +79,43 @@ const PROPOSAL = Prisma.sql`select p.propuesta_ia_plantilla_id::text as id, p.pl
   p.decidida_por::text as "decidedBy", ${iso8601(Prisma.raw("p.creada_en"))} as "createdAt"
   from propuestas_ia_plantilla p`
 
-type MessageRow = { id: string; templateId: string; userId: string; content: string | null; sentAt: string; hiddenAt: string | null }
+export type MessageColumns = { role: string; state: string; errorCode: string | null; completedAt: string | null; idempotencyKey: string | null }
+
+type MessageRow = MessageColumns & { id: string; templateId: string; userId: string; content: string | null; sentAt: string; hiddenAt: string | null }
 
 type ProposalRow = Omit<StoredProposal, "structure" | "changes"> & { structure: string | null; changes: string | null }
 
+const nullableText = (value: unknown): string | null => (value === null || value === undefined ? null : phpString(value))
+
+export function splitMessageContent(content: PhpRecord): { columns: MessageColumns; content: PhpRecord } {
+  const { rol, estado, codigo_error, completado_en, ...rest } = content
+  let idempotencyKey: string | null = null
+  if (isRecord(rest.entrada)) {
+    const { clave_idempotencia, ...input } = rest.entrada
+    idempotencyKey = nullableText(clave_idempotencia)
+    rest.entrada = input
+  }
+  return {
+    columns: { role: phpString(rol), state: phpString(estado), errorCode: nullableText(codigo_error), completedAt: nullableText(completado_en), idempotencyKey },
+    content: rest,
+  }
+}
+
+export function joinMessageContent(content: PhpRecord, columns: MessageColumns): PhpRecord {
+  const joined: PhpRecord = { rol: columns.role, estado: columns.state, ...content }
+  if (columns.idempotencyKey !== null) joined.entrada = { ...record(content.entrada), clave_idempotencia: columns.idempotencyKey }
+  if (columns.errorCode !== null) joined.codigo_error = columns.errorCode
+  if (columns.completedAt !== null) joined.completado_en = columns.completedAt
+  return joined
+}
+
 function messageOf(row: MessageRow): StoredMessage {
-  return { ...row, content: record(phpJsonDecode(row.content)) }
+  const { role, state, errorCode, completedAt, idempotencyKey, content, ...rest } = row
+  return { ...rest, content: joinMessageContent(record(phpJsonDecode(content)), { role, state, errorCode, completedAt, idempotencyKey }) }
+}
+
+function messageJsonbOf(content: PhpRecord): Prisma.Sql {
+  return Object.keys(content).length === 0 ? jsonbValue("{}") : jsonbOf(content)
 }
 
 function proposalOf(row: ProposalRow): StoredProposal {
@@ -98,10 +131,12 @@ const conversationOf = (templateId: string, userId: string) =>
 
 const content = (path: string[]) => Prisma.raw(`(m.contenido_mensaje${path.slice(0, -1).map((key) => ` -> '${key}'`).join("")} ->> '${path[path.length - 1]}')`)
 
+const completedAtOf = (value: string | null) => (value === null ? Prisma.sql`null` : Prisma.sql`${value}::timestamptz`)
+
 function busy(db: Db, templateId: string, userId: string): Promise<boolean> {
   return hasRows(
     db.$queryRaw<{ id: string }[]>`select m.mensaje_ia_plantilla_id::text as id from mensajes_ia_plantilla m
-      where ${conversationOf(templateId, userId)} and ${content(["estado"])} = any(${OPEN_STATES}::text[])
+      where ${conversationOf(templateId, userId)} and m.estado = any(${OPEN_STATES}::text[])
       limit 1`,
   )
 }
@@ -137,13 +172,15 @@ export function assistantTx(db: Db): AssistantTx {
     questionByKey: (templateId, userId, key) =>
       firstId(
         db,
-        Prisma.sql`m.plantilla_id = ${templateId}::uuid and m.usuario_id = ${userId}::uuid and ${content(["rol"])} = 'usuario' and ${content(["entrada", "clave_idempotencia"])} = ${key}`,
+        Prisma.sql`m.plantilla_id = ${templateId}::uuid and m.usuario_id = ${userId}::uuid and m.rol = 'usuario' and m.clave_idempotencia = ${key}`,
       ),
     answerTo: (questionId) => firstId(db, Prisma.sql`${content(["entrada", "respuesta_a_id"])} = ${questionId}`),
     conversationBusy: (templateId, userId) => busy(db, templateId, userId),
     async insertMessage(message) {
-      await db.$executeRaw`insert into mensajes_ia_plantilla (mensaje_ia_plantilla_id, plantilla_id, usuario_id, contenido_mensaje)
-        values (${message.id}::uuid, ${message.templateId}::uuid, ${message.userId}::uuid, ${jsonbOf(message.content)})`
+      const { columns, content: rest } = splitMessageContent(message.content)
+      await db.$executeRaw`insert into mensajes_ia_plantilla (mensaje_ia_plantilla_id, plantilla_id, usuario_id, contenido_mensaje, rol, estado, codigo_error, completado_en, clave_idempotencia)
+        values (${message.id}::uuid, ${message.templateId}::uuid, ${message.userId}::uuid, ${messageJsonbOf(rest)}, ${columns.role}, ${columns.state}, ${columns.errorCode},
+          ${completedAtOf(columns.completedAt)}, ${columns.idempotencyKey})`
     },
     lockProposal: (id) => oneProposal(db, Prisma.sql`p.propuesta_ia_plantilla_id = ${id}::uuid`, true),
     async decideProposal(id, state, actorId, at) {
@@ -152,7 +189,10 @@ export function assistantTx(db: Db): AssistantTx {
     },
     lockMessage: (id) => oneMessage(db, Prisma.sql`m.mensaje_ia_plantilla_id = ${id}::uuid`, true),
     async updateMessage(id, value) {
-      await db.$executeRaw`update mensajes_ia_plantilla set contenido_mensaje = ${jsonbOf(value)} where mensaje_ia_plantilla_id = ${id}::uuid`
+      const { columns, content: rest } = splitMessageContent(value)
+      await db.$executeRaw`update mensajes_ia_plantilla set contenido_mensaje = ${messageJsonbOf(rest)}, rol = ${columns.role}, estado = ${columns.state},
+          codigo_error = ${columns.errorCode}, completado_en = ${completedAtOf(columns.completedAt)}, clave_idempotencia = ${columns.idempotencyKey}
+        where mensaje_ia_plantilla_id = ${id}::uuid`
     },
     async replacePendingProposals(templateId, userId) {
       await db.$executeRaw`update propuestas_ia_plantilla set estado_propuesta = 'reemplazada'
@@ -198,7 +238,7 @@ export function assistantStoreOn(db: Db, transaction: <T>(work: (tx: AssistantTx
         where ${conversationOf(message.templateId, message.userId)}
           and m.mensaje_ia_plantilla_id not in (${message.id}::uuid, ${questionId}::uuid)
           and m.enviado_en < (select q.enviado_en from mensajes_ia_plantilla q where q.mensaje_ia_plantilla_id = ${questionId}::uuid limit 1)
-          and ${content(["estado"])} = 'completado'
+          and m.estado = 'completado'
         order by m.enviado_en desc
         limit ${limit}`
       return found.map(messageOf)

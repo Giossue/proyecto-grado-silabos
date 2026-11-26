@@ -55,7 +55,7 @@ export function accountTx(db: Db): AccountTx {
     lockAccountByEmail: (email) => first<Account>(db, Prisma.sql`${ACCOUNT} where lower("usuarios"."correo_electronico") = ${email} limit ${1} for update`),
     async insertAccount(account) {
       const id = uuid7()
-      await db.$executeRaw`insert into "usuarios" ("usuario_id", "nombre_usuario", "correo_electronico", "correo_verificado_en", "contrasena", "usuario_activo") values (${id}, ${account.name}, ${account.email}, ${null}, ${account.passwordHash}, ${true})`
+      await db.$executeRaw`insert into "usuarios" ("usuario_id", "nombre_usuario", "correo_electronico", "correo_verificado_en", "usuario_activo") values (${id}, ${account.name}, ${account.email}, ${null}, ${true})`
       await db.$executeRaw`insert into "cuentas_usuario" ("id", "account_id", "provider_id", "user_id", "password") values (${uuid7()}, ${id}, ${CREDENTIAL_PROVIDER}, ${id}, ${account.passwordHash})`
       return { id, name: account.name, email: account.email, active: true, verified: false }
     },

@@ -39,7 +39,7 @@ const USER = "0193a3c2-1111-7000-8000-000000000001"
 
 describe("identity repositories on Prisma send the same SQL and map the rows like the recorded previous ones", () => {
   it("finds the session user and the effective roles", async () => {
-    const user = { usuario_id: USER, contrasena: "$2y$12$hash", usuario_activo: true, correo_verificado_en: "2026-01-01 00:00:00+00", preferencias_correo_usuario: { a: true } }
+    const user = { usuario_id: USER, password: "$2y$12$hash", usuario_activo: true, correo_verificado_en: "2026-01-01 00:00:00+00", preferencias_correo_usuario: { a: true } }
     expect(await same("findUser", [user], (executor) => sessionStoreOn(executor).findUser(USER))).toMatchObject({ id: USER, active: true })
     await same("findUserMissing", [], (executor) => sessionStoreOn(executor).findUser(USER))
     const role = { asignacion_rol_id: "r-1", usuario_id: USER, rol: "docente", carrera_id: "c-1", career_label: "Software · SW" }

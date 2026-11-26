@@ -4,7 +4,7 @@ import { rowsOf, type RawExecutor } from "./raw-executor"
 
 type UserRow = {
   usuario_id: string
-  contrasena: string
+  password: string
   usuario_activo: boolean
   correo_verificado_en: string | null
   preferencias_correo_usuario: unknown
@@ -23,7 +23,7 @@ export function sessionStoreOn(executor: RawExecutor): SessionStore {
     async findUser(id) {
       const [row] = await rowsOf<UserRow>(
         executor,
-        Prisma.sql`select u.usuario_id, coalesce(c.password, u.contrasena) as contrasena, u.usuario_activo,
+        Prisma.sql`select u.usuario_id, coalesce(c.password, '') as password, u.usuario_activo,
                u.correo_verificado_en::text as correo_verificado_en, u.preferencias_correo_usuario
              from usuarios u
              left join cuentas_usuario c on c.user_id = u.usuario_id and c.provider_id = 'credential'
@@ -32,7 +32,7 @@ export function sessionStoreOn(executor: RawExecutor): SessionStore {
       if (!row) return null
       return {
         id: row.usuario_id,
-        passwordHash: row.contrasena,
+        passwordHash: row.password,
         active: row.usuario_activo,
         emailVerifiedAt: row.correo_verificado_en,
         emailPreferences: row.preferencias_correo_usuario,

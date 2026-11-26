@@ -126,7 +126,7 @@ describe("InProgressWork generation", () => {
     const reply = (text: string): unknown[] => {
       if (text.startsWith("select convocatoria.carrera_id::text as career_id")) return [{ career_id: CAREER, period_id: PERIOD }]
       if (text.startsWith("select paralelo.paralelo_id::text as id")) return [{ id: PARALLEL, subject_id: CAREER, code: "A", shift: "matutina", subject: "Cálculo", campus: null, modality: "presencial", teachers: 1 }]
-      if (text.startsWith("select asignatura.asignatura_id::text as id")) return [{ id: CAREER, code: "C1", name: "Cálculo", cycle: 1, position: 1, unit: null, credits: "2.00", total_hours: 96, hours_ac: "1.00", hours_pae: "1.00", hours_aa: "1.00", career_id: CAREER, career_code: "SW", career_name: "Software", cycle_count: 8, faculty_id: null, faculty: null, faculty_logo: null }]
+      if (text.startsWith("select asignatura.asignatura_id::text as id")) return [{ id: CAREER, code: "C1", name: "Cálculo", cycle: 1, position: 1, unit: null, credits: "2.00", hours_ac: "1.00", hours_pae: "1.00", hours_aa: "1.00", career_id: CAREER, career_code: "SW", career_name: "Software", cycle_count: 8, faculty_id: null, faculty: null, faculty_logo: null }]
       if (text.startsWith("select codigo_periodo_academico as code")) return [{ code: "2026-1", weeks: 16 }]
       if (text.includes("order by silabos.guardado_en desc")) return [{ value: JSON.stringify(formation) }]
       if (text.startsWith("select docentes_vigentes_silabo.usuario_id")) return [{ id: "t1" }]
@@ -154,7 +154,7 @@ describe("InProgressWork academic context", () => {
     const queries: string[] = []
     const reply = (text: string): unknown[] => {
       if (text.startsWith("select paralelo.paralelo_id::text as id")) return [{ id: PARALLEL, subject_id: CAREER, code: "A", shift: "matutina", subject: "Cálculo", modality: "presencial", teachers: 1 }]
-      if (text.startsWith("select asignatura.asignatura_id::text as id")) return [{ id: CAREER, code: "C1", name: "Cálculo", cycle: 1, position: 1, unit: null, credits: "2.00", total_hours: 96, hours_ac: "1.00", hours_pae: "1.00", hours_aa: "1.00", career_id: CAREER, career_code: "SW", career_name: "Software", cycle_count: 8, faculty_id: null, faculty: null, faculty_logo: null }]
+      if (text.startsWith("select asignatura.asignatura_id::text as id")) return [{ id: CAREER, code: "C1", name: "Cálculo", cycle: 1, position: 1, unit: null, credits: "2.00", hours_ac: "1.00", hours_pae: "1.00", hours_aa: "1.00", career_id: CAREER, career_code: "SW", career_name: "Software", cycle_count: 8, faculty_id: null, faculty: null, faculty_logo: null }]
       if (text.startsWith("select previa.codigo_asignatura as code")) return [{ code: "M0" }]
       if (text.startsWith("select codigo_periodo_academico as code")) return [{ code: "2026-1", weeks: 16 }]
       return []

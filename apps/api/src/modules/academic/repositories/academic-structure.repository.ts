@@ -11,6 +11,7 @@ import type {
   SubjectRecord,
   TeacherAssignmentRecord,
 } from "../../../server/academic/structure"
+import { subjectTotalHours } from "../../../server/academic/subjectHours"
 import { decimalText } from "./prisma-values"
 
 const institutionTimezone = () => process.env.DISPLAY_TIMEZONE ?? "America/Guayaquil"
@@ -26,7 +27,6 @@ const SUBJECT_COLUMNS = {
   unidad_curricular_asignatura: true,
   modalidad_asignatura: true,
   creditos_asignatura: true,
-  total_horas_asignatura: true,
   horas_docencia: true,
   horas_practicas: true,
   horas_autonomas: true,
@@ -46,7 +46,7 @@ function toSubject(row: SubjectRow): SubjectRecord {
     organizationUnit: row.unidad_curricular_asignatura,
     modality: row.modalidad_asignatura,
     credits: decimalText(row.creditos_asignatura),
-    totalHours: row.total_horas_asignatura,
+    totalHours: subjectTotalHours(row.horas_docencia, row.horas_practicas, row.horas_autonomas),
     hoursAc: decimalText(row.horas_docencia),
     hoursPae: decimalText(row.horas_practicas),
     hoursAa: decimalText(row.horas_autonomas),

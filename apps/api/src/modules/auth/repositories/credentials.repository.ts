@@ -8,7 +8,6 @@ export async function storeCredentialPassword(executor: RawExecutor, userId: str
   await executor.$executeRaw(Prisma.sql`insert into cuentas_usuario (id, account_id, provider_id, user_id, password)
     values (${id}, ${userId}, ${CREDENTIAL_PROVIDER}, ${userId}::uuid, ${hash})
     on conflict (provider_id, account_id) do update set password = excluded.password, updated_at = now()`)
-  await executor.$executeRaw(Prisma.sql`update usuarios set contrasena = ${hash} where usuario_id = ${userId}::uuid`)
 }
 
 export function deleteUserSessions(executor: RawExecutor, userId: string, exceptId: string | null = null): Promise<number> {

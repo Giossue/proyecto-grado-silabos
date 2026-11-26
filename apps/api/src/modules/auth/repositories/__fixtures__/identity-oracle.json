@@ -2,7 +2,7 @@
  "findUser": {
   "queries": [
    {
-    "sql": "select u.usuario_id, coalesce(c.password, u.contrasena) as contrasena, u.usuario_activo, u.correo_verificado_en::text as correo_verificado_en, u.preferencias_correo_usuario from usuarios u left join cuentas_usuario c on c.user_id = u.usuario_id and c.provider_id = 'credential' where u.usuario_id = $1 limit 1",
+    "sql": "select u.usuario_id, coalesce(c.password, '') as password, u.usuario_activo, u.correo_verificado_en::text as correo_verificado_en, u.preferencias_correo_usuario from usuarios u left join cuentas_usuario c on c.user_id = u.usuario_id and c.provider_id = 'credential' where u.usuario_id = $1 limit 1",
     "params": [
      "0193a3c2-1111-7000-8000-000000000001"
     ]
@@ -21,7 +21,7 @@
  "findUserMissing": {
   "queries": [
    {
-    "sql": "select u.usuario_id, coalesce(c.password, u.contrasena) as contrasena, u.usuario_activo, u.correo_verificado_en::text as correo_verificado_en, u.preferencias_correo_usuario from usuarios u left join cuentas_usuario c on c.user_id = u.usuario_id and c.provider_id = 'credential' where u.usuario_id = $1 limit 1",
+    "sql": "select u.usuario_id, coalesce(c.password, '') as password, u.usuario_activo, u.correo_verificado_en::text as correo_verificado_en, u.preferencias_correo_usuario from usuarios u left join cuentas_usuario c on c.user_id = u.usuario_id and c.provider_id = 'credential' where u.usuario_id = $1 limit 1",
     "params": [
      "0193a3c2-1111-7000-8000-000000000001"
     ]
@@ -182,13 +182,6 @@
      "0193a3c2-1111-7000-8000-000000000001",
      "$2y$new"
     ]
-   },
-   {
-    "sql": "update usuarios set contrasena = $1 where usuario_id = $2::uuid",
-    "params": [
-     "$2y$new",
-     "0193a3c2-1111-7000-8000-000000000001"
-    ]
    }
   ],
   "expected": "__undefined__"
@@ -214,13 +207,6 @@
      "credential",
      "0193a3c2-1111-7000-8000-000000000001",
      "$2y$new"
-    ]
-   },
-   {
-    "sql": "update usuarios set contrasena = $1 where usuario_id = $2::uuid",
-    "params": [
-     "$2y$new",
-     "0193a3c2-1111-7000-8000-000000000001"
     ]
    },
    {

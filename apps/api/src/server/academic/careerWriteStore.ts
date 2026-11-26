@@ -15,7 +15,7 @@ import { insertColumns, SUBJECTS_TABLE, updateColumns } from "./columnSql"
 import type { CurriculumDeps, CurriculumTx } from "./curriculumWrites"
 import { deletionTx } from "./deletions"
 
-type SubjectLock = { id: string; careerId: string; totalHours: number | null } & Record<SubjectColumn, SubjectValue>
+type SubjectLock = { id: string; careerId: string } & Record<SubjectColumn, SubjectValue>
 
 const ACTIVE_ASSIGNMENT = (parallelId: string) => Prisma.sql`asignaciones_paralelo.paralelo_id = ${parallelId}::uuid and asignaciones_paralelo.asignacion_paralelo_activa = true`
 const ELIGIBLE_USER = Prisma.sql`usuarios.usuario_activo = true and usuarios.correo_verificado_en is not null`
@@ -80,15 +80,15 @@ export function careerWriteTx(db: Db, afterCommit: AfterCommit, now: number, opt
       return row ? row.value : null
     },
     async lockSubject(subjectId, careerId) {
-      const row = await first<SubjectLock & { career_id: string; total_hours: number | null }>(
+      const row = await first<SubjectLock & { career_id: string }>(
         db,
-        Prisma.sql`select asignaturas.asignatura_id::text as id, asignaturas.carrera_id::text as career_id, asignaturas.total_horas_asignatura as total_hours,
+        Prisma.sql`select asignaturas.asignatura_id::text as id, asignaturas.carrera_id::text as career_id,
             ${SUBJECT_SELECTION}
           from asignaturas where asignaturas.asignatura_id = ${subjectId}::uuid and asignaturas.carrera_id = ${careerId}::uuid limit 1 for update`,
       )
       if (!row) return null
       const columns = Object.fromEntries(SUBJECT_COLUMNS.map((name) => [name, row[name]])) as Record<SubjectColumn, SubjectValue>
-      return { id: row.id, careerId: row.career_id, totalHours: nullableNumber(row.total_hours), columns }
+      return { id: row.id, careerId: row.career_id, columns }
     },
     async updateSubject(subjectId, columns) {
       await db.$executeRaw(updateColumns(SUBJECTS_TABLE, columns, Prisma.sql`"asignaturas"."asignatura_id" = ${subjectId}::uuid`))

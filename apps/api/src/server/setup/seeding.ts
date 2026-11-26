@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
 import type { PrismaClient } from "../../generated/prisma/client"
 import { provisionTxOn } from "../../modules/template/template-provision.repository"
-import { type Db, TRANSACTION_OPTIONS } from "../../prisma/db"
+import { TRANSACTION_OPTIONS } from "../../prisma/db"
 import { bcryptHash } from "../auth/bcrypt"
 import { CREDENTIAL_PROVIDER } from "../auth/credentialProvider"
 import { officialDefinition, officialSections } from "../configuration/officialTemplate"
@@ -24,12 +24,6 @@ export function seedOptions(environment: Record<string, string | undefined>): Se
   }
 }
 
-export async function copyMissingCredentials(db: Db): Promise<number> {
-  return db.$executeRaw`insert into cuentas_usuario (id, account_id, provider_id, user_id, password)
-    select gen_random_uuid()::text, u.usuario_id::text, ${CREDENTIAL_PROVIDER}, u.usuario_id, u.contrasena from usuarios u
-    on conflict (provider_id, account_id) do nothing`
-}
-
 export async function provisionOfficialTemplate(tx: ProvisionTx, ids = { template: uuid7, block: randomUUID, field: uuid7 }): Promise<string | null> {
   if (await tx.anyTemplate()) return null
   const templateId = ids.template()
@@ -47,7 +41,6 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
         usuario_id: uuid7(),
         nombre_usuario: options.adminName,
         correo_electronico: options.adminEmail,
-        contrasena: await bcryptHash(options.adminPassword, options.bcryptRounds),
         usuario_activo: true,
         correo_verificado_en: new Date(),
       },
@@ -59,7 +52,16 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
       select: { asignacion_rol_id: true },
     })
     if (!activeRole) await tx.asignaciones_rol.create({ data: { asignacion_rol_id: uuid7(), usuario_id: admin.usuario_id, rol: "administrador", carrera_id: null, asignacion_rol_activa: true } })
-    await copyMissingCredentials(tx)
+    await tx.cuentas_usuario.createMany({
+      data: {
+        id: uuid7(),
+        account_id: admin.usuario_id,
+        provider_id: CREDENTIAL_PROVIDER,
+        user_id: admin.usuario_id,
+        password: await bcryptHash(options.adminPassword, options.bcryptRounds),
+      },
+      skipDuplicates: true,
+    })
     const templateId = await provisionOfficialTemplate(provisionTxOn(tx))
     return { adminCreated: inserted.count === 1, adminRoleCreated: !activeRole, templateId }
   }, TRANSACTION_OPTIONS)
