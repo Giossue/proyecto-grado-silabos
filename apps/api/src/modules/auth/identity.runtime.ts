@@ -21,7 +21,6 @@ export type IdentityRuntime = {
   hashPassword: (plain: string) => Promise<string>
   dummyHash: () => Promise<string>
   production: () => boolean
-  pwned?: (prefix: string) => Promise<string>
   today: () => string
   timezone: () => string
   timebox: Timebox

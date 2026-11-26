@@ -43,7 +43,6 @@ export type RecoveryDeps = {
   hashPassword: (plain: string) => Promise<string>
   timebox: Timebox
   production: () => boolean
-  pwned?: (prefix: string) => Promise<string>
   sendMail: (mail: QueuedMail) => Promise<unknown>
 }
 
@@ -74,8 +73,8 @@ class Refused extends Error {
   }
 }
 
-function strengthOf(deps: RecoveryDeps) {
-  return passwordStrength("contraseña", { production: deps.production(), pwned: deps.pwned })
+function strengthOf() {
+  return passwordStrength("contraseña")
 }
 
 async function guarded(request: Request, deps: RecoveryDeps): Promise<{ input: PhpArray; gate: Throttle } | Response> {
@@ -92,7 +91,7 @@ async function resetOutcome(request: Request, deps: RecoveryDeps): Promise<Respo
   const guard = await guarded(request, deps)
   if (guard instanceof Response) return guard
   const { input, gate } = guard
-  const { errors } = await validateSchema(passwordResetSchema(strengthOf(deps)), input)
+  const { errors } = await validateSchema(passwordResetSchema(strengthOf()), input)
   if (errors !== null) return gate.decorate(fromController(validationError(errors)))
   const email = stringOf(input.email).toLowerCase()
   const status = await deps.timebox(async (returnEarly) => {
@@ -123,7 +122,7 @@ async function activationOutcome(request: Request, deps: RecoveryDeps): Promise<
   const guard = await guarded(request, deps)
   if (guard instanceof Response) return guard
   const { input, gate } = guard
-  const { errors } = await validateSchema(accountActivationSchema(strengthOf(deps)), input)
+  const { errors } = await validateSchema(accountActivationSchema(strengthOf()), input)
   if (errors !== null) return gate.decorate(fromController(validationError(errors)))
   const now = deps.runtime.now()
   const hash = await storedPassword(stringOf(input.password), deps.hashPassword)

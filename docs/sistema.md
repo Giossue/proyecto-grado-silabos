@@ -181,8 +181,7 @@ Rutas públicas fuera de la API: `/logos/institucion`, `/logos/facultad/:id`, `/
 
 - **Contraseñas:**
   - se guardan con bcrypt;
-  - en producción piden al menos 12 caracteres, con mayúsculas, minúsculas, números y símbolos;
-  - se rechazan las que aparecen en filtraciones conocidas. La consulta a *Have I Been Pwned* es anónima: solo se envían los 5 primeros caracteres del hash.
+  - piden al menos 8 caracteres, sin otras reglas, en todos los entornos.
 - **Sin verificación en dos pasos ni cambio de contraseña en Configuración:** el ingreso es con correo y contraseña (o la cuenta institucional). Quien olvida la contraseña la restablece con un enlace por correo.
 - **Sesiones:**
   - en la base de datos, con cookie `HttpOnly`;

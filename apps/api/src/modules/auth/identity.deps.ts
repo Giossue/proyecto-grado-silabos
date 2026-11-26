@@ -48,7 +48,6 @@ export function identityDepsOf(bridge: BridgeDeps, limiter: RateLimiter, runtime
       hashPassword: runtime.hashPassword,
       timebox: runtime.timebox,
       production: runtime.production,
-      pwned: runtime.pwned,
       sendMail: runtime.sendMail,
     },
     writes: {
