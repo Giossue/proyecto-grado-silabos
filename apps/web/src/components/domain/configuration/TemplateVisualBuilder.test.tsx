@@ -28,8 +28,14 @@ const presets = [
   { key: "planificacion" as const, field_key: "unidades", label: "Unidades", quien_llena: "carrera" as FieldResponsible, content: { type: "doc", content: [{ type: "table", content: [{ type: "tableRow", content: [{ type: "tableCell", attrs: { colspan: 1, rowspan: 1 }, content: [{ type: "paragraph", content: [{ type: "text", text: "Dato" }] }] }] }] }] } as DocumentNode },
 ]
 const advancedItems = async (): Promise<string[]> => {
-  await press(byLabel("Opciones avanzadas"))
+  await press(byText("button", "Más"))
   return menuItems().map((item) => item.textContent!.trim())
+}
+const openTab = async (name: string): Promise<void> => {
+  const tab = [...body().querySelectorAll<HTMLElement>('[role="tab"]')].find((item) => item.textContent?.trim() === name)
+  expect(tab).toBeTruthy()
+  fireEvent.mouseDown(tab!)
+  await settle()
 }
 const responsibleMenu = async (label: string, choice: string): Promise<void> => {
   await press(byLabel(`Si se puede editar el campo ${label}`))
@@ -89,12 +95,13 @@ describe("TemplateVisualBuilder", () => {
     const { handle } = await mountBuilder({ template: designed, presets }, { edit: false })
     expect(body().querySelector<HTMLElement>("[data-sheet]")!.style.getPropertyValue("--document-margin")).toBe("1.5cm")
     await startEditing(handle)
-    expect(byLabel("Diseño")).toBeNull()
     expect(byLabel("Listas")).toBeNull()
-    expect(await advancedItems()).toContain("Diseño")
-    await chooseMenuItem("Diseño")
-    expect(body().querySelector('[role="dialog"]')!.textContent).toContain("Márgenes y tamaños del documento")
-    expect(body().querySelector("#template-layout-margin_cm")).toBeTruthy()
+    expect(await advancedItems()).not.toContain("Diseño")
+    fireEvent.keyDown(document.activeElement ?? body(), { key: "Escape" })
+    await settle()
+    await openTab("Diseño")
+    expect(body().querySelector('[role="dialog"]')).toBeNull()
+    expect(body().querySelector('[role="tabpanel"][data-state="active"] #template-layout-margin_cm')).toBeTruthy()
     const choose = async (id: string, label: string) => {
       await press(body().querySelector(`#${id}`))
       await press([...body().querySelectorAll('[role="option"]')].find((option) => option.textContent?.trim() === label))
@@ -103,7 +110,6 @@ describe("TemplateVisualBuilder", () => {
     await choose("template-layout-body_font_size", "12 pt")
     expect(body().querySelector<HTMLElement>("[data-sheet]")!.style.getPropertyValue("--document-margin")).toBe("2.5cm")
     expect(body().querySelector<HTMLElement>("[data-sheet]")!.style.getPropertyValue("--document-body-size")).toBe("12pt")
-    await click(byText("button", "Cerrar"))
     await save()
     expect((saved() as unknown as { layout: unknown }).layout).toEqual({ margin_cm: 2.5, title_font_size: 14, section_font_size: 11, body_font_size: 12 })
   })
@@ -190,8 +196,7 @@ describe("TemplateVisualBuilder", () => {
   it("aplica una plantilla lista: solo copia su contenido y quién lo llena al campo", async () => {
     await mountBuilder({ template, presets })
     await selectField("f1")
-    await press(byLabel("Si se puede editar el campo Primero"))
-    await click(menuItems().find((item) => item.textContent?.trim() === "Plantilla"))
+    await press(byLabel("Contenido predefinido"))
     await chooseMenuItem("Datos de identificación")
     await save()
     expect(saved().sections[0]!.fields[0]).toMatchObject({ key: "f1", label: "Primero", quien_llena: "institucional" })
@@ -201,8 +206,7 @@ describe("TemplateVisualBuilder", () => {
   it("el campo con contenido de plantilla se sigue editando como cualquier otro", async () => {
     await mountBuilder({ template, presets })
     await selectField("f1")
-    await press(byLabel("Si se puede editar el campo Primero"))
-    await click(menuItems().find((item) => item.textContent?.trim() === "Plantilla"))
+    await press(byLabel("Contenido predefinido"))
     await chooseMenuItem("Datos de identificación")
     expect(body().querySelector<HTMLTextAreaElement>('[aria-label="Nombre del campo Primero"]')!.disabled).toBe(false)
     expect(body().querySelector('[aria-label="Ayuda del campo Primero"]')).toBeNull()

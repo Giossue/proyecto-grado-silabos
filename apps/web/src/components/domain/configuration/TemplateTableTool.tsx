@@ -7,17 +7,18 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 
 export type FieldTable = { kind: string; label: string; editable: boolean }
 
-type TemplateTableToolProps = { allowed: boolean; disabled?: boolean; tables: FieldTable[]; onCreate: () => void; onEdit: (kind: string) => void }
+type TemplateTableToolProps = { allowed: boolean; disabled?: boolean; text?: string; tables: FieldTable[]; onCreate: () => void; onEdit: (kind: string) => void }
 
-export function TemplateTableTool({ allowed, disabled = false, tables, onCreate, onEdit }: TemplateTableToolProps) {
+export function TemplateTableTool({ allowed, disabled = false, text, tables, onCreate, onEdit }: TemplateTableToolProps) {
   const tooltip = allowed ? "Tabla repetible" : "Tabla repetible: no va en campos Institucionales"
 
   return (
     <MenuTooltip label={tooltip}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Tabla repetible" disabled={disabled || !allowed} data-table-tool onMouseDown={(event) => event.preventDefault()}>
-            <Sheet aria-hidden="true" />
+          <Button type="button" variant="ghost" size={text ? "sm" : "icon-sm"} aria-label="Tabla repetible" disabled={disabled || !allowed} data-table-tool onMouseDown={(event) => event.preventDefault()}>
+            <Sheet data-icon={text ? "inline-start" : undefined} aria-hidden="true" />
+            {text}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">

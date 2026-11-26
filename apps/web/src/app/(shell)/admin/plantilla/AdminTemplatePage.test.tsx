@@ -313,7 +313,9 @@ describe("AdminTemplatePage", () => {
     const scrollRegion = one('[aria-label="Hoja 1 de la plantilla con desplazamiento horizontal"]')
     expect(scrollRegion.classList.contains("overflow-x-auto")).toBe(true)
     expect(scrollRegion.getAttribute("tabindex")).toBe("0")
-    expect(scrollRegion.parentElement).toBe(region)
+    const sheetArea = scrollRegion.parentElement!
+    expect(region.contains(sheetArea)).toBe(true)
+    expect([...sheetArea.classList].some((name) => /^(bg-|rounded|p-|px-|py-)/.test(name))).toBe(false)
     expect(one("[data-sheet]").parentElement).toBe(scrollRegion)
   })
 
@@ -372,14 +374,14 @@ describe("AdminTemplatePage", () => {
     expect(body().querySelector('button[aria-label="Editar JSON"]')).toBeNull()
   })
 
-  it("abre el JSON de la plantilla desde Opciones avanzadas", async () => {
+  it("abre el JSON de la plantilla desde el menú «Más»", async () => {
     vi.mocked(getTemplateJson).mockReset().mockResolvedValue({ version: 2, sections: [] })
     await mountPage()
 
-    expect(body().querySelector('button[aria-label="Opciones avanzadas"]')).toBeNull()
+    expect(body().querySelector("[data-more-menu]")).toBeNull()
     await startEditing()
 
-    const advanced = buttons(one("[data-template-ribbon]")).find((item) => item.getAttribute("aria-label") === "Opciones avanzadas")
+    const advanced = buttons(one("[data-template-ribbon]")).find((item) => item.textContent?.trim() === "Más")
     expect(advanced).toBeTruthy()
     fireEvent.keyDown(advanced!, { key: "Enter" })
     await settle()

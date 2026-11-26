@@ -17,13 +17,14 @@ type TemplateFieldLimitToolProps = {
   selected?: boolean
   editable?: boolean
   disabled?: boolean
+  text?: string
   onApply: (limit: number | null) => void
 }
 
 const LABEL = "Límite de caracteres"
 const limitSchema = fieldLimitFormSchema(`Escriba un número entre ${FIELD_LIMIT_MIN} y ${formatCharacters(FIELD_LIMIT_MAX)}`)
 
-export function TemplateFieldLimitTool({ limit = null, selected = false, editable = false, disabled = false, onApply }: TemplateFieldLimitToolProps) {
+export function TemplateFieldLimitTool({ limit = null, selected = false, editable = false, disabled = false, text, onApply }: TemplateFieldLimitToolProps) {
   const id = useId()
   const [open, setOpen] = useState(false)
   const form = useSchemaForm(limitSchema, { defaultValues: { limit: "" }, reValidateMode: "onChange" })
@@ -46,8 +47,9 @@ export function TemplateFieldLimitTool({ limit = null, selected = false, editabl
     <MenuTooltip label={tooltip}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button type="button" variant={limit ? "secondary" : "ghost"} size="icon-sm" aria-label={LABEL} disabled={!selected || !editable || disabled} data-field-limit-tool onMouseDown={(event) => event.preventDefault()}>
-            <TextCursorInput aria-hidden="true" />
+          <Button type="button" variant={limit ? "secondary" : "ghost"} size={text ? "sm" : "icon-sm"} aria-label={LABEL} disabled={!selected || !editable || disabled} data-field-limit-tool onMouseDown={(event) => event.preventDefault()}>
+            <TextCursorInput data-icon={text ? "inline-start" : undefined} aria-hidden="true" />
+            {text}
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-72">

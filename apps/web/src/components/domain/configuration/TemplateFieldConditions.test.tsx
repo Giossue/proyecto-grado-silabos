@@ -24,7 +24,7 @@ describe("Mostrar solo si en el editor de la plantilla", () => {
 
   it("con un campo elegido, «Mostrar solo si…» lo condiciona a una respuesta anterior y le da identificador a esa respuesta", async () => {
     const { payload } = await mountBuilder({ template: template(question()) })
-    expect(body().querySelector<HTMLButtonElement>("[data-field-condition-tool]")!.disabled).toBe(true)
+    expect(body().querySelector("[data-field-condition-tool]")).toBeNull()
     await selectField("f2")
     await click(body().querySelector("[data-field-condition-tool]"))
     await press(body().querySelector("[data-condition-source]"))

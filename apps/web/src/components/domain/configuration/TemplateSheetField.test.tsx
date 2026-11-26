@@ -2,7 +2,7 @@ import { fireEvent, render } from "@testing-library/react"
 import type { Editor } from "@tiptap/core"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { TemplateField } from "@/api/template"
-import { TemplateFormatTools } from "@/components/domain/configuration/TemplateFormatTools"
+import { TemplateVariableTool } from "@/components/domain/configuration/TemplateFormatTools"
 import { TemplateSheetField } from "@/components/domain/configuration/TemplateSheetField"
 import { setTemplateRuntime } from "@/lib/blocks/runtime"
 import type { TemplateDefinitionPayload } from "@silabos/shared/lib/blocks/types"
@@ -45,9 +45,9 @@ describe("datos del sistema en el editor de la plantilla", () => {
     const host = await mountField(paragraph([{ type: "text", text: "Hola " }]))
     const editor = host.editor()
     editor.commands.focus("end")
-    render(<TemplateFormatTools editor={editor} variables={variables} />)
+    render(<TemplateVariableTool editor={editor} variables={variables} />)
     await flush()
-    const trigger = document.body.querySelector<HTMLElement>('[aria-label="Insertar dato del sistema"]')!
+    const trigger = document.body.querySelector<HTMLElement>('[aria-label="Dato automático"]')!
     expect(trigger).not.toBeNull()
     fireEvent.keyDown(trigger, { key: "Enter" })
     await flush()

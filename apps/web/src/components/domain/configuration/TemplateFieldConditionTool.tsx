@@ -17,12 +17,13 @@ type TemplateFieldConditionToolProps = {
   sources: ConditionSource[]
   allowed?: boolean
   disabled?: boolean
+  text?: string
   onApply: (source: ConditionSource | null, options: string[]) => void
 }
 
 const LABEL = "Mostrar solo si…"
 
-export function TemplateFieldConditionTool({ condition = null, sources, allowed = false, disabled = false, onApply }: TemplateFieldConditionToolProps) {
+export function TemplateFieldConditionTool({ condition = null, sources, allowed = false, disabled = false, text, onApply }: TemplateFieldConditionToolProps) {
   const [open, setOpen] = useState(false)
   const form = useSchemaForm(conditionChoiceSchema, { defaultValues: { source: "", options: [] }, mode: "onChange", reValidateMode: "onChange" })
   const choice: ConditionChoice = { source: form.watch("source") ?? "", options: form.watch("options") ?? [] }
@@ -50,8 +51,9 @@ export function TemplateFieldConditionTool({ condition = null, sources, allowed 
     <MenuTooltip label={tooltip}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button type="button" variant={condition ? "secondary" : "ghost"} size="icon-sm" aria-label={LABEL} disabled={!allowed || disabled} data-field-condition-tool onMouseDown={(event) => event.preventDefault()}>
-            <ListFilter aria-hidden="true" />
+          <Button type="button" variant={condition ? "secondary" : "ghost"} size={text ? "sm" : "icon-sm"} aria-label={LABEL} disabled={!allowed || disabled} data-field-condition-tool onMouseDown={(event) => event.preventDefault()}>
+            <ListFilter data-icon={text ? "inline-start" : undefined} aria-hidden="true" />
+            {text}
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="max-h-(--overlay-max-height) w-80 overflow-y-auto">

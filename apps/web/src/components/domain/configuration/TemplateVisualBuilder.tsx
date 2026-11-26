@@ -1,22 +1,25 @@
 "use client"
 
 import type { Editor } from "@tiptap/core"
-import { Braces, CircleAlert, Eye, EyeOff, GripVertical, ImageUp, Plus, Ruler, Save, Settings2, Trash2 } from "lucide-react"
+import { Braces, CircleAlert, Ellipsis, Eye, EyeOff, GripVertical, ImageUp, Plus, Save, Trash2 } from "lucide-react"
 import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type Ref } from "react"
 import { ApiError } from "@/api/client"
 import { checkTemplateDraft, getTemplateDraftImpact, importTemplateJson, previewTemplateDraft, uploadTemplateLogo } from "@/api/template"
 import type { DesignedTable, RepeatableTableDesign, TemplateDraftImpact, TemplateDraftPayload, TemplateField, TemplatePayload, TemplatePreset, TemplateSectionPayload } from "@/api/template"
 import type { TemplateAssistantDraft, TemplateAssistantProposal } from "@/api/templateAssistant"
 import { TemplateFieldConditionTool } from "@/components/domain/configuration/TemplateFieldConditionTool"
+import { TemplateDesignTools } from "@/components/domain/configuration/TemplateDesignTools"
 import { TemplateFieldContent } from "@/components/domain/configuration/TemplateFieldContent"
 import { TemplateFieldLimitTool } from "@/components/domain/configuration/TemplateFieldLimitTool"
-import { TemplateFormatTools } from "@/components/domain/configuration/TemplateFormatTools"
+import { TemplateFieldPanel } from "@/components/domain/configuration/TemplateFieldPanel"
+import { TemplateFormatTools, TemplateTextTableTool, TemplateVariableTool } from "@/components/domain/configuration/TemplateFormatTools"
 import { TemplateImpactDialog } from "@/components/domain/configuration/TemplateImpactDialog"
 import { TemplateInlineText } from "@/components/domain/configuration/TemplateInlineText"
 import { TemplateInsertPoint } from "@/components/domain/configuration/TemplateInsertPoint"
 import { TemplateJsonDialog } from "@/components/domain/configuration/TemplateJsonDialog"
 import { TemplateResponseTool } from "@/components/domain/configuration/TemplateResponseTool"
-import { TemplateSelectionTools, type TemplateSectionTarget, type TemplateSelection } from "@/components/domain/configuration/TemplateSelectionTools"
+import { TemplateRibbonDivider, TemplateRibbonGroup } from "@/components/domain/configuration/TemplateRibbonGroup"
+import { TemplatePresetTool, TemplateResponsibleMenu, TemplateSelectionTools, type TemplateSectionTarget, type TemplateSelection } from "@/components/domain/configuration/TemplateSelectionTools"
 import { TemplateSheetField } from "@/components/domain/configuration/TemplateSheetField"
 import { TemplateTableDesigner } from "@/components/domain/configuration/TemplateTableDesigner"
 import { TemplateTableTool, type FieldTable } from "@/components/domain/configuration/TemplateTableTool"
@@ -25,19 +28,17 @@ import { paginateSheet } from "@/components/domain/configuration/templatePaginat
 import { apiMessage, uniqueKey } from "@/components/domain/configuration/templateStructure"
 import { useStructureHistory } from "@/components/domain/configuration/useStructureHistory"
 import { IconTooltip } from "@/components/domain/IconTooltip"
-import { MenuTooltip } from "@/components/domain/MenuTooltip"
 import { UnsavedChangesDialog } from "@/components/domain/UnsavedChangesDialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { setTemplateRuntime, templateRuntime } from "@/lib/blocks/runtime"
 import type { BlockDefinition, DocumentStyle, TemplateDefinitionPayload } from "@silabos/shared/lib/blocks/types"
 import { useShownWhileClosing } from "@/lib/dialogExit"
-import { layoutOf, layoutStyle, paperOf, sheetPixels, type DocumentLayout } from "@/lib/documentLayout"
+import { layoutOf, layoutStyle, sheetPixels, type DocumentLayout } from "@/lib/documentLayout"
 import { limitLabel } from "@/lib/fieldLimits"
 import { conditionLabel, conditionSources, newResponseId, responseIds, withNewResponseIds, withResponseId, type ConditionSource } from "@/lib/responseConditions"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
@@ -60,6 +61,8 @@ type DropMark = { kind: "field"; sectionId: string; index: number } | { kind: "s
 type SheetEntry = { section: TemplateSectionPayload; fields: TemplateField[]; landscape: boolean; index: number }
 type Sheet = { landscape: boolean; items: SheetEntry[] }
 type Selected = { section: TemplateSectionPayload; sectionIndex: number; fieldIndex: number }
+type RibbonTab = "inicio" | "insertar" | "diseno" | "seleccion"
+const RIBBON_PANEL = "data-[state=inactive]:hidden flex min-h-16 items-stretch overflow-x-auto px-1 py-1.5"
 
 export type TemplateVisualBuilderHandle = {
   askEdit: () => void
@@ -86,7 +89,7 @@ type TemplateVisualBuilderProps = {
 
 const NO_MARKS: Marks = { sections: [], fields: [] }
 const NO_TABLES: Tables = {}
-const SELECTION_KEEPERS = '[data-field], [data-section-heading], [data-insert-point], [data-template-ribbon], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-slot="popover-content"]'
+const SELECTION_KEEPERS = '[data-field], [data-section-heading], [data-insert-point], [data-template-ribbon], [data-template-panel], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-slot="popover-content"]'
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 const moved = <T,>(items: T[], index: number, direction: -1 | 1): T[] => {
   const next = [...items]
@@ -152,7 +155,8 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const [titleDraft, setTitleDraft] = useState("")
   const [layoutDraft, setLayoutDraft] = useState<DocumentLayout>(() => layoutOf(template.layout))
   const [tables, setTables] = useState<Tables>(NO_TABLES)
-  const [designOpen, setDesignOpen] = useState(false)
+  const [ribbonTab, setRibbonTab] = useState<RibbonTab>("inicio")
+  const [panelClosed, setPanelClosed] = useState(false)
   const [logoOverride, setLogoOverride] = useState<string | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [impact, setImpact] = useState<TemplateDraftImpact | null>(null)
@@ -166,6 +170,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const removalShown = useShownWhileClosing(removal)
 
   const root = useRef<HTMLDivElement | null>(null)
+  const sheetArea = useRef<HTMLDivElement | null>(null)
   const baseDefinition = useRef<TemplateDefinitionPayload | null>(null)
   const savedState = useRef("")
   const checkRun = useRef(0)
@@ -201,17 +206,6 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const orderedFields = draft.flatMap((section) => section.fields)
   const usedResponseIds = responseIds(orderedFields.map((field) => field.content))
   const allSources = conditionSources(orderedFields)
-  const paper = paperOf(documentStyle)
-  const toolbarWidth = `min(${sheets[0]?.landscape ? paper.height : paper.width}mm, 100%)`
-  const options = template.layoutOptions
-  const layoutControls = options
-    ? ([
-        { key: "margin_cm", label: "Márgenes", options: options.margins },
-        { key: "title_font_size", label: "Tamaño del título", options: options.title_sizes },
-        { key: "section_font_size", label: "Tamaño de las secciones", options: options.section_sizes },
-        { key: "body_font_size", label: "Tamaño del contenido", options: options.body_sizes },
-      ] as const)
-    : []
 
   const scaleFor = (landscape: boolean): number => {
     const pixels = sheetPixels(documentStyle)
@@ -245,6 +239,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
 
   const selectField = (id: string, editor: Editor | null): void => {
     setSelectedField(id)
+    setPanelClosed(false)
     setSelectedSection(null)
     setActiveEditor(editor)
   }
@@ -588,7 +583,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const reasonOf = (kind: string): string | null => {
     if (designOf(kind)) return null
     if (tables[kind]) return "Esta tabla llegó del asistente; ábrala de nuevo después de guardar para cambiarla."
-    return blockDesigns?.[kind]?.reason ?? "Esta tabla no se puede editar aquí. Para cambiarla use Opciones avanzadas → Editar JSON."
+    return blockDesigns?.[kind]?.reason ?? "Esta tabla no se puede editar aquí. Para cambiarla use Más → Editar JSON."
   }
   const fieldTables: FieldTable[] = [...new Set((selectedTemplateField?.content.content ?? [])
     .filter((node) => node.type === "documentBlock" && typeof node.attrs?.kind === "string")
@@ -836,7 +831,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   useEffect(() => {
     const keydown = (event: KeyboardEvent): void => onKeyDown(event)
     const pointerdown = (event: PointerEvent): void => onPointerDown(event)
-    const element = root.current
+    const element = sheetArea.current
     const timers = { frame: paginationFrame, timer: paginationTimer }
     const elements = sheetElements.current
     document.addEventListener("pointerdown", pointerdown)
@@ -857,6 +852,10 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   }, [])
 
   const editingDisabled = locked || busy || previewing
+  const shownTab: RibbonTab = ribbonTab === "seleccion" && !selection ? "inicio" : ribbonTab
+  const panelOpen = !readOnly && !panelClosed && selection?.kind === "field"
+  const limitTool = <TemplateFieldLimitTool selected={selection?.kind === "field"} editable={editableField} disabled={editingDisabled} text="Límite de caracteres" limit={selectedTemplateField?.max_length ?? null} onApply={setSelectedLimit} />
+  const conditionTool = <TemplateFieldConditionTool allowed={selection?.kind === "field"} disabled={editingDisabled} text="Mostrar solo si…" condition={selectedTemplateField?.show_if ?? null} sources={sourcesBefore(selectedField)} onApply={setSelectedCondition} />
   const removalTitle = removalShown?.kind === "section" ? "Eliminar sección" : "Eliminar campo"
   const removalText = removalShown?.kind === "section" ? `Se quitará «${removalShown.name}» con sus ${removalShown.count} campos de la plantilla` : `Se quitará «${removalShown?.name}» de la plantilla`
 
@@ -869,64 +868,18 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
       ) : null}
 
       {!preview ? (
-        <div className="pointer-events-none sticky top-16 z-20 flex w-full justify-center">
-          <div data-template-ribbon role="toolbar" aria-label="Cinta de edición de la plantilla" style={{ minWidth: toolbarWidth }} className="pointer-events-auto flex w-max max-w-[calc(100vw-2rem)] shrink-0 items-start gap-1 rounded-md bg-card p-1.5 shadow-menu ring-1 ring-surface-ring">
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-              <TemplateFormatTools editor={ribbonEditor} disabled={editingDisabled} variables={variables} canUndo={structure.canUndo} canRedo={structure.canRedo} onUndo={undoStructure} onRedo={redoStructure} />
-              <TemplateResponseTool editor={ribbonEditor} allowed={editableField} disabled={editingDisabled} sources={sourcesBefore(selectedField)} usedIds={usedResponseIds} claimSource={claimSource} />
-              <TemplateFieldConditionTool allowed={selection?.kind === "field"} disabled={editingDisabled} condition={selectedTemplateField?.show_if ?? null} sources={sourcesBefore(selectedField)} onApply={setSelectedCondition} />
-              <TemplateFieldLimitTool selected={selection?.kind === "field"} editable={editableField} disabled={editingDisabled} limit={selectedTemplateField?.max_length ?? null} onApply={setSelectedLimit} />
-              <TemplateTableTool allowed={editableField} disabled={editingDisabled} tables={fieldTables} onCreate={() => openDesigner(null)} onEdit={openDesigner} />
-              <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden="true" />
-              <TemplateSelectionTools
-                selection={selection}
-                presets={presets}
-                locked={locked || previewing}
-                busy={busy}
-                targets={moveTargets}
-                onDuplicate={duplicateSelected}
-                onMoveTo={moveSelectedTo}
-                onResponsible={setSelectedResponsible}
-                onPreset={applyPreset}
-                onName={() => setNaming(selectedField)}
-                onMove={moveSelected}
-                onRemove={removeSelected}
-                onOrientation={toggleOrientation}
-              />
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <span className="mx-0.5 h-5 w-px shrink-0 bg-border" aria-hidden="true" />
-              <div className="flex shrink-0 items-center gap-1">
-                <MenuTooltip label="Opciones avanzadas">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button type="button" variant="ghost" size="icon-sm" aria-label="Opciones avanzadas" disabled={busy || locked}>
-                        <Settings2 aria-hidden="true" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuGroup>
-                        {layoutControls.length ? (
-                          <DropdownMenuItem disabled={locked} onSelect={() => setDesignOpen(true)}>
-                            <Ruler aria-hidden="true" />
-                            Diseño
-                          </DropdownMenuItem>
-                        ) : null}
-                        <DropdownMenuItem disabled={locked} onSelect={() => setJsonOpen(true)}>
-                          <Braces aria-hidden="true" />
-                          Editar JSON
-                        </DropdownMenuItem>
-                      </DropdownMenuGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </MenuTooltip>
-              </div>
-              <IconTooltip label={previewing ? "Volver a editar" : "Vista previa"}>
-                <Button type="button" variant={previewing ? "secondary" : "ghost"} size="icon-sm" aria-label={previewing ? "Volver a editar" : "Vista previa"} aria-pressed={previewing} disabled={busy || previewLoading} data-draft-preview onClick={() => void togglePreview()}>
-                  {previewLoading ? <Spinner /> : previewing ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
-                </Button>
-              </IconTooltip>
-              <div className="flex shrink-0 items-center gap-2">
+        <div data-template-ribbon role="region" aria-label="Cinta de edición de la plantilla" className="sticky top-14 z-20 flex w-full flex-col rounded-md bg-card shadow-menu ring-1 ring-surface-ring">
+          <Tabs value={shownTab} onValueChange={(value) => setRibbonTab(value as RibbonTab)} className="gap-0">
+            <div className="flex flex-wrap items-center gap-x-2 border-b px-2">
+              <TabsList aria-label="Pestañas de la cinta" className="h-10">
+                <TabsTrigger value="inicio">Inicio</TabsTrigger>
+                <TabsTrigger value="insertar">Insertar</TabsTrigger>
+                <TabsTrigger value="diseno">Diseño</TabsTrigger>
+                {selection ? <TabsTrigger value="seleccion" data-contextual-tab>{selection.kind === "field" ? "Campo" : "Sección"}</TabsTrigger> : null}
+              </TabsList>
+              {!selection ? <span className="truncate text-xs text-muted-foreground">Seleccione un campo</span> : null}
+              <span className="flex-1" />
+              <div className="flex shrink-0 items-center gap-1 py-1" role="group" aria-label="Acciones de la plantilla">
                 {problems.length ? (
                   <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive" data-problems onClick={showFirstProblem}>
                     <CircleAlert data-icon="inline-start" aria-hidden="true" />
@@ -934,17 +887,88 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                   </Button>
                 ) : null}
                 <span className="sr-only" aria-live="polite">{changed ? "Sin guardar" : null}</span>
-                <Button type="button" className="relative" data-tour="template-save" disabled={busy || !changed} onClick={() => void save()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="ghost" size="sm" disabled={busy || locked} data-more-menu>
+                      <Ellipsis data-icon="inline-start" aria-hidden="true" />
+                      Más
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem disabled={locked} onSelect={() => setJsonOpen(true)}>
+                        <Braces aria-hidden="true" />
+                        Editar JSON
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button type="button" variant={previewing ? "secondary" : "outline"} size="sm" aria-label={previewing ? "Volver a editar" : "Vista previa"} aria-pressed={previewing} disabled={busy || previewLoading} data-draft-preview onClick={() => void togglePreview()}>
+                  {previewLoading ? <Spinner data-icon="inline-start" /> : previewing ? <EyeOff data-icon="inline-start" aria-hidden="true" /> : <Eye data-icon="inline-start" aria-hidden="true" />}
+                  {previewing ? "Volver a editar" : "Vista previa"}
+                </Button>
+                <Button type="button" size="sm" className="relative" data-tour="template-save" disabled={busy || !changed} onClick={() => void save()}>
                   {busy ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" aria-hidden="true" />}
                   Guardar
                   {changed ? <span data-unsaved className="absolute -top-1 -right-1 size-2.5 rounded-full bg-warning ring-2 ring-background" aria-hidden="true" /> : null}
                 </Button>
               </div>
             </div>
-          </div>
+            <TabsContent forceMount value="inicio" className={RIBBON_PANEL}>
+              <TemplateFormatTools editor={ribbonEditor} disabled={editingDisabled} canUndo={structure.canUndo} canRedo={structure.canRedo} onUndo={undoStructure} onRedo={redoStructure} />
+            </TabsContent>
+            <TabsContent forceMount value="insertar" className={RIBBON_PANEL}>
+              <TemplateRibbonGroup label="Tablas">
+                <TemplateTextTableTool editor={ribbonEditor} disabled={editingDisabled} />
+                <TemplateTableTool allowed={editableField} disabled={editingDisabled} text="Tabla repetible" tables={fieldTables} onCreate={() => openDesigner(null)} onEdit={openDesigner} />
+              </TemplateRibbonGroup>
+              <TemplateRibbonDivider />
+              <TemplateRibbonGroup label="Respuesta del docente">
+                <TemplateResponseTool editor={ribbonEditor} allowed={editableField} disabled={editingDisabled} sources={sourcesBefore(selectedField)} usedIds={usedResponseIds} claimSource={claimSource} />
+              </TemplateRibbonGroup>
+              {variables?.length || presets?.length ? (
+                <>
+                  <TemplateRibbonDivider />
+                  <TemplateRibbonGroup label="Contenido">
+                    <TemplateVariableTool editor={ribbonEditor} disabled={editingDisabled} variables={variables} />
+                    <TemplatePresetTool presets={presets} allowed={selection?.kind === "field"} disabled={editingDisabled} onPreset={applyPreset} />
+                  </TemplateRibbonGroup>
+                </>
+              ) : null}
+            </TabsContent>
+            <TabsContent forceMount value="diseno" className={RIBBON_PANEL}>
+              <TemplateDesignTools options={template.layoutOptions} layout={layoutDraft} disabled={editingDisabled} onLayout={setLayout} />
+            </TabsContent>
+            {selection ? (
+              <TabsContent forceMount value="seleccion" className={RIBBON_PANEL}>
+                <TemplateSelectionTools
+                  selection={selection}
+                  locked={locked || previewing}
+                  busy={busy}
+                  targets={moveTargets}
+                  onDuplicate={duplicateSelected}
+                  onMoveTo={moveSelectedTo}
+                  onResponsible={setSelectedResponsible}
+                  onName={() => setNaming(selectedField)}
+                  onMove={moveSelected}
+                  onRemove={removeSelected}
+                  onOrientation={toggleOrientation}
+                >
+                  {selection.kind === "field" ? (
+                    <TemplateRibbonGroup label="Reglas">
+                      {limitTool}
+                      {conditionTool}
+                    </TemplateRibbonGroup>
+                  ) : null}
+                </TemplateSelectionTools>
+              </TabsContent>
+            ) : null}
+          </Tabs>
         </div>
       ) : null}
 
+      <div className="flex min-w-0 items-start gap-4">
+      <div ref={sheetArea} className="flex min-w-0 flex-1 flex-col gap-4">
       {sheets.map((sheet, sheetIndex) => (
         <div key={sheetIndex} className="min-w-0 overflow-x-auto" tabIndex={0} role="region" aria-label={`Hoja ${sheetIndex + 1} de la plantilla con desplazamiento horizontal`}>
           <article
@@ -999,7 +1023,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
               ) : null}
 
               {sheet.items.map(({ section, fields, index: sectionIndex }) => (
-                <section key={section.id} data-section={section.id} data-orientation={sheet.landscape ? "landscape" : "portrait"} className="relative flex min-w-0 scroll-mt-36 flex-col gap-3">
+                <section key={section.id} data-section={section.id} data-orientation={sheet.landscape ? "landscape" : "portrait"} className="relative flex min-w-0 scroll-mt-48 flex-col gap-3">
                   {sectionMarked(sectionIndex) ? <span data-drop-mark className="pointer-events-none absolute inset-x-0 -top-3 z-10 h-0.5 rounded-full bg-primary" aria-hidden="true" /> : null}
                   {sectionIndex === sections.length - 1 && sectionMarked(sections.length) ? <span data-drop-mark className="pointer-events-none absolute inset-x-0 -bottom-3 z-10 h-0.5 rounded-full bg-primary" aria-hidden="true" /> : null}
                   {!readOnly && !locked && (sectionIndex === 0 || (sections[sectionIndex - 1]?.fields.length ?? 0) === 0) ? (
@@ -1151,6 +1175,24 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
           </article>
         </div>
       ))}
+      </div>
+      {panelOpen && selectedTemplateField ? (
+        <TemplateFieldPanel
+          name={fieldName(selectedTemplateField)}
+          responsible={<TemplateResponsibleMenu field={selectedTemplateField} locked={locked || previewing} onResponsible={setSelectedResponsible} onName={() => setNaming(selectedField)} />}
+          limit={limitTool}
+          limitText={!editableField ? "Solo en campos editables" : selectedTemplateField.max_length ? limitLabel(selectedTemplateField.max_length) : "Sin límite"}
+          condition={conditionTool}
+          conditionText={selectedTemplateField.show_if ? conditionLabel(selectedTemplateField.show_if, allSources) : "Siempre se muestra"}
+          tables={fieldTables}
+          tablesAllowed={editableField}
+          disabled={editingDisabled}
+          onCreateTable={() => openDesigner(null)}
+          onEditTable={openDesigner}
+          onClose={() => setPanelClosed(true)}
+        />
+      ) : null}
+      </div>
 
       <TemplateImpactDialog impact={impact} onConfirm={confirmImpact} onCancel={() => setImpact(null)} />
       <UnsavedChangesDialog
@@ -1163,36 +1205,6 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
         onDiscard={discardAndLeave}
       />
 
-      <Dialog open={designOpen} onOpenChange={setDesignOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Diseño</DialogTitle>
-            <DialogDescription>Márgenes y tamaños del documento. La letra, los colores y la alineación son los institucionales</DialogDescription>
-          </DialogHeader>
-          <FieldGroup className="gap-4">
-            {layoutControls.map((control) => (
-              <Field key={control.key}>
-                <FieldLabel htmlFor={`template-layout-${control.key}`}>{control.label}</FieldLabel>
-                <Select value={String(layoutDraft[control.key])} onValueChange={(value) => setLayout(control.key, value)}>
-                  <SelectTrigger id={`template-layout-${control.key}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {control.options.map((option) => <SelectItem key={option.value} value={String(option.value)}>{option.label}</SelectItem>)}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-            ))}
-          </FieldGroup>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">Cerrar</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <TemplateTableDesigner
         open={designerOpen}
         onOpenChange={setDesignerOpen}

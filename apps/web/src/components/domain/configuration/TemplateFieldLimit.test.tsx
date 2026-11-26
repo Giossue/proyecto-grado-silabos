@@ -34,7 +34,7 @@ describe("Límite de caracteres en el editor de la plantilla", () => {
 
   it("con un campo editable elegido, «Límite de caracteres» pone el límite y lo muestra bajo el campo", async () => {
     const { payload } = await mountBuilder({ template: template() })
-    expect(tool().disabled).toBe(true)
+    expect(body().querySelector("[data-field-limit-tool]")).toBeNull()
     await selectField("f1")
     expect(tool().disabled).toBe(false)
     await click(tool())
