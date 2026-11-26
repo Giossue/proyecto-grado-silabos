@@ -42,12 +42,10 @@ describe("Mostrar solo si en el editor de la plantilla", () => {
     expect(body().querySelector('[data-field-condition="f2"]')!.textContent).toBe("Se muestra solo si «Usa laboratorio» es Sí")
   })
 
-  it("el primer campo no tiene respuestas anteriores y una condición se quita con «Quitar condición»", async () => {
+  it("el primer campo no tiene respuestas anteriores, así que no ofrece «Mostrar solo si», y una condición se quita con «Quitar condición»", async () => {
     const { payload } = await mountBuilder({ template: template(question({ id: "usa_lab" }), { response: "usa_lab", options: ["o1"] }) })
     await selectField("f1")
-    await click(body().querySelector("[data-field-condition-tool]"))
-    expect(body().textContent).toContain("Ponga antes una respuesta de elegir una o varias para usarla aquí")
-    await click(body().querySelector("[data-field-condition-tool]"))
+    expect(body().querySelector("[data-field-condition-tool]")).toBeNull()
 
     await selectField("f2")
     await click(body().querySelector("[data-field-condition-tool]"))

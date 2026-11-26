@@ -901,7 +901,9 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const editingDisabled = locked || busy || previewing
   const shownTab: RibbonTab = ribbonTab === "seleccion" && !selection ? "inicio" : ribbonTab
   const limitTool = <TemplateFieldLimitTool selected={selection?.kind === "field"} editable={editableField} disabled={editingDisabled} text="Límite de caracteres" limit={selectedTemplateField?.max_length ?? null} onApply={setSelectedLimit} />
-  const conditionTool = <TemplateFieldConditionTool allowed={selection?.kind === "field"} disabled={editingDisabled} text="Mostrar solo si…" condition={selectedTemplateField?.show_if ?? null} sources={sourcesBefore(selectedField)} onApply={setSelectedCondition} />
+  const fieldConditionSources = sourcesBefore(selectedField)
+  const conditionApplies = fieldConditionSources.length > 0 || Boolean(selectedTemplateField?.show_if)
+  const conditionTool = <TemplateFieldConditionTool allowed={selection?.kind === "field"} disabled={editingDisabled} text="Mostrar solo si…" condition={selectedTemplateField?.show_if ?? null} sources={fieldConditionSources} onApply={setSelectedCondition} />
   const removalTitle = removalShown?.kind === "section" ? "Eliminar sección" : "Eliminar campo"
   const removalText = removalShown?.kind === "section" ? `Se quitará «${removalShown.name}» con sus ${removalShown.count} campos de la plantilla` : `Se quitará «${removalShown?.name}» de la plantilla`
 
@@ -1015,10 +1017,10 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                   onRemove={removeSelected}
                   onOrientation={toggleOrientation}
                 >
-                  {selection.kind === "field" ? (
+                  {selection.kind === "field" && (editableField || conditionApplies) ? (
                     <TemplateRibbonGroup label="Reglas">
                       {editableField ? limitTool : null}
-                      {conditionTool}
+                      {conditionApplies ? conditionTool : null}
                     </TemplateRibbonGroup>
                   ) : null}
                   {selection.kind === "field" && fieldTables.length ? (

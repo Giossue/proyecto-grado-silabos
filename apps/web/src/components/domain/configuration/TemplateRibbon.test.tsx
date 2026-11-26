@@ -87,7 +87,7 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
     expect([...activePanel().querySelectorAll("[data-field-editability] [data-editability]")].map((item) => item.textContent!.trim())).toEqual(["No editable", "Editable"])
     expect(activePanel().querySelector('[data-editability="carrera"]')!.getAttribute("data-state")).toBe("on")
     expect(activePanel().querySelector("[data-field-limit-tool]")!.textContent).toBe("Límite de caracteres")
-    expect(activePanel().querySelector("[data-field-condition-tool]")!.textContent).toBe("Mostrar solo si…")
+    expect(activePanel().querySelector("[data-field-condition-tool]")).toBeNull()
     for (const label of ["Subir el campo Primero", "Bajar el campo Primero", "Duplicar el campo Primero", "Mover el campo Primero a otra sección", "Eliminar el campo Primero"]) {
       expect(activePanel().querySelector(`button[aria-label="${label}"]`)).not.toBeNull()
     }
@@ -104,13 +104,13 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
     expect(tab("Inicio")!.getAttribute("aria-selected")).toBe("true")
   })
 
-  it("un campo No editable no muestra el límite, y sin tablas repetibles no hay grupo de tablas", async () => {
+  it("un campo No editable sin respuestas antes no muestra reglas, y sin tablas repetibles no hay grupo de tablas", async () => {
     await mountBuilder({ template, presets })
     await selectField("f2")
-    expect(groups(activePanel())).toEqual(["Nombre", "Quién lo llena", "Reglas", "Organizar"])
+    expect(groups(activePanel())).toEqual(["Nombre", "Quién lo llena", "Organizar"])
     expect(activePanel().querySelector('[data-editability="institucional"]')!.getAttribute("data-state")).toBe("on")
     expect(activePanel().querySelector("[data-field-limit-tool]")).toBeNull()
-    expect(activePanel().querySelector("[data-field-condition-tool]")).not.toBeNull()
+    expect(activePanel().querySelector("[data-field-condition-tool]")).toBeNull()
     expect(ribbon().textContent).not.toContain("Tablas repetibles")
     expect(body().textContent).not.toContain("Este campo no tiene tablas repetibles")
   })
