@@ -1,4 +1,4 @@
-import { FORMATION_FIELD } from "@silabos/shared/lib/teacherFormation"
+import { CAMPUS_FIELD, COREQUISITES_FIELD, FORMATION_FIELD } from "@silabos/shared/lib/teacherFormation"
 import { Prisma } from "../../generated/prisma/client"
 import { definitionHash } from "../ficha/definitionHash"
 import { isPhpArray, list, phpJsonDecode, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
@@ -9,7 +9,10 @@ import { SYLLABUS_EXISTS, writtenBySql } from "./syllabusSql"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export { isTeacherField, teacherFieldKeys } from "../configuration/templatePresentation"
-export { FORMATION_FIELD }
+export { CAMPUS_FIELD, COREQUISITES_FIELD, FORMATION_FIELD }
+
+// Corequisites belong to the subject, so a teacher's value from another syllabus is not carried over.
+const NOT_CARRIED = [COREQUISITES_FIELD]
 
 
 const TEXT_ONLY: TemplateDefinition = { document: {}, variables: {}, blocks: {} }
@@ -70,7 +73,7 @@ export async function carriedValue(executor: Executor, syllabusId: string, key: 
 }
 
 export async function carryTeacherFields(executor: Executor, syllabusId: string, template: SyllabusTemplate, newId: () => string): Promise<void> {
-  const fields = templateFields(template).filter((field) => isCareerField(field) && isTeacherField(field, template.definition))
+  const fields = templateFields(template).filter((field) => isCareerField(field) && isTeacherField(field, template.definition) && !NOT_CARRIED.includes(field.key))
   for (const field of fields) {
     const [current] = await rowsOf<{ id: string; value: string | null }>(
       executor,
@@ -84,11 +87,11 @@ export async function carryTeacherFields(executor: Executor, syllabusId: string,
   }
 }
 
-export async function formationOf(executor: Executor, syllabusId: string): Promise<string | null> {
+export async function teacherFieldText(executor: Executor, syllabusId: string, key: string): Promise<string | null> {
   const [row] = await rowsOf<{ value: string | null }>(
     executor,
     Prisma.sql`select valores_campo.valor_campo::text as value from valores_campo ${FIELD_OF_VALUE}
-      where valores_campo.silabo_id = ${syllabusId}::uuid and campos_plantilla.clave_campo_plantilla = ${FORMATION_FIELD}
+      where valores_campo.silabo_id = ${syllabusId}::uuid and campos_plantilla.clave_campo_plantilla = ${key}
       order by definiciones_campo.vigente_en_plantilla desc, campos_plantilla.vigente_en_plantilla desc limit 1`,
   )
   if (row === undefined) return null

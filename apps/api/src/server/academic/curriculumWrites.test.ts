@@ -25,7 +25,7 @@ const REQUIREMENT = "01a1c5bc-7e56-7195-a7f3-26b3ab4e935a"
 const NEW_ID = "01a2aaaa-0000-7000-8000-000000000001"
 
 type Subject = { id: string; code: string; name: string; cycle: number | null; position: number; parallels: number; syllabi: number }
-type Requirement = { id: string; subjectId: string; requirementId: string; type: string }
+type Requirement = { id: string; subjectId: string; requirementId: string }
 
 let world: FakeWorld
 let log: string[]
@@ -47,19 +47,18 @@ function deps(): CurriculumDeps {
           maxCycle: async () => Math.max(...subjects.map((subject) => subject.cycle ?? 0)),
           updateCycleCount: async (careerId, count) => void log.push(`cycles:${careerId}:${count}`),
           lockSubjects: async (_careerId, ids) => subjects.filter((subject) => ids.includes(subject.id)).map((subject) => ({ id: subject.id, cycle: subject.cycle })),
-          prerequisites: async () =>
-            requirements.filter((item) => item.type === "prerrequisito").map((item) => ({ subjectId: item.subjectId, requirementId: item.requirementId })),
+          prerequisites: async () => requirements.map((item) => ({ subjectId: item.subjectId, requirementId: item.requirementId })),
           findRequirement: async (subjectId, requirementId) => {
             const found = requirements.find((item) => item.subjectId === subjectId && item.requirementId === requirementId)
-            return found ? { id: found.id, type: found.type } : null
+            return found ? { id: found.id } : null
           },
-          insertRequirement: async (subjectId, requirementId, type) => {
-            log.push(`requirement:${subjectId}:${requirementId}:${type}`)
+          insertRequirement: async (subjectId, requirementId, ...rest: unknown[]) => {
+            log.push(`requirement:${[subjectId, requirementId, ...rest].join(":")}`)
             return NEW_ID
           },
           lockRequirement: async (id) => {
             const found = requirements.find((item) => item.id === id)
-            return found ? { id: found.id, type: found.type } : null
+            return found ? { id: found.id } : null
           },
           deleteRequirement: async (id) => void log.push(`delete-requirement:${id}`),
           lockSubject: async (id) => {
@@ -129,8 +128,8 @@ beforeEach(() => {
     { id: DATA_STRUCTURES, code: "SW-B3-011", name: "Estructura de Datos", cycle: 3, position: 0, parallels: 0, syllabi: 0 },
   ]
   requirements = [
-    { id: REQUIREMENT, subjectId: OOP, requirementId: ALGORITHMS, type: "prerrequisito" },
-    { id: "01a1c5bc-7e87-7399-bc43-30b65bb04952", subjectId: DATA_STRUCTURES, requirementId: OOP, type: "prerrequisito" },
+    { id: REQUIREMENT, subjectId: OOP, requirementId: ALGORITHMS },
+    { id: "01a1c5bc-7e87-7399-bc43-30b65bb04952", subjectId: DATA_STRUCTURES, requirementId: OOP },
   ]
 })
 
@@ -166,49 +165,43 @@ describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/configurat
 })
 
 describe("POST /api/v1/coordination/academic/curriculum/{curriculum}/requirements", () => {
-  it("adds a prerequisite from an earlier cycle and a corequisite of the same cycle", async () => {
-    expect((await relate({ subject_id: CALCULUS_II, requirement_id: CALCULUS, type: "prerrequisito" })).json).toEqual({ message: "Prerrequisito agregado." })
-    expect((await relate({ subject_id: CALCULUS, requirement_id: ALGORITHMS, type: "correquisito" })).json).toEqual({ message: "Correquisito agregado." })
-    expect(log.filter((line) => line.startsWith("requirement") || line.startsWith("sync"))).toEqual([
-      `requirement:${CALCULUS_II}:${CALCULUS}:prerrequisito`,
-      `sync:false:${CAREER}`,
-      `requirement:${CALCULUS}:${ALGORITHMS}:correquisito`,
-      `sync:false:${CAREER}`,
-    ])
+  it("adds a prerequisite from an earlier cycle and saves it without a requirement type", async () => {
+    expect((await relate({ subject_id: CALCULUS_II, requirement_id: CALCULUS })).json).toEqual({ message: "Prerrequisito agregado." })
+    expect(log.filter((line) => line.startsWith("requirement") || line.startsWith("sync"))).toEqual([`requirement:${CALCULUS_II}:${CALCULUS}`, `sync:false:${CAREER}`])
   })
 
-  it("an existing relation of the same type changes nothing and one of another type is refused", async () => {
-    expect((await relate({ subject_id: OOP, requirement_id: ALGORITHMS, type: "prerrequisito" })).status).toBe(200)
+  it("rejects a requirement of the same cycle instead of saving a corequisite", async () => {
+    const response = await relate({ subject_id: CALCULUS, requirement_id: ALGORITHMS })
+    expect(response.status).toBe(422)
+    expect(response.json?.errors).toEqual({ requirement_id: ["Un prerrequisito debe estar en un ciclo anterior."] })
+    expect(log.some((line) => line.startsWith("requirement") || line.startsWith("sync"))).toBe(false)
+  })
+
+  it("an existing relation changes nothing", async () => {
+    expect((await relate({ subject_id: OOP, requirement_id: ALGORITHMS })).json).toEqual({ message: "Prerrequisito agregado." })
     expect(log).toEqual(["begin", `guard:false:${CAREER}`, "commit"])
-    requirements.push({ id: "01a2bbbb-0000-7000-8000-000000000003", subjectId: CALCULUS_II, requirementId: CALCULUS, type: "correquisito" })
-    expect((await relate({ subject_id: CALCULUS_II, requirement_id: CALCULUS, type: "prerrequisito" })).json?.errors).toEqual({
-      requirement_id: ["Esa materia ya está registrada con otro tipo de requisito."],
-    })
   })
 
   it("enforces cycles, the curriculum and the acyclic prerequisites", async () => {
     const errors = async (body: Record<string, string>) => (await relate(body)).json?.errors
-    expect(await errors({ subject_id: ALGORITHMS, requirement_id: OOP, type: "prerrequisito" })).toEqual({ requirement_id: ["Un prerrequisito debe estar en un ciclo anterior."] })
-    expect(await errors({ subject_id: OOP, requirement_id: CALCULUS, type: "correquisito" })).toEqual({ requirement_id: ["Un correquisito debe estar en el mismo ciclo."] })
-    expect(await errors({ subject_id: OOP, requirement_id: "01a1c5bc-7eca-70e6-99e0-23ff7ff043d3", type: "prerrequisito" })).toEqual({
+    expect(await errors({ subject_id: ALGORITHMS, requirement_id: OOP })).toEqual({ requirement_id: ["Un prerrequisito debe estar en un ciclo anterior."] })
+    expect(await errors({ subject_id: OOP, requirement_id: "01a1c5bc-7eca-70e6-99e0-23ff7ff043d3" })).toEqual({
       requirement_id: ["Ambas materias deben pertenecer a la malla actual."],
     })
     subjects.push({ id: "01a2bbbb-0000-7000-8000-000000000001", code: "X", name: "Cero", cycle: 0, position: 0, parallels: 0, syllabi: 0 })
-    requirements.push({ id: "01a2bbbb-0000-7000-8000-000000000002", subjectId: "01a2bbbb-0000-7000-8000-000000000001", requirementId: DATA_STRUCTURES, type: "prerrequisito" })
-    expect(await errors({ subject_id: DATA_STRUCTURES, requirement_id: "01a2bbbb-0000-7000-8000-000000000001", type: "prerrequisito" })).toEqual({
+    requirements.push({ id: "01a2bbbb-0000-7000-8000-000000000002", subjectId: "01a2bbbb-0000-7000-8000-000000000001", requirementId: DATA_STRUCTURES })
+    expect(await errors({ subject_id: DATA_STRUCTURES, requirement_id: "01a2bbbb-0000-7000-8000-000000000001" })).toEqual({
       requirement_id: ["La relación produciría un ciclo de prerrequisitos."],
     })
   })
 
   it("validates the request with the curriculum labels", async () => {
-    expect((await relate({ subject_id: OOP, requirement_id: OOP, type: "otro" })).json?.errors).toEqual({
+    expect((await relate({ subject_id: OOP, requirement_id: OOP })).json?.errors).toEqual({
       requirement_id: ["Los campos materia requisito y materia deben ser diferentes."],
-      type: ["El valor seleccionado en tipo no es válido."],
     })
     expect((await relate({})).json?.errors).toEqual({
       subject_id: ["El campo materia es obligatorio."],
       requirement_id: ["El campo materia requisito es obligatorio."],
-      type: ["El campo tipo es obligatorio."],
     })
   })
 })
@@ -281,8 +274,8 @@ describe("curriculum edits through /api/v1/admin/careers/{career}/academic/curri
     expect((await send("PATCH", `${adminBase(CAREER)}/configuration`, { cycle_count: "10" }, (request) => updateCurriculumConfiguration(request, CAREER, deps(), CAREER))).status).toBe(200)
     expect(log).toContain(`cycles:${CAREER}:10`)
     log = []
-    expect((await send("POST", `${adminBase(CAREER)}/requirements`, { subject_id: CALCULUS_II, requirement_id: CALCULUS, type: "prerrequisito" }, (request) => createSubjectRequirement(request, CAREER, deps(), CAREER))).status).toBe(200)
-    expect(log).toContain(`requirement:${CALCULUS_II}:${CALCULUS}:prerrequisito`)
+    expect((await send("POST", `${adminBase(CAREER)}/requirements`, { subject_id: CALCULUS_II, requirement_id: CALCULUS }, (request) => createSubjectRequirement(request, CAREER, deps(), CAREER))).status).toBe(200)
+    expect(log).toContain(`requirement:${CALCULUS_II}:${CALCULUS}`)
     log = []
     expect((await send("DELETE", `${adminBase(CAREER)}/requirements/${REQUIREMENT}`, {}, (request) => deleteSubjectRequirement(request, CAREER, REQUIREMENT, deps(), CAREER))).status).toBe(200)
     expect(log).toContain(`delete-requirement:${REQUIREMENT}`)

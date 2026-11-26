@@ -38,7 +38,7 @@ export const screenTours: Record<string, TourStep[]> = {
   '/admin/estructura-academica': [
     step(ACTIONS, 'Crear', 'Cree una facultad o una carrera. Las carreras también se pueden subir con un Excel', 'left'),
     step(TABS, 'Facultades y carreras', 'Cambie entre la lista de facultades y la de carreras', 'bottom'),
-    step(FILTERS, 'Buscar', 'Busque por nombre o filtre por campus', 'bottom'),
+    step(FILTERS, 'Buscar', 'Busque por nombre', 'bottom'),
     step(TABLE, 'Lista', 'Pulse una fila para editarla. Nada se borra: lo que ya no se usa se desactiva', 'top'),
   ],
   '/admin/usuarios': [

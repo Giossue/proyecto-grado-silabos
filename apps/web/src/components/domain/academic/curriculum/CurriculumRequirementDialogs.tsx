@@ -27,8 +27,8 @@ export function useRequirementConnection({ curriculumId, editable, subjectCycle,
     if (!editable || saving) return
     const requirementCycle = subjectCycle(pending.sourceId)
     const targetCycle = subjectCycle(pending.targetId)
-    if (requirementCycle === null || targetCycle === null || requirementCycle > targetCycle) {
-      toast.error("Una materia solo puede requerir otra de un ciclo anterior (prerrequisito) o del mismo ciclo (correquisito)")
+    if (requirementCycle === null || targetCycle === null || requirementCycle >= targetCycle) {
+      toast.error("Un prerrequisito debe estar en un ciclo anterior")
       return
     }
     setSaving(true)
@@ -36,7 +36,6 @@ export function useRequirementConnection({ curriculumId, editable, subjectCycle,
       const result = await createSubjectRequirement(curriculumId, {
         requirement_id: pending.sourceId,
         subject_id: pending.targetId,
-        type: requirementCycle < targetCycle ? "prerrequisito" : "correquisito",
       })
       onChanged(result.message)
     } catch (reason) {
@@ -83,7 +82,7 @@ export function CurriculumRequirementDialogs({ curriculumId, editable, subjectNa
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{shownRequirement?.type === "correquisito" ? "Correquisito" : "Prerrequisito"}</DialogTitle>
+          <DialogTitle>Prerrequisito</DialogTitle>
           <DialogDescription>
             «{subjectName(shownRequirement?.requirement_id)}» → «{subjectName(shownRequirement?.subject_id)}». Si la relación se creó por error, puede eliminarla; las materias no se modifican
           </DialogDescription>

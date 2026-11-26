@@ -4,7 +4,7 @@ import type { Db } from "../../prisma/db"
 import { profileFields } from "../configuration/subjectProfileFields"
 import { fakeTemplateStore, goldenTemplate, withFormation } from "../configuration/testing"
 import { definitionHash } from "../ficha/definitionHash"
-import { carryTeacherFields, FORMATION_FIELD, formationDocument, documentText, joinedDocuments, teacherFieldKeys } from "./teacherFields"
+import { CAMPUS_FIELD, carryTeacherFields, COREQUISITES_FIELD, FORMATION_FIELD, formationDocument, documentText, joinedDocuments, teacherFieldKeys } from "./teacherFields"
 
 const SYLLABUS = "0195e7a0-0000-7000-8000-000000000001"
 const EMPTY = { type: "doc", content: [{ type: "paragraph", attrs: { textAlign: "left" } }] }
@@ -93,6 +93,26 @@ describe("carry over of the teacher fields", () => {
     const update = queries.find((query) => text(query).startsWith("update valores_campo"))
     expect(update && text(update)).toBe("update valores_campo set valor_campo = $1::jsonb, huella_definicion_campo = $2 where valores_campo.valor_campo_id = $3::uuid")
     expect(update?.values).toEqual([JSON.stringify(paragraphs("Magíster", "", "Doctor")), huella, "v1"])
+  })
+
+  it("carries the campus a teacher wrote before but never the corequisites, which belong to each subject", async () => {
+    const template = withFormation()
+    const block = "0195e7a0-0000-7000-8000-0000000000b2"
+    template.sections[0].blocks.push({
+      id: block,
+      key: "campus_y_correquisitos",
+      title: "",
+      position: template.sections[0].blocks.length + 1,
+      fields: [
+        { id: "0195e7a0-0000-7000-8000-0000000000f2", blockId: block, key: CAMPUS_FIELD, label: "Campus universitario", responsible: "carrera", content: EMPTY },
+        { id: "0195e7a0-0000-7000-8000-0000000000f3", blockId: block, key: COREQUISITES_FIELD, label: "Correquisitos", responsible: "carrera", content: EMPTY },
+      ],
+    })
+    template.definition = { ...template.definition, teacher_fields: [CAMPUS_FIELD, COREQUISITES_FIELD, FORMATION_FIELD] }
+    const { db, queries } = recordingDb((query) => (text(query).startsWith("select docentes_vigentes_silabo.usuario_id") ? [{ id: "t1" }] : []))
+    await carryTeacherFields(db, SYLLABUS, template, () => "new-id")
+    const carried = queries.filter((query) => text(query).includes("order by silabos.guardado_en desc")).map((query) => query.values[0])
+    expect(carried).toEqual([FORMATION_FIELD, CAMPUS_FIELD])
   })
 
   it("keeps a teacher field that already has text and does nothing when the template has no teacher fields", async () => {

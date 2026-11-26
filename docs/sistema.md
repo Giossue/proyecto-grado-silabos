@@ -130,9 +130,11 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
   - una vista: `docentes_vigentes_silabo`.
 - **Cada envío de sílabo** guarda una **instantánea** del contenido y su **SHA-256**. Lo aprobado no cambia.
 - **Formación del docente:** es el campo `formacion_docente` de la sección «Identificación» de la plantilla. Lo llena el docente en cada sílabo; la definición de la plantilla lo marca en `teacher_fields`, así que no aparece en el perfil de la asignatura de Coordinación ni en la ficha en Excel. En el Word y el PDF sale en la misma fila de la tabla de identificación (variable `formacion_docente`), no como bloque aparte. Es obligatorio para enviar.
+- **Campus y correquisitos del docente:** la base ya no guarda el campus de la facultad ni correquisitos (todo requisito de la malla es un prerrequisito de un ciclo anterior). Los campos `nombre_campus` y `correquisitos_asignatura` de la sección «Identificación» son campos del docente, como `formacion_docente`: están en `teacher_fields`, salen en la tabla de identificación (fuentes `identification.teacher_campus` y `identification.teacher_corequisites`) y el campus se arrastra del sílabo anterior del docente; los correquisitos no, porque dependen de la asignatura. Los sílabos creados antes conservan lo que mostraban.
 - **Arrastre entre sílabos:** cada valor guarda en `valores_campo.huella_definicion_campo` el SHA-256 de la definición del campo con la que se escribió. Al generar o iniciar un sílabo, si un campo del docente está vacío, toma lo último que escribió cada docente vigente en ese mismo campo (cualquier materia o período, por `silabos.guardado_en`), siempre que la definición no haya cambiado. Si hay varios docentes, sus textos van uno debajo del otro, sin repetir.
 - **Estado al abrir un sílabo:** al abrirlo por primera vez, la API (`POST /teacher/syllabi/{id}/start`) lo prepara: copia lo del período anterior, arrastra los campos del docente y fija `silabos.iniciado_en`, pero lo deja en `sin_iniciar`. Pasa a `borrador` con el primer guardado de un campo que cambia lo guardado (o con «Copiar desde otro paralelo»); guardar el mismo valor no lo cambia. Un sílabo `sin_iniciar` con `iniciado_en` ya se puede editar, validar y enviar, y para el resto del sistema (plantilla nueva, cambio de docente al reabrir, copiar desde otro paralelo, protección al eliminar) cuenta como empezado.
 - **Migración `20261125220000_formacion_como_campo`:** agrega el campo y la huella, pasa la formación que estaba en `usuarios` a los sílabos vivos (los enviados o aprobados toman la de su última versión enviada), llena las huellas y elimina `usuarios.formacion_experiencia_usuario`. No toca versiones, aprobaciones ni instantáneas.
+- **Migraciones `20261126000000_quitar_campus_y_correquisitos` y `20261126000100_campus_y_correquisitos_como_campo`:** la primera borra los correquisitos y quita `requisitos_asignatura.tipo_requisito_asignatura` y `facultades.campus_facultad`; la segunda cambia las fuentes en las plantillas guardadas, agrega los dos campos del docente y los llena en los sílabos existentes con lo que ya mostraban (los enviados o aprobados, con su última versión enviada).
 
 ---
 
@@ -317,9 +319,9 @@ Lee `STORAGE_PATH` (carpetas `private` y `public`) y usa las variables `S3_*`; e
 - **Accesibilidad y web moderna:**
   - guías *Modern Web Guidance* de Google Chrome, con objetivo Baseline 2024;
   - navegación con teclado, lectores de pantalla y movimiento reducido;
+  - opciones de accesibilidad (alto contraste, tamaño del texto, sin animaciones y modo dislexia) guardadas solo en el navegador, sin pasar por el servidor;
   - tema claro u oscuro según el sistema;
   - tablas ordenables;
-  - opciones de accesibilidad (alto contraste, tamaño del texto, sin animaciones y modo dislexia) guardadas solo en el navegador, sin pasar por el servidor;
   - diseño adaptable a celular.
 
 ---

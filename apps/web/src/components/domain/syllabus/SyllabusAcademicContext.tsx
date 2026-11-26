@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card"
 type ContextGroup = { title: string; items: { label: string; value: string }[] }
 
 const PENDING = "Pendiente de Coordinación"
+const TEACHER_PENDING = "Lo completa el docente"
 
 const UNIT_MARKS: [string, string][] = [
   ["marca_unidad_basica", "Unidad básica"],
@@ -14,6 +15,7 @@ const number = (raw: string): string => (/^\d+\.\d+$/.test(raw) ? raw.replace(/\
 
 export function SyllabusAcademicContext({ variables }: { variables: Record<string, string> }) {
   const value = (key: string): string => number(variables[key]?.trim() ?? "") || PENDING
+  const written = (key: string): string => variables[key]?.trim() || TEACHER_PENDING
   const curricularUnit = variables.unidad_organizacion_curricular?.trim() || UNIT_MARKS.find(([key]) => variables[key]?.trim())?.[1] || PENDING
   const groups: ContextGroup[] = [
     {
@@ -25,14 +27,14 @@ export function SyllabusAcademicContext({ variables }: { variables: Record<strin
         { label: "Facultad", value: value("nombre_facultad") },
         { label: "Unidad de organización curricular", value: curricularUnit },
         { label: "Prerrequisitos", value: value("prerrequisitos_asignatura") },
-        { label: "Correquisitos", value: value("correquisitos_asignatura") },
+        { label: "Correquisitos", value: written("correquisitos_asignatura") },
       ],
     },
     {
       title: "Oferta académica",
       items: [
         { label: "Período académico", value: value("nombre_periodo_academico") },
-        { label: "Campus", value: value("nombre_campus") },
+        { label: "Campus", value: written("nombre_campus") },
         { label: "Modalidad", value: value("modalidad_estudio") },
         { label: "Ciclo", value: value("ciclo_asignatura") },
         { label: "Paralelo", value: value("codigo_paralelo") },

@@ -104,7 +104,6 @@ export type Curriculum = {
     id: string;
     subject_id: string;
     requirement_id: string;
-    type: "prerrequisito" | "correquisito";
   }>;
   modalityOptions: Array<{ value: string; label: string }>;
   organizationUnitOptions: Array<{ value: string; label: string }>;
@@ -120,7 +119,6 @@ export type ScheduledSubjects = {
     subject_cycle: number | null;
     profile_complete?: boolean;
     generates_syllabus: boolean;
-    campus_name: string | null;
     modality_name: string | null;
     parallels: Array<{ id: string; code: string; shift: string | null; editable?: boolean; deletable?: boolean; sent_syllabus?: boolean; started_syllabus?: boolean }>;
     editable: boolean;
@@ -263,7 +261,6 @@ export const createSubjectRequirement = (
   payload: {
     subject_id: string;
     requirement_id: string;
-    type: "prerrequisito" | "correquisito";
   },
 ) =>
   withPurgeConfirmation((confirm) =>

@@ -8,13 +8,12 @@ import type { StoredLogo } from "../shared/logoStore"
 import { baseOptions, CONVOCATION_LOCK_REASON, forbidden } from "./structure"
 
 export type GovernanceProcess = { id: string; periodId: string; state: string }
-export type GovernanceFaculty = { id: string; name: string; campus: string; libraries: unknown; active: boolean; logo: StoredLogo | null }
+export type GovernanceFaculty = { id: string; name: string; libraries: unknown; active: boolean; logo: StoredLogo | null }
 export type GovernanceCareer = {
   id: string
   facultyId: string
   coordinator: { id: string; name: string } | null
   modality: string | null
-  campus: string | null
   code: string
   name: string
   active: boolean
@@ -40,21 +39,10 @@ const PROCESS_CLOSED = "cerrado"
 const IN_PROGRESS = ["abierto", "pausado"]
 const FACULTY_BLOCK = "Desactive primero las carreras activas de esta facultad."
 const CAREER_BLOCK = "La carrera participa en un periodo académico en curso. Espere a que se cierre."
-const CAMPUS_LOCATIONS = [
-  "Campus Matriz Dr. Gabriel Galarza López",
-  "Campus Laguacoto",
-  "Campus CENI (Centro de Eventos Nacionales e Internacionales)",
-  "Extensión San Miguel",
-  "Sede Chimbo",
-]
 
 function periodStatus(period: GovernancePeriod, today: string): { status: string; label: string } {
   if (period.endsOn < today) return { status: "finalizado", label: "Finalizado" }
   return period.startsOn > today ? { status: "proximo", label: "Próximo" } : { status: "en_curso", label: "En curso" }
-}
-
-function campusOptions(): { value: string; label: string }[] {
-  return CAMPUS_LOCATIONS.map((value) => ({ value, label: value }))
 }
 
 async function governancePayload(request: Request, deps: GovernanceDeps): Promise<Record<string, unknown>> {
@@ -90,7 +78,6 @@ async function governancePayload(request: Request, deps: GovernanceDeps): Promis
         faculties.map(async (faculty) => ({
           id: faculty.id,
           nombre: faculty.name,
-          campus: faculty.campus,
           catalog_libraries: faculty.libraries,
           activo: faculty.active,
           deactivate_block: facultyBlocks.has(faculty.id) ? FACULTY_BLOCK : null,
@@ -104,7 +91,6 @@ async function governancePayload(request: Request, deps: GovernanceDeps): Promis
         coordinator: career.coordinator,
         modality: career.modality,
         modality_label: career.modality,
-        campus_name: career.campus,
         code: career.code,
         name: career.name,
         active: career.active,
@@ -131,7 +117,6 @@ async function governancePayload(request: Request, deps: GovernanceDeps): Promis
     options: {
       ...baseOptions(),
       faculties: faculties.filter((faculty) => faculty.active).map((faculty) => ({ id: faculty.id, nombre: faculty.name })),
-      campusOptions: campusOptions(),
     },
   }
 }

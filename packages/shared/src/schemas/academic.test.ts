@@ -8,11 +8,15 @@ const UUID = "01a1c5ba-2222-7000-8000-999999999999"
 describe("academic schemas", () => {
   it("validate a faculty and its catalog libraries", async () => {
     expect(await schemaErrors(facultySchema({ updating: false }), { nombre: "FCA", campus: "Campus X", catalog_libraries: ["A1", "A1", "con espacio"] })).toEqual({
-      campus: ["El valor seleccionado en campus no es válido."],
       "catalog_libraries.0": ["El campo catalog_libraries.0 tiene un valor duplicado."],
       "catalog_libraries.1": ["El campo catalog_libraries.1 tiene un valor duplicado."],
       "catalog_libraries.2": ["El formato del campo catalog_libraries.2 no es válido."],
     })
+  })
+
+  it("no longer asks for a campus nor a requirement type", async () => {
+    expect(await schemaErrors(facultySchema({ updating: false }), { nombre: "FCA" })).toEqual({})
+    expect(await schemaErrors(requirementSchema({ subjectId: UUID, hasSubject: true }), { subject_id: UUID, requirement_id: "01a1c5ba-2222-7000-8000-111111111111" })).toEqual({})
   })
 
   it("validate a career with its unique code", async () => {
@@ -39,9 +43,8 @@ describe("academic schemas", () => {
       creditos: ["El campo creditos debe ser un número."],
       horas_ac: ["El campo horas ac debe ser al menos 0."],
     })
-    expect(await schemaErrors(requirementSchema({ subjectId: UUID, hasSubject: true }), { subject_id: UUID, requirement_id: UUID, type: "otro" })).toEqual({
+    expect(await schemaErrors(requirementSchema({ subjectId: UUID, hasSubject: true }), { subject_id: UUID, requirement_id: UUID, type: "correquisito" })).toEqual({
       requirement_id: ["Los campos materia requisito y materia deben ser diferentes."],
-      type: ["El valor seleccionado en tipo no es válido."],
     })
     expect(await schemaErrors(parallelsSchema(), { subject_id: UUID, codes: ["A", "A"], shift: "matutina" })).toEqual({
       user_id: ["Seleccione el docente del paralelo."],

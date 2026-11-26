@@ -88,13 +88,13 @@ export async function administratorSetup(setup: SetupRepository, templates: Temp
       step(
         "faculties",
         "Registrar las facultades",
-        "Elija el campus y cargue el logo de cada facultad; Coordinación lo necesita para abrir su periodo académico.",
+        "Cargue el logo de cada facultad; Coordinación lo necesita para abrir su periodo académico.",
         await setup.activeFacultyExists(),
       ),
       step(
         "careers",
         "Registrar las carreras",
-        "Cada carrera hereda el campus de su facultad y registra su modalidad aprobada. Puede importarlas desde Excel.",
+        "Cada carrera registra su modalidad aprobada. Puede importarlas desde Excel.",
         careerCount > 0,
       ),
       step(

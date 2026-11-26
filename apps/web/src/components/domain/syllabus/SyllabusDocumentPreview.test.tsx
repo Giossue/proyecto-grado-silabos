@@ -52,4 +52,21 @@ describe("SyllabusDocumentPreview", () => {
 
     unmount()
   })
+
+  it("tampoco dibuja como bloque propio el campus ni los correquisitos que escribe el docente", async () => {
+    const written = [{ ...sections[0]!, fields: [...sections[0]!.fields,
+      { id: "f7", key: "nombre_campus", label: "Campus universitario", quien_llena: "carrera", value: paragraph("Guaranda"), required: true, teacher_editable: true },
+      { id: "f8", key: "correquisitos_asignatura", label: "Correquisitos", quien_llena: "carrera", value: paragraph("SW-P7-040"), required: true, teacher_editable: true },
+    ] }] as unknown as SyllabusDetail["sections"]
+    const { container, unmount } = render(<SyllabusDocumentPreview presentation={presentation} sections={written} />)
+    await flush()
+
+    expect(container.querySelector('[data-field="f7"]')).toBeNull()
+    expect(container.querySelector('[data-field="f8"]')).toBeNull()
+    expect(container.textContent).not.toContain("Guaranda")
+    expect(container.textContent).not.toContain("SW-P7-040")
+    expect(container.querySelector('[data-field="f1"]')).toBeTruthy()
+
+    unmount()
+  })
 })

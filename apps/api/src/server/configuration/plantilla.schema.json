@@ -24,7 +24,7 @@
         },
         "required_sections": { "type": "array", "items": { "type": "string" }, "description": "Secciones que la plantilla no puede quitar." },
         "library_sections": { "type": "array", "items": { "type": "string" }, "description": "Secciones que revisa Biblioteca." },
-        "teacher_fields": { "type": "array", "items": { "$ref": "#/$defs/key" }, "description": "Campos que llena el docente con sus datos (su formación); no van en el perfil de la asignatura." },
+        "teacher_fields": { "type": "array", "items": { "$ref": "#/$defs/key" }, "description": "Campos que llena el docente en su sílabo (campus, correquisitos y su formación); no van en el perfil de la asignatura." },
         "presets": { "type": "array", "items": { "$ref": "#/$defs/preset" } },
         "sections": { "type": "array", "maxItems": 60, "items": { "$ref": "#/$defs/section" } }
     },

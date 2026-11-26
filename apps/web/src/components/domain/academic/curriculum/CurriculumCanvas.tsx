@@ -166,7 +166,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
   }
 
   const subjectById = useMemo(() => new Map(subjects.map((subject) => [subject.id, subject])), [subjects])
-  const edges: Edge[] = useMemo(() => buildRequirementEdges(requirements, subjects, subjectById), [requirements, subjects, subjectById])
+  const edges: Edge[] = useMemo(() => buildRequirementEdges(requirements, subjectById), [requirements, subjectById])
 
   const editorTarget = useMemo(() => (hasOpenEditor ? { subjectId: editingSubjectId, cycle: draftCycle } : null), [hasOpenEditor, editingSubjectId, draftCycle])
   const shownEditor = useShownWhileClosing(editorTarget)

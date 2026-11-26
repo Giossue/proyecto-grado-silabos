@@ -58,7 +58,7 @@ export class CoordinationAcademicController {
   }
 
   @Post("curriculum/:curriculum/requirements")
-  @ApiOperation({ summary: "Agrega un prerrequisito o correquisito.", description: CONFIRM })
+  @ApiOperation({ summary: "Agrega un prerrequisito de un ciclo anterior.", description: CONFIRM })
   @ApiParam({ name: "curriculum", format: "uuid" })
   @ApiBody({ type: RequirementDto })
   @ApiUnprocessableEntityResponse(VALIDATION)

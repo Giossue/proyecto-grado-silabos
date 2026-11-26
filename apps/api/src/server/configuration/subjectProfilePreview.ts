@@ -37,18 +37,15 @@ export type SubjectContextRow = {
   faculty_logo: string | null
 }
 
-export type SubjectRequirementRow = { type: string | null; code: string }
+export type SubjectRequirementRow = { code: string }
 
 export type SubjectPreviewDeps = SubjectProfileDeps & {
   subjectContext: (subjectId: string) => Promise<PhpRecord | null>
   logos: LogoStore
 }
 
-function requirementCodes(requirements: SubjectRequirementRow[], type: string): string[] {
-  return requirements
-    .filter((requirement) => requirement.type === type)
-    .map((requirement) => requirement.code)
-    .sort(phpCompareStrings)
+function requirementCodes(requirements: SubjectRequirementRow[]): string[] {
+  return requirements.map((requirement) => requirement.code).sort(phpCompareStrings)
 }
 
 export function subjectAcademicContext(subject: SubjectContextRow, requirements: SubjectRequirementRow[]): PhpRecord {
@@ -75,8 +72,7 @@ export function subjectAcademicContext(subject: SubjectContextRow, requirements:
       hours_ac: subject.hours_ac,
       hours_pae: subject.hours_pae,
       hours_aa: subject.hours_aa,
-      prerequisites: requirementCodes(requirements, "prerrequisito"),
-      corequisites: requirementCodes(requirements, "correquisito"),
+      prerequisites: requirementCodes(requirements),
     },
   }
 }
@@ -96,7 +92,7 @@ export async function loadSubjectContext(db: Db, subjectId: string): Promise<Php
         left join archivos archivo on archivo.archivo_id = facultad.logo_archivo_id
       where asignatura.asignatura_id = ${subjectId}::uuid limit 1`
   if (!subject) return null
-  const requirements = await db.$queryRaw<SubjectRequirementRow[]>`select requisito.tipo_requisito_asignatura as type, previa.codigo_asignatura as code
+  const requirements = await db.$queryRaw<SubjectRequirementRow[]>`select previa.codigo_asignatura as code
       from requisitos_asignatura requisito inner join asignaturas previa on previa.asignatura_id = requisito.requisito_id
       where requisito.asignatura_id = ${subjectId}::uuid`
   return subjectAcademicContext({ ...subject, cycle_count: Number(subject.cycle_count) }, requirements)

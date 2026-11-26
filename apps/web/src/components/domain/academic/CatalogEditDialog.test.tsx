@@ -30,9 +30,7 @@ const base: DialogProps = {
   entity: "facultad",
   recordId: "faculty-1",
   recordName: "Facultad de Ciencias",
-  campus: "Campus Laguacoto",
   faculties: [],
-  campusOptions: [{ value: "Campus Laguacoto", label: "Campus Laguacoto" }],
   modalityOptions: [],
   logoUrl: "https://api.example.test/logos/faculty-1.png",
   showTrigger: false,
@@ -164,7 +162,6 @@ describe("CatalogEditDialog · periodo académico activo", () => {
 
     expect(document.body.textContent).not.toContain("Hay un periodo académico activo")
     expect([...document.body.querySelectorAll<HTMLInputElement>('input[id^="edit-"]')].every((input) => input.disabled)).toBe(true)
-    expect(document.body.querySelector<HTMLButtonElement>('button[id^="edit-campus-"]')?.disabled).toBe(true)
     expect(buttonWithText("Editar")!.disabled).toBe(true)
   })
 })
@@ -210,6 +207,20 @@ describe("CatalogEditDialog · cambios que devuelven sílabos enviados", () => {
     expect(resent[1]).toBe("faculty-1")
     expect((resent[2] as FormData).get("confirm_purge")).toBe("1")
     expect((resent[2] as FormData).get("nombre")).toBe("Facultad con otro nombre")
+  })
+
+  it("la facultad no tiene campo de campus y no lo envía al guardar", async () => {
+    await editingDialog()
+    expect(document.body.querySelector('[id^="edit-campus-"]')).toBeNull()
+    expect(document.body.textContent).not.toMatch(/campus/i)
+
+    await rename("Facultad renovada")
+    fireEvent.click(buttonWithText("Guardar cambios")!)
+    await flush()
+
+    const sent = vi.mocked(updateAcademicRecord).mock.calls[0]![2] as FormData
+    expect(sent.get("nombre")).toBe("Facultad renovada")
+    expect(sent.has("campus")).toBe(false)
   })
 })
 

@@ -14,14 +14,14 @@ const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 const FACULTY = "01a1c5bc-79c0-7000-8000-000000000001"
 const FACULTY_NAME = "Facultad de Ciencias Administrativas"
 const CAREERS_HEADER = ["Facultad", "Modalidad", "Código de carrera", "Nombre de la carrera", "Número de ciclos"]
-const CURRICULUM_HEADER = ["Código", "Nombre de la materia", "Ciclo", "Unidad de organización", "Modalidad", "Horas ACD", "Horas APE", "Horas AA", "Créditos", "Prerrequisitos (códigos)", "Correquisitos (códigos)"]
+const CURRICULUM_HEADER = ["Código", "Nombre de la materia", "Ciclo", "Unidad de organización", "Modalidad", "Horas ACD", "Horas APE", "Horas AA", "Créditos", "Prerrequisitos (códigos)"]
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 
 type Subject = { id: string; careerId: string; code: string; cycle: number; position: number; columns: Record<string, unknown> }
 type State = {
   careers: { id: string; code: string; name: string; cycles: number; active: boolean; columns?: Record<string, unknown> }[]
   subjects: Subject[]
-  requirements: { id: string; subjectId: string; requirementId: string; type: string }[]
+  requirements: { id: string; subjectId: string; requirementId: string; extra: unknown[] }[]
   synced: number
   locked: boolean
 }
@@ -79,11 +79,11 @@ function requirementTx(): CurriculumTx {
     },
     lockSubjects: async (careerId: string, subjectIds: string[]) =>
       state.subjects.filter((subject) => subject.careerId === careerId && subjectIds.includes(subject.id)).map((subject) => ({ id: subject.id, cycle: subject.cycle })),
-    prerequisites: async () => state.requirements.filter((requirement) => requirement.type === "prerrequisito"),
+    prerequisites: async () => state.requirements,
     findRequirement: async (subjectId: string, requirementId: string) => state.requirements.find((row) => row.subjectId === subjectId && row.requirementId === requirementId) ?? null,
-    insertRequirement: async (subjectId: string, requirementId: string, type: string) => {
+    insertRequirement: async (subjectId: string, requirementId: string, ...extra: unknown[]) => {
       const id = nextId()
-      state.requirements.push({ id, subjectId, requirementId, type })
+      state.requirements.push({ id, subjectId, requirementId, extra })
       return id
     },
     sync: async () => void state.synced++,
@@ -263,6 +263,9 @@ describe("GET career and curriculum import templates", () => {
     expect(response.headers.get("content-disposition")).toBe("attachment; filename=plantilla-malla.xlsx")
     const sheet = (await readBook(Buffer.from(await response.arrayBuffer()))).getWorksheet("Datos") as ExcelJS.Worksheet
     expect(sheet.getCell("F1").value).toBe("Genera sílabo")
+    expect(sheet.getRow(1).values).toEqual([undefined, ...CURRICULUM_HEADER.slice(0, 5), "Genera sílabo", ...CURRICULUM_HEADER.slice(5), undefined, expect.any(String)])
+    expect(String(sheet.getCell("M2").value)).toContain("Prerrequisitos (de un ciclo anterior): códigos separados por coma")
+    expect(String(sheet.getCell("M2").value)).not.toMatch(/correquisito/i)
     signIn("docente", CAREER)
     expect((await curriculumImportTemplate(get("/api/v1/coordination/academic/curriculum-import/template"), deps())).status).toBe(403)
   })
@@ -272,51 +275,64 @@ describe("POST /api/v1/coordination/academic/curriculum-import", () => {
   beforeEach(() => signIn("coordinador", CAREER))
 
   it("imports the curriculum with its requirements all or nothing", async () => {
-    const bad = await xlsx([CURRICULUM_HEADER, ["IMP-001", "Programación I", "1", "Unidad básica", "Presencial", "48", "32", "64", "3", "NO-EXISTE", ""]])
+    const bad = await xlsx([CURRICULUM_HEADER, ["IMP-001", "Programación I", "1", "Unidad básica", "Presencial", "48", "32", "64", "3", "NO-EXISTE"]])
     const rejected = await json(await curriculum(bad, { confirm: "1" }))
     expect(rejected).toMatchObject({ valid: false, created: 0 })
     expect(rejected.rows[0].errors).toEqual(["El requisito NO-EXISTE no está en la malla ni en el archivo."])
     const file = await xlsx([
       CURRICULUM_HEADER,
-      ["IMP-001", "Programación I", "1", "Unidad básica", "Presencial", "48", "32", "64", "3", "", ""],
-      ["IMP-002", "Programación II", "2", "Unidad profesional", "", "48,5", "32", "64", "3", "IMP-001; sw-b1-001", ""],
+      ["IMP-001", "Programación I", "1", "Unidad básica", "Presencial", "48", "32", "64", "3", ""],
+      ["IMP-002", "Programación II", "2", "Unidad profesional", "", "48,5", "32", "64", "3", "IMP-001; sw-b1-001"],
     ])
     expect(await json(await curriculum(file, { confirm: "1" }))).toMatchObject({ valid: true, created: 2 })
     const second = state.subjects.find((subject) => subject.code === "IMP-002")!
     expect(second.columns).toMatchObject({ horas_docencia: 48.5, unidad_curricular_asignatura: "profesional", modalidad_asignatura: null, genera_silabo_asignatura: true })
-    expect(state.requirements.map((row) => [row.subjectId, row.type])).toEqual([
-      [second.id, "prerrequisito"],
-      [second.id, "prerrequisito"],
+    expect(state.requirements.map((row) => [row.subjectId, row.extra])).toEqual([
+      [second.id, []],
+      [second.id, []],
     ])
     expect(state.synced).toBe(2)
   })
 
   it("imports into a career without subjects", async () => {
     state.subjects = []
-    const file = await xlsx([CURRICULUM_HEADER, ["VAC-001", "Base", "1", "Unidad básica", "", "1", "1", "1", "1", "", ""], ["VAC-002", "Siguiente", "2", "Unidad básica", "", "1", "1", "1", "1", "VAC-001", ""]])
+    const file = await xlsx([CURRICULUM_HEADER, ["VAC-001", "Base", "1", "Unidad básica", "", "1", "1", "1", "1", ""], ["VAC-002", "Siguiente", "2", "Unidad básica", "", "1", "1", "1", "1", "VAC-001"]])
     expect((await json(await curriculum(file, { confirm: "1" }))).created).toBe(2)
     expect(state.subjects).toHaveLength(2)
   })
 
   it("checks that requirements follow the cycles", async () => {
-    const wrong = await xlsx([CURRICULUM_HEADER, ["CIC-001", "Base", "1", "Unidad básica", "", "1", "1", "1", "1", "", ""], ["CIC-002", "Par", "1", "Unidad básica", "", "1", "1", "1", "1", "CIC-001", ""]])
+    const wrong = await xlsx([CURRICULUM_HEADER, ["CIC-001", "Base", "1", "Unidad básica", "", "1", "1", "1", "1", ""], ["CIC-002", "Par", "1", "Unidad básica", "", "1", "1", "1", "1", "CIC-001"]])
     const body = await json(await curriculum(wrong))
     expect(body.valid).toBe(false)
     expect(body.rows[1].errors[0]).toBe("El prerrequisito CIC-001 debe estar en un ciclo anterior.")
   })
 
+  it("ignores the corequisite column of files made with an older template and keeps their prerequisites", async () => {
+    state.subjects = []
+    const file = await xlsx([
+      [...CURRICULUM_HEADER, "Correquisitos (códigos)"],
+      ["COR-001", "Base", "1", "Unidad básica", "", "1", "1", "1", "1", "", ""],
+      ["COR-002", "Par", "1", "Unidad básica", "", "1", "1", "1", "1", "", "COR-001"],
+      ["COR-003", "Siguiente", "2", "Unidad básica", "", "1", "1", "1", "1", "COR-001", "COR-002"],
+    ])
+    expect(await json(await curriculum(file, { confirm: "1" }))).toMatchObject({ valid: true, created: 3 })
+    const ids = new Map(state.subjects.map((subject) => [subject.code, subject.id]))
+    expect(state.requirements.map((row) => [row.subjectId, row.requirementId, row.extra])).toEqual([[ids.get("COR-003"), ids.get("COR-001"), []]])
+  })
+
   it("marks subjects without syllabus and keeps files of the old template working", async () => {
     const header = [...CURRICULUM_HEADER.slice(0, 5), "Genera sílabo", ...CURRICULUM_HEADER.slice(5)]
-    const bad = await xlsx([header, ["SIL-001", "Optativa", "1", "Unidad básica", "", "Quizás", "48", "32", "64", "3", "", ""]])
+    const bad = await xlsx([header, ["SIL-001", "Optativa", "1", "Unidad básica", "", "Quizás", "48", "32", "64", "3", ""]])
     expect((await json(await curriculum(bad, { confirm: "1" }))).rows[0].errors).toEqual(["Genera sílabo debe ser Sí o No."])
     const file = await xlsx([
       header,
-      ["SIL-001", "Con sílabo", "1", "Unidad básica", "", "Sí", "48", "32", "64", "3", "", ""],
-      ["SIL-002", "Sin sílabo", "1", "Unidad básica", "", "No", "48", "32", "64", "3", "", ""],
-      ["SIL-003", "Vacía", "1", "Unidad básica", "", "", "48", "32", "64", "3", "", ""],
+      ["SIL-001", "Con sílabo", "1", "Unidad básica", "", "Sí", "48", "32", "64", "3", ""],
+      ["SIL-002", "Sin sílabo", "1", "Unidad básica", "", "No", "48", "32", "64", "3", ""],
+      ["SIL-003", "Vacía", "1", "Unidad básica", "", "", "48", "32", "64", "3", ""],
     ])
     expect((await json(await curriculum(file, { confirm: "1" }))).created).toBe(3)
-    const old = await xlsx([CURRICULUM_HEADER, ["SIL-004", "De plantilla anterior", "1", "Unidad básica", "", "48", "32", "64", "3", "", ""]])
+    const old = await xlsx([CURRICULUM_HEADER, ["SIL-004", "De plantilla anterior", "1", "Unidad básica", "", "48", "32", "64", "3", ""]])
     expect((await json(await curriculum(old, { confirm: "1" }))).created).toBe(1)
     const generates = (code: string) => state.subjects.find((subject) => subject.code === code)?.columns.genera_silabo_asignatura
     expect(["SIL-001", "SIL-002", "SIL-003", "SIL-004"].map(generates)).toEqual([true, false, true, true])
@@ -324,13 +340,13 @@ describe("POST /api/v1/coordination/academic/curriculum-import", () => {
   })
 
   it("keeps PHP's renumbered keys when codes are integers", async () => {
-    const file = await xlsx([CURRICULUM_HEADER, ["101", "Num A", "1", "Unidad básica", "", "1", "1", "1", "1", "", ""], ["102", "Num B", "1", "Unidad básica", "", "1", "1", "1", "1", "101", ""]])
+    const file = await xlsx([CURRICULUM_HEADER, ["101", "Num A", "1", "Unidad básica", "", "1", "1", "1", "1", ""], ["102", "Num B", "1", "Unidad básica", "", "1", "1", "1", "1", "101"]])
     expect((await json(await curriculum(file))).rows.map((row: { errors: string[] }) => row.errors)).toEqual([[], []])
   })
 
   it("stops on an open convocation and creates nothing", async () => {
     state.locked = true
-    const file = await xlsx([CURRICULUM_HEADER, ["IMP-001", "Programación I", "1", "Unidad básica", "", "48", "32", "64", "3", "", ""]])
+    const file = await xlsx([CURRICULUM_HEADER, ["IMP-001", "Programación I", "1", "Unidad básica", "", "48", "32", "64", "3", ""]])
     const response = await curriculum(file, { confirm: "1" })
     expect(await response.text()).toBe('{"message":"Periodo académico activo","errors":{"process":["Periodo académico activo"]}}')
     expect(state.subjects).toHaveLength(1)
@@ -340,7 +356,7 @@ describe("POST /api/v1/coordination/academic/curriculum-import", () => {
 describe("curriculum import through /api/v1/admin/careers/{career}/academic/curriculum-import", () => {
   const OTHER = "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"
   const adminImport = (careerId: string, file: Buffer) => importCurriculum(post(`/api/v1/admin/careers/${careerId}/academic/curriculum-import`, file, { confirm: "1" }), deps(), careerId)
-  const row = () => xlsx([CURRICULUM_HEADER, ["ADM-001", "Redes I", "1", "Unidad básica", "", "48", "32", "64", "3", "", ""]])
+  const row = () => xlsx([CURRICULUM_HEADER, ["ADM-001", "Redes I", "1", "Unidad básica", "", "48", "32", "64", "3", ""]])
 
   beforeEach(() => {
     state.careers.push({ id: OTHER, code: "RD-8", name: "Redes", cycles: 4, active: true })

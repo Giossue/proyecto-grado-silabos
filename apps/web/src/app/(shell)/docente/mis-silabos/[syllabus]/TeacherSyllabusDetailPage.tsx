@@ -46,7 +46,7 @@ import { openRevisionPdf } from "@/lib/openPdf"
 import { syllabusConditions, visibleSections as withoutHiddenParts } from "@/lib/responseConditions"
 import { paths } from "@/lib/routes"
 import { isTeacherField } from "@/lib/syllabusForm"
-import { drawnInDocument, FORMATION_FIELD } from "@silabos/shared/lib/teacherFormation"
+import { drawnInDocument, shownInCard } from "@silabos/shared/lib/teacherFormation"
 import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { toast } from "@/lib/toast"
 import { handleUnauthorized } from "@/lib/unauthorized"
@@ -152,7 +152,7 @@ export default function TeacherSyllabusDetailPage() {
   const shownCopySource = useShownWhileClosing(copySource)
   const saveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
   const dirtyFields = useRef(new Set<string>())
-  const formationEdited = useRef(false)
+  const cardFieldEdited = useRef(false)
   const pendingSave = useRef<Promise<void>>(Promise.resolve())
   const inFlight = useRef(0)
 
@@ -338,7 +338,7 @@ export default function TeacherSyllabusDetailPage() {
     const current = syllabusRef.current
     if (!current || !isTeacherField(field) || !canEditNow() || conflictRef.current) return
     setSyllabus(withField(current, field.id, { value }))
-    if (field.key === FORMATION_FIELD) formationEdited.current = true
+    if (shownInCard(field)) cardFieldEdited.current = true
     setEditedHere(true)
     clearFieldValidation(field.id)
     scheduleSave(field.id)
@@ -378,8 +378,8 @@ export default function TeacherSyllabusDetailPage() {
   })
 
   const openPreview = async (): Promise<void> => {
-    if ((await flushAutosave()) && formationEdited.current) {
-      formationEdited.current = false
+    if ((await flushAutosave()) && cardFieldEdited.current) {
+      cardFieldEdited.current = false
       await load()
     }
     setPreviewing(true)

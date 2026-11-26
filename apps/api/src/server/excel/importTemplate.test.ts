@@ -8,7 +8,9 @@ import { parts, readBook } from "./testing"
 
 const fixture = (name: string) => readFileSync(path.join(__dirname, "__fixtures__", name))
 
-const CURRICULUM = [
+// Frozen input that produced laravel-plantilla-malla.xlsx with PhpSpreadsheet. It pins the generic
+// writer to Laravel's bytes; the columns the app offers today are tested in structureImports.test.ts.
+const LARAVEL_CURRICULUM = [
   "Código",
   "Nombre de la materia",
   "Ciclo",
@@ -22,7 +24,7 @@ const CURRICULUM = [
   "Prerrequisitos (códigos)",
   "Correquisitos (códigos)",
 ]
-const CURRICULUM_NOTES = [
+const LARAVEL_CURRICULUM_NOTES = [
   "Una fila por materia; no deje filas vacías entre registros.",
   "Código: único en la malla, por ejemplo SW-B1-001.",
   "Ciclo: un número entre 1 y el número de ciclos de la carrera.",
@@ -46,13 +48,13 @@ function unlocked(files: Map<string, string>, reference: string): boolean {
 
 const curriculum = () =>
   importTemplate(
-    CURRICULUM,
+    LARAVEL_CURRICULUM,
     [
       { column: 3, options: ["Unidad básica", "Unidad profesional", "Unidad de integración curricular"] },
       { column: 4, options: ["Presencial", "Semipresencial", "En línea", "A distancia", "Híbrida"] },
       { column: 5, options: ["Sí", "No"] },
     ],
-    CURRICULUM_NOTES,
+    LARAVEL_CURRICULUM_NOTES,
     { now: 1_795_000_000 },
   )
 

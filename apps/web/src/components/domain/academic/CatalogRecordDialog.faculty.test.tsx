@@ -1,5 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+import { fireEvent } from "@testing-library/react"
 import { useState, type ComponentProps } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { createAcademicRecord } from "@/api/academic"
@@ -15,8 +14,7 @@ vi.mock("@/lib/logoPrepare", () => ({
   prepareLogo: vi.fn().mockResolvedValue(new File(["png"], "logo.png", { type: "image/png" })),
 }))
 
-const campus = "Campus Matriz Dr. Gabriel Galarza López"
-const options = { faculties: [], campusOptions: [{ value: campus, label: campus }], modalityOptions: [] } as unknown as ComponentProps<typeof CatalogRecordDialog>["options"]
+const options = { faculties: [], modalityOptions: [] } as unknown as ComponentProps<typeof CatalogRecordDialog>["options"]
 const body = (): HTMLElement => document.body
 const row = (name: string): HTMLElement => [...body().querySelectorAll<HTMLElement>('[data-slot="field"]')].find((item) => item.textContent?.trim() === name)!
 const isChecked = (name: string): boolean => row(name).querySelector('[role="checkbox"]')!.getAttribute("aria-checked") === "true"
@@ -34,10 +32,7 @@ const mountDialog = async (entity: "facultad" | "carrera" = "facultad") => {
   await flush()
 }
 const fillData = async (withLogo = true): Promise<void> => {
-  const actor = userEvent.setup()
   fireEvent.change(body().querySelector("#catalog-name")!, { target: { value: "Facultad de Salud" } })
-  await actor.click(screen.getByRole("combobox", { name: /Campus/ }))
-  await actor.click(await screen.findByRole("option", { name: campus }))
   if (withLogo) {
     fireEvent.change(body().querySelector<HTMLInputElement>("#faculty-logo")!, { target: { files: [new File(["x"], "logo.png", { type: "image/png" })] } })
   }
@@ -112,7 +107,7 @@ describe("Nueva facultad · paso de bibliotecas", () => {
 
     expect(sent().get("catalog_libraries")).toBeNull()
     expect(sent().get("nombre")).toBe("Facultad de Salud")
-    expect(sent().get("campus")).toBe(campus)
+    expect(sent().has("campus")).toBe(false)
     expect(sent().get("logo")).toBeInstanceOf(File)
     expect(saved.mock.calls).toEqual([["Facultad creada."]])
   })

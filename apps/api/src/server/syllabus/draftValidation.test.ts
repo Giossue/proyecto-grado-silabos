@@ -45,7 +45,7 @@ function deps(): DraftValidationDeps {
           templateStore: fakeTemplateStore(templates),
           documentFields: async () => fields,
           values: async () => values,
-          identification: async () => ({ context: { subject: { name: "Redes" } }, parallelCode: "A", parallelShift: null, teachers: [], formation: null }),
+          identification: async () => ({ context: { subject: { name: "Redes" } }, parallelCode: "A", parallelShift: null, teachers: [], formation: null, campus: null, corequisites: null }),
         })
         committed = true
         return result

@@ -45,11 +45,12 @@ describe("CurriculumRelationPicker", () => {
     expect(onPick).toHaveBeenCalledWith(expected)
   })
 
-  it("en modo requiere solo ofrece materias del mismo ciclo o de ciclos anteriores, agrupadas por ciclo", async () => {
-    renderWithProviders(<Harness subjects={[subject("a", 1, 0), subject("b", 2, 0), subject("c", 3, 0)]} initial={{ subjectId: "b", mode: "requires" }} onPick={vi.fn()} />)
+  it("en modo requiere solo ofrece materias de ciclos anteriores, agrupadas por ciclo", async () => {
+    renderWithProviders(<Harness subjects={[subject("a", 1, 0), subject("b", 2, 0), subject("d", 2, 1), subject("c", 3, 0)]} initial={{ subjectId: "b", mode: "requires" }} onPick={vi.fn()} />)
     await flush()
 
     expect(document.body.querySelector('[data-value="a"]')).not.toBeNull()
+    expect(document.body.querySelector('[data-value="d"]')).toBeNull()
     expect(document.body.querySelector('[data-value="c"]')).toBeNull()
     expect(document.body.textContent).toContain("Ciclo I")
   })

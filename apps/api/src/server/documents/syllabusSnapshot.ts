@@ -107,7 +107,7 @@ function templateSections(template: SyllabusTemplate, values: Map<string, unknow
   }))
 }
 
-function withoutFormation(sections: SnapshotSection[]): SnapshotSection[] {
+function withoutCardFields(sections: SnapshotSection[]): SnapshotSection[] {
   return sections.map((section) => ({ ...section, fields: section.fields.filter(drawnInDocument) }))
 }
 
@@ -121,7 +121,7 @@ export async function buildSyllabusSnapshot(syllabusId: string, source: Snapshot
   const identification = identificationOf(card)
   const variables = resolveVariables(definition, { identification, academic_context: card.context })
   const facultyId = dataGet(card.context, "career.faculty_id")
-  const structure = withoutFormation(archived === null ? templateSections(template, values, definition) : archivedSections(archived, definition))
+  const structure = withoutCardFields(archived === null ? templateSections(template, values, definition) : archivedSections(archived, definition))
   const sections = visibleSections(structure, fieldConditions(definition)).map((section) => ({
     ...section,
     fields: section.fields.map((field) => ({ ...field, value: resolveDocument(record(field.document), variables, definition) })),

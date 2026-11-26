@@ -18,7 +18,6 @@ const row = (id: string, name: string, code: string, cycle: number | null, paral
   subject_name: name,
   subject_cycle: cycle,
   generates_syllabus: true,
-  campus_name: "Matriz",
   modality_name: "Presencial",
   parallels: parallels.map((parallel, index) => ({ id: `${id}-${index}`, ...parallel })),
   editable: true,

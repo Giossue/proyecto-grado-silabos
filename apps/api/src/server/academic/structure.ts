@@ -51,7 +51,7 @@ export type SubjectRecord = {
   generatesSyllabus: boolean
 }
 
-export type RequirementRecord = { id: string; subjectId: string; requirementId: string; type: string }
+export type RequirementRecord = { id: string; subjectId: string; requirementId: string }
 
 export type TeacherAssignmentRecord = {
   id: string
@@ -103,7 +103,6 @@ export function baseOptions(): Record<string, unknown> {
     faculties: [],
     careers: [],
     periods: [],
-    campusOptions: [],
     modalityOptions: modalityOptions(),
     shiftOptions: shiftOptions(),
     currentCurricula: [],
@@ -219,7 +218,6 @@ export async function curriculumBuilder(
       id: requirement.id,
       subject_id: requirement.subjectId,
       requirement_id: requirement.requirementId,
-      type: requirement.type,
     })),
     modalityOptions: modalityOptions(),
     organizationUnitOptions: Object.entries(CURRICULAR_UNITS).map(([value, label]) => ({ value, label })),

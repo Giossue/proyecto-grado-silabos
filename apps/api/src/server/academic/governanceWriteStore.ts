@@ -51,8 +51,8 @@ export function governanceWriteTx(db: Db, afterCommit: AfterCommit, now: number,
     },
     async createFaculty(data) {
       const id = uuid7()
-      await db.$executeRaw`insert into facultades (facultad_id, nombre_facultad, campus_facultad, bibliotecas_koha_facultad, facultad_activa)
-        values (${id}::uuid, ${data.name}, ${data.campus}, ${jsonbValue(JSON.stringify(data.libraries))}, true)`
+      await db.$executeRaw`insert into facultades (facultad_id, nombre_facultad, bibliotecas_koha_facultad, facultad_activa)
+        values (${id}::uuid, ${data.name}, ${jsonbValue(JSON.stringify(data.libraries))}, true)`
       return id
     },
     insertObject: (row) => insertStoredObject(db, row),
@@ -65,7 +65,7 @@ export function governanceWriteTx(db: Db, afterCommit: AfterCommit, now: number,
     lockFaculty: (id) =>
       first(
         db,
-        Prisma.sql`select facultades.facultad_id::text as id, facultades.nombre_facultad as name, facultades.campus_facultad as campus,
+        Prisma.sql`select facultades.facultad_id::text as id, facultades.nombre_facultad as name,
             facultades.bibliotecas_koha_facultad::text as libraries
           from facultades where facultades.facultad_id = ${id}::uuid limit 1 for update`,
       ),

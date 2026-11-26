@@ -106,7 +106,12 @@ test.describe.serial("coordination", () => {
     await dragBetween(page, created, canvas.getByRole("article", { name: "SW-1010: BASE DE DATOS" }))
     await restored
 
-    await edge.click({ force: true })
+    const middle = await edge.locator(".react-flow__edge-interaction").evaluate((path: SVGPathElement) => {
+      const point = path.getPointAtLength(path.getTotalLength() / 2)
+      const matrix = path.getScreenCTM()!
+      return { x: point.x * matrix.a + point.y * matrix.c + matrix.e, y: point.x * matrix.b + point.y * matrix.d + matrix.f }
+    })
+    await page.mouse.click(middle.x, middle.y)
     const requirement = page.getByRole("dialog", { name: "Prerrequisito" })
     await requirement.getByRole("button").filter({ hasText: /Quitar|Eliminar/ }).click()
     await confirmPurgeIfAsked(page)

@@ -10,7 +10,6 @@ export type RequirementEdgeData = {
     label: string;
     sourceOffset: number;
     targetOffset: number;
-    sameLevel: boolean;
     channelIndex: number;
     channelCount: number;
 };
@@ -196,7 +195,6 @@ type EdgeGeometry = {
 const edgeGeometry = (
     requirements: CurriculumRequirement[],
     subjectById: Map<string, CurriculumBuilderSubject>,
-    sameLevelIds: Set<string>,
 ): Map<string, EdgeGeometry> => {
     const columnIndex = new Map<string, number>();
     const byCycle = new Map<number, CurriculumBuilderSubject[]>();
@@ -232,7 +230,7 @@ const edgeGeometry = (
         const targetId = requirement.subject_id;
         const gap = cycleOf(targetId) - 1;
         push(`${gap}:${columnOf(targetId)}`, { requirement, end: 'target', towards: centerX(sourceId) });
-        push(`${sameLevelIds.has(requirement.id) ? gap : cycleOf(sourceId)}:${columnOf(sourceId)}`, {
+        push(`${cycleOf(sourceId)}:${columnOf(sourceId)}`, {
             requirement,
             end: 'source',
             towards: centerX(targetId),
@@ -242,8 +240,7 @@ const edgeGeometry = (
         const slots: End[][] = [];
         const seen = new Map<string, End[]>();
         ends.forEach((end) => {
-            const straight = !sameLevelIds.has(end.requirement.id)
-                && columnOf(end.requirement.requirement_id) === columnOf(end.requirement.subject_id)
+            const straight = columnOf(end.requirement.requirement_id) === columnOf(end.requirement.subject_id)
                 && cycleOf(end.requirement.subject_id) - cycleOf(end.requirement.requirement_id) === 1;
             const shared = straight ? seen.get(end.requirement.id) : undefined;
             if (shared) {
@@ -271,7 +268,6 @@ const edgeGeometry = (
 
     const byGap = new Map<number, CurriculumRequirement[]>();
     requirements.forEach((requirement) => {
-        if (sameLevelIds.has(requirement.id)) return;
         const gap = cycleOf(requirement.subject_id) - 1;
         byGap.set(gap, [...(byGap.get(gap) ?? []), requirement]);
     });
@@ -332,33 +328,14 @@ const edgeGeometry = (
 
 export const buildRequirementEdges = (
     requirements: CurriculumRequirement[],
-    subjects: CurriculumBuilderSubject[],
     subjectById: Map<string, CurriculumBuilderSubject>,
 ): Edge<RequirementEdgeData>[] => {
-    const cycleOf = new Map(
-        subjects.map((subject) => [subject.id, subject.cycle]),
-    );
-    const sameLevelIds = new Set(
-        requirements
-            .filter(
-                (requirement) =>
-                    requirement.type === 'correquisito' &&
-                    cycleOf.get(requirement.requirement_id) ===
-                        cycleOf.get(requirement.subject_id),
-            )
-            .map((requirement) => requirement.id),
-    );
-    const geometry = edgeGeometry(requirements, subjectById, sameLevelIds);
+    const geometry = edgeGeometry(requirements, subjectById);
+    const color = 'var(--curriculum-prerequisite)';
+    const label = 'Prerrequisito';
 
     return requirements.map((requirement) => {
-        const color =
-            requirement.type === 'correquisito'
-                ? 'var(--curriculum-corequisite)'
-                : 'var(--curriculum-prerequisite)';
-        const sameLevel = sameLevelIds.has(requirement.id);
         const offset = geometry.get(requirement.id);
-        const label =
-            requirement.type === 'correquisito' ? 'Correquisito' : 'Prerrequisito';
         const nameOf = (id: string) => subjectById.get(id)?.name ?? 'materia';
 
         return {
@@ -374,22 +351,11 @@ export const buildRequirementEdges = (
                 width: 16,
                 height: 16,
             },
-            ...(sameLevel
-                ? {
-                      markerStart: {
-                          type: MarkerType.ArrowClosed,
-                          color,
-                          width: 16,
-                          height: 16,
-                      },
-                  }
-                : {}),
             style: { stroke: color, strokeWidth: 2 },
             data: {
                 label,
                 sourceOffset: offset?.source ?? 0,
                 targetOffset: offset?.target ?? 0,
-                sameLevel,
                 channelIndex: offset?.channelIndex ?? 0,
                 channelCount: offset?.channelCount ?? 1,
             },

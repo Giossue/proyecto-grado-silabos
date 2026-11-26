@@ -4,7 +4,6 @@ import { BaseEdge, EdgeLabelRenderer, useReactFlow, type Edge, type EdgeProps } 
 import { useState, type MouseEvent } from "react"
 import { laneHeight, subjectHeight, type RequirementEdgeData } from "@/components/domain/academic/curriculum/curriculumCanvasLayout"
 
-const OVERPASS_RISE = 18
 const LEVEL_GAP = laneHeight - subjectHeight
 const CHANNEL_MARGIN = 12
 
@@ -14,12 +13,6 @@ export const requirementPath = (props: Pick<EdgeProps<RequirementEdge>, "sourceX
   const { data } = props
   const sourceX = props.sourceX + data.sourceOffset
   const targetX = props.targetX + data.targetOffset
-  if (data.sameLevel) {
-    const top = props.targetY
-    const rise = top - OVERPASS_RISE
-
-    return [`M ${sourceX} ${top} V ${rise} H ${targetX} V ${top}`, (sourceX + targetX) / 2, rise]
-  }
   if (Math.abs(sourceX - targetX) < 0.5) return [`M ${sourceX} ${props.sourceY} V ${props.targetY}`, sourceX, (props.sourceY + props.targetY) / 2]
   const usable = LEVEL_GAP - CHANNEL_MARGIN * 2
   const step = usable / (data.channelCount + 1)
@@ -28,7 +21,7 @@ export const requirementPath = (props: Pick<EdgeProps<RequirementEdge>, "sourceX
   return [`M ${sourceX} ${props.sourceY} V ${channelY} H ${targetX} V ${props.targetY}`, (sourceX + targetX) / 2, channelY]
 }
 
-export function CurriculumRequirementEdge({ id, sourceX, sourceY, targetX, targetY, data, style, markerEnd, markerStart }: EdgeProps<RequirementEdge>) {
+export function CurriculumRequirementEdge({ id, sourceX, sourceY, targetX, targetY, data, style, markerEnd }: EdgeProps<RequirementEdge>) {
   const { screenToFlowPosition } = useReactFlow()
   const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null)
   if (!data) return null
@@ -46,7 +39,7 @@ export function CurriculumRequirementEdge({ id, sourceX, sourceY, targetX, targe
         onFocus={() => setHoverPoint({ x: labelX, y: labelY })}
         onBlur={() => setHoverPoint(null)}
       >
-        <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} markerStart={markerStart} interactionWidth={24} />
+        <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} interactionWidth={24} />
       </g>
       <EdgeLabelRenderer>
         {hoverPoint ? (

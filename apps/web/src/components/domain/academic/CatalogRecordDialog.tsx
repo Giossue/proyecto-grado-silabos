@@ -23,7 +23,7 @@ import { VALIDATION_LIMITS } from "@/lib/validationLimits"
 import { careerSchema, facultySchema, periodSchema } from "@silabos/shared/schemas/academic"
 import type { AcademicStructureProps, GovernanceCatalogEntity } from "@/types/academic"
 
-type RecordForm = { nombre: string; code: string; faculty_id: string; campus: string; modality: string; cycle_count: string; starts_on: string; ends_on: string }
+type RecordForm = { nombre: string; code: string; faculty_id: string; modality: string; cycle_count: string; starts_on: string; ends_on: string }
 
 type CatalogRecordDialogProps = Pick<AcademicStructureProps, "options"> & {
   entity: GovernanceCatalogEntity
@@ -34,7 +34,7 @@ type CatalogRecordDialogProps = Pick<AcademicStructureProps, "options"> & {
   onSaved?: (message: string) => void
 }
 
-const EMPTY_FORM: RecordForm = { nombre: "", code: "", faculty_id: "", campus: "", modality: "", cycle_count: "", starts_on: "", ends_on: "" }
+const EMPTY_FORM: RecordForm = { nombre: "", code: "", faculty_id: "", modality: "", cycle_count: "", starts_on: "", ends_on: "" }
 
 const LABELS: Record<GovernanceCatalogEntity, { trigger: string; title: string; description: string; submit: string }> = {
   facultad: { trigger: "Nueva facultad", title: "Nueva facultad", description: "Complete los datos de la facultad", submit: "Crear facultad" },
@@ -79,7 +79,7 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
   }, [isOpen, entity, loadKoha])
 
   const missingRequired = !{
-    facultad: filled(form.nombre, form.campus),
+    facultad: filled(form.nombre),
     carrera: filled(form.faculty_id, form.modality, form.nombre, form.code, form.cycle_count),
     periodo: filled(form.starts_on, form.ends_on),
   }[entity]
@@ -193,7 +193,6 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
             {entity === "facultad" && step === 1 ? (
               <FieldGroup key="datos" className={stepClassName}>
                 {nameField}
-                {selectField("campus", "catalog-campus", "Campus", "Seleccione el campus de la facultad", options.campusOptions)}
                 <Field data-invalid={Boolean(errors.logo)}>
                   <FieldLabel htmlFor="faculty-logo" required>
                     Logo de la facultad

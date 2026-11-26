@@ -102,7 +102,7 @@
         },
         "nombre_campus": {
             "label": "Nombre del campus",
-            "source": "identification.campus",
+            "source": "identification.teacher_campus",
             "sample": "Matriz"
         },
         "nombre_periodo_academico": {
@@ -132,7 +132,7 @@
         },
         "correquisitos_asignatura": {
             "label": "Correquisitos de la asignatura",
-            "source": "identification.corequisites",
+            "source": "identification.teacher_corequisites",
             "sample": "Ninguno"
         },
         "unidad_organizacion_curricular": {
@@ -660,6 +660,8 @@
         "bibliografia"
     ],
     "teacher_fields": [
+        "nombre_campus",
+        "correquisitos_asignatura",
         "formacion_docente"
     ],
     "presets": [
@@ -706,6 +708,22 @@
                     "quien_llena": "carrera",
                     "content": [
                         "<div data-block=\"identificacion\" data-props=\"{}\" data-value=\"{}\"></div>"
+                    ]
+                },
+                {
+                    "key": "nombre_campus",
+                    "label": "Campus universitario",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
+                    ]
+                },
+                {
+                    "key": "correquisitos_asignatura",
+                    "label": "Correquisitos",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
                     ]
                 },
                 {

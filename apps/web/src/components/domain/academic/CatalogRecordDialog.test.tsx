@@ -28,7 +28,6 @@ const options = {
   periods: [],
   modalityOptions: [{ value: "Presencial", label: "Presencial" }],
   shiftOptions: [],
-  campusOptions: [],
   currentCurricula: [],
   activeSubjects: [],
   scheduledSubjects: [],
@@ -39,7 +38,6 @@ const options = {
 const editBase = {
   faculties: [],
   modalityOptions: [{ value: "Presencial", label: "Presencial" }],
-  campusOptions: [],
   showTrigger: false,
   open: true,
 }
@@ -85,22 +83,21 @@ describe("academic catalog code fields", () => {
     expect(document.body.textContent).not.toContain("Código de malla curricular")
   })
 
-  it("orders faculty name, campus, and logo fields", async () => {
+  it("orders faculty name and logo fields, without a campus field", async () => {
     renderWithProviders(<Harness entity="facultad" />)
     await flush()
 
     const nameLabel = document.body.querySelector('label[for="catalog-name"]')
-    const campusLabel = document.body.querySelector('label[for="catalog-campus"]')
     const logoLabel = document.body.querySelector('label[for="faculty-logo"]')
     expect(nameLabel).not.toBeNull()
-    expect(campusLabel).not.toBeNull()
+    expect(document.body.querySelector("#catalog-campus")).toBeNull()
+    expect(document.body.textContent).not.toMatch(/campus/i)
     expect(logoLabel).not.toBeNull()
     expect(document.body.textContent).toContain("Se ajusta a 600 × 180 px")
     expect(document.body.textContent).toContain("fondo transparente")
     expect(document.body.textContent).not.toContain("fondo sólido")
     expect(document.body.textContent).not.toContain("Opcional para Administración")
-    expect(nameLabel!.compareDocumentPosition(campusLabel!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
-    expect(campusLabel!.compareDocumentPosition(logoLabel!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(nameLabel!.compareDocumentPosition(logoLabel!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })
 
   it("does not ask for a period code or teaching weeks", async () => {

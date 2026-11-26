@@ -28,7 +28,6 @@ export type CatalogRecord = {
   deactivate_block?: string | null;
   lock_reason?: string | null;
   logo_url?: string | null;
-  campus?: string | null;
   catalog_libraries?: string[];
 };
 
@@ -52,7 +51,6 @@ export type AcademicStructureProps = {
       modality: string | null;
       modality_label: string | null;
       coordinator: { id: string; name: string } | null;
-      campus_name: string | null;
       code: string;
       name: string;
       active: boolean;
@@ -99,7 +97,6 @@ export type AcademicStructureProps = {
     period_status: "proximo" | "en_curso" | "finalizado";
     period_status_label: string;
     period_planning_enabled: boolean;
-    campus_name: string | null;
     modality_name: string | null;
     parallels: {
       id: string;
@@ -144,7 +141,6 @@ export type AcademicStructureProps = {
     faculties: Option[];
     careers: Option[];
     periods: Option[];
-    campusOptions: Array<{ value: string; label: string }>;
     modalityOptions: Array<{ value: string; label: string }>;
     shiftOptions: Array<{ value: string; label: string }>;
     currentCurricula: Option[];
@@ -213,7 +209,6 @@ export type CurriculumBuilderProps = {
     id: string;
     subject_id: string;
     requirement_id: string;
-    type: "prerrequisito" | "correquisito";
   }[];
   modalityOptions: { value: string; label: string }[];
   organizationUnitOptions: { value: string; label: string }[];

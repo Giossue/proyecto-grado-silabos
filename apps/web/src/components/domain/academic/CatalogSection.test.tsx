@@ -9,15 +9,15 @@ vi.mock("@/api/libraryCatalog", () => ({ getCatalogLibraries: vi.fn().mockResolv
 
 const catalogs = {
   faculties: [
-    { id: "f1", nombre: "Ciencias", activo: true, campus: "Matriz", logo_url: "/logos/f1.png" },
-    { id: "f2", nombre: "Salud", activo: false, campus: null, logo_url: null },
+    { id: "f1", nombre: "Ciencias", activo: true, logo_url: "/logos/f1.png" },
+    { id: "f2", nombre: "Salud", activo: false, logo_url: null },
   ],
   careers: [
-    { id: "c1", faculty_id: "f1", modality: "presencial", modality_label: "Presencial", coordinator: null, campus_name: "Matriz", code: "SW", name: "Software", active: true },
+    { id: "c1", faculty_id: "f1", modality: "presencial", modality_label: "Presencial", coordinator: null, code: "SW", name: "Software", active: true },
   ],
   periods: [],
 } as AcademicStructureProps["catalogs"]
-const options = { campusOptions: [{ value: "Matriz", label: "Matriz" }], modalityOptions: [{ value: "presencial", label: "Presencial" }] } as AcademicStructureProps["options"]
+const options = { modalityOptions: [{ value: "presencial", label: "Presencial" }] } as AcademicStructureProps["options"]
 
 describe("CatalogSection", () => {
   it("un clic en la fila de una facultad abre su ficha en solo lectura y la búsqueda filtra por nombre", async () => {
@@ -40,16 +40,20 @@ describe("CatalogSection", () => {
 
     const name = screen.getByRole("button", { name: "Software" })
     expect(name.closest("tr")!.textContent).toContain("Ciencias")
+    expect(document.body.textContent).not.toMatch(/campus/i)
+    expect(document.body.querySelector("#careers-search-campus")).toBeNull()
     expect(name.closest("tr")!.hasAttribute("tabindex")).toBe(false)
     fireEvent.click(name)
     await flush()
     expect(document.body.querySelector<HTMLInputElement>("#edit-code-c1")!.value).toBe("SW")
   })
 
-  it("la tabla de facultades no tiene columna de logo", () => {
+  it("la tabla de facultades no tiene columna de logo ni de campus, ni filtro de campus", () => {
     renderWithProviders(<CatalogSection section="faculties" catalogs={catalogs} options={options} onChanged={vi.fn()} />)
 
-    expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual(["Facultad", "Campus"])
+    expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual(["Facultad"])
+    expect(document.body.textContent).not.toMatch(/campus/i)
+    expect(document.body.querySelector("#faculties-search-campus")).toBeNull()
     expect(screen.queryByText("Sin logo")).toBeNull()
     expect(screen.queryByRole("button", { name: /^Ver logo/ })).toBeNull()
   })
@@ -63,7 +67,7 @@ describe("CatalogSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Facultad" }))
     expect(facultyRows()).toEqual(["Salud", "Ciencias"])
     expect(screen.getByRole("columnheader", { name: "Facultad" }).getAttribute("aria-sort")).toBe("descending")
-    fireEvent.click(screen.getByRole("button", { name: "Campus" }))
+    fireEvent.click(screen.getByRole("button", { name: "Facultad" }))
     expect(facultyRows()).toEqual(["Ciencias", "Salud"])
     unmount()
 

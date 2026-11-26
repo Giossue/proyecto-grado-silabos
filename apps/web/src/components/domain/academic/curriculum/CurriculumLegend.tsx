@@ -13,10 +13,6 @@ export function CurriculumLegend({ units, rows }: CurriculumLegendProps) {
           <dt className="h-0.5 w-5 shrink-0 rounded bg-(--curriculum-prerequisite)" aria-hidden="true" />
           <dd>Prerrequisito</dd>
         </div>
-        <div className="flex items-center gap-2">
-          <dt className="h-0.5 w-5 shrink-0 rounded bg-(--curriculum-corequisite)" aria-hidden="true" />
-          <dd>Correquisito</dd>
-        </div>
       </dl>
       {units.length > 0 ? (
         <dl className="flex flex-col gap-1 border-t pt-2">

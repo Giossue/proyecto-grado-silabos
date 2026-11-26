@@ -115,10 +115,10 @@ export class AcademicStructurePrismaRepository implements AcademicStructureRepos
     if (subjectIds.length === 0) return []
     const found = await this.prisma.requisitos_asignatura.findMany({
       where: { asignatura_id: { in: subjectIds }, requisito_id: { in: subjectIds } },
-      select: { requisito_asignatura_id: true, asignatura_id: true, requisito_id: true, tipo_requisito_asignatura: true },
-      orderBy: [{ tipo_requisito_asignatura: "asc" }, { requisito_asignatura_id: "asc" }],
+      select: { requisito_asignatura_id: true, asignatura_id: true, requisito_id: true },
+      orderBy: { requisito_asignatura_id: "asc" },
     })
-    return found.map((row) => ({ id: row.requisito_asignatura_id, subjectId: row.asignatura_id, requirementId: row.requisito_id, type: row.tipo_requisito_asignatura }))
+    return found.map((row) => ({ id: row.requisito_asignatura_id, subjectId: row.asignatura_id, requirementId: row.requisito_id }))
   }
 
   async teacherAssignments(careerId: string): Promise<TeacherAssignmentRecord[]> {

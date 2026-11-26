@@ -17,7 +17,6 @@ const IDLE_CAREER = "01a1c5bc-79ca-7331-8f0f-000000000003"
 const PERIOD = "01a1c5bc-79d3-730d-84f4-6a91c41c8a75"
 const OLD_PERIOD = "01a1c5bc-79d3-730d-84f4-000000000004"
 const PROCESS = "01a1c5bc-8107-70ce-b951-112443c38cd1"
-const MATRIZ = "Campus Matriz Dr. Gabriel Galarza López"
 
 let root: string
 let world: FakeWorld
@@ -70,7 +69,6 @@ const career = (overrides: Partial<GovernanceCareer> = {}): GovernanceCareer => 
   facultyId: FACULTY,
   coordinator: { id: "01a1c5bc-7a86-7353-917c-f4f6dda1739c", name: "MARÍA JOSÉ" },
   modality: "Presencial",
-  campus: MATRIZ,
   code: "SW-8",
   name: "Software",
   active: true,
@@ -103,10 +101,10 @@ beforeEach(() => {
   today = "2026-11-23"
   processes = [{ id: PROCESS, periodId: PERIOD, state: "abierto" }]
   faculties = [
-    { id: FACULTY, name: "Ciencias Administrativas", campus: MATRIZ, libraries: ["BIB-1"], active: true, logo: { disk: "private", path: `logos/facultades/${FACULTY}/logo.png`, classification: "logo_facultad" } },
-    { id: OTHER_FACULTY, name: "Ciencias Agropecuarias", campus: "Campus Laguacoto", libraries: [], active: true, logo: null },
+    { id: FACULTY, name: "Ciencias Administrativas", libraries: ["BIB-1"], active: true, logo: { disk: "private", path: `logos/facultades/${FACULTY}/logo.png`, classification: "logo_facultad" } },
+    { id: OTHER_FACULTY, name: "Ciencias Agropecuarias", libraries: [], active: true, logo: null },
   ]
-  careers = [career(), career({ id: IDLE_CAREER, facultyId: OTHER_FACULTY, coordinator: null, modality: null, campus: "Campus Laguacoto", code: "AG-1", name: "Agronomía", active: false })]
+  careers = [career(), career({ id: IDLE_CAREER, facultyId: OTHER_FACULTY, coordinator: null, modality: null, code: "AG-1", name: "Agronomía", active: false })]
   periods = [
     { id: PERIOD, code: "Noviembre-Marzo 2026-2027", startsOn: "2026-11-02", endsOn: "2027-03-12", teachingWeeks: 16 },
     { id: OLD_PERIOD, code: "Mayo-Septiembre 2026", startsOn: "2026-05-04", endsOn: "2026-09-11", teachingWeeks: null },
@@ -119,7 +117,7 @@ beforeEach(() => {
 })
 
 describe("GET admin/academic/{section?}", () => {
-  it("gives the academic forms the authoritative modality, shift and campus options", async () => {
+  it("gives the academic forms the authoritative modality and shift options, without campus", async () => {
     const body = await json()
     expect(body.options).toEqual({
       faculties: [
@@ -128,13 +126,6 @@ describe("GET admin/academic/{section?}", () => {
       ],
       careers: [],
       periods: [],
-      campusOptions: [
-        { value: MATRIZ, label: MATRIZ },
-        { value: "Campus Laguacoto", label: "Campus Laguacoto" },
-        { value: "Campus CENI (Centro de Eventos Nacionales e Internacionales)", label: "Campus CENI (Centro de Eventos Nacionales e Internacionales)" },
-        { value: "Extensión San Miguel", label: "Extensión San Miguel" },
-        { value: "Sede Chimbo", label: "Sede Chimbo" },
-      ],
       modalityOptions: ["Presencial", "Semipresencial", "En línea", "A distancia", "Híbrida"].map((value) => ({ value, label: value })),
       shiftOptions: [
         { value: "matutina", label: "Matutina" },
@@ -154,7 +145,7 @@ describe("GET admin/academic/{section?}", () => {
     const text = await response.text()
     expect(text.startsWith('{"lock_reason":"Periodo académico activo","convocation_in_progress":true,"catalogs":{"faculties":[{"id":"')).toBe(true)
     expect(text).toContain(
-      `{"id":"${FACULTY}","nombre":"Ciencias Administrativas","campus":"${MATRIZ}","catalog_libraries":["BIB-1"],"activo":true,` +
+      `{"id":"${FACULTY}","nombre":"Ciencias Administrativas","catalog_libraries":["BIB-1"],"activo":true,` +
         `"deactivate_block":"Desactive primero las carreras activas de esta facultad.","lock_reason":null,"logo_url":"http://localhost:3000/logos/facultad/${FACULTY}?v=1794318825"}`,
     )
     expect(text.endsWith('"section":"faculties"}')).toBe(true)
@@ -166,7 +157,6 @@ describe("GET admin/academic/{section?}", () => {
       coordinator: { id: "01a1c5bc-7a86-7353-917c-f4f6dda1739c", name: "MARÍA JOSÉ" },
       modality: "Presencial",
       modality_label: "Presencial",
-      campus_name: MATRIZ,
       code: "SW-8",
       name: "Software",
       active: true,

@@ -4,7 +4,7 @@ import { phpJsonDecode } from "../../../server/configuration/phpValues"
 import type { CareerRoleCount, GovernanceCareer, GovernanceFaculty, GovernancePeriod, GovernanceProcess, GovernanceRepository } from "../../../server/academic/governance"
 import { plainDate } from "./prisma-values"
 
-type FacultyRow = { id: string; name: string; campus: string; libraries: string | null; has_logo: boolean; disk: string | null; path: string | null; classification: string | null; active: boolean }
+type FacultyRow = { id: string; name: string; libraries: string | null; has_logo: boolean; disk: string | null; path: string | null; classification: string | null; active: boolean }
 
 @Injectable()
 export class GovernancePrismaRepository implements GovernanceRepository {
@@ -19,7 +19,7 @@ export class GovernancePrismaRepository implements GovernanceRepository {
 
   async faculties(): Promise<GovernanceFaculty[]> {
     const found = await this.prisma.$queryRaw<FacultyRow[]>`select facultades.facultad_id::text as id, facultades.nombre_facultad as name,
-        facultades.campus_facultad as campus, facultades.bibliotecas_koha_facultad::text as libraries, facultades.facultad_activa as active,
+        facultades.bibliotecas_koha_facultad::text as libraries, facultades.facultad_activa as active,
         (archivos.archivo_id is not null) as has_logo, archivos.disco as disk, archivos.ruta_archivo as path, archivos.categoria as classification
       from facultades
       left join archivos on archivos.archivo_id = facultades.logo_archivo_id
@@ -27,7 +27,6 @@ export class GovernancePrismaRepository implements GovernanceRepository {
     return found.map((row) => ({
       id: row.id,
       name: row.name,
-      campus: row.campus,
       libraries: phpJsonDecode(row.libraries),
       active: row.active,
       logo: row.has_logo ? { disk: row.disk ?? "private", path: row.path, classification: row.classification } : null,
@@ -43,7 +42,6 @@ export class GovernancePrismaRepository implements GovernanceRepository {
         codigo_carrera: true,
         nombre_carrera: true,
         carrera_activa: true,
-        facultades: { select: { campus_facultad: true } },
         asignaciones_rol: {
           where: { rol: "coordinador", asignacion_rol_activa: true },
           take: 1,
@@ -59,7 +57,6 @@ export class GovernancePrismaRepository implements GovernanceRepository {
         facultyId: row.facultad_id,
         coordinator: coordinator === null ? null : { id: coordinator.usuario_id, name: coordinator.nombre_usuario },
         modality: row.modalidad_carrera,
-        campus: row.facultades.campus_facultad,
         code: row.codigo_carrera,
         name: row.nombre_carrera,
         active: row.carrera_activa,

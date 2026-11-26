@@ -133,8 +133,8 @@ const fakes = {
     today: () => "2026-11-25",
     governance: {
       processes: async () => [],
-      faculties: async () => [{ id: FACULTY, name: "Ciencias", campus: "Campus Matriz Dr. Gabriel Galarza López", libraries: ["biblioteca"], active: true, logo: null }],
-      careers: async () => [{ id: CAREER, facultyId: FACULTY, coordinator: null, modality: "Presencial", campus: "Campus Laguacoto", code: "SW", name: "Software", active: true }],
+      faculties: async () => [{ id: FACULTY, name: "Ciencias", libraries: ["biblioteca"], active: true, logo: null }],
+      careers: async () => [{ id: CAREER, facultyId: FACULTY, coordinator: null, modality: "Presencial", code: "SW", name: "Software", active: true }],
       periods: async () => [{ id: "p-1", code: "2026-1", startsOn: "2026-04-01", endsOn: "2026-08-31", teachingWeeks: 16 }],
       facultiesWithActiveCareers: async () => [FACULTY],
       careersInRunningConvocation: async () => [],
@@ -177,7 +177,7 @@ const fakes = {
       parallelsWithTeacher: async () => [PARALLEL],
       parallelsWithSentSyllabus: async () => [],
       parallelsWithStartedSyllabus: async () => [],
-      careerSubjects: async () => [{ id: SUBJECT, code: "SW-101", name: "Programación", cycle: 1, active: true, generatesSyllabus: true, campus: "Campus Laguacoto", modality: "Presencial" }],
+      careerSubjects: async () => [{ id: SUBJECT, code: "SW-101", name: "Programación", cycle: 1, active: true, generatesSyllabus: true, modality: "Presencial" }],
     },
   }),
   careerWrites: () => ({

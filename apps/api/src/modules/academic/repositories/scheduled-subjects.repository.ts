@@ -5,7 +5,7 @@ import { uuidList } from "../../../prisma/sql"
 import { IN_PROGRESS, SYLLABUS_SCOPE, TOUCHED_SYLLABUS } from "../../../server/academic/academicSql"
 import type { CareerParallelRecord, ScheduledSubjectRecord, ScheduledSubjectsRepository } from "../../../server/academic/scheduledSubjects"
 
-type SubjectRow = { id: string; codigo: string; nombre: string; ciclo: number | null; activo: boolean; genera: boolean; campus: string | null; modalidad: string | null }
+type SubjectRow = { id: string; codigo: string; nombre: string; ciclo: number | null; activo: boolean; genera: boolean; modalidad: string | null }
 
 @Injectable()
 export class ScheduledSubjectsPrismaRepository implements ScheduledSubjectsRepository {
@@ -47,10 +47,9 @@ export class ScheduledSubjectsPrismaRepository implements ScheduledSubjectsRepos
   async careerSubjects(careerId: string): Promise<ScheduledSubjectRecord[]> {
     const found = await this.prisma.$queryRaw<SubjectRow[]>`select asignatura.asignatura_id::text as id, asignatura.codigo_asignatura as codigo, asignatura.nombre_asignatura as nombre,
         asignatura.ciclo_asignatura as ciclo, asignatura.asignatura_activa as activo, asignatura.genera_silabo_asignatura as genera,
-        facultad.campus_facultad as campus, coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modalidad
+        coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modalidad
       from asignaturas asignatura
       left join carreras carrera on carrera.carrera_id = asignatura.carrera_id
-      left join facultades facultad on facultad.facultad_id = carrera.facultad_id
       where asignatura.carrera_id = ${careerId}::uuid
       order by asignatura.ciclo_asignatura asc, asignatura.orden_asignatura_en_ciclo asc, asignatura.nombre_asignatura asc`
     return found.map((row) => ({
@@ -60,7 +59,6 @@ export class ScheduledSubjectsPrismaRepository implements ScheduledSubjectsRepos
       cycle: row.ciclo === null ? null : Number(row.ciclo),
       active: row.activo,
       generatesSyllabus: row.genera,
-      campus: row.campus,
       modality: row.modalidad,
     }))
   }

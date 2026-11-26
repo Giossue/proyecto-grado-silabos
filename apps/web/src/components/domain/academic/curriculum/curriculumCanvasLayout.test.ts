@@ -7,9 +7,9 @@ const subject = (id: string, cycle: number, position: number): CurriculumBuilder
 
 const edgesFor = (subjects: CurriculumBuilderSubject[], pairs: Array<[string, string]>) => {
   const byId = new Map(subjects.map((item) => [item.id, item]))
-  const requirements = pairs.map(([from, to], index) => ({ id: `r${index}`, subject_id: to, requirement_id: from, type: "prerrequisito" as const }))
+  const requirements = pairs.map(([from, to], index) => ({ id: `r${index}`, subject_id: to, requirement_id: from }))
 
-  return buildRequirementEdges(requirements, subjects, byId)
+  return buildRequirementEdges(requirements, byId)
 }
 
 describe("trazado de relaciones de la malla", () => {
@@ -28,6 +28,15 @@ describe("trazado de relaciones de la malla", () => {
 
     expect(aToC!.targetOffset).toBeLessThan(bToC!.targetOffset)
     expect(bToC!.channelIndex).toBeLessThan(aToC!.channelIndex)
+  })
+
+  it("dibuja toda relación como prerrequisito, incluso una guardada entre materias del mismo ciclo", () => {
+    const [edge] = edgesFor([subject("A", 1, 0), subject("B", 1, 1)], [["A", "B"]])
+
+    expect(edge!.ariaLabel).toBe("Prerrequisito: A → B")
+    expect(edge!.style).toEqual({ stroke: "var(--curriculum-prerequisite)", strokeWidth: 2 })
+    expect(edge!.markerStart).toBeUndefined()
+    expect(edge!.data).toEqual({ label: "Prerrequisito", sourceOffset: expect.any(Number), targetOffset: expect.any(Number), channelIndex: expect.any(Number), channelCount: expect.any(Number) })
   })
 
   it("baja recta cuando origen y destino están en la misma columna de niveles seguidos", () => {

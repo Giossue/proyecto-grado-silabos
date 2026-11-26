@@ -270,8 +270,8 @@ describe("dashboard", () => {
         done: 6,
         total: 6,
         steps: [
-          { key: "faculties", label: "Registrar las facultades", hint: "Elija el campus y cargue el logo de cada facultad; Coordinación lo necesita para abrir su periodo académico.", done: true, action: null },
-          { key: "careers", label: "Registrar las carreras", hint: "Cada carrera hereda el campus de su facultad y registra su modalidad aprobada. Puede importarlas desde Excel.", done: true, action: null },
+          { key: "faculties", label: "Registrar las facultades", hint: "Cargue el logo de cada facultad; Coordinación lo necesita para abrir su periodo académico.", done: true, action: null },
+          { key: "careers", label: "Registrar las carreras", hint: "Cada carrera registra su modalidad aprobada. Puede importarlas desde Excel.", done: true, action: null },
           { key: "accounts", label: "Crear las cuentas de coordinación y de biblioteca", hint: "Al menos una de cada una, también por importación desde Excel. Los docentes los crea cada Coordinación.", done: true, action: null },
           { key: "coordinators", label: "Asignar un coordinador a cada carrera", hint: "Todas las carreras tienen coordinador.", done: true, action: null },
           { key: "template", label: "Armar la plantilla del sílabo", hint: TEMPLATE_HINT, done: true, action: null },

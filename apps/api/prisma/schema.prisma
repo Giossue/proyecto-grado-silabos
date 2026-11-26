@@ -280,7 +280,6 @@ model facultades {
   nombre_facultad           String     @db.VarChar(180)
   facultad_activa           Boolean    @default(true)
   logo_archivo_id           String?    @db.Uuid
-  campus_facultad           String     @db.VarChar(255)
   bibliotecas_koha_facultad Json       @default("[]")
   carreras                  carreras[]
   archivos                  archivos?  @relation(fields: [logo_archivo_id], references: [archivo_id], onDelete: Restrict, onUpdate: NoAction, map: "facultades_logo_archivo_id_foreign")
@@ -431,7 +430,6 @@ model requisitos_asignatura {
   requisito_asignatura_id                                      String      @id @db.Uuid
   asignatura_id                                                String      @db.Uuid
   requisito_id                                                 String      @db.Uuid
-  tipo_requisito_asignatura                                    String      @default("prerrequisito") @db.VarChar(30)
   asignaturas_requisitos_asignatura_asignatura_idToasignaturas asignaturas @relation("requisitos_asignatura_asignatura_idToasignaturas", fields: [asignatura_id], references: [asignatura_id], onUpdate: NoAction, map: "requisitos_asignatura_asignatura_id_foreign")
   asignaturas_requisitos_asignatura_requisito_idToasignaturas  asignaturas @relation("requisitos_asignatura_requisito_idToasignaturas", fields: [requisito_id], references: [asignatura_id], onUpdate: NoAction, map: "requisitos_asignatura_requisito_id_foreign")
 
@@ -567,7 +565,6 @@ model usuarios {
   contrasena                                                                       String                    @db.VarChar(255)
   usuario_activo                                                                   Boolean                   @default(true)
   codigo_recordarme                                                                String?                   @db.VarChar(100)
-  preferencias_accesibilidad_usuario                                               Json?
   preferencias_correo_usuario                                                      Json?
   ajustes_sistema                                                                  ajustes_sistema[]
   aprobaciones                                                                     aprobaciones[]

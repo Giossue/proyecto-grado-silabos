@@ -21,12 +21,15 @@ test.describe.serial("administration: faculties and careers", () => {
   const faculty = `Facultad E2E ${suffix}`
   const career = `Carrera E2E ${suffix}`
 
+  test.afterAll(async () => {
+    await query("update carreras set carrera_activa = false where codigo_carrera = $1", [`E2E-${suffix}`])
+  })
+
   test("admin creates a faculty with a logo, edits it and toggles its status", async ({ page, issues }) => {
     await page.goto("/admin/estructura-academica")
     await page.getByRole("button", { name: "Crear facultad" }).click()
     const dialog = page.getByRole("dialog", { name: "Nueva facultad" })
     await dialog.locator("#catalog-name").fill(faculty)
-    await chooseSelect(page, "catalog-campus")
     await dialog.locator("#faculty-logo").setInputFiles(logo)
     await dialog.getByRole("button", { name: "Siguiente" }).click()
     const library = dialog.getByRole("checkbox").first()

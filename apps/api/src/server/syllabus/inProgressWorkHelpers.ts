@@ -13,7 +13,6 @@ export const DOCUMENT_PATHS = [
   "career.name",
   "career.faculty",
   "career.faculty_logo",
-  "scheduled_subject.campus",
   "subject.name",
   "subject.code",
   "subject.cycle",
@@ -24,7 +23,6 @@ export const DOCUMENT_PATHS = [
   "subject.hours_pae",
   "subject.hours_aa",
   "subject.prerequisites",
-  "subject.corequisites",
   "scheduled_subject.modality",
 ]
 export type WorkScope = { careerIds?: string | string[] | null; periodId?: string | null; subjectId?: string | null; subjectIds?: string[] | null }

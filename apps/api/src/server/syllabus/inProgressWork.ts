@@ -33,7 +33,7 @@ import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 export const SYLLABUS_ALIVE = Prisma.sql`exists (select 1 from convocatorias_carreras vivo where vivo.convocatoria_carrera_id = silabos.convocatoria_carrera_id
   and exists (select 1 from convocatorias_universidad vivo_proceso where vivo_proceso.convocatoria_universidad_id = vivo.convocatoria_universidad_id))`
 
-type ParallelRow = { id: string; subject_id: string; code: string; shift: string | null; subject: string; campus: string | null; modality: string | null; teachers: number }
+type ParallelRow = { id: string; subject_id: string; code: string; shift: string | null; subject: string; modality: string | null; teachers: number }
 
 export const CONFIRMATION_FIELD = "confirm_purge"
 export const DEFAULT_REASON = "cambió la base institucional (malla, período académico o plantilla)"
@@ -335,7 +335,6 @@ export class InProgressWork {
     dataSet(context, "parallel.id", parallel.id)
     dataSet(context, "parallel.code", parallel.code)
     dataSet(context, "parallel.shift", parallel.shift)
-    dataSet(context, "scheduled_subject.campus", parallel.campus)
     dataSet(context, "scheduled_subject.modality", parallel.modality)
     await this.saveContext(syllabus, context)
   }
@@ -486,12 +485,11 @@ export class InProgressWork {
     const [parallel] = await rowsOf<ParallelRow>(
       this.executor,
       Prisma.sql`select paralelo.paralelo_id::text as id, paralelo.asignatura_id::text as subject_id, paralelo.codigo_paralelo as code, paralelo.jornada_paralelo as shift,
-          asignatura.nombre_asignatura as subject, facultad.campus_facultad as campus,
+          asignatura.nombre_asignatura as subject,
           coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modality, 0 as teachers
         from paralelos paralelo
           inner join asignaturas asignatura on asignatura.asignatura_id = paralelo.asignatura_id
           inner join carreras carrera on carrera.carrera_id = asignatura.carrera_id
-          left join facultades facultad on facultad.facultad_id = carrera.facultad_id
         where paralelo.paralelo_id = ${parallelId}::uuid limit 1`,
     )
     return parallel ?? null
@@ -681,7 +679,7 @@ export class InProgressWork {
     return rowsOf<ParallelRow>(
       this.executor,
       Prisma.sql`select paralelo.paralelo_id::text as id, paralelo.asignatura_id::text as subject_id, paralelo.codigo_paralelo as code, paralelo.jornada_paralelo as shift,
-          asignatura.nombre_asignatura as subject, facultad.campus_facultad as campus,
+          asignatura.nombre_asignatura as subject,
           coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modality,
           (select count(*)::int from asignaciones_paralelo asignacion where asignacion.paralelo_id = paralelo.paralelo_id and asignacion.asignacion_paralelo_activa = true
             and exists (select 1 from asignaciones_rol rol where rol.asignacion_rol_id = asignacion.asignacion_rol_id and rol.asignacion_rol_activa = true
@@ -690,7 +688,6 @@ export class InProgressWork {
         from paralelos paralelo
           inner join asignaturas asignatura on asignatura.asignatura_id = paralelo.asignatura_id
           inner join carreras carrera on carrera.carrera_id = asignatura.carrera_id
-          left join facultades facultad on facultad.facultad_id = carrera.facultad_id
         where ${where}
         order by paralelo.asignatura_id asc, paralelo.codigo_paralelo asc ${lock ? Prisma.sql`for update of paralelo` : Prisma.empty}`,
     )
@@ -706,7 +703,7 @@ export class InProgressWork {
     return {
       ...subject,
       parallel: { id: parallel.id, code: parallel.code, shift: parallel.shift },
-      scheduled_subject: { period: period.code, teaching_weeks: period.weeks === null ? null : Number(period.weeks), campus: parallel.campus, modality: parallel.modality },
+      scheduled_subject: { period: period.code, teaching_weeks: period.weeks === null ? null : Number(period.weeks), modality: parallel.modality },
     }
   }
 

@@ -33,7 +33,7 @@ export function CurriculumRelationPicker({ subjects, picker, onPickerChange, onP
     .filter((subject) => subject.id !== shown?.subjectId)
     .filter((subject) => {
       const cycle = current?.cycle ?? 0
-      return shown?.mode === "requires" ? (subject.cycle ?? 0) <= cycle : (subject.cycle ?? 0) >= cycle
+      return shown?.mode === "requires" ? (subject.cycle ?? 0) < cycle : (subject.cycle ?? 0) > cycle
     })
     .sort((left, right) => (left.cycle ?? 0) - (right.cycle ?? 0) || left.position - right.position)
   const byCycle = new Map<number, CurriculumBuilderSubject[]>()

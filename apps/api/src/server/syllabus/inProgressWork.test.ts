@@ -149,6 +149,32 @@ describe("InProgressWork generation", () => {
   })
 })
 
+describe("InProgressWork academic context", () => {
+  it("leaves the campus and the corequisites for the teacher: it neither reads nor stores them", async () => {
+    const queries: string[] = []
+    const reply = (text: string): unknown[] => {
+      if (text.startsWith("select paralelo.paralelo_id::text as id")) return [{ id: PARALLEL, subject_id: CAREER, code: "A", shift: "matutina", subject: "Cálculo", modality: "presencial", teachers: 1 }]
+      if (text.startsWith("select asignatura.asignatura_id::text as id")) return [{ id: CAREER, code: "C1", name: "Cálculo", cycle: 1, position: 1, unit: null, credits: "2.00", total_hours: 96, hours_ac: "1.00", hours_pae: "1.00", hours_aa: "1.00", career_id: CAREER, career_code: "SW", career_name: "Software", cycle_count: 8, faculty_id: null, faculty: null, faculty_logo: null }]
+      if (text.startsWith("select previa.codigo_asignatura as code")) return [{ code: "M0" }]
+      if (text.startsWith("select codigo_periodo_academico as code")) return [{ code: "2026-1", weeks: 16 }]
+      return []
+    }
+    const db = {
+      $queryRaw: async (query: TemplateStringsArray | Prisma.Sql, ...values: unknown[]) => {
+        const text = (query instanceof Prisma.Sql ? query : Prisma.sql(query, ...values)).text.replace(/\s+/g, " ").trim()
+        queries.push(text)
+        return reply(text)
+      },
+      $executeRaw: async () => 1,
+    } as unknown as Db
+    const built = await new InProgressWork(db, () => {}).contextOf(PARALLEL, PERIOD)
+    expect(built?.context.scheduled_subject).toEqual({ period: "2026-1", teaching_weeks: 16, modality: "presencial" })
+    expect(built?.context.subject).toMatchObject({ prerequisites: ["M0"] })
+    expect(built?.context.subject).not.toHaveProperty("corequisites")
+    expect(queries.join(" ")).not.toMatch(/campus|tipo_requisito/)
+  })
+})
+
 describe("InProgressWork adapting to a new template", () => {
   const workSyllabus = (started: boolean) => ({ id: SYLLABUS, convocationId: CONVOCATION, parallelId: PARALLEL, state: "sin_iniciar", context: {}, started, version: 1 })
 

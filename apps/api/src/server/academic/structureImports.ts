@@ -30,7 +30,6 @@ export const CURRICULUM_COLUMNS = {
   aa: "Horas AA",
   creditos: "Créditos",
   prerrequisitos: "Prerrequisitos (códigos)",
-  correquisitos: "Correquisitos (códigos)",
 }
 
 const CURRICULUM_OPTIONAL = ["genera_silabo"]
@@ -52,7 +51,7 @@ const CURRICULUM_NOTES = [
   "Unidad de organización y Modalidad: elija una opción de la lista (la modalidad es opcional).",
   "Genera sílabo: Sí o No. Si la materia no lleva sílabo, elija No; si la deja vacía se toma Sí.",
   "Horas y créditos: números; las horas totales se calculan solas.",
-  "Prerrequisitos (de un ciclo anterior) y correquisitos (del mismo ciclo): códigos separados por coma; pueden ser materias de la malla o del mismo archivo.",
+  "Prerrequisitos (de un ciclo anterior): códigos separados por coma; pueden ser materias de la malla o del mismo archivo.",
 ]
 
 export const CAREERS_FORBIDDEN = "No puede importar carreras con el rol activo."
@@ -213,7 +212,7 @@ export async function importCareers(request: Request, deps: StructureImportDeps)
   )
 }
 
-type CurriculumPayload = { key: string; relations: { code: string; type: string }[]; data: PhpArray }
+type CurriculumPayload = { key: string; relations: { code: string }[]; data: PhpArray }
 
 async function checkCurriculum(
   rows: ImportRow[],
@@ -271,19 +270,13 @@ async function checkCurriculum(
       numbers[key] = phpIsNumeric(value) ? phpAddZero(value) : 0
     }
     const relations: CurriculumPayload["relations"] = []
-    for (const [column, type] of [
-      ["prerrequisitos", "prerrequisito"],
-      ["correquisitos", "correquisito"],
-    ]) {
-      for (const requirement of codes(values[column])) {
-        const requirementKey = importKey(requirement)
-        const requirementCycle = cycles.get(requirementKey) ?? 0
-        if (requirementKey === codeKey) errors.push("Una materia no puede ser requisito de sí misma.")
-        else if (!existing.has(requirementKey) && !fileCodes.has(requirementKey)) errors.push(`El requisito ${requirement} no está en la malla ni en el archivo.`)
-        else if (type === "prerrequisito" && requirementCycle >= phpIntValue(cycle)) errors.push(`El prerrequisito ${requirement} debe estar en un ciclo anterior.`)
-        else if (type === "correquisito" && requirementCycle !== phpIntValue(cycle)) errors.push(`El correquisito ${requirement} debe estar en el mismo ciclo.`)
-        else relations.push({ code: requirementKey, type })
-      }
+    for (const requirement of codes(values.prerrequisitos)) {
+      const requirementKey = importKey(requirement)
+      const requirementCycle = cycles.get(requirementKey) ?? 0
+      if (requirementKey === codeKey) errors.push("Una materia no puede ser requisito de sí misma.")
+      else if (!existing.has(requirementKey) && !fileCodes.has(requirementKey)) errors.push(`El requisito ${requirement} no está en la malla ni en el archivo.`)
+      else if (requirementCycle >= phpIntValue(cycle)) errors.push(`El prerrequisito ${requirement} debe estar en un ciclo anterior.`)
+      else relations.push({ code: requirementKey })
     }
     checked.push({ ...row, errors })
     payloads.push({
@@ -337,7 +330,7 @@ export async function importCurriculum(request: Request, deps: StructureImportDe
               requirements,
               context,
               career.id,
-              { subject_id: ids.get(payload.key) as string, requirement_id: ids.get(relation.code) as string, type: relation.type, confirm_purge: upload.input.confirm_purge ?? null },
+              { subject_id: ids.get(payload.key) as string, requirement_id: ids.get(relation.code) as string, confirm_purge: upload.input.confirm_purge ?? null },
               addRequirement,
             )
           }

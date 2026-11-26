@@ -29,7 +29,6 @@ const base: Omit<ActionsProps, "editOpen" | "onEditOpenChange"> = {
   recordId: "r1",
   recordName: "Software",
   modalityOptions: [],
-  campusOptions: [],
   faculties: [],
   active: true,
   onChanged: changed,

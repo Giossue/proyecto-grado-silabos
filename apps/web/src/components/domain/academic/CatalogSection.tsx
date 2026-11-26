@@ -25,12 +25,8 @@ type CatalogSectionProps = Pick<AcademicStructureProps, "catalogs" | "options"> 
 }
 
 const facultySearch = (item: CatalogRecord) => [item.nombre]
-const facultyFilters: Record<string, ClientFilterDefinition<CatalogRecord>> = {
-  campus: { matches: (item, value) => item.campus === value },
-}
 const careerSearch = (item: Career) => [item.name]
 const careerFilters: Record<string, ClientFilterDefinition<Career>> = {
-  campus: { matches: (item, value) => item.campus_name === value },
   modalidad: { matches: (item, value) => item.modality === value },
 }
 
@@ -38,7 +34,6 @@ const NO_LIBRARIES: string[] = []
 
 const facultyColumns = {
   name: { label: "Facultad", value: (item: CatalogRecord) => item.nombre },
-  campus: { label: "Campus", value: (item: CatalogRecord) => item.campus },
 } satisfies SortColumns<CatalogRecord>
 
 export function CatalogSection({ section, catalogs, options, onChanged }: CatalogSectionProps) {
@@ -52,12 +47,11 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
         name: { label: "Carrera", value: (item: Career) => item.name },
         faculty: { label: "Facultad", value: (item: Career) => facultyNames.get(item.faculty_id) ?? "Facultad no disponible" },
         modality: { label: "Modalidad", value: (item: Career) => item.modality_label },
-        campus: { label: "Campus", value: (item: Career) => item.campus_name },
       }) satisfies SortColumns<Career>,
     [facultyNames],
   )
 
-  const facultyFilter = useClientFilter(catalogs.faculties, facultySearch, facultyFilters)
+  const facultyFilter = useClientFilter(catalogs.faculties, facultySearch)
   const facultySort = useTableSort(facultyFilter.items, facultyColumns)
   const facultyPage = useClientPagination(facultySort.items, 20, `${facultyFilter.criteria}|${facultySort.criteria}`)
   const careerFilter = useClientFilter(catalogs.careers, careerSearch, careerFilters)
@@ -68,28 +62,6 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
   const editOpenChange = (id: string) => (open: boolean) => setEditingId((current) => (open ? id : current === id ? null : current))
 
 
-  const campusFilter = (id: string, filter: { values: Record<string, string>; setValue: (key: string, value: string) => void }) => (
-    <Field>
-      <FieldLabel htmlFor={id} className="sr-only">
-        Campus
-      </FieldLabel>
-      <Select value={filter.values.campus} onValueChange={(value) => filter.setValue("campus", value)}>
-        <SelectTrigger id={id}>
-          <SelectValue placeholder="Todos los campus" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">Todos los campus</SelectItem>
-            {options.campusOptions.map((campus) => (
-              <SelectItem key={campus.value} value={campus.value}>
-                {campus.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </Field>
-  )
 
   return (
     <>
@@ -101,18 +73,16 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
             label="Buscar facultad"
             placeholder="Buscar por nombre"
             sort={facultySort}
-            filters={campusFilter("faculties-search-campus", facultyFilter)}
           />
           <Table label="Listado académico">
             <TableHeader>
               <TableRow>
                 <SortableHead sort={facultySort} column="name">Facultad</SortableHead>
-                <SortableHead sort={facultySort} column="campus">Campus</SortableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {facultyPage.items.length === 0 ? (
-                <TableEmpty colSpan={2}>{facultyFilter.active ? "Ninguna facultad coincide con los filtros" : "No existen facultades registradas"}</TableEmpty>
+                <TableEmpty colSpan={1}>{facultyFilter.active ? "Ninguna facultad coincide con los filtros" : "No existen facultades registradas"}</TableEmpty>
               ) : (
                 facultyPage.items.map((faculty) => (
                   <TableRow
@@ -132,9 +102,7 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                         recordId={faculty.id}
                         recordName={faculty.nombre}
                         active={faculty.activo}
-                        campus={faculty.campus}
                         catalogLibraries={faculty.catalog_libraries ?? NO_LIBRARIES}
-                        campusOptions={options.campusOptions}
                         modalityOptions={options.modalityOptions}
                         logoUrl={faculty.logo_url}
                         faculties={catalogs.faculties}
@@ -145,7 +113,6 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                         onChanged={onChanged}
                       />
                     </TableCell>
-                    <TableCell>{faculty.campus ?? "Sin campus"}</TableCell>
                   </TableRow>
                 ))
               )}
@@ -163,29 +130,26 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
             placeholder="Buscar por nombre"
             sort={careerSort}
             filters={
-              <>
-                {campusFilter("careers-search-campus", careerFilter)}
-                <Field>
-                  <FieldLabel htmlFor="careers-search-modality" className="sr-only">
-                    Modalidad
-                  </FieldLabel>
-                  <Select value={careerFilter.values.modalidad} onValueChange={(value) => careerFilter.setValue("modalidad", value)}>
-                    <SelectTrigger id="careers-search-modality">
-                      <SelectValue placeholder="Todas las modalidades" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="all">Todas las modalidades</SelectItem>
-                        {options.modalityOptions.map((modality) => (
-                          <SelectItem key={modality.value} value={modality.value}>
-                            {modality.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </Field>
-              </>
+              <Field>
+                <FieldLabel htmlFor="careers-search-modality" className="sr-only">
+                  Modalidad
+                </FieldLabel>
+                <Select value={careerFilter.values.modalidad} onValueChange={(value) => careerFilter.setValue("modalidad", value)}>
+                  <SelectTrigger id="careers-search-modality">
+                    <SelectValue placeholder="Todas las modalidades" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="all">Todas las modalidades</SelectItem>
+                      {options.modalityOptions.map((modality) => (
+                        <SelectItem key={modality.value} value={modality.value}>
+                          {modality.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
             }
           />
           <Table label="Listado académico">
@@ -194,7 +158,6 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                 <SortableHead sort={careerSort} column="name">Carrera</SortableHead>
                 <SortableHead sort={careerSort} column="faculty">Facultad</SortableHead>
                 <SortableHead sort={careerSort} column="modality">Modalidad</SortableHead>
-                <SortableHead sort={careerSort} column="campus">Campus</SortableHead>
                 <TableHead className="w-24">
                   <span className="sr-only">Trabajo de la carrera</span>
                 </TableHead>
@@ -202,7 +165,7 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
             </TableHeader>
             <TableBody>
               {careerPage.items.length === 0 ? (
-                <TableEmpty colSpan={5}>{careerFilter.active ? "Ninguna carrera coincide con los filtros" : "No existen carreras registradas"}</TableEmpty>
+                <TableEmpty colSpan={4}>{careerFilter.active ? "Ninguna carrera coincide con los filtros" : "No existen carreras registradas"}</TableEmpty>
               ) : (
                 careerPage.items.map((career) => (
                   <TableRow
@@ -218,7 +181,7 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                         </span>
                       ) : null}
                       <TableCardLine>
-                        {career.modality_label ?? "Sin modalidad"} · {career.campus_name ?? "Sin campus"}
+                        {career.modality_label ?? "Sin modalidad"}
                       </TableCardLine>
                       <CatalogActions
                         entity="carrera"
@@ -232,7 +195,6 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                         facultyId={career.faculty_id}
                         modality={career.modality}
                         faculties={catalogs.faculties}
-                        campusOptions={options.campusOptions}
                         modalityOptions={options.modalityOptions}
                         editOpen={editingId === career.id}
                         onEditOpenChange={editOpenChange(career.id)}
@@ -241,7 +203,6 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                     </TableCell>
                     <TableCell>{facultyName(career.faculty_id)}</TableCell>
                     <TableCell data-card-hide="true">{career.modality_label ?? "Sin modalidad"}</TableCell>
-                    <TableCell data-card-hide="true">{career.campus_name ?? "Sin campus"}</TableCell>
                     <TableCell>{career.active ? <CareerWorkLinks careerId={career.id} careerName={career.name} /> : null}</TableCell>
                   </TableRow>
                 ))

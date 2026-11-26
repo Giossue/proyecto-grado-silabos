@@ -7,8 +7,9 @@ import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { buildIdentification } from "../syllabus/identificationCard"
 import { fakeTemplateStore, fieldId, goldenFields, goldenTemplate, type FakeTemplateWorld } from "./testing"
-import { previewSubjectProfile, subjectAcademicContext, type SubjectContextRow, type SubjectPreviewDeps } from "./subjectProfilePreview"
+import { loadSubjectContext, previewSubjectProfile, subjectAcademicContext, type SubjectContextRow, type SubjectPreviewDeps } from "./subjectProfilePreview"
 import type { PhpRecord } from "./phpValues"
+import type { Db } from "../../prisma/db"
 
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
@@ -94,11 +95,7 @@ beforeEach(() => {
   contexts = new Map([
     [
       SUBJECT,
-      subjectAcademicContext(SUBJECT_ROW, [
-        { type: "prerrequisito", code: "SW-P6-032" },
-        { type: "correquisito", code: "SW-P7-040" },
-        { type: "prerrequisito", code: "SW-P5-021" },
-      ]),
+      subjectAcademicContext(SUBJECT_ROW, [{ code: "SW-P6-032" }, { code: "SW-P5-021" }]),
     ],
   ])
 })
@@ -122,7 +119,6 @@ describe("GET academic/asignaturas/{asignatura}/ficha/vista-previa", () => {
       hours_pae: "16.50",
       hours_aa: "48.00",
       prerequisites: ["SW-P5-021", "SW-P6-032"],
-      corequisites: ["SW-P7-040"],
     })
     expect(buildIdentification(context, [], [], [])).toMatchObject({
       faculty: "Ciencias Administrativas",
@@ -131,7 +127,8 @@ describe("GET academic/asignaturas/{asignatura}/ficha/vista-previa", () => {
       cycle: "Séptimo",
       code: "SW-P7-037",
       prerequisites: "SW-P5-021, SW-P6-032",
-      corequisites: "SW-P7-040",
+      teacher_campus: "",
+      teacher_corequisites: "",
       organization_unit: "Unidad profesional",
       hours_ac: "32",
       hours_pae: "16.5",
@@ -190,5 +187,23 @@ describe("GET academic/asignaturas/{asignatura}/ficha/vista-previa", () => {
   it("answers 401 without a session", async () => {
     const response = await previewSubjectProfile(apiRequest(`/api/v1/academic/asignaturas/${SUBJECT}/ficha/vista-previa`), SUBJECT, deps())
     expect(await read(response)).toEqual({ status: 401, text: '{"message":"Unauthenticated."}' })
+  })
+})
+
+describe("loadSubjectContext", () => {
+  it("lists every requirement of the subject as a prerequisite without reading a requirement type", async () => {
+    const queries: string[] = []
+    const db = {
+      $queryRaw: async (strings: TemplateStringsArray) => {
+        const text = strings.join("?").replace(/\s+/g, " ")
+        queries.push(text)
+        if (text.includes("from asignaturas asignatura")) return [{ ...SUBJECT_ROW, cycle_count: 8 }]
+        return [{ code: "SW-P6-032" }, { code: "SW-P5-021" }]
+      },
+    } as unknown as Db
+    const context = await loadSubjectContext(db, SUBJECT)
+    expect(context?.subject).toMatchObject({ prerequisites: ["SW-P5-021", "SW-P6-032"] })
+    expect(context?.subject).not.toHaveProperty("corequisites")
+    expect(queries.join(" ")).not.toMatch(/tipo_requisito|campus/)
   })
 })

@@ -4,16 +4,16 @@ import { SortableHead, SortSelect, SortStatus } from "@/components/domain/TableS
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table"
 import { useTableSort, type SortColumns } from "@/composables/useTableSort"
 
-type Row = { id: string; name: string; campus: string }
+type Row = { id: string; name: string; city: string }
 
 const rows: Row[] = [
-  { id: "1", name: "Salud", campus: "Norte" },
-  { id: "2", name: "Ciencias", campus: "Matriz" },
+  { id: "1", name: "Salud", city: "Norte" },
+  { id: "2", name: "Ciencias", city: "Matriz" },
 ]
 
 const columns = {
   name: { label: "Facultad", value: (row: Row) => row.name },
-  campus: { label: "Campus", value: (row: Row) => row.campus },
+  city: { label: "Ciudad", value: (row: Row) => row.city },
 } satisfies SortColumns<Row>
 
 function Probe() {
@@ -26,14 +26,14 @@ function Probe() {
         <TableHeader>
           <TableRow>
             <SortableHead sort={sort} column="name">Facultad</SortableHead>
-            <SortableHead sort={sort} column="campus">Campus</SortableHead>
+            <SortableHead sort={sort} column="city">Ciudad</SortableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {sort.items.map((row) => (
             <TableRow key={row.id}>
               <TableCell>{row.name}</TableCell>
-              <TableCell>{row.campus}</TableCell>
+              <TableCell>{row.city}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -56,7 +56,7 @@ describe("encabezados ordenables", () => {
 
     expect(names()).toEqual(["Ciencias", "Salud"])
     expect(screen.getByRole("columnheader", { name: "Facultad" }).getAttribute("aria-sort")).toBe("ascending")
-    expect(screen.getByRole("columnheader", { name: "Campus" }).hasAttribute("aria-sort")).toBe(false)
+    expect(screen.getByRole("columnheader", { name: "Ciudad" }).hasAttribute("aria-sort")).toBe(false)
     expect(document.activeElement).toBe(button)
     expect(screen.getByRole("status").textContent).toBe("Ordenado por Facultad, ascendente, 2 filas")
 

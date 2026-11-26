@@ -26,8 +26,6 @@ type CatalogActionsProps = {
   facultyId?: string | null
   modality?: string | null
   modalityOptions: Option[]
-  campus?: string | null
-  campusOptions: Option[]
   catalogLibraries?: string[]
   startsOn?: string | null
   endsOn?: string | null
@@ -53,8 +51,6 @@ export function CatalogActions({
   facultyId,
   modality,
   modalityOptions,
-  campus,
-  campusOptions,
   catalogLibraries = NO_LIBRARIES,
   startsOn,
   endsOn,
@@ -181,9 +177,7 @@ export function CatalogActions({
         recordCode={recordCode ?? null}
         facultyId={facultyId}
         modality={modality}
-        campus={campus}
         catalogLibraries={catalogLibraries}
-        campusOptions={campusOptions}
         modalityOptions={modalityOptions}
         logoUrl={logoUrl}
         startsOn={startsOn}

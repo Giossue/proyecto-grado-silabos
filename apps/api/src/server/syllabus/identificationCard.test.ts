@@ -14,19 +14,18 @@ describe("identification card", () => {
           cycle: 7,
           organization_unit: "Unidad profesional",
           prerequisites: ["SW-P6-032"],
-          corequisites: [],
           hours_ac: 32,
           hours_pae: 16,
           hours_aa: 48,
           total_hours: 96,
           credits: 2,
         },
-        scheduled_subject: { period: "Marzo – Julio 2026", campus: "Matriz", modality: "Presencial", teaching_weeks: 16 },
+        scheduled_subject: { period: "Marzo – Julio 2026", modality: "Presencial", teaching_weeks: 16 },
       },
       ["A"],
       ["NOMBRE DEL DOCENTE"],
       ["docente@ueb.edu.ec"],
-      { discapacidad_tiene: "No", formacion_experiencia: "Formación y experiencia en el área de la asignatura." },
+      { discapacidad_tiene: "No", formacion_experiencia: "Formación y experiencia en el área de la asignatura.", campus_universitario: "Matriz", correquisitos: "Ninguno" },
     )
     expect({ ...data, shift: "Matutina" }).toEqual(IDENTIFICATION_SAMPLE)
     expect(Object.keys(data)).toEqual(Object.keys(IDENTIFICATION_SAMPLE))
@@ -60,7 +59,8 @@ describe("identification card", () => {
     expect(data.cycle).toBe("Séptimo")
     expect(data.parallel).toBe("A, B")
     expect(data.prerequisites).toBe("SW-P6-032")
-    expect(data.corequisites).toBe("Ninguno")
+    expect(data.teacher_corequisites).toBe("Ninguno")
+    expect(data.teacher_campus).toBe("Matriz")
     expect(data.total_hours).toBe("96")
     expect(data.shift).toBe("")
     expect(data.disability).toBe("si")
@@ -79,11 +79,32 @@ describe("identification card", () => {
       ["docente@ueb.edu.ec"],
     )
     expect(data.period).toBe("Noviembre 2025 – Marzo 2026")
-    expect(data.campus).toBe("Matriz")
+    expect(data.teacher_campus).toBe("Matriz")
     expect(data.disability).toBe("no")
   })
 
-  it("builds the card of a syllabus from its snapshot, live parallel, current teachers and the formation field", () => {
+  it("takes the campus and the corequisites from what the teacher wrote", () => {
+    const context = { subject: { name: "Redes", prerequisites: ["SW-P6-032"] }, scheduled_subject: { period: "2026-1", modality: "Presencial" } }
+    const written = buildIdentification(context, ["A"], [], [], { campus_universitario: " Guaranda ", correquisitos: "SW-P7-040, SW-P7-041" })
+    expect(written.teacher_campus).toBe("Guaranda")
+    expect(written.teacher_corequisites).toBe("SW-P7-040, SW-P7-041")
+    expect(written.prerequisites).toBe("SW-P6-032")
+    const blank = buildIdentification(context, ["A"], [], [], { campus_universitario: "", correquisitos: "" })
+    expect(blank.teacher_campus).toBe("")
+    expect(blank.teacher_corequisites).toBe("")
+    expect(blank).not.toHaveProperty("campus")
+    expect(blank).not.toHaveProperty("corequisites")
+  })
+
+  it("keeps the campus and the corequisites stored in the context of a syllabus created before the teacher filled them", () => {
+    const stored = { subject: { name: "Redes", prerequisites: [], corequisites: ["SW-P7-040"] }, scheduled_subject: { campus: "Matriz" } }
+    expect(buildIdentification(stored, [], [], [])).toMatchObject({ teacher_campus: "Matriz", teacher_corequisites: "SW-P7-040", prerequisites: "Ninguno" })
+    const none = { subject: { name: "Redes", corequisites: [] }, scheduled_subject: { campus: "Matriz" } }
+    expect(buildIdentification(none, [], [], []).teacher_corequisites).toBe("Ninguno")
+    expect(buildIdentification(stored, [], [], [], { campus_universitario: "Guaranda", correquisitos: "Ninguno" })).toMatchObject({ teacher_campus: "Guaranda", teacher_corequisites: "Ninguno" })
+  })
+
+  it("builds the card of a syllabus from its snapshot, live parallel, current teachers and the teacher fields", () => {
     const data = identificationOf({
       context: { subject: { name: "Redes", hours_ac: "48.50", cycle: "11" }, parallel: { code: "B" } },
       parallelCode: "A",
@@ -94,7 +115,11 @@ describe("identification card", () => {
         { name: "Luis", email: "luis@ueb.edu.ec" },
       ],
       formation: "Magíster\n\nDoctor",
+      campus: "Guaranda",
+      corequisites: "SW-P7-040",
     })
+    expect(data.teacher_campus).toBe("Guaranda")
+    expect(data.teacher_corequisites).toBe("SW-P7-040")
     expect(data.parallel).toBe("B")
     expect(data.shift).toBe("Vespertina")
     expect(data.teacher).toBe("Ana, Luis")

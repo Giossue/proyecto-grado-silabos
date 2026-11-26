@@ -8,7 +8,7 @@ import { createTemplateStore } from "../shared/templateStore"
 import type { DraftFieldRecord, DraftFieldStore, DraftFieldTx, DraftSyllabus } from "./draftField"
 import type { IdentificationSource } from "./identificationCard"
 import { currentTeacherSql, SYLLABUS_EXISTS, writtenBySql } from "./syllabusSql"
-import { formationOf } from "./teacherFields"
+import { CAMPUS_FIELD, COREQUISITES_FIELD, FORMATION_FIELD, teacherFieldText } from "./teacherFields"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export async function syllabusFacts(executor: Executor, id: string, userId: string): Promise<DraftSyllabus | null> {
@@ -49,7 +49,9 @@ export async function identificationSource(executor: Executor, syllabusId: strin
     parallelCode: syllabus?.code ?? null,
     parallelShift: syllabus?.shift ?? null,
     teachers,
-    formation: await formationOf(executor, syllabusId),
+    formation: await teacherFieldText(executor, syllabusId, FORMATION_FIELD),
+    campus: await teacherFieldText(executor, syllabusId, CAMPUS_FIELD),
+    corequisites: await teacherFieldText(executor, syllabusId, COREQUISITES_FIELD),
   }
 }
 

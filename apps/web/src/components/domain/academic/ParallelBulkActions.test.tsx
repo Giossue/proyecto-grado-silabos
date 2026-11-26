@@ -47,7 +47,6 @@ const item = (id: string, parallels: Parallel[]): Row => ({
   subject_name: id,
   subject_cycle: 1,
   generates_syllabus: true,
-  campus_name: null,
   modality_name: null,
   parallels,
   editable: true,

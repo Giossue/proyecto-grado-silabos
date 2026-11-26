@@ -59,7 +59,7 @@ function deps(): DraftFieldDeps {
         log.push("stored")
         return values.get(`${syllabusId}:${field}`) ?? null
       },
-      identification: async () => ({ context: { subject: { name: "Redes" }, career: { name: "Software" } }, parallelCode: "A", parallelShift: "matutina", teachers, formation: "Magíster" }),
+      identification: async () => ({ context: { subject: { name: "Redes" }, career: { name: "Software" } }, parallelCode: "A", parallelShift: "matutina", teachers, formation: "Magíster", campus: null, corequisites: null }),
       transaction: async (work) => {
         log.push("begin")
         const before = new Map(values)

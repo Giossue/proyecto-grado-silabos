@@ -25,7 +25,7 @@ import { careerSchema, facultySchema, periodSchema } from "@silabos/shared/schem
 import type { CatalogRecord, GovernanceCatalogEntity } from "@/types/academic"
 
 type Option = { value: string; label: string }
-type EditForm = { nombre: string; code: string; faculty_id: string; campus: string; modality: string; starts_on: string; ends_on: string }
+type EditForm = { nombre: string; code: string; faculty_id: string; modality: string; starts_on: string; ends_on: string }
 
 type CatalogEditDialogProps = {
   entity: GovernanceCatalogEntity
@@ -34,12 +34,10 @@ type CatalogEditDialogProps = {
   recordCode?: string | null
   facultyId?: string | null
   modality?: string | null
-  campus?: string | null
   startsOn?: string | null
   endsOn?: string | null
   modalityOptions: Option[]
   faculties: CatalogRecord[]
-  campusOptions: Option[]
   lockReason?: string | null
   logoUrl?: string | null
   showTrigger?: boolean
@@ -53,7 +51,7 @@ type CatalogEditDialogProps = {
 
 const NO_ACTIONS: DialogAction[] = []
 const NO_LIBRARIES: string[] = []
-const FIELD_ERRORS = ["nombre", "code", "faculty_id", "campus", "modality", "starts_on", "ends_on", "logo", "catalog_libraries"]
+const FIELD_ERRORS = ["nombre", "code", "faculty_id", "modality", "starts_on", "ends_on", "logo", "catalog_libraries"]
 const ENTITY_LABELS: Record<GovernanceCatalogEntity, string> = { facultad: "facultad", carrera: "carrera", periodo: "periodo académico" }
 const editSchema = (entity: GovernanceCatalogEntity, values: EditForm) =>
   entity === "facultad" ? facultySchema({ updating: true }) : entity === "carrera" ? careerSchema({ updating: true }) : periodSchema({ startsOn: values.starts_on, creating: false })
@@ -67,12 +65,10 @@ export function CatalogEditDialog({
   recordCode,
   facultyId,
   modality,
-  campus,
   startsOn,
   endsOn,
   modalityOptions,
   faculties,
-  campusOptions,
   lockReason,
   logoUrl,
   showTrigger = true,
@@ -87,7 +83,6 @@ export function CatalogEditDialog({
     nombre: recordName,
     code: recordCode ?? "",
     faculty_id: facultyId ?? "",
-    campus: campus ?? "",
     modality: modality ?? "",
     starts_on: startsOn ?? "",
     ends_on: endsOn ?? "",
@@ -275,7 +270,6 @@ export function CatalogEditDialog({
                 </TabsList>
                 <TabsContent value="datos" className="flex flex-col gap-7">
                   {nameField}
-                  {selectField("campus", `edit-campus-${recordId}`, "Campus", "Seleccione el campus de la facultad", campusOptions)}
                   <Field data-invalid={Boolean(errors.logo)}>
                     <FieldLabel htmlFor={`edit-faculty-logo-${recordId}`} required={logoRequired}>
                       Logo de la facultad

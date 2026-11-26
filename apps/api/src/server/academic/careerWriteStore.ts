@@ -218,7 +218,7 @@ export function careerWriteTx(db: Db, afterCommit: AfterCommit, now: number, opt
   }
 }
 
-const REQUIREMENT = Prisma.sql`requisitos_asignatura.requisito_asignatura_id::text as id, requisitos_asignatura.tipo_requisito_asignatura as type`
+const REQUIREMENT = Prisma.sql`requisitos_asignatura.requisito_asignatura_id::text as id`
 
 export function curriculumTx(db: Db, afterCommit: AfterCommit, now: number, options: WriteOptions = {}): CurriculumTx {
   const { work: progress, notice } = work(db, afterCommit, now, options)
@@ -241,17 +241,17 @@ export function curriculumTx(db: Db, afterCommit: AfterCommit, now: number, opti
     prerequisites: (careerId) =>
       db.$queryRaw<{ subjectId: string; requirementId: string }[]>`select requisitos_asignatura.asignatura_id::text as "subjectId", requisitos_asignatura.requisito_id::text as "requirementId"
         from requisitos_asignatura
-        where requisitos_asignatura.tipo_requisito_asignatura = ${"prerrequisito"} and ${SUBJECT_IN_CAREER(Prisma.sql`requisitos_asignatura.asignatura_id`, careerId)}`,
+        where ${SUBJECT_IN_CAREER(Prisma.sql`requisitos_asignatura.asignatura_id`, careerId)}`,
     findRequirement: (subjectId, requirementId) =>
       first(
         db,
         Prisma.sql`select ${REQUIREMENT} from requisitos_asignatura
           where requisitos_asignatura.asignatura_id = ${subjectId}::uuid and requisitos_asignatura.requisito_id = ${requirementId}::uuid limit 1`,
       ),
-    async insertRequirement(subjectId, requirementId, type) {
+    async insertRequirement(subjectId, requirementId) {
       const id = uuid7()
-      await db.$executeRaw`insert into requisitos_asignatura (requisito_asignatura_id, asignatura_id, requisito_id, tipo_requisito_asignatura)
-        values (${id}::uuid, ${subjectId}::uuid, ${requirementId}::uuid, ${type})`
+      await db.$executeRaw`insert into requisitos_asignatura (requisito_asignatura_id, asignatura_id, requisito_id)
+        values (${id}::uuid, ${subjectId}::uuid, ${requirementId}::uuid)`
       return id
     },
     lockRequirement: (requirementId, careerId) =>

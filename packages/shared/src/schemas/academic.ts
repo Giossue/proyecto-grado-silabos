@@ -8,13 +8,6 @@ export const CURRICULAR_UNITS: Record<string, string> = {
   integracion_curricular: "Unidad de integración curricular",
 }
 export const SHIFTS = ["matutina", "vespertina", "nocturna"]
-export const CAMPUSES = [
-  "Campus Matriz Dr. Gabriel Galarza López",
-  "Campus Laguacoto",
-  "Campus CENI (Centro de Eventos Nacionales e Internacionales)",
-  "Extensión San Miguel",
-  "Sede Chimbo",
-]
 
 export const CYCLE_LIMIT = 30
 export const CODE_MAX = 80
@@ -35,7 +28,6 @@ export function facultySchema({ updating }: { updating: boolean }) {
   return z
     .object({
       nombre: requiredField("nombre", [is.string(), is.max(NAME_MAX)]),
-      campus: requiredField("campus", [is.oneOf(CAMPUSES)]),
       catalog_libraries: sometimesField("catalog libraries", [is.array(), is.max(LIBRARIES_MAX)]),
       ...(updating ? { confirm_purge: purge() } : {}),
     })
@@ -89,7 +81,6 @@ export function requirementSchema({ subjectId, hasSubject }: { subjectId: unknow
       is.uuid(),
       is.satisfying((value) => !(hasSubject && value === subjectId), "Los campos materia requisito y materia deben ser diferentes."),
     ]),
-    type: requiredField("tipo", [is.string(), is.max(30), is.oneOf(["prerrequisito", "correquisito"])]),
   })
 }
 

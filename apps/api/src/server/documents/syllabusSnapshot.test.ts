@@ -25,6 +25,8 @@ const source = (): SnapshotSource => ({
     parallelShift: "matutina",
     teachers: [{ name: "Ana Pérez", email: "ana@ueb.edu.ec" }],
     formation: "Magíster",
+    campus: "Matriz",
+    corequisites: null,
   }),
   archivedFields: async () => archived,
   logos: { faculty: async () => null },

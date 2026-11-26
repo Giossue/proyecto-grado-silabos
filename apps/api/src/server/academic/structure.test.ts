@@ -22,7 +22,7 @@ const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const SHIFTS = '"shiftOptions":[{"value":"matutina","label":"Matutina"},{"value":"vespertina","label":"Vespertina"},{"value":"nocturna","label":"Nocturna"}]'
 const MODALITIES =
   '[{"value":"Presencial","label":"Presencial"},{"value":"Semipresencial","label":"Semipresencial"},{"value":"En línea","label":"En línea"},{"value":"A distancia","label":"A distancia"},{"value":"Híbrida","label":"Híbrida"}]'
-const BASE_OPTIONS = `"faculties":[],"careers":[],"periods":[],"campusOptions":[],"modalityOptions":${MODALITIES},${SHIFTS},"currentCurricula":[],"activeSubjects":[],"scheduledSubjects":[]`
+const BASE_OPTIONS = `"faculties":[],"careers":[],"periods":[],"modalityOptions":${MODALITIES},${SHIFTS},"currentCurricula":[],"activeSubjects":[],"scheduledSubjects":[]`
 
 let world: FakeWorld
 let careers: Map<string, CareerRecord>
@@ -59,7 +59,7 @@ const repository = (): AcademicStructureRepository => ({
   curriculumSubjects: async (id) => (id === CAREER ? subjects : []),
   requirements: async (ids) => {
     calls.push(`requirements:${ids.join(",")}`)
-    return ids.length < 2 ? [] : [{ id: "r-1", subjectId: ids[1], requirementId: ids[0], type: "prerrequisito" }]
+    return ids.length < 2 ? [] : [{ id: "r-1", subjectId: ids[1], requirementId: ids[0] }]
   },
   teacherAssignments: async () => assignments,
   careerTeachers: async () => teachers,
@@ -146,7 +146,7 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
         `{"career":{"id":"${CAREER}","name":"Software","modality":{"value":"Presencial","label":"Presencial"}},` +
         `"curriculum":{"id":"${CAREER}","cycle_count":4,"editable":true,"lock_reason":null,"lock":null},` +
         `${fixed},${totals},"subjects":[${first},${second}],` +
-        `"requirements":[{"id":"r-1","subject_id":"01a1c5bc-7d0a-7172-b554-6ae09a4da972","requirement_id":"01a1c5bc-7cbf-7091-860c-63a02b91e998","type":"prerrequisito"}],` +
+        `"requirements":[{"id":"r-1","subject_id":"01a1c5bc-7d0a-7172-b554-6ae09a4da972","requirement_id":"01a1c5bc-7cbf-7091-860c-63a02b91e998"}],` +
         `"modalityOptions":${MODALITIES},` +
         '"organizationUnitOptions":[{"value":"basica","label":"Unidad básica"},{"value":"profesional","label":"Unidad profesional"},{"value":"integracion_curricular","label":"Unidad de integración curricular"}],' +
         `"options":{${BASE_OPTIONS},"parallels":[],"teacherUsers":[]}}`,

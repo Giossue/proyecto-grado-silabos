@@ -11,7 +11,7 @@ import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/
 import { storageWriter, type StorageWriter } from "../http/storageWriter"
 import { uuid7 } from "../http/uuid7"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { CAMPUSES, careerSchema, facultySchema, periodSchema, statusSchema } from "@silabos/shared/schemas/academic"
+import { careerSchema, facultySchema, periodSchema, statusSchema } from "@silabos/shared/schemas/academic"
 import { mergeErrors, validateSchema } from "../http/schemaValidation"
 import { GenerationRejected, requestBoolean } from "../syllabus/inProgressWorkHelpers"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
@@ -20,14 +20,12 @@ import { CONVOCATION_LOCK_REASON } from "./structure"
 import type { StoredObjectInput } from "./supportDocumentWrites"
 import { unmatchedRoute } from "../http/router"
 
-export { CAMPUSES }
-
-export type FacultyRow = { id: string; name: string; campus: string; libraries: string | null }
+export type FacultyRow = { id: string; name: string; libraries: string | null }
 export type CareerRow = { id: string; facultyId: string; code: string; name: string; modality: string | null }
 export type PeriodRow = { id: string; code: string; startsOn: string; endsOn: string; weeks: number | null }
 export type CareerData = { facultyId: string; modality: string; code: string; name: string; cycleCount: number }
 export type PeriodData = { code: string; startsOn: string; endsOn: string; weeks: number }
-export type FacultyData = { name: string; campus: string; libraries: PhpValue[] }
+export type FacultyData = { name: string; libraries: PhpValue[] }
 export type GovernanceFiles = { storage: StorageWriter; newObjectId: () => string; newLogoId: () => string }
 
 export interface GovernanceWriteTx {
@@ -232,7 +230,7 @@ export async function createGovernanceRecord(request: Request, entity: string, d
         async () => {
           let created: string
           if (entity === "facultad") {
-            created = await tx.createFaculty({ name: input.nombre as string, campus: input.campus as string, libraries: isPhpArray(input.catalog_libraries) ? Object.values(input.catalog_libraries) : [] })
+            created = await tx.createFaculty({ name: input.nombre as string, libraries: isPhpArray(input.catalog_libraries) ? Object.values(input.catalog_libraries) : [] })
             const objectId = await storeFacultyLogo(tx, deps, created, logoOf(body) as UploadedFile)
             await tx.updateColumns("facultad", created, { logo_archivo_id: objectId })
           } else if (entity === "carrera") {
@@ -352,7 +350,6 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
             const libraries = input.catalog_libraries === undefined ? null : Object.values(input.catalog_libraries as PhpArray)
             const dirty: Dirty[] = []
             if (faculty.name !== input.nombre) dirty.push({ column: "nombre_facultad", before: faculty.name, after: input.nombre })
-            if (faculty.campus !== input.campus) dirty.push({ column: "campus_facultad", before: faculty.campus, after: input.campus })
             if (libraries !== null && !sameLibraries(faculty.libraries, libraries)) dirty.push({ column: "bibliotecas_koha_facultad", before: faculty.libraries, after: libraries })
             if (dirty.length === 0 && logo === null) return
             const columns: Record<string, unknown> = Object.fromEntries(dirty.map((item) => [item.column, item.after]))

@@ -87,7 +87,7 @@ const detailStore = (): SyllabusDetailStore => ({
       .filter((candidate) => candidate.id !== syllabus.id && candidate.subjectId === syllabus.subjectId && candidate.convocationId === syllabus.convocationId)
       .filter((candidate) => candidate.state !== "sin_iniciar" && candidate.currentTeacher)
       .map((candidate): CopySource => ({ id: candidate.id, parallel: candidate.parallel, state: candidate.state })),
-  identification: async () => ({ context: rows.get(TARGET)?.context ?? {}, parallelCode: "A", parallelShift: "matutina", teachers: [{ name: "Ana Pérez", email: "ana@ueb.edu.ec" }], formation: null }),
+  identification: async () => ({ context: rows.get(TARGET)?.context ?? {}, parallelCode: "A", parallelShift: "matutina", teachers: [{ name: "Ana Pérez", email: "ana@ueb.edu.ec" }], formation: null, campus: null, corequisites: null }),
   fieldContents: async () => new Map(),
 })
 

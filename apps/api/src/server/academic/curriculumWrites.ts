@@ -22,9 +22,9 @@ export interface CurriculumTx {
   updateCycleCount(careerId: string, cycleCount: number): Promise<void>
   lockSubjects(careerId: string, subjectIds: string[]): Promise<{ id: string; cycle: number | null }[]>
   prerequisites(careerId: string): Promise<{ subjectId: string; requirementId: string }[]>
-  findRequirement(subjectId: string, requirementId: string): Promise<{ id: string; type: string } | null>
-  insertRequirement(subjectId: string, requirementId: string, type: string): Promise<string>
-  lockRequirement(requirementId: string, careerId: string): Promise<{ id: string; type: string } | null>
+  findRequirement(subjectId: string, requirementId: string): Promise<{ id: string } | null>
+  insertRequirement(subjectId: string, requirementId: string): Promise<string>
+  lockRequirement(requirementId: string, careerId: string): Promise<{ id: string } | null>
   deleteRequirement(requirementId: string): Promise<void>
   lockSubject(subjectId: string, careerId: string): Promise<CurriculumSubject | null>
   subjectUsage(subjectId: string): Promise<{ parallels: number; syllabi: number }>
@@ -102,21 +102,17 @@ function createsCycle(relations: { subjectId: string; requirementId: string }[],
 export async function addRequirement(tx: CurriculumTx, career: CurriculumCareer, context: CareerContext, input: PhpArray): Promise<string> {
   const subjectId = input.subject_id as string
   const requirementId = input.requirement_id as string
-  const type = input.type as string
   const subjects = await tx.lockSubjects(career.id, [subjectId, requirementId])
   if (subjects.length !== 2) throw invalid("requirement_id", "Ambas materias deben pertenecer a la malla actual.")
   const subjectCycle = subjects.find((subject) => subject.id === subjectId)?.cycle ?? 0
   const requirementCycle = subjects.find((subject) => subject.id === requirementId)?.cycle ?? 0
-  if (type === "prerrequisito" && requirementCycle >= subjectCycle) throw invalid("requirement_id", "Un prerrequisito debe estar en un ciclo anterior.")
-  if (type === "correquisito" && requirementCycle !== subjectCycle) throw invalid("requirement_id", "Un correquisito debe estar en el mismo ciclo.")
-  if (type === "prerrequisito" && createsCycle(await tx.prerequisites(career.id), subjectId, requirementId)) {
+  if (requirementCycle >= subjectCycle) throw invalid("requirement_id", "Un prerrequisito debe estar en un ciclo anterior.")
+  if (createsCycle(await tx.prerequisites(career.id), subjectId, requirementId)) {
     throw invalid("requirement_id", "La relación produciría un ciclo de prerrequisitos.")
   }
-  const message = type === "correquisito" ? "Correquisito agregado." : "Prerrequisito agregado."
-  const existing = await tx.findRequirement(subjectId, requirementId)
-  if (existing !== null && existing.type !== type) throw invalid("requirement_id", "Esa materia ya está registrada con otro tipo de requisito.")
-  if (existing !== null) return message
-  await tx.insertRequirement(subjectId, requirementId, type)
+  const message = "Prerrequisito agregado."
+  if ((await tx.findRequirement(subjectId, requirementId)) !== null) return message
+  await tx.insertRequirement(subjectId, requirementId)
   await confirmedSync(tx, context, input)
   return message
 }

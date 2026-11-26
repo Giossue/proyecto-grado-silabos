@@ -9,6 +9,8 @@ export type IdentificationSource = {
   parallelShift: string | null
   teachers: IdentificationTeacher[]
   formation: string | null
+  campus: string | null
+  corequisites: string | null
 }
 
 const SHIFT_LABELS: Record<string, string> = { matutina: "Matutina", vespertina: "Vespertina", nocturna: "Nocturna" }
@@ -64,6 +66,12 @@ function scheduled(context: unknown, key: string): string {
   return text(dataGet(context, `scheduled_subject.${key}`) ?? dataGet(context, `offering.${key}`))
 }
 
+// Syllabi created before the teacher filled these rows keep the value stored in their academic context.
+function storedCorequisites(context: unknown): string {
+  const value = dataGet(context, "subject.corequisites")
+  return value === null ? "" : falsyAsNone(join(value))
+}
+
 export function buildIdentification(context: unknown, parallels: string[], teachers: string[], emails: string[], inputs: Record<string, string> = {}): Identification {
   const get = (path: string) => text(dataGet(context, path))
   const input = (key: string) => text(inputs[key] ?? null)
@@ -71,7 +79,7 @@ export function buildIdentification(context: unknown, parallels: string[], teach
     faculty: get("career.faculty"),
     career: get("career.name"),
     modality: scheduled(context, "modality"),
-    campus: scheduled(context, "campus"),
+    teacher_campus: input("campus_universitario") || scheduled(context, "campus"),
     subject: get("subject.name"),
     period: scheduled(context, "period"),
     cycle: cycle(dataGet(context, "subject.cycle")),
@@ -79,7 +87,7 @@ export function buildIdentification(context: unknown, parallels: string[], teach
     shift: "",
     code: get("subject.code"),
     prerequisites: falsyAsNone(join(dataGet(context, "subject.prerequisites"))),
-    corequisites: falsyAsNone(join(dataGet(context, "subject.corequisites"))),
+    teacher_corequisites: input("correquisitos") || storedCorequisites(context),
     organization_unit: get("subject.organization_unit"),
     hours_ac: identificationNumber(get("subject.hours_ac")),
     hours_pae: identificationNumber(get("subject.hours_pae")),
@@ -116,7 +124,7 @@ export function identificationOf(source: IdentificationSource): Identification {
     strings([contextString(source.context, "parallel.code", source.parallelCode)]),
     strings(source.teachers.map((teacher) => teacher.name)),
     strings(source.teachers.map((teacher) => teacher.email)),
-    { formacion_experiencia: source.formation ?? "" },
+    { formacion_experiencia: source.formation ?? "", campus_universitario: source.campus ?? "", correquisitos: source.corequisites ?? "" },
   )
   data.shift = strings([contextString(source.context, "parallel.shift", source.parallelShift)])
     .map((shift) => SHIFT_LABELS[shift] ?? ucfirst(shift))

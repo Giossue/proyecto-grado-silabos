@@ -130,8 +130,8 @@ beforeEach(() => {
   purge = null
   finalized = false
   faculties = new Map([
-    [FACULTY, { id: FACULTY, name: "Facultad de Ciencias", campus: "Campus Laguacoto", libraries: "[]", active: true }],
-    [OTHER_FACULTY, { id: OTHER_FACULTY, name: "Facultad Nueva", campus: "Campus Laguacoto", libraries: '["UEB"]', active: true }],
+    [FACULTY, { id: FACULTY, name: "Facultad de Ciencias", libraries: "[]", active: true }],
+    [OTHER_FACULTY, { id: OTHER_FACULTY, name: "Facultad Nueva", libraries: '["UEB"]', active: true }],
   ])
   careers = new Map([[CAREER, { id: CAREER, facultyId: FACULTY, code: "SW-8", name: "Software", modality: "Presencial", active: true, roles: false, inProgress: false }]])
   periods = new Map([[PERIOD, { id: PERIOD, code: "Noviembre-Marzo 2026-2027", startsOn: "2026-11-02", endsOn: "2027-03-12", weeks: 16, running: false }]])
@@ -155,11 +155,11 @@ describe("faculties with their logo", () => {
   const LOGO_PATH = `logos/facultades/${NEW_ID}/6b1d0c1e-3a5f-4c2b-9d8e-7f6a5b4c3d2e.png`
 
   it("creates a faculty with its catalog libraries and its logo fitted to 600 x 180", async () => {
-    const response = await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "Facultad de Salud", campus: "Campus Laguacoto", catalog_libraries: '["UEB","SALUD"]' }, { name: "logo.png", content: logo("rgba-800x400.png") }, (request) =>
+    const response = await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "Facultad de Salud", catalog_libraries: '["UEB","SALUD"]' }, { name: "logo.png", content: logo("rgba-800x400.png") }, (request) =>
       createGovernanceRecord(request, "facultad", deps()),
     )
     expect(response).toEqual({ status: 201, text: `{"message":"Registro institucional creado.","id":"${NEW_ID}"}` })
-    expect(createdFaculties).toEqual([{ name: "Facultad de Salud", campus: "Campus Laguacoto", libraries: ["UEB", "SALUD"] }])
+    expect(createdFaculties).toEqual([{ name: "Facultad de Salud", libraries: ["UEB", "SALUD"] }])
     const stored = readFileSync(storage.path("private", LOGO_PATH))
     expect([decodePng(stored).width, decodePng(stored).height]).toEqual([600, 180])
     expect(statSync(storage.path("private", LOGO_PATH)).mode & 0o777).toBe(0o600)
@@ -169,12 +169,12 @@ describe("faculties with their logo", () => {
     expect(log).toContain(`update:facultad:${NEW_ID}:${JSON.stringify({ logo_archivo_id: "01a2aaaa-0000-7000-8000-00000000f11e" })}`)
   })
 
-  it("requires a transparent PNG logo and a known campus when creating", async () => {
-    expect(await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "F", campus: "Otro" }, null, (request) => createGovernanceRecord(request, "facultad", deps()))).toEqual({
+  it("requires a transparent PNG logo when creating, and no longer asks for a campus", async () => {
+    expect(await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "F" }, null, (request) => createGovernanceRecord(request, "facultad", deps()))).toEqual({
       status: 422,
-      text: '{"message":"El valor seleccionado en campus no es válido. (y 1 error más)","errors":{"campus":["El valor seleccionado en campus no es válido."],"logo":["El campo logotipo es obligatorio."]}}',
+      text: '{"message":"El campo logotipo es obligatorio.","errors":{"logo":["El campo logotipo es obligatorio."]}}',
     })
-    expect(await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "F", campus: "Campus Laguacoto" }, { name: "logo.png", content: logo("opaque-64.png") }, (request) => createGovernanceRecord(request, "facultad", deps()))).toEqual({
+    expect(await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "F" }, { name: "logo.png", content: logo("opaque-64.png") }, (request) => createGovernanceRecord(request, "facultad", deps()))).toEqual({
       status: 422,
       text: '{"message":"El logo debe ser un PNG sin fondo (con transparencia).","errors":{"logo":["El logo debe ser un PNG sin fondo (con transparencia)."]}}',
     })
@@ -182,8 +182,16 @@ describe("faculties with their logo", () => {
     expect(objects).toEqual([])
   })
 
+  it("ignores a campus sent by an old client: the faculty is created without one", async () => {
+    const response = await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "Facultad de Salud", campus: "Campus Laguacoto" }, { name: "logo.png", content: logo("rgba-800x400.png") }, (request) =>
+      createGovernanceRecord(request, "facultad", deps()),
+    )
+    expect(response.status).toBe(201)
+    expect(createdFaculties).toEqual([{ name: "Facultad de Salud", libraries: [] }])
+  })
+
   it("replaces the logo of a faculty sent as POST with _method=PATCH", async () => {
-    const response = await sendForm("POST", `/api/v1/admin/academic/facultad/${FACULTY}`, { _method: "PATCH", nombre: "Facultad renovada", campus: "Campus Laguacoto" }, { name: "logo.png", content: logo("ga-300x300.png") }, (request) =>
+    const response = await sendForm("POST", `/api/v1/admin/academic/facultad/${FACULTY}`, { _method: "PATCH", nombre: "Facultad renovada" }, { name: "logo.png", content: logo("ga-300x300.png") }, (request) =>
       postGovernanceRecord(request, "facultad", FACULTY, deps()),
     )
     expect(response).toEqual({ status: 200, text: '{"message":"Datos institucionales actualizados."}' })
@@ -194,7 +202,7 @@ describe("faculties with their logo", () => {
   })
 
   it("rejects a logo that is not a file when updating", async () => {
-    expect((await update("facultad", FACULTY, { nombre: "F", campus: "Campus Laguacoto", logo: "archivo" })).json?.errors).toEqual({
+    expect((await update("facultad", FACULTY, { nombre: "F", logo: "archivo" })).json?.errors).toEqual({
       logo: ["El campo logotipo debe ser un archivo.", "El campo logotipo debe ser un archivo de tipo: image/png.", "Suba un archivo PNG."],
     })
   })
@@ -245,7 +253,7 @@ describe("POST /api/v1/admin/academic/{entity}", () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
     expect((await create("carrera", { ...careerBody, cycle_count: 8 })).text).toBe(FORBIDDEN)
     world.assignments = [makeAssignment({ role: "administrador", careerId: null })]
-    expect((await create("facultad", { nombre: "F" })).json?.errors).toEqual({ campus: ["El campo campus es obligatorio."], logo: ["El campo logotipo es obligatorio."] })
+    expect((await create("facultad", { nombre: "F" })).json?.errors).toEqual({ logo: ["El campo logotipo es obligatorio."] })
     expect((await create("periodo", { starts_on: "next monday", ends_on: "2027-03-20" })).json?.errors).toEqual({ starts_on: ["El campo fecha de inicio debe ser una fecha válida."] })
     expect((await create("periodo", { starts_on: "2026-13-01", ends_on: "2027-02-30" })).json?.errors).toEqual({
       starts_on: ["El campo fecha de inicio debe ser una fecha válida."],
@@ -287,8 +295,9 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}", () => {
     expect((await update("carrera", CAREER, { ...careerBody, nombre: "Otra", confirm_purge: true })).status).toBe(200)
   })
 
-  it("updates a faculty and syncs every career of it", async () => {
-    expect((await update("facultad", FACULTY, { nombre: "Facultad renovada", campus: "Campus Laguacoto", catalog_libraries: ["UEB"] })).status).toBe(200)
+  it("updates a faculty and syncs every career of it, never writing a campus", async () => {
+    expect((await update("facultad", FACULTY, { nombre: "Facultad renovada", campus: "Campus Matriz Dr. Gabriel Galarza López", catalog_libraries: ["UEB"] })).status).toBe(200)
+    expect(log).toContain(`update:facultad:${FACULTY}:${JSON.stringify({ nombre_facultad: "Facultad renovada", bibliotecas_koha_facultad: ["UEB"] })}`)
     expect(log).toContain(`sync:false:${CAREER}`)
   })
 

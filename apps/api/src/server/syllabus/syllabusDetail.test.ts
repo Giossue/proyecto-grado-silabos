@@ -42,6 +42,8 @@ const identificationSource = () => ({
   parallelShift: "Matutina",
   teachers: [{ name: "Ana Pérez", email: "ana@ueb.edu.ec" }],
   formation: null,
+  campus: null,
+  corequisites: null,
 })
 
 const store = (): SyllabusDetailStore => ({

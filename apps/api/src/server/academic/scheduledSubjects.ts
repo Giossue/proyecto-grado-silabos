@@ -18,7 +18,6 @@ export type ScheduledSubjectRecord = {
   cycle: number | null
   active: boolean
   generatesSyllabus: boolean
-  campus: string | null
   modality: string | null
 }
 
@@ -81,7 +80,6 @@ export async function scheduledSubjectsResponse(request: Request, career: Career
           subject_cycle: subject.cycle,
           profile_complete: done === undefined ? false : done.filled === done.total,
           generates_syllabus: subject.generatesSyllabus,
-          campus_name: subject.campus,
           modality_name: subject.modality,
           parallels: group.map((parallel) => ({
             id: parallel.id,
