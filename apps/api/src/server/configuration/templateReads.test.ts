@@ -8,6 +8,9 @@ import { fakeTemplateStore, goldenSample, goldenTemplate, goldenFields, TEMPLATE
 import { exportTemplateJson, teacherPreview, type TemplateReadDeps } from "./templateReads"
 import { documentLines } from "./documentHtml"
 import templateGolden from "./__fixtures__/template-golden.json"
+import { defineBlock } from "./blockDefinition"
+import { toRuntime } from "./templateDraft"
+import { defineAnyBlock } from "./templateShortForm"
 
 const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
@@ -140,7 +143,16 @@ describe("GET admin/template/{template}/json", () => {
     const response = await read(await exportJson(TEMPLATE_ID, { host: "silabos.ueb.edu.ec", "x-forwarded-proto": "https" }))
 
     expect(response.status).toBe(200)
-    expect(JSON.parse(response.text)).toEqual(JSON.parse(expected))
+    const body = JSON.parse(response.text) as Record<string, unknown>
+    const wanted = JSON.parse(expected) as Record<string, unknown>
+    expect({ ...body, blocks: null }).toEqual({ ...wanted, blocks: null })
+    const variables = Object.keys(definition.variables as Record<string, unknown>)
+    const exported = body.blocks as Record<string, Record<string, unknown>>
+    expect(Object.keys(exported)).toEqual(Object.keys(wanted.blocks as Record<string, unknown>))
+    for (const [kind, full] of Object.entries(wanted.blocks as Record<string, unknown>)) {
+      expect(exported[kind]).toHaveProperty("titulo")
+      expect(defineAnyBlock(kind, toRuntime(exported[kind]), variables)).toEqual(defineBlock(kind, toRuntime(full), variables))
+    }
   })
 
   it("is reserved to the Administrator role and leaves unknown templates to Laravel", async () => {

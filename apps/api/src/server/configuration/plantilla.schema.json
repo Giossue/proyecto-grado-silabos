@@ -1,7 +1,7 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Plantilla del sílabo (formato 2)",
-    "description": "Estructura del JSON que exporta e importa «Plantilla como JSON». El servidor valida además las reglas que este esquema no puede expresar. Manual: docs/architecture/template-json.md.",
+    "description": "Estructura del JSON que exporta e importa «Plantilla como JSON». El servidor valida además las reglas que este esquema no puede expresar. Manual: docs/sistema.md (JSON de la plantilla).",
     "type": "object",
     "required": ["version", "sections"],
     "additionalProperties": false,
@@ -18,9 +18,9 @@
         },
         "blocks": {
             "type": "object",
-            "description": "Piezas con datos, reglas y diseño propios. Se insertan con <div data-block=\"clave\"></div>.",
+            "description": "Piezas con datos, reglas y diseño propios. Se insertan con <div data-block=\"clave\"></div>. La exportación usa la forma corta (titulo, campos, reglas, catalogo, diseño); la importación acepta también la forma completa (label, value, rules, catalog, layout).",
             "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,40}$" },
-            "additionalProperties": { "$ref": "#/$defs/block" }
+            "additionalProperties": { "anyOf": [{ "$ref": "#/$defs/shortBlock" }, { "$ref": "#/$defs/block" }] }
         },
         "required_sections": { "type": "array", "items": { "type": "string" }, "description": "Secciones que la plantilla no puede quitar." },
         "library_sections": { "type": "array", "items": { "type": "string" }, "description": "Secciones que revisa Biblioteca." },
@@ -263,6 +263,122 @@
                         }
                     }
                 }
+            }
+        },
+        "shortType": {
+            "enum": ["texto", "texto largo", "número", "horas", "sí/no"],
+            "description": "texto: hasta 1000 caracteres en una línea. texto largo: igual, en varias líneas. número u horas: hasta 999.99 con 2 decimales. sí/no: opciones «si» (Sí) y «no» (No)."
+        },
+        "shortLeaf": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Un dato. Sin «tipo» es «texto». Solo se escribe lo que cambia del valor por defecto.",
+            "properties": {
+                "tipo": { "$ref": "#/$defs/shortType" },
+                "titulo": { "$ref": "#/$defs/title" },
+                "error": { "$ref": "#/$defs/errorMessage" },
+                "solo_si": { "$ref": "#/$defs/condition" },
+                "max": { "type": "number", "description": "Texto: máximo de caracteres (1000 por defecto). Número: valor máximo (999.99 por defecto)." },
+                "min": { "enum": [0, 1], "description": "Solo texto. 1: obligatorio." },
+                "decimales": { "type": "integer", "minimum": 0, "maximum": 6, "description": "Solo número. 2 por defecto." }
+            }
+        },
+        "shortChoice": {
+            "type": "object",
+            "required": ["opciones"],
+            "additionalProperties": false,
+            "properties": {
+                "titulo": { "$ref": "#/$defs/title" },
+                "error": { "$ref": "#/$defs/errorMessage" },
+                "solo_si": { "$ref": "#/$defs/condition" },
+                "opciones": {
+                    "type": "object",
+                    "minProperties": 1,
+                    "description": "Clave de la opción y su texto: {\"presencial\": \"Presencial\"}.",
+                    "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,40}$" },
+                    "additionalProperties": { "type": "string", "maxLength": 120 }
+                }
+            }
+        },
+        "shortList": {
+            "type": "object",
+            "required": ["columnas"],
+            "additionalProperties": false,
+            "properties": {
+                "titulo": { "$ref": "#/$defs/title", "description": "Nombre de cada fila (por ejemplo «unidad»)." },
+                "filas": { "type": "string", "pattern": "^\\s*\\d{1,3}\\s*-\\s*\\d{1,3}\\s*$", "description": "Mínimo y máximo de filas, por ejemplo «1-8». Sin «filas»: 0-100." },
+                "al_empezar": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Filas al empezar. Por defecto, el mínimo." },
+                "error": { "$ref": "#/$defs/errorMessage" },
+                "solo_si": { "$ref": "#/$defs/condition" },
+                "columnas": { "$ref": "#/$defs/shortFields" }
+            }
+        },
+        "shortGroup": {
+            "type": "object",
+            "required": ["campos"],
+            "additionalProperties": false,
+            "properties": {
+                "titulo": { "$ref": "#/$defs/title" },
+                "error": { "$ref": "#/$defs/errorMessage" },
+                "solo_si": { "$ref": "#/$defs/condition" },
+                "campos": { "$ref": "#/$defs/shortFields" }
+            }
+        },
+        "shortField": {
+            "anyOf": [
+                { "$ref": "#/$defs/shortType" },
+                { "$ref": "#/$defs/shortLeaf" },
+                { "$ref": "#/$defs/shortChoice" },
+                { "$ref": "#/$defs/shortList" },
+                { "$ref": "#/$defs/shortGroup" },
+                { "$ref": "#/$defs/value" }
+            ]
+        },
+        "shortFields": {
+            "type": "object",
+            "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,40}$" },
+            "additionalProperties": { "$ref": "#/$defs/shortField" }
+        },
+        "shortBlock": {
+            "type": "object",
+            "required": ["titulo"],
+            "additionalProperties": false,
+            "description": "Forma corta de un bloque. Lo que no se puede escribir corto va en la forma completa: un dato con «type» o una regla como objeto.",
+            "properties": {
+                "titulo": { "type": "string", "maxLength": 120 },
+                "propiedades": {
+                    "type": "object",
+                    "description": "Textos que fija la plantilla en cada aparición del bloque.",
+                    "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,40}$" },
+                    "additionalProperties": { "anyOf": [{ "enum": ["texto", "texto largo"] }, { "$ref": "#/$defs/shortLeaf" }, { "$ref": "#/$defs/text" }] }
+                },
+                "campos": { "$ref": "#/$defs/shortFields" },
+                "reglas": {
+                    "type": "array",
+                    "description": "Nombre de una regla conocida o la regla completa.",
+                    "items": {
+                        "anyOf": [
+                            { "enum": ["semanas_maximas", "unidades_sin_nombre", "unidades_sin_semanas", "semanas_unidades_incompletas", "horas_unidades_no_coinciden", "libros_sin_titulo"] },
+                            { "$ref": "#/$defs/rule" }
+                        ]
+                    }
+                },
+                "catalogo": {
+                    "type": "object",
+                    "description": "Llena las filas de una lista con libros del catálogo de la biblioteca: «lista» es la lista y «columnas» dice qué dato del libro va a cada columna de texto.",
+                    "required": ["lista", "columnas"],
+                    "additionalProperties": false,
+                    "properties": {
+                        "lista": { "$ref": "#/$defs/key" },
+                        "columnas": {
+                            "type": "object",
+                            "minProperties": 1,
+                            "propertyNames": { "enum": ["author", "title", "year", "place", "publisher", "isbn", "call_number", "format"] },
+                            "additionalProperties": { "$ref": "#/$defs/key" }
+                        }
+                    }
+                },
+                "diseño": { "$ref": "#/$defs/html" }
             }
         },
         "preset": {

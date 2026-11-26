@@ -10,12 +10,12 @@ const CODE = /^[a-z][a-z0-9_]{0,60}$/
 const NAME = /^[a-z][a-z0-9_]{0,40}$/
 const PATH = /^(\{[a-z][a-z0-9_.]*\}|[a-z][a-z0-9_]*|\*)(\.(\{[a-z][a-z0-9_.]*\}|[a-z][a-z0-9_]*|\*))*$/
 const TYPES = ["string", "number", "object", "array"]
-const MULTIPLES = [1, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]
+export const MULTIPLES = [1, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]
 const SLOT_SOURCES = ["value", "prop", "item", "counter", "sum", "count", "index"]
 const CONDITION_SOURCES = ["value", "prop", "item", "variable"]
 const CONDITION_TESTS = ["equals", "empty", "zero"]
 const CATALOG_FIELDS = ["author", "title", "year", "place", "publisher", "isbn", "call_number", "format"]
-const BLOCK_KEYS = ["label", "props", "value", "rules", "layout", "catalog"]
+export const BLOCK_KEYS = ["label", "props", "value", "rules", "layout", "catalog"]
 const LAYOUT_ONLY: TemplateDefinition = { document: {}, variables: {}, blocks: {} }
 
 export function pcreMatch(pattern: RegExp, subject: string): RegExpExecArray | null {

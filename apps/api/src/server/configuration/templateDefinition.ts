@@ -1,6 +1,7 @@
 import { defineBlock, given, pcreMatch } from "./blockDefinition"
 import { isList, isPhpArray, isRecord, isScalar, list, mbStrlen, phpIntCast, phpString, phpTrim, record, type PhpRecord } from "./phpValues"
 import { guardTable } from "./repeatableTable"
+import { defineAnyBlock } from "./templateShortForm"
 import { normalizeTemplateDocument, type TemplateDefinition } from "./templateRuntime"
 import { defineDocumentStyle, definitionError } from "./templateStyle"
 
@@ -124,7 +125,7 @@ export function defineTemplate(raw: unknown, sections: DraftSectionSource[] = []
   const rawBlocks = given(raw, "blocks") ?? []
   if (!isObjectLike(rawBlocks)) definitionError("«blocks» debe ser un objeto con una definición por bloque.")
   const blocks: Record<string, PhpRecord> = {}
-  for (const [kind, block] of entriesOf(rawBlocks)) blocks[kind] = defineBlock(kind, block, keys)
+  for (const [kind, block] of entriesOf(rawBlocks)) blocks[kind] = defineAnyBlock(kind, block, keys)
   const document = defineDocumentStyle(given(raw, "document") ?? [])
   const requiredSections = sectionKeys(given(raw, "required_sections") ?? [], "required_sections")
   const librarySections = sectionKeys(given(raw, "library_sections") ?? [], "library_sections")

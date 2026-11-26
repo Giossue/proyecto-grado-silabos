@@ -7,6 +7,10 @@ import { requestRoot } from "../http/request"
 import { apiJson, validationError } from "../http/responses"
 import { list, phpCount, phpShape, record, type PhpRecord } from "./phpValues"
 import { documentLines } from "./documentHtml"
+import { defineBlock } from "./blockDefinition"
+import { canonicalJson } from "../documents/canonicalJson"
+import { toRuntime } from "./templateDraft"
+import { defineAnyBlock, shortBlock } from "./templateShortForm"
 import { fieldConditions, fieldLimits, limitAllowed, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import { IDENTIFICATION_SAMPLE, syllabusSectionPayload, teacherFieldKeys, type SyllabusTemplate } from "./templatePresentation"
 import type { TemplateStore } from "../shared/templateStore"
@@ -88,14 +92,26 @@ export async function templateSchema(request: Request): Promise<Response> {
   return fromController(await binaryFileResponse(request, file, { "Content-Type": "application/schema+json", "Cache-Control": "public" }))
 }
 
-function exportedBlock(block: PhpRecord): PhpRecord {
-  return {
+function exportedBlock(kind: string, block: PhpRecord, variables: string[]): PhpRecord {
+  const full = {
     label: block.label,
     ...(phpCount(block.props ?? []) !== 0 ? { props: block.props } : {}),
     ...(phpCount(block.value ?? []) !== 0 ? { value: block.value } : {}),
     ...(phpCount(block.rules ?? []) !== 0 ? { rules: block.rules } : {}),
     ...(block.catalog !== undefined && block.catalog !== null ? { catalog: block.catalog } : {}),
     layout: documentLines({ type: "doc", content: block.layout }),
+  }
+  const short = shortBlock(block)
+  return importsAlike(kind, short, full, variables) ? short : full
+}
+
+function importsAlike(kind: string, short: PhpRecord, full: PhpRecord, variables: string[]): boolean {
+  const asImported = (value: unknown) => toRuntime(JSON.parse(JSON.stringify(phpShape(value))))
+  try {
+    return canonicalJson(defineAnyBlock(kind, asImported(short), variables)) === canonicalJson(defineBlock(kind, asImported(full), variables))
+  } catch (error) {
+    if (error instanceof TemplateValidationError) return false
+    throw error
   }
 }
 
@@ -113,7 +129,8 @@ export function exportTemplateJsonOf(request: Request, template: SyllabusTemplat
 export function templateExport(request: Request, template: SyllabusTemplate, definition: TemplateDefinition): PhpRecord {
   const conditions = fieldConditions(definition)
   const limits = fieldLimits(definition)
-  const blocks = Object.fromEntries(Object.entries(definition.blocks).map(([kind, block]) => [kind, exportedBlock(record(block))]))
+  const variables = Object.keys(definition.variables)
+  const blocks = Object.fromEntries(Object.entries(definition.blocks).map(([kind, block]) => [kind, exportedBlock(kind, record(block), variables)]))
   return {
     $schema: schemaUrl(request),
     version: EXPORT_FORMAT_VERSION,
