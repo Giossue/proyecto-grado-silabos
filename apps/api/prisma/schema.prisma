@@ -257,6 +257,8 @@ model envios_biblioteca {
   envio_biblioteca_id   String            @id @db.Uuid
   revision_silabo_id    String            @unique(map: "envios_biblioteca_revision_silabo_id_unica") @db.Uuid
   verificado_por        String?           @db.Uuid
+  creado_en             DateTime          @default(now()) @db.Timestamptz(6)
+  actualizado_en        DateTime          @default(now()) @db.Timestamptz(6)
   verificado_en         DateTime?         @db.Timestamptz(6)
   verificacion_heredada Boolean           @default(false)
   revisiones_silabo     revisiones_silabo @relation(fields: [revision_silabo_id], references: [revision_silabo_id], onUpdate: NoAction, map: "envios_biblioteca_revision_silabo_id_fk")
@@ -485,6 +487,7 @@ model revisiones_coordinacion {
 model revisiones_silabo {
   revision_silabo_id                                             String                   @id @db.Uuid
   silabo_id                                                      String                   @db.Uuid
+  actualizado_en                                                 DateTime                 @default(now()) @db.Timestamptz(6)
   revision_anterior_id                                           String?                  @db.Uuid
   numero_revision                                                Int                      @db.SmallInt
   clave_solicitud                                                String                   @db.Uuid
