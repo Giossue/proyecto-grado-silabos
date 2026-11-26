@@ -55,7 +55,6 @@ export async function scheduledSubjectsResponse(request: Request, career: Career
     const parallels = await deps.scheduled.careerParallels(career.id)
     const ids = parallels.map((parallel) => parallel.id)
     const withSyllabus = new Set(await deps.scheduled.parallelsWithSyllabus(ids))
-    const withTeacher = new Set(await deps.scheduled.parallelsWithTeacher(ids))
     const sent = new Set(await deps.scheduled.parallelsWithSentSyllabus(ids))
     const started = new Set(await deps.scheduled.parallelsWithStartedSyllabus(ids))
     const subjects = await deps.scheduled.careerSubjects(career.id)
@@ -89,7 +88,7 @@ export async function scheduledSubjectsResponse(request: Request, career: Career
             code: parallel.code,
             shift: parallel.shift,
             editable: true,
-            deletable: !withSyllabus.has(parallel.id) && !withTeacher.has(parallel.id),
+            deletable: !withSyllabus.has(parallel.id),
             sent_syllabus: sent.has(parallel.id),
             started_syllabus: started.has(parallel.id),
           })),

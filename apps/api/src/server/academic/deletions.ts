@@ -16,7 +16,7 @@ export interface DeletionTx {
   lockTeacherAssignment(id: string, careerId: string): Promise<{ id: string } | null>
   deleteTeacherAssignment(id: string): Promise<void>
   lockParallel(id: string, careerId: string): Promise<{ id: string; code: string } | null>
-  parallelHasTeacherAssignment(id: string): Promise<boolean>
+  deleteParallelAssignments(id: string): Promise<void>
   parallelHasTouchedSyllabus(id: string): Promise<boolean>
   deleteParallelSyllabi(id: string): Promise<void>
   deleteParallel(id: string): Promise<void>
@@ -65,7 +65,9 @@ export function deletionTx(tx: Runner): DeletionTx {
     lockParallel: (id, careerId) =>
       first(tx, Prisma.sql`select paralelos.paralelo_id::text as id, paralelos.codigo_paralelo as code from paralelos
         where paralelos.paralelo_id = ${id}::uuid and ${IN_CAREER(careerId)} limit 1 for update`),
-    parallelHasTeacherAssignment: (id) => exists(tx, Prisma.sql`select * from asignaciones_paralelo where paralelo_id = ${id}::uuid`),
+    async deleteParallelAssignments(id) {
+      await tx.$executeRaw`delete from asignaciones_paralelo where paralelo_id = ${id}::uuid`
+    },
     parallelHasTouchedSyllabus: (id) => exists(tx, Prisma.sql`select * from silabos where paralelo_id = ${id}::uuid and ${TOUCHED_SYLLABUS} and ${SYLLABUS_SCOPE}`),
     async deleteParallelSyllabi(id) {
       await tx.$executeRaw`delete from silabos where paralelo_id = ${id}::uuid and ${SYLLABUS_SCOPE}`
@@ -157,9 +159,9 @@ export async function deleteParallel(request: Request, parallelId: string, deps:
     async (tx) => {
       const parallel = await tx.lockParallel(parallelId, context.careerId)
       if (parallel === null) throw new Missing(MODELS.parallel)
-      if (await tx.parallelHasTeacherAssignment(parallel.id)) rejectWith("El paralelo tiene un docente asignado. Quite primero la asignación docente.")
       if (await tx.parallelHasTouchedSyllabus(parallel.id)) rejectWith("El paralelo ya tiene sílabo y no puede eliminarse.")
       await tx.deleteParallelSyllabi(parallel.id)
+      await tx.deleteParallelAssignments(parallel.id)
       await tx.deleteParallel(parallel.id)
     },
     "Paralelo eliminado.",

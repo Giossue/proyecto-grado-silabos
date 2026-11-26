@@ -105,7 +105,7 @@ const deletionTx: DeletionTx = {
   lockTeacherAssignment: async () => null,
   deleteTeacherAssignment: async (id) => void log(`deleteTeacherAssignment:${id}`),
   lockParallel: async (id) => (id === PARALLEL ? { id, code: "A" } : null),
-  parallelHasTeacherAssignment: async () => false,
+  deleteParallelAssignments: async () => undefined,
   parallelHasTouchedSyllabus: async () => false,
   deleteParallelSyllabi: async (id) => void log(`deleteParallelSyllabi:${id}`),
   deleteParallel: async (id) => void log(`deleteParallel:${id}`),

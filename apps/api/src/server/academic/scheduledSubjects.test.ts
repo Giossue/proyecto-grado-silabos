@@ -107,7 +107,7 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
         `"scheduledSubjects":[` +
         `{"subject_id":"${ALGORITHMS}","label":"SW-B1-001 · Algoritmos","subject_code":"SW-B1-001","subject_name":"Algoritmos","subject_cycle":1,"profile_complete":false,"generates_syllabus":true,"campus_name":"Campus Laguacoto","modality_name":"Presencial","parallels":[` +
         `{"id":"p-a","code":"A","shift":"matutina","editable":true,"deletable":false,"sent_syllabus":true,"started_syllabus":true},` +
-        `{"id":"p-b","code":"B","shift":"nocturna","editable":true,"deletable":false,"sent_syllabus":false,"started_syllabus":false}],"editable":true},` +
+        `{"id":"p-b","code":"B","shift":"nocturna","editable":true,"deletable":true,"sent_syllabus":false,"started_syllabus":false}],"editable":true},` +
         `{"subject_id":"${RETIRED_WITH_PARALLEL}","label":"SW-B1-003 · Retirada con paralelo","subject_code":"SW-B1-003","subject_name":"Retirada con paralelo","subject_cycle":null,"profile_complete":false,"generates_syllabus":false,"campus_name":null,"modality_name":null,"parallels":[` +
         `{"id":"p-r","code":"C","shift":"vespertina","editable":true,"deletable":true,"sent_syllabus":false,"started_syllabus":true}],"editable":true},` +
         `{"subject_id":"${NETWORKS}","label":"SW-B2-004 · Redes","subject_code":"SW-B2-004","subject_name":"Redes","subject_cycle":2,"profile_complete":true,"generates_syllabus":true,"campus_name":"Campus Laguacoto","modality_name":"Presencial","parallels":[],"editable":true}],` +

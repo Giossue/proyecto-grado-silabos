@@ -50,7 +50,9 @@ const store = (): AcademicDeletionStore => ({
         const parallel = parallels.get(id)
         return parallel?.careerId === careerId ? { id, code: parallel.code } : null
       },
-      parallelHasTeacherAssignment: async (id) => (parallels.get(id)?.teacherAssignments ?? 0) > 0,
+      async deleteParallelAssignments(id) {
+        if ((parallels.get(id)?.teacherAssignments ?? 0) > 0) staged.push({ op: "delete asignaciones_paralelo", parallel: id })
+      },
       parallelHasTouchedSyllabus: async (id) => (parallels.get(id)?.syllabi ?? []).some((syllabus) => syllabus.touched),
       async deleteParallelSyllabi(id) {
         staged.push({ op: "delete silabos", parallel: id, count: parallels.get(id)?.syllabi.length ?? 0 })
@@ -209,14 +211,21 @@ describe("DELETE /api/v1/coordination/academic/parallels/{parallel}", () => {
     ])
   })
 
-  it("keeps a parallel with a teacher assignment", async () => {
+  it("deletes a parallel with a teacher in one step, removing its teacher assignments first", async () => {
     asRole("coordinador", CAREER)
-    parallels.set(PARALLEL, { careerId: CAREER, code: "A", teacherAssignments: 1, syllabi: [] })
-    const message = "El paralelo tiene un docente asignado. Quite primero la asignación docente."
-    expect(await read(await deleteParallel(remove(path), PARALLEL, deps()))).toEqual({
-      status: 422,
-      text: `{"message":"${message}","errors":{"record":["${message}"]}}`,
-    })
+    parallels.set(PARALLEL, { careerId: CAREER, code: "A", teacherAssignments: 1, syllabi: [{ touched: false }] })
+    expect(await read(await deleteParallel(remove(path), PARALLEL, deps()))).toEqual({ status: 200, text: '{"message":"Paralelo eliminado."}' })
+    expect(committed).toEqual([
+      { op: "delete silabos", parallel: PARALLEL, count: 1 },
+      { op: "delete asignaciones_paralelo", parallel: PARALLEL },
+      { op: "delete paralelos", id: PARALLEL },
+    ])
+  })
+
+  it("keeps a parallel with a teacher whose syllabus already has work", async () => {
+    asRole("coordinador", CAREER)
+    parallels.set(PARALLEL, { careerId: CAREER, code: "A", teacherAssignments: 1, syllabi: [{ touched: true }] })
+    expect((await deleteParallel(remove(path), PARALLEL, deps())).status).toBe(422)
     expect(committed).toEqual([])
   })
 

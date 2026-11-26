@@ -78,8 +78,7 @@ export function ParallelCreationDialog({ shiftOptions, subjectId, parallels, tea
   const teacherEditable = (parallelId: string): boolean => Boolean(teacherUsers) && assignmentOf(parallelId)?.editable !== false
   const canEditRow = (parallel: Parallel): boolean => parallel.editable !== false || teacherEditable(parallel.id)
   const canDeleteParallel = (parallel: Parallel): boolean => parallel.deletable !== false && parallels.length > 1
-  const canRemoveTeacher = (parallelId: string): boolean => assignmentOf(parallelId) !== null && teacherEditable(parallelId)
-  const showActions = editingId !== null || parallels.some((parallel) => canEditRow(parallel) || canRemoveTeacher(parallel.id) || canDeleteParallel(parallel))
+  const showActions = editingId !== null || parallels.some((parallel) => canEditRow(parallel) || canDeleteParallel(parallel))
 
   const startEdit = (parallel: Parallel): void => {
     setEditingId(parallel.id)
@@ -138,7 +137,6 @@ export function ParallelCreationDialog({ shiftOptions, subjectId, parallels, tea
   }
 
   const removeParallel = (id: string) => runRowAction(() => deleteParallel(id), "No se pudo eliminar el paralelo")
-  const removeTeacher = (parallelId: string) => runRowAction(() => replaceTeacher(parallelId, NO_TEACHER), "No se pudo quitar el docente del paralelo")
 
   const startAdd = (): void => {
     setNewTeacher("")
@@ -291,21 +289,7 @@ export function ParallelCreationDialog({ shiftOptions, subjectId, parallels, tea
                                   </Button>
                                 </IconTooltip>
                               ) : null}
-                              {canRemoveTeacher(parallel.id) ? (
-                                <IconTooltip label="Quitar docente">
-                                  <Button
-                                    type="button"
-                                    size="icon-sm"
-                                    variant="ghost"
-                                    className={destructiveIcon}
-                                    disabled={rowBusy}
-                                    aria-label={`Quitar el docente del paralelo ${parallel.code}`}
-                                    onClick={() => void removeTeacher(parallel.id)}
-                                  >
-                                    <Trash2 aria-hidden="true" />
-                                  </Button>
-                                </IconTooltip>
-                              ) : canDeleteParallel(parallel) ? (
+                              {canDeleteParallel(parallel) ? (
                                 <IconTooltip label="Eliminar paralelo">
                                   <Button
                                     type="button"
