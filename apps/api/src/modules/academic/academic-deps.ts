@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common"
+import { PrismaService } from "../../prisma/prisma.service"
 import type { CareerWriteDeps } from "../../server/academic/careerWrites"
 import { createCareerWriteDeps, createCurriculumDeps } from "../../server/academic/careerWriteStore"
 import type { CurriculumDeps } from "../../server/academic/curriculumWrites"
@@ -14,13 +15,16 @@ import type { SupportDocumentDeps } from "../../server/academic/supportDocuments
 import { dispatchSupportDocumentView } from "../../server/academic/supportDocumentViewJob"
 import { defaultSupportDocumentWriteDeps, type SupportDocumentWriteDeps } from "../../server/academic/supportDocumentWrites"
 import type { BridgeDeps } from "../../server/auth/types"
-import { createTemplateStore } from "../../server/configuration/templateStore"
 import { institutionToday } from "../../server/shared/clock"
+import { createTemplateStore } from "../../server/shared/templateStore"
 import type { RateLimiter } from "../../server/http/throttle"
-import { defaultIdentityWriteDeps, type IdentityWriteDeps } from "../../server/identity/accountWrites"
-import { defaultIdentityImportDeps, type IdentityImportDeps } from "../../server/identity/imports"
+import type { IdentityWriteDeps } from "../../server/identity/accountWrites"
+import type { IdentityImportDeps } from "../../server/identity/imports"
 import { type CatalogDeps, defaultCatalogDeps } from "../../server/library/catalogHandlers"
 import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
+import { IdentityDeps } from "../auth/identity.deps"
+import { IDENTITY_RUNTIME, type IdentityRuntime } from "../auth/identity.runtime"
+import { identityImportStoreOn } from "../users/repositories/identity-import.repository"
 import { AcademicDeletionPrismaStore } from "./repositories/academic-deletion.store"
 import { AcademicStructurePrismaRepository } from "./repositories/academic-structure.repository"
 import { GovernancePrismaRepository } from "./repositories/governance.repository"
@@ -31,8 +35,11 @@ import { SupportDocumentsPrismaRepository } from "./repositories/support-documen
 @Injectable()
 export class AcademicDeps {
   constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AUTH_BRIDGE) private readonly bridge: BridgeDeps,
     @Inject(RATE_LIMITER) private readonly limiter: RateLimiter,
+    @Inject(IdentityDeps) private readonly identity: IdentityDeps,
+    @Inject(IDENTITY_RUNTIME) private readonly runtime: IdentityRuntime,
     @Inject(GovernancePrismaRepository) private readonly governanceRepository: GovernancePrismaRepository,
     @Inject(AcademicStructurePrismaRepository) private readonly structureRepository: AcademicStructurePrismaRepository,
     @Inject(ScheduledSubjectsPrismaRepository) private readonly scheduledRepository: ScheduledSubjectsPrismaRepository,
@@ -50,11 +57,11 @@ export class AcademicDeps {
   }
 
   governanceWrites(): GovernanceWriteDeps {
-    return { ...createGovernanceWriteDeps(), bridge: this.bridge, deletions: this.deletions() }
+    return { ...createGovernanceWriteDeps(this.prisma), bridge: this.bridge, deletions: this.deletions() }
   }
 
   structureImports(): StructureImportDeps {
-    return { bridge: this.bridge, limiter: this.limiter, store: this.structureImportStore, ...createStructureImportTransactions() }
+    return { bridge: this.bridge, limiter: this.limiter, store: this.structureImportStore, ...createStructureImportTransactions(this.prisma) }
   }
 
   structure(): AcademicStructureDeps {
@@ -62,15 +69,15 @@ export class AcademicDeps {
   }
 
   scheduled(): ScheduledSubjectsDeps {
-    return { ...this.structure(), scheduled: this.scheduledRepository, templates: createTemplateStore() }
+    return { ...this.structure(), scheduled: this.scheduledRepository, templates: createTemplateStore(this.prisma) }
   }
 
   careerWrites(): CareerWriteDeps {
-    return { ...createCareerWriteDeps(), bridge: this.bridge }
+    return { ...createCareerWriteDeps(this.prisma), bridge: this.bridge }
   }
 
   curriculum(): CurriculumDeps {
-    return { ...createCurriculumDeps(), bridge: this.bridge }
+    return { ...createCurriculumDeps(this.prisma), bridge: this.bridge }
   }
 
   supportDocuments(): SupportDocumentDeps {
@@ -82,14 +89,14 @@ export class AcademicDeps {
   }
 
   careerTeachers(): IdentityWriteDeps {
-    return { ...defaultIdentityWriteDeps(), bridge: this.bridge, limiter: this.limiter }
+    return { ...this.identity.set.writes, bridge: this.bridge, limiter: this.limiter }
   }
 
   teacherImports(): IdentityImportDeps {
-    return { ...defaultIdentityImportDeps(), bridge: this.bridge, limiter: this.limiter }
+    return { ...this.identity.set.writes, store: identityImportStoreOn(this.prisma), now: this.runtime.now, bridge: this.bridge, limiter: this.limiter }
   }
 
   catalog(): CatalogDeps {
-    return { ...defaultCatalogDeps(), bridge: this.bridge, limiter: this.limiter }
+    return { ...defaultCatalogDeps(this.prisma), bridge: this.bridge, limiter: this.limiter }
   }
 }

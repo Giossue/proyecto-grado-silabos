@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common"
 import type { AppSession } from "../../server/auth/types"
-import type { TemplateStore } from "../../server/configuration/templateStore"
+import type { TemplateStore } from "../../server/shared/templateStore"
 import { dashboardDeadlineFor, dashboardFor, type DashboardCoreDeps } from "../../server/dashboard/dashboard"
 import { PrismaDashboardRepository } from "./dashboard.repository"
 import { DASHBOARD_TEMPLATES, DASHBOARD_TODAY } from "./dashboard.tokens"

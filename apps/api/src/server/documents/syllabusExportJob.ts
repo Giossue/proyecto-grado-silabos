@@ -1,3 +1,4 @@
+import type { PrismaService } from "../../prisma/prisma.service"
 import { dispatch } from "../queue/dispatch"
 import { defineJob } from "../queue/job"
 import { failSyllabusExport, generateSyllabusExport, type ExportJobDeps } from "./syllabusExport"
@@ -19,8 +20,14 @@ export function createSyllabusExportJob(deps: () => ExportJobDeps) {
   })
 }
 
-export const syllabusExportJob = createSyllabusExportJob(createExportJobDeps)
+export function syllabusExportJobOn(prisma: PrismaService) {
+  return createSyllabusExportJob(() => createExportJobDeps(prisma))
+}
+
+const dispatchedExportJob = createSyllabusExportJob(() => {
+  throw new Error("GenerateSyllabusExportJob runs only in the worker, built with syllabusExportJobOn.")
+})
 
 export function dispatchSyllabusExport(artifactId: string): Promise<string> {
-  return dispatch(syllabusExportJob, { artifactId })
+  return dispatch(dispatchedExportJob, { artifactId })
 }

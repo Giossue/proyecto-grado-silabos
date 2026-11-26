@@ -1,23 +1,18 @@
-import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { INSTITUTION_LOGO, logoErrors } from "../files/logos"
 import { fitPng, PngError } from "../files/png"
-import { requestBody, postMaxSize, postTooLarge, type MultipartInput } from "../files/uploads"
+import { requestBody, postTooLarge, type MultipartInput } from "../files/uploads"
 import { requestRoot } from "../http/request"
 import { apiJson, validationError } from "../http/responses"
-import { storageWriter, storedStat, type StorageWriter } from "../http/storageWriter"
+import { storedStat, type StorageWriter } from "../http/storageWriter"
 import { boundTemplate, FORBIDDEN, managesTemplates } from "./templateReads"
-import { createTemplateStore, type TemplateStore } from "./templateStore"
+import type { TemplateStore } from "../shared/templateStore"
 
 export const INSTITUTION_LOGO_PATH = "logos/institucion.png"
 
 export type TemplateLogoDeps = { bridge: BridgeDeps; store: TemplateStore; storage: StorageWriter; maxPostSize: number }
 
-export function defaultTemplateLogoDeps(): TemplateLogoDeps {
-  return { bridge: defaultBridgeDeps(), store: createTemplateStore(), storage: storageWriter(), maxPostSize: postMaxSize() }
-}
-
-export async function uploadTemplateLogo(request: Request, templateId: string, deps: TemplateLogoDeps = defaultTemplateLogoDeps()): Promise<Response> {
+export async function uploadTemplateLogo(request: Request, templateId: string, deps: TemplateLogoDeps): Promise<Response> {
   const tooLarge = postTooLarge(request, deps.maxPostSize)
   if (tooLarge !== null) return tooLarge
   const body = await requestBody(request.clone())

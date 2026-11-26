@@ -1,25 +1,20 @@
 import { HttpFailure } from "../http/failures"
 import { requestBoolean } from "../syllabus/inProgressWorkHelpers"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import { bcryptHash, bcryptVerify } from "../auth/bcrypt"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { institutionToday } from "../shared/clock"
 import { isJsonRequest, requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
-import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
+import { throttle, type RateLimiter, type Throttle } from "../http/throttle"
 import { managedUserSchema, newManagedUserSchema, type ExistsCheck } from "@silabos/shared/schemas/people"
 import type { UniqueCheck } from "@silabos/shared/schemas/account"
 import { validateSchema } from "../http/schemaValidation"
-import { frontendUrl } from "../mail/config"
-import { queueMail } from "../mail/sendMailJob"
 import { withAfterCommit } from "../queue/dispatch"
 import {
   collapseNameColumns,
   fullName,
   phpBoolean,
   phpCastBool,
-  randomString,
   ROLE_ADMINISTRATOR,
 } from "./accountRules"
 import {
@@ -38,8 +33,7 @@ import {
   type ActionContext,
   type RoleGrant,
 } from "./accounts"
-import { createAccountRepository } from "./accountStore"
-import { createProfileRepository, type SessionDeps } from "./session"
+import type { SessionDeps } from "./session"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
 
@@ -50,22 +44,6 @@ export type IdentityWriteDeps = {
   limiter: RateLimiter
   verifyPassword: (plain: string, hash: string) => Promise<boolean | null>
   session: Pick<SessionDeps, "profiles" | "today" | "timezone">
-}
-
-export function defaultIdentityWriteDeps(): IdentityWriteDeps {
-  return {
-    bridge: defaultBridgeDeps(),
-    accounts: createAccountRepository(),
-    services: {
-      random: randomString,
-      hashPassword: (plain) => bcryptHash(plain, Number.parseInt(process.env.BCRYPT_ROUNDS ?? "12", 10)),
-      frontendUrl: () => frontendUrl(),
-      queueMail,
-    },
-    limiter: sharedRateLimiter(),
-    verifyPassword: bcryptVerify,
-    session: { profiles: createProfileRepository(), today: institutionToday, timezone: () => process.env.DISPLAY_TIMEZONE ?? "America/Guayaquil" },
-  }
 }
 
 export function isAdministrator(session: AppSession): boolean {
@@ -159,7 +137,7 @@ export function uniqueEmail(deps: IdentityWriteDeps, ignore: string | null): Uni
   return async (value) => !(await deps.accounts.emailTaken(stringOf(value), ignore))
 }
 
-export async function storeManagedUser(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function storeManagedUser(request: Request, deps: IdentityWriteDeps): Promise<Response> {
   const original = request.clone()
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
@@ -182,7 +160,7 @@ export async function storeManagedUser(request: Request, deps: IdentityWriteDeps
   return apiJson({ message: "Cuenta creada con su rol inicial.", user: { id: created.id, nombre: created.name, correo_electronico: created.email } }, 201)
 }
 
-export async function updateManagedUser(request: Request, id: string, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function updateManagedUser(request: Request, id: string, deps: IdentityWriteDeps): Promise<Response> {
   const bound = await bindAccount(request, id, deps)
   if (bound instanceof Response) return bound
   const { session, target, original } = bound
@@ -214,7 +192,7 @@ export function managesPending(session: AppSession, target: Account): boolean {
   return session.user.active && session.user.id !== target.id && target.active && !target.verified && session.activeRole?.role === ROLE_ADMINISTRATOR
 }
 
-export async function resendManagedUserActivation(request: Request, id: string, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function resendManagedUserActivation(request: Request, id: string, deps: IdentityWriteDeps): Promise<Response> {
   const bound = await bindAccount(request, id, deps, { throttled: true })
   if (bound instanceof Response) return bound
   const { session, target, original, finish } = bound
@@ -224,7 +202,7 @@ export async function resendManagedUserActivation(request: Request, id: string, 
   return finish(apiJson({ message: `Invitación de activación enviada a ${target.email}.` }))
 }
 
-export async function destroyManagedUser(request: Request, id: string, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function destroyManagedUser(request: Request, id: string, deps: IdentityWriteDeps): Promise<Response> {
   const bound = await bindAccount(request, id, deps)
   if (bound instanceof Response) return bound
   const { session, target, original } = bound
@@ -238,7 +216,7 @@ export async function removeManagedUserRole(
   request: Request,
   id: string,
   assignmentId: string,
-  deps: IdentityWriteDeps = defaultIdentityWriteDeps(),
+  deps: IdentityWriteDeps,
 ): Promise<Response> {
   let assignment: RoleGrant | null = null
   const bound = await bindAccount(request, id, deps, {

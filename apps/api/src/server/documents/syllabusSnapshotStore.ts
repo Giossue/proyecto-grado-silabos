@@ -1,12 +1,12 @@
-import { db } from "@/db"
-import { createLogoStore } from "../configuration/institutionalLogos"
-import { loadTemplate } from "../configuration/templateStore"
+import type { Db } from "../../prisma/db"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { createLogoStore } from "../shared/logoStore"
+import { loadTemplate } from "../shared/templateStore"
 import { identificationSource } from "../syllabus/draftFieldStore"
 import { syllabusDetailStoreOn } from "../syllabus/syllabusDetailQueries"
-import type { Executor } from "../syllabus/teacherSyllabusQueries"
 import type { SnapshotSource } from "./syllabusSnapshot"
 
-export function snapshotSourceOn(executor: Executor): SnapshotSource {
+export function snapshotSourceOn(executor: Db): SnapshotSource {
   const detail = syllabusDetailStoreOn(executor)
   return {
     template: () => loadTemplate(executor),
@@ -17,6 +17,6 @@ export function snapshotSourceOn(executor: Executor): SnapshotSource {
   }
 }
 
-export function createSnapshotSource(): SnapshotSource {
-  return snapshotSourceOn(db)
+export function createSnapshotSource(prisma: PrismaService): SnapshotSource {
+  return snapshotSourceOn(prisma)
 }

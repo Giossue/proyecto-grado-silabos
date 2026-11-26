@@ -1,0 +1,530 @@
+{
+ "unfiltered": {
+  "queries": [
+   {
+    "sql": "select count(*) as count from \"usuarios\"",
+    "params": []
+   },
+   {
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" order by \"usuarios\".\"nombre_usuario\" asc limit $1",
+    "params": [
+     20
+    ]
+   },
+   {
+    "sql": "select \"asignaciones_rol\".\"usuario_id\", \"asignaciones_rol\".\"asignacion_rol_id\", \"asignaciones_rol\".\"rol\", case when \"carreras\".\"carrera_id\" is null then null else (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1 then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) end, \"asignaciones_rol\".\"asignacion_rol_activa\" from \"asignaciones_rol\" left join \"carreras\" on \"carreras\".\"carrera_id\" = \"asignaciones_rol\".\"carrera_id\" where \"asignaciones_rol\".\"usuario_id\" in ($1, $2) order by \"asignaciones_rol\".\"asignado_en\" desc",
+    "params": [
+     "90000000-0000-4000-8000-000000000001",
+     "90000000-0000-4000-8000-000000000002"
+    ]
+   }
+  ],
+  "expected": {
+   "total": 2,
+   "items": [
+    {
+     "id": "90000000-0000-4000-8000-000000000001",
+     "name": "Ana Pérez",
+     "email": "ana@ueb.edu.ec",
+     "active": true,
+     "verified": true,
+     "twoFactor": false,
+     "invitationActive": false,
+     "assignments": [
+      {
+       "id": "a1",
+       "role": "docente",
+       "careerLabel": "Software",
+       "active": true
+      }
+     ]
+    },
+    {
+     "id": "90000000-0000-4000-8000-000000000002",
+     "name": "Luis Mora",
+     "email": "luis@ueb.edu.ec",
+     "active": true,
+     "verified": false,
+     "twoFactor": false,
+     "invitationActive": true,
+     "assignments": [
+      {
+       "id": "a2",
+       "role": "coordinador",
+       "careerLabel": null,
+       "active": false
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "every filter, the status order and a second page": {
+  "queries": [
+   {
+    "sql": "select count(*) as count from \"usuarios\" where ((translate(\"usuarios\".\"nombre_usuario\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $1 or translate(\"usuarios\".\"correo_electronico\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $2) and \"usuarios\".\"usuario_activo\" = $3 and \"usuarios\".\"correo_verificado_en\" is null and \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $4 and \"asignaciones_rol\".\"rol\" = $5)) and \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $6 and \"asignaciones_rol\".\"carrera_id\" = $7)))",
+    "params": [
+     "%Jo\\%se\\_\\\\%",
+     "%Jo\\%se\\_\\\\%",
+     true,
+     true,
+     "docente",
+     true,
+     "c1"
+    ]
+   },
+   {
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where ((translate(\"usuarios\".\"nombre_usuario\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $1 or translate(\"usuarios\".\"correo_electronico\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $2) and \"usuarios\".\"usuario_activo\" = $3 and \"usuarios\".\"correo_verificado_en\" is null and \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $4 and \"asignaciones_rol\".\"rol\" = $5)) and \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $6 and \"asignaciones_rol\".\"carrera_id\" = $7))) order by case when \"usuarios\".\"usuario_activo\" = false then $8::text when \"usuarios\".\"correo_verificado_en\" is null then case when exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) then $9::text else $10::text end else $11::text end desc nulls last, \"usuarios\".\"nombre_usuario\" asc, \"usuarios\".\"usuario_id\" asc limit $12 offset $13",
+    "params": [
+     "%Jo\\%se\\_\\\\%",
+     "%Jo\\%se\\_\\\\%",
+     true,
+     true,
+     "docente",
+     true,
+     "c1",
+     "Inactivo",
+     "Pendiente",
+     "Invitación vencida",
+     "Activo",
+     20,
+     20
+    ]
+   },
+   {
+    "sql": "select \"asignaciones_rol\".\"usuario_id\", \"asignaciones_rol\".\"asignacion_rol_id\", \"asignaciones_rol\".\"rol\", case when \"carreras\".\"carrera_id\" is null then null else (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1 then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) end, \"asignaciones_rol\".\"asignacion_rol_activa\" from \"asignaciones_rol\" left join \"carreras\" on \"carreras\".\"carrera_id\" = \"asignaciones_rol\".\"carrera_id\" where \"asignaciones_rol\".\"usuario_id\" in ($1, $2) order by \"asignaciones_rol\".\"asignado_en\" desc",
+    "params": [
+     "90000000-0000-4000-8000-000000000001",
+     "90000000-0000-4000-8000-000000000002"
+    ]
+   }
+  ],
+  "expected": {
+   "total": 2,
+   "items": [
+    {
+     "id": "90000000-0000-4000-8000-000000000001",
+     "name": "Ana Pérez",
+     "email": "ana@ueb.edu.ec",
+     "active": true,
+     "verified": true,
+     "twoFactor": false,
+     "invitationActive": false,
+     "assignments": [
+      {
+       "id": "a1",
+       "role": "docente",
+       "careerLabel": "Software",
+       "active": true
+      }
+     ]
+    },
+    {
+     "id": "90000000-0000-4000-8000-000000000002",
+     "name": "Luis Mora",
+     "email": "luis@ueb.edu.ec",
+     "active": true,
+     "verified": false,
+     "twoFactor": false,
+     "invitationActive": true,
+     "assignments": [
+      {
+       "id": "a2",
+       "role": "coordinador",
+       "careerLabel": null,
+       "active": false
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "the active status and the name order": {
+  "queries": [
+   {
+    "sql": "select count(*) as count from \"usuarios\" where (\"usuarios\".\"usuario_activo\" = $1 and \"usuarios\".\"correo_verificado_en\" is not null)",
+    "params": [
+     true
+    ]
+   },
+   {
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where (\"usuarios\".\"usuario_activo\" = $1 and \"usuarios\".\"correo_verificado_en\" is not null) order by \"usuarios\".\"nombre_usuario\" asc nulls last, \"usuarios\".\"nombre_usuario\" asc, \"usuarios\".\"usuario_id\" asc limit $2",
+    "params": [
+     true,
+     20
+    ]
+   },
+   {
+    "sql": "select \"asignaciones_rol\".\"usuario_id\", \"asignaciones_rol\".\"asignacion_rol_id\", \"asignaciones_rol\".\"rol\", case when \"carreras\".\"carrera_id\" is null then null else (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1 then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) end, \"asignaciones_rol\".\"asignacion_rol_activa\" from \"asignaciones_rol\" left join \"carreras\" on \"carreras\".\"carrera_id\" = \"asignaciones_rol\".\"carrera_id\" where \"asignaciones_rol\".\"usuario_id\" in ($1, $2) order by \"asignaciones_rol\".\"asignado_en\" desc",
+    "params": [
+     "90000000-0000-4000-8000-000000000001",
+     "90000000-0000-4000-8000-000000000002"
+    ]
+   }
+  ],
+  "expected": {
+   "total": 2,
+   "items": [
+    {
+     "id": "90000000-0000-4000-8000-000000000001",
+     "name": "Ana Pérez",
+     "email": "ana@ueb.edu.ec",
+     "active": true,
+     "verified": true,
+     "twoFactor": false,
+     "invitationActive": false,
+     "assignments": [
+      {
+       "id": "a1",
+       "role": "docente",
+       "careerLabel": "Software",
+       "active": true
+      }
+     ]
+    },
+    {
+     "id": "90000000-0000-4000-8000-000000000002",
+     "name": "Luis Mora",
+     "email": "luis@ueb.edu.ec",
+     "active": true,
+     "verified": false,
+     "twoFactor": false,
+     "invitationActive": true,
+     "assignments": [
+      {
+       "id": "a2",
+       "role": "coordinador",
+       "careerLabel": null,
+       "active": false
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "the inactive status alone": {
+  "queries": [
+   {
+    "sql": "select count(*) as count from \"usuarios\" where \"usuarios\".\"usuario_activo\" = $1",
+    "params": [
+     false
+    ]
+   },
+   {
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where \"usuarios\".\"usuario_activo\" = $1 order by \"usuarios\".\"nombre_usuario\" asc limit $2",
+    "params": [
+     false,
+     20
+    ]
+   },
+   {
+    "sql": "select \"asignaciones_rol\".\"usuario_id\", \"asignaciones_rol\".\"asignacion_rol_id\", \"asignaciones_rol\".\"rol\", case when \"carreras\".\"carrera_id\" is null then null else (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1 then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) end, \"asignaciones_rol\".\"asignacion_rol_activa\" from \"asignaciones_rol\" left join \"carreras\" on \"carreras\".\"carrera_id\" = \"asignaciones_rol\".\"carrera_id\" where \"asignaciones_rol\".\"usuario_id\" in ($1, $2) order by \"asignaciones_rol\".\"asignado_en\" desc",
+    "params": [
+     "90000000-0000-4000-8000-000000000001",
+     "90000000-0000-4000-8000-000000000002"
+    ]
+   }
+  ],
+  "expected": {
+   "total": 2,
+   "items": [
+    {
+     "id": "90000000-0000-4000-8000-000000000001",
+     "name": "Ana Pérez",
+     "email": "ana@ueb.edu.ec",
+     "active": true,
+     "verified": true,
+     "twoFactor": false,
+     "invitationActive": false,
+     "assignments": [
+      {
+       "id": "a1",
+       "role": "docente",
+       "careerLabel": "Software",
+       "active": true
+      }
+     ]
+    },
+    {
+     "id": "90000000-0000-4000-8000-000000000002",
+     "name": "Luis Mora",
+     "email": "luis@ueb.edu.ec",
+     "active": true,
+     "verified": false,
+     "twoFactor": false,
+     "invitationActive": true,
+     "assignments": [
+      {
+       "id": "a2",
+       "role": "coordinador",
+       "careerLabel": null,
+       "active": false
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "the search alone": {
+  "queries": [
+   {
+    "sql": "select count(*) as count from \"usuarios\" where (translate(\"usuarios\".\"nombre_usuario\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $1 or translate(\"usuarios\".\"correo_electronico\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $2)",
+    "params": [
+     "%Nandu%",
+     "%Nandu%"
+    ]
+   },
+   {
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where (translate(\"usuarios\".\"nombre_usuario\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $1 or translate(\"usuarios\".\"correo_electronico\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $2) order by \"usuarios\".\"nombre_usuario\" asc limit $3",
+    "params": [
+     "%Nandu%",
+     "%Nandu%",
+     20
+    ]
+   },
+   {
+    "sql": "select \"asignaciones_rol\".\"usuario_id\", \"asignaciones_rol\".\"asignacion_rol_id\", \"asignaciones_rol\".\"rol\", case when \"carreras\".\"carrera_id\" is null then null else (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1 then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) end, \"asignaciones_rol\".\"asignacion_rol_activa\" from \"asignaciones_rol\" left join \"carreras\" on \"carreras\".\"carrera_id\" = \"asignaciones_rol\".\"carrera_id\" where \"asignaciones_rol\".\"usuario_id\" in ($1, $2) order by \"asignaciones_rol\".\"asignado_en\" desc",
+    "params": [
+     "90000000-0000-4000-8000-000000000001",
+     "90000000-0000-4000-8000-000000000002"
+    ]
+   }
+  ],
+  "expected": {
+   "total": 2,
+   "items": [
+    {
+     "id": "90000000-0000-4000-8000-000000000001",
+     "name": "Ana Pérez",
+     "email": "ana@ueb.edu.ec",
+     "active": true,
+     "verified": true,
+     "twoFactor": false,
+     "invitationActive": false,
+     "assignments": [
+      {
+       "id": "a1",
+       "role": "docente",
+       "careerLabel": "Software",
+       "active": true
+      }
+     ]
+    },
+    {
+     "id": "90000000-0000-4000-8000-000000000002",
+     "name": "Luis Mora",
+     "email": "luis@ueb.edu.ec",
+     "active": true,
+     "verified": false,
+     "twoFactor": false,
+     "invitationActive": true,
+     "assignments": [
+      {
+       "id": "a2",
+       "role": "coordinador",
+       "careerLabel": null,
+       "active": false
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "the role alone": {
+  "queries": [
+   {
+    "sql": "select count(*) as count from \"usuarios\" where \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $1 and \"asignaciones_rol\".\"rol\" = $2))",
+    "params": [
+     true,
+     "administrador"
+    ]
+   },
+   {
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $1 and \"asignaciones_rol\".\"rol\" = $2)) order by \"usuarios\".\"nombre_usuario\" asc limit $3",
+    "params": [
+     true,
+     "administrador",
+     20
+    ]
+   },
+   {
+    "sql": "select \"asignaciones_rol\".\"usuario_id\", \"asignaciones_rol\".\"asignacion_rol_id\", \"asignaciones_rol\".\"rol\", case when \"carreras\".\"carrera_id\" is null then null else (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1 then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) end, \"asignaciones_rol\".\"asignacion_rol_activa\" from \"asignaciones_rol\" left join \"carreras\" on \"carreras\".\"carrera_id\" = \"asignaciones_rol\".\"carrera_id\" where \"asignaciones_rol\".\"usuario_id\" in ($1, $2) order by \"asignaciones_rol\".\"asignado_en\" desc",
+    "params": [
+     "90000000-0000-4000-8000-000000000001",
+     "90000000-0000-4000-8000-000000000002"
+    ]
+   }
+  ],
+  "expected": {
+   "total": 2,
+   "items": [
+    {
+     "id": "90000000-0000-4000-8000-000000000001",
+     "name": "Ana Pérez",
+     "email": "ana@ueb.edu.ec",
+     "active": true,
+     "verified": true,
+     "twoFactor": false,
+     "invitationActive": false,
+     "assignments": [
+      {
+       "id": "a1",
+       "role": "docente",
+       "careerLabel": "Software",
+       "active": true
+      }
+     ]
+    },
+    {
+     "id": "90000000-0000-4000-8000-000000000002",
+     "name": "Luis Mora",
+     "email": "luis@ueb.edu.ec",
+     "active": true,
+     "verified": false,
+     "twoFactor": false,
+     "invitationActive": true,
+     "assignments": [
+      {
+       "id": "a2",
+       "role": "coordinador",
+       "careerLabel": null,
+       "active": false
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "the career alone": {
+  "queries": [
+   {
+    "sql": "select count(*) as count from \"usuarios\" where \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $1 and \"asignaciones_rol\".\"carrera_id\" = $2))",
+    "params": [
+     true,
+     "c2"
+    ]
+   },
+   {
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $1 and \"asignaciones_rol\".\"carrera_id\" = $2)) order by case when \"usuarios\".\"usuario_activo\" = false then $3::text when \"usuarios\".\"correo_verificado_en\" is null then case when exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) then $4::text else $5::text end else $6::text end asc nulls last, \"usuarios\".\"nombre_usuario\" asc, \"usuarios\".\"usuario_id\" asc limit $7 offset $8",
+    "params": [
+     true,
+     "c2",
+     "Inactivo",
+     "Pendiente",
+     "Invitación vencida",
+     "Activo",
+     20,
+     40
+    ]
+   },
+   {
+    "sql": "select \"asignaciones_rol\".\"usuario_id\", \"asignaciones_rol\".\"asignacion_rol_id\", \"asignaciones_rol\".\"rol\", case when \"carreras\".\"carrera_id\" is null then null else (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1 then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) end, \"asignaciones_rol\".\"asignacion_rol_activa\" from \"asignaciones_rol\" left join \"carreras\" on \"carreras\".\"carrera_id\" = \"asignaciones_rol\".\"carrera_id\" where \"asignaciones_rol\".\"usuario_id\" in ($1, $2) order by \"asignaciones_rol\".\"asignado_en\" desc",
+    "params": [
+     "90000000-0000-4000-8000-000000000001",
+     "90000000-0000-4000-8000-000000000002"
+    ]
+   }
+  ],
+  "expected": {
+   "total": 2,
+   "items": [
+    {
+     "id": "90000000-0000-4000-8000-000000000001",
+     "name": "Ana Pérez",
+     "email": "ana@ueb.edu.ec",
+     "active": true,
+     "verified": true,
+     "twoFactor": false,
+     "invitationActive": false,
+     "assignments": [
+      {
+       "id": "a1",
+       "role": "docente",
+       "careerLabel": "Software",
+       "active": true
+      }
+     ]
+    },
+    {
+     "id": "90000000-0000-4000-8000-000000000002",
+     "name": "Luis Mora",
+     "email": "luis@ueb.edu.ec",
+     "active": true,
+     "verified": false,
+     "twoFactor": false,
+     "invitationActive": true,
+     "assignments": [
+      {
+       "id": "a2",
+       "role": "coordinador",
+       "careerLabel": null,
+       "active": false
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "nothing matches": {
+  "queries": [
+   {
+    "sql": "select count(*) as count from \"usuarios\"",
+    "params": []
+   }
+  ],
+  "expected": {
+   "total": 0,
+   "items": []
+  }
+ },
+ "careers": {
+  "queries": [
+   {
+    "sql": "select \"carrera_id\", (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1 then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) from \"carreras\" where \"carreras\".\"carrera_activa\" = $1 order by \"carreras\".\"nombre_carrera\" asc, \"carreras\".\"codigo_carrera\" asc",
+    "params": [
+     true
+    ]
+   }
+  ],
+  "expected": [
+   {
+    "id": "c1",
+    "nombre": "Software · SW"
+   }
+  ]
+ },
+ "imports": {
+  "queries": [
+   {
+    "sql": "select \"carrera_id\", \"nombre_carrera\", \"codigo_carrera\", (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1 then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) from \"carreras\" where \"carreras\".\"carrera_activa\" = $1",
+    "params": [
+     true
+    ]
+   },
+   {
+    "sql": "select (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1 then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) from \"carreras\" where \"carreras\".\"carrera_activa\" = $1 order by \"carreras\".\"nombre_carrera\" asc, \"carreras\".\"codigo_carrera\" asc",
+    "params": [
+     true
+    ]
+   }
+  ],
+  "careers": [
+   {
+    "id": "c1",
+    "name": "Software",
+    "code": "",
+    "label": "Software · SW"
+   },
+   {
+    "id": "c2",
+    "name": "",
+    "code": "DER",
+    "label": ""
+   }
+  ],
+  "labels": [
+   "Software · SW",
+   ""
+  ]
+ }
+}

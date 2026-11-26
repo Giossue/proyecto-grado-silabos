@@ -2,7 +2,7 @@ import { deleteGovernanceRecord, type AcademicDeletionDeps } from "./deletions"
 import { HttpFailure } from "../http/failures"
 import { MODELS } from "../http/models"
 import { createHash, randomUUID } from "node:crypto"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { FACULTY_LOGO, isUploadedFile, logoErrors } from "../files/logos"
 import { fitPng, PngError } from "../files/png"
@@ -16,7 +16,6 @@ import { mergeErrors, validateSchema } from "../http/schemaValidation"
 import { GenerationRejected, requestBoolean } from "../syllabus/inProgressWorkHelpers"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { plainDateOf } from "@silabos/shared/lib/phpDates"
-import { createGovernanceWriteDeps } from "./governanceWriteStore"
 import { CONVOCATION_LOCK_REASON } from "./structure"
 import type { StoredObjectInput } from "./supportDocumentWrites"
 import { unmatchedRoute } from "../http/router"
@@ -61,7 +60,7 @@ export type GovernanceWriteDeps = {
   transaction<T>(work: (tx: GovernanceWriteTx) => Promise<T>): Promise<T>
   files?: GovernanceFiles
   maxPostSize?: number
-  deletions?: AcademicDeletionDeps
+  deletions: AcademicDeletionDeps
 }
 
 function filesOf(deps: GovernanceWriteDeps): GovernanceFiles {
@@ -120,10 +119,6 @@ function decodeLibraries(input: PhpArray): void {
 
 function logoOf(body: GovernanceBody): PhpValue | UploadedFile | undefined {
   return body.files.logo !== undefined ? body.files.logo : body.input.logo
-}
-
-export function defaultGovernanceWriteDeps(): GovernanceWriteDeps {
-  return { bridge: defaultBridgeDeps(), ...createGovernanceWriteDeps() }
 }
 
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
@@ -200,7 +195,7 @@ async function run(original: Request, deps: GovernanceWriteDeps, work: () => Pro
   })
 }
 
-export async function createGovernanceRecord(request: Request, entity: string, deps: GovernanceWriteDeps = defaultGovernanceWriteDeps()): Promise<Response> {
+export async function createGovernanceRecord(request: Request, entity: string, deps: GovernanceWriteDeps): Promise<Response> {
   const tooLarge = postTooLarge(request, deps.maxPostSize ?? postMaxSize())
   if (tooLarge !== null) return tooLarge
   const original = request.clone()
@@ -278,7 +273,7 @@ function sameLibraries(before: string | null, after: unknown[]): boolean {
   return JSON.stringify(storedLibraries(before)) === JSON.stringify(after)
 }
 
-export async function updateGovernanceRecord(request: Request, entity: string, recordId: string, deps: GovernanceWriteDeps = defaultGovernanceWriteDeps()): Promise<Response> {
+export async function updateGovernanceRecord(request: Request, entity: string, recordId: string, deps: GovernanceWriteDeps): Promise<Response> {
   const tooLarge = postTooLarge(request, deps.maxPostSize ?? postMaxSize())
   if (tooLarge !== null) return tooLarge
   const original = request.clone()
@@ -395,7 +390,7 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
   })
 }
 
-export async function setGovernanceStatus(request: Request, entity: string, recordId: string, deps: GovernanceWriteDeps = defaultGovernanceWriteDeps()): Promise<Response> {
+export async function setGovernanceStatus(request: Request, entity: string, recordId: string, deps: GovernanceWriteDeps): Promise<Response> {
   const original = request.clone()
   if (!["facultad", "carrera"].includes(entity)) return unauthorizedEntity(request, deps)
   const session = await careerSession(request.clone(), deps)
@@ -432,7 +427,7 @@ export async function setGovernanceStatus(request: Request, entity: string, reco
   })
 }
 
-export async function postGovernanceRecord(request: Request, entity: string, recordId: string, deps: GovernanceWriteDeps = defaultGovernanceWriteDeps()): Promise<Response> {
+export async function postGovernanceRecord(request: Request, entity: string, recordId: string, deps: GovernanceWriteDeps): Promise<Response> {
   const tooLarge = postTooLarge(request, deps.maxPostSize ?? postMaxSize())
   if (tooLarge !== null) return tooLarge
   const method = await spoofedMethod(request)

@@ -1,5 +1,5 @@
 import { MODELS } from "../http/models"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { ROLE_COMBINATION_MESSAGE, roleCombinationConflicts } from "../identity/accountRules"
 import { isJsonRequest, isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
@@ -9,7 +9,6 @@ import { parallelSchema, parallelsSchema, parallelTeacherSchema, subjectSchema, 
 import { validateSchema } from "../http/schemaValidation"
 import { requestBoolean, type WorkScope } from "../syllabus/inProgressWorkHelpers"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
-import { createCareerWriteDeps } from "./careerWriteStore"
 import { phpIntCast } from "./governanceWrites"
 import { CONVOCATION_LOCK_REASON } from "./structure"
 import { unmatchedRoute, routeAllows } from "../http/router"
@@ -84,10 +83,6 @@ export type CareerWriteDeps = {
 }
 
 export type CareerContext = { session: AppSession; careerId: string }
-
-export function defaultCareerWriteDeps(): CareerWriteDeps {
-  return { bridge: defaultBridgeDeps(), ...createCareerWriteDeps() }
-}
 
 const CREATED = "Registro académico creado dentro de su carrera."
 const PURGE_STARTED =
@@ -228,7 +223,7 @@ async function prepared(request: Request, deps: CareerWriteDeps): Promise<{ cont
   return { context, input: await requestInput(request) }
 }
 
-export async function createCareerRecord(request: Request, entity: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
+export async function createCareerRecord(request: Request, entity: string, deps: CareerWriteDeps): Promise<Response> {
   const original = request.clone()
   if (!["asignatura", "asignacion_docente"].includes(entity) || !routeAllows(request)) return unmatchedRoute(request)
   const ready = await prepared(request, deps)
@@ -280,7 +275,7 @@ export async function insertCareerSubject(tx: CareerWriteTx, context: CareerCont
   return id
 }
 
-export async function updateCareerRecord(request: Request, entity: string, recordId: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
+export async function updateCareerRecord(request: Request, entity: string, recordId: string, deps: CareerWriteDeps): Promise<Response> {
   const original = request.clone()
   if (entity !== "asignatura" || !routeAllows(request)) return unmatchedRoute(request)
   const ready = await prepared(request, deps)
@@ -314,7 +309,7 @@ export async function updateCareerRecord(request: Request, entity: string, recor
   })
 }
 
-export async function createParallels(request: Request, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
+export async function createParallels(request: Request, deps: CareerWriteDeps): Promise<Response> {
   const original = request.clone()
   const ready = await prepared(request, deps)
   if (ready instanceof Response) return ready
@@ -353,7 +348,7 @@ export async function createParallels(request: Request, deps: CareerWriteDeps = 
   })
 }
 
-export async function updateParallel(request: Request, parallelId: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
+export async function updateParallel(request: Request, parallelId: string, deps: CareerWriteDeps): Promise<Response> {
   const original = request.clone()
   if (!routeAllows(request)) return unmatchedRoute(request)
   const ready = await prepared(request, deps)
@@ -387,7 +382,7 @@ export async function updateParallel(request: Request, parallelId: string, deps:
   })
 }
 
-export async function replaceParallelTeacher(request: Request, parallelId: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
+export async function replaceParallelTeacher(request: Request, parallelId: string, deps: CareerWriteDeps): Promise<Response> {
   const original = request.clone()
   if (!routeAllows(request)) return unmatchedRoute(request)
   const ready = await prepared(request, deps)

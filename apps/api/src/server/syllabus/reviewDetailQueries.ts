@@ -1,15 +1,14 @@
-import { and, eq, sql } from "drizzle-orm"
-import { db } from "@/db"
-import { epochText } from "@/db/expressions"
-import { revisionesSilabo, usuarios } from "@/db/schema"
-import { iso8601 } from "../http/sql"
+import { Prisma } from "../../generated/prisma/client"
+import type { Db } from "../../prisma/db"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { epochText, iso8601 } from "../../prisma/sql"
 import { LIBRARY_FROM, OUTCOME_SQL, RESPONSIBLE_SQL, STATE_SQL } from "../library/reviewQueries"
 import { teacherNamesOf } from "./coordinationReviewQueries"
 import type { HistoryEntry, ReviewDetailStore } from "./reviewDetails"
 import { reviewCommentsOf, revisionSnapshotOf, signaturesOf, syllabusDetailStoreOn } from "./syllabusDetailQueries"
-import { rowsOf, type Executor } from "./teacherSyllabusQueries"
+import { rowsOf } from "./teacherSyllabusQueries"
 
-const REVISION_EXISTS = sql`exists (select 1 from silabos silabo_revision where silabo_revision.silabo_id = revisiones_silabo.silabo_id
+const REVISION_EXISTS = Prisma.sql`exists (select 1 from silabos silabo_revision where silabo_revision.silabo_id = revisiones_silabo.silabo_id
   and exists (select 1 from convocatorias_carreras convocatoria_revision where convocatoria_revision.convocatoria_carrera_id = silabo_revision.convocatoria_carrera_id
     and exists (select 1 from convocatorias_universidad proceso_revision where proceso_revision.convocatoria_universidad_id = convocatoria_revision.convocatoria_universidad_id)))`
 
@@ -34,23 +33,17 @@ type HistoryRow = {
   justification: string | null
 }
 
-export function reviewDetailStoreOn(executor: Executor): ReviewDetailStore {
+export function reviewDetailStoreOn(executor: Db): ReviewDetailStore {
   const syllabi = syllabusDetailStoreOn(executor)
   return {
     async revision(id) {
-      const [row] = await executor
-        .select({
-          id: revisionesSilabo.revisionSilaboId,
-          syllabusId: revisionesSilabo.silaboId,
-          number: revisionesSilabo.numeroRevision,
-          submittedAt: epochText(revisionesSilabo.enviadoEn),
-          submittedBy: usuarios.nombreUsuario,
-          fingerprint: revisionesSilabo.hashContenido,
-        })
-        .from(revisionesSilabo)
-        .leftJoin(usuarios, eq(usuarios.usuarioId, revisionesSilabo.enviadoPor))
-        .where(and(eq(revisionesSilabo.revisionSilaboId, id), REVISION_EXISTS))
-        .limit(1)
+      const [row] = await rowsOf<{ id: string; syllabusId: string; number: number; submittedAt: string; submittedBy: string | null; fingerprint: string }>(
+        executor,
+        Prisma.sql`select "revisiones_silabo"."revision_silabo_id"::text as id, "revisiones_silabo"."silabo_id"::text as "syllabusId", "revisiones_silabo"."numero_revision" as number,
+          ${epochText(Prisma.raw('"revisiones_silabo"."enviado_en"'))} as "submittedAt", "usuarios"."nombre_usuario" as "submittedBy", "revisiones_silabo"."hash_contenido" as fingerprint
+        from "revisiones_silabo" left join "usuarios" on "usuarios"."usuario_id" = "revisiones_silabo"."enviado_por"
+        where ("revisiones_silabo"."revision_silabo_id" = ${id}::uuid and ${REVISION_EXISTS}) limit 1`,
+      )
       return row ? { ...row, number: Number(row.number), submittedAt: Number(row.submittedAt), submittedBy: row.submittedBy as string } : null
     },
     syllabus: (id, userId) => syllabi.syllabus(id, userId),
@@ -58,13 +51,13 @@ export function reviewDetailStoreOn(executor: Executor): ReviewDetailStore {
     async history(syllabusId) {
       const rows = await rowsOf<HistoryRow>(
         executor,
-        sql`select revisiones_silabo.revision_silabo_id::text as id, revisiones_silabo.numero_revision as number,
-            ${iso8601(sql.raw("revisiones_silabo.enviado_en"))} as submitted_at, remitente.nombre_usuario as submitted_by,
-            ${iso8601(sql.raw("revision_coordinacion.revisado_en"))} as reviewed_at, revision_coordinacion.revisado_por::text as reviewer_id, revisor.nombre_usuario as reviewer,
-            ${iso8601(sql.raw("aprobacion.aprobado_en"))} as approved_at, aprobacion.aprobado_por::text as approver_id, aprobador.nombre_usuario as approver,
-            envio.envio_biblioteca_id is not null as has_submission, ${iso8601(sql.raw("envio.verificado_en"))} as verified_at, verificador.nombre_usuario as verifier,
+        Prisma.sql`select revisiones_silabo.revision_silabo_id::text as id, revisiones_silabo.numero_revision as number,
+            ${iso8601(Prisma.raw("revisiones_silabo.enviado_en"))} as submitted_at, remitente.nombre_usuario as submitted_by,
+            ${iso8601(Prisma.raw("revision_coordinacion.revisado_en"))} as reviewed_at, revision_coordinacion.revisado_por::text as reviewer_id, revisor.nombre_usuario as reviewer,
+            ${iso8601(Prisma.raw("aprobacion.aprobado_en"))} as approved_at, aprobacion.aprobado_por::text as approver_id, aprobador.nombre_usuario as approver,
+            envio.envio_biblioteca_id is not null as has_submission, ${iso8601(Prisma.raw("envio.verificado_en"))} as verified_at, verificador.nombre_usuario as verifier,
             envio.verificacion_heredada as inherited, revisiones_silabo.correccion_etapa as correction_stage,
-            ${iso8601(sql.raw("revisiones_silabo.correccion_solicitada_en"))} as correction_at, solicitante.nombre_usuario as correction_by,
+            ${iso8601(Prisma.raw("revisiones_silabo.correccion_solicitada_en"))} as correction_at, solicitante.nombre_usuario as correction_by,
             revisiones_silabo.correccion_justificacion as justification
           from revisiones_silabo
             left join usuarios remitente on remitente.usuario_id = revisiones_silabo.enviado_por
@@ -95,8 +88,8 @@ export function reviewDetailStoreOn(executor: Executor): ReviewDetailStore {
     async librarySubmission(revisionId) {
       const [row] = await rowsOf<{ sent_at: string; sent_by: string; verified_at: string | null; verified_by: string | null; state: string; outcome: string | null; responsible_id: string | null }>(
         executor,
-        sql`select extract(epoch from revision.enviado_en)::bigint as sent_at, remitente.nombre_usuario as sent_by,
-            ${iso8601(sql.raw("envios_biblioteca.verificado_en"))} as verified_at, verificador.nombre_usuario as verified_by,
+        Prisma.sql`select extract(epoch from revision.enviado_en)::bigint as sent_at, remitente.nombre_usuario as sent_by,
+            ${iso8601(Prisma.raw("envios_biblioteca.verificado_en"))} as verified_at, verificador.nombre_usuario as verified_by,
             ${STATE_SQL} as state, ${OUTCOME_SQL} as outcome, (${RESPONSIBLE_SQL})::text as responsible_id
           ${LIBRARY_FROM}
             left join usuarios remitente on remitente.usuario_id = revision.enviado_por
@@ -108,13 +101,13 @@ export function reviewDetailStoreOn(executor: Executor): ReviewDetailStore {
         : null
     },
     async userName(id) {
-      const [row] = await executor.select({ name: usuarios.nombreUsuario }).from(usuarios).where(eq(usuarios.usuarioId, id)).limit(1)
+      const [row] = await rowsOf<{ name: string }>(executor, Prisma.sql`select "nombre_usuario" as name from "usuarios" where "usuarios"."usuario_id" = ${id}::uuid limit 1`)
       return row?.name ?? null
     },
     comments: (syllabusId, stage) => reviewCommentsOf(executor, syllabusId, stage),
   }
 }
 
-export function createReviewDetailStore(): ReviewDetailStore {
-  return reviewDetailStoreOn(db)
+export function createReviewDetailStore(prisma: PrismaService): ReviewDetailStore {
+  return reviewDetailStoreOn(prisma)
 }

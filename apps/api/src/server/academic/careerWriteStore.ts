@@ -1,176 +1,175 @@
-import { and, asc, desc, eq, exists, getTableColumns, inArray, isNotNull, max, ne, or, sql, type SQL } from "drizzle-orm"
-import type { AnyPgColumn } from "drizzle-orm/pg-core"
-import { db } from "@/db"
-import { byColumnName, fromEpoch, hasRows } from "@/db/expressions"
-import { asignacionesParalelo, asignacionesRol, asignaturas, carreras, convocatoriasCarreras, convocatoriasUniversidad, paralelos, requisitosAsignatura, silabos, usuarios } from "@/db/schema"
+import { Prisma } from "../../generated/prisma/client"
+import { type Db, inTransactionAfterCommit } from "../../prisma/db"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { fromEpoch, hasRows } from "../../prisma/sql"
 import { careerDataLocked } from "../configuration/subjectProfileWriteStore"
 import { uuid7 } from "../http/uuid7"
 import { systemNow } from "../shared/clock"
 import { notificationScope, type WriteOptions } from "../notifications/queries"
-import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
+import type { AfterCommit } from "../queue/afterCommit"
 import { FinalizedChangeNotice, keepContent } from "../syllabus/finalizedChangeNotice"
 import { InProgressWork, SYLLABUS_ALIVE } from "../syllabus/inProgressWork"
-import { dbTransaction, type TransactionRunner } from "../syllabus/reviewDecisionStore"
-import type { Executor } from "../syllabus/teacherSyllabusQueries"
+import { IN_CAREER } from "./academicSql"
 import { SUBJECT_COLUMNS, type CareerWriteDeps, type CareerWriteTx, type SubjectColumn, type SubjectValue } from "./careerWrites"
+import { insertColumns, SUBJECTS_TABLE, updateColumns } from "./columnSql"
 import type { CurriculumDeps, CurriculumTx } from "./curriculumWrites"
 import { deletionTx } from "./deletions"
 
-const IN_CAREER = (careerId: string) => sql`exists (select * from asignaturas where paralelos.asignatura_id = asignaturas.asignatura_id and asignaturas.carrera_id = ${careerId}::uuid)`
-const ACTIVE_ROLE = eq(asignacionesRol.asignacionRolActiva, true)
-const ELIGIBLE_USER = and(eq(usuarios.usuarioActivo, true), isNotNull(usuarios.correoVerificadoEn))
-const ACTIVE_ASSIGNMENT = (parallelId: string) => and(eq(asignacionesParalelo.paraleloId, parallelId), eq(asignacionesParalelo.asignacionParaleloActiva, true))
-const REQUIREMENT = { id: requisitosAsignatura.requisitoAsignaturaId, type: requisitosAsignatura.tipoRequisitoAsignatura }
-function subjectFields(): Record<SubjectColumn, AnyPgColumn> {
-  const columns = Object.values(getTableColumns(asignaturas))
-  return Object.fromEntries(SUBJECT_COLUMNS.map((name) => [name, columns.find((column) => column.name === name) as AnyPgColumn])) as Record<SubjectColumn, AnyPgColumn>
+type SubjectLock = { id: string; careerId: string; totalHours: number | null } & Record<SubjectColumn, SubjectValue>
+
+const ACTIVE_ASSIGNMENT = (parallelId: string) => Prisma.sql`asignaciones_paralelo.paralelo_id = ${parallelId}::uuid and asignaciones_paralelo.asignacion_paralelo_activa = true`
+const ELIGIBLE_USER = Prisma.sql`usuarios.usuario_activo = true and usuarios.correo_verificado_en is not null`
+const SUBJECT_IN_CAREER = (subject: Prisma.Sql, careerId: string) =>
+  Prisma.sql`exists (select asignaturas.asignatura_id from asignaturas where asignaturas.asignatura_id = ${subject} and asignaturas.carrera_id = ${careerId}::uuid)`
+const SUBJECT_SELECTION = Prisma.sql`asignaturas.codigo_asignatura, asignaturas.nombre_asignatura, asignaturas.ciclo_asignatura,
+  asignaturas.creditos_asignatura::text as creditos_asignatura, asignaturas.horas_docencia::text as horas_docencia,
+  asignaturas.horas_practicas::text as horas_practicas, asignaturas.horas_autonomas::text as horas_autonomas,
+  asignaturas.orden_asignatura_en_ciclo, asignaturas.unidad_curricular_asignatura, asignaturas.modalidad_asignatura::text as modalidad_asignatura,
+  asignaturas.genera_silabo_asignatura`
+
+async function first<T>(db: Db, query: Prisma.Sql): Promise<T | null> {
+  return (await db.$queryRaw<T[]>(query))[0] ?? null
 }
 
-function subjectInCareer(executor: Executor, subject: AnyPgColumn, careerId: string): SQL {
-  return exists(executor.select({ id: asignaturas.asignaturaId }).from(asignaturas).where(and(eq(asignaturas.asignaturaId, subject), eq(asignaturas.carreraId, careerId))))
+function found(db: Db, query: Prisma.Sql): Promise<boolean> {
+  return hasRows(db.$queryRaw<unknown[]>(query))
 }
 
-function subjectExists(executor: Executor, ...conditions: (SQL | undefined)[]): Promise<boolean> {
-  return hasRows(executor.select({ id: asignaturas.asignaturaId }).from(asignaturas).where(and(...conditions)).limit(1))
+function nullableNumber(value: unknown): number | null {
+  return value === null || value === undefined ? null : Number(value)
 }
 
-function work(executor: Executor, afterCommit: AfterCommit, now: number, options: WriteOptions): { work: InProgressWork; notice: FinalizedChangeNotice } {
-  const progress = new InProgressWork(executor, afterCommit, notificationScope(executor, afterCommit, now, options.mail))
+function work(db: Db, afterCommit: AfterCommit, now: number, options: WriteOptions): { work: InProgressWork; notice: FinalizedChangeNotice } {
+  const progress = new InProgressWork(db, afterCommit, notificationScope(db, afterCommit, now, options.mail))
   return { work: progress, notice: new FinalizedChangeNotice(progress, now) }
 }
 
-async function lockCareer(executor: Executor, careerId: string, curriculumId: string = careerId): Promise<{ id: string; cycleCount: number } | null> {
-  const [row] = await executor
-    .select({ id: carreras.carreraId, cycleCount: carreras.numeroCiclos })
-    .from(carreras)
-    .where(and(eq(carreras.carreraId, careerId), eq(carreras.carreraId, curriculumId)))
-    .limit(1)
-    .for("update")
-  return row ? { id: row.id, cycleCount: Number(row.cycleCount) } : null
+async function lockCareer(db: Db, careerId: string, curriculumId: string = careerId): Promise<{ id: string; cycleCount: number } | null> {
+  const row = await first<{ id: string; cycle_count: number }>(
+    db,
+    Prisma.sql`select carreras.carrera_id::text as id, carreras.numero_ciclos as cycle_count from carreras
+      where carreras.carrera_id = ${careerId}::uuid and carreras.carrera_id = ${curriculumId}::uuid limit 1 for update`,
+  )
+  return row ? { id: row.id, cycleCount: Number(row.cycle_count) } : null
 }
 
-export function careerWriteTx(executor: Executor, afterCommit: AfterCommit, now: number, options: WriteOptions = {}): CareerWriteTx {
-  const { work: progress, notice } = work(executor, afterCommit, now, options)
-  const deletions = deletionTx(executor)
+export function careerWriteTx(db: Db, afterCommit: AfterCommit, now: number, options: WriteOptions = {}): CareerWriteTx {
+  const { work: progress, notice } = work(db, afterCommit, now, options)
+  const deletions = deletionTx(db)
   return {
-    careerLocked: (careerId) => careerDataLocked(executor, careerId),
-    lockCareer: (careerId) => lockCareer(executor, careerId),
+    careerLocked: (careerId) => careerDataLocked(db, careerId),
+    lockCareer: (careerId) => lockCareer(db, careerId),
     async lastPosition(careerId, cycle) {
-      const [row] = await executor
-        .select({ position: max(asignaturas.ordenAsignaturaEnCiclo) })
-        .from(asignaturas)
-        .where(and(eq(asignaturas.carreraId, careerId), sql`${asignaturas.cicloAsignatura} = ${cycle}`))
-      return row?.position === null || row?.position === undefined ? null : Number(row.position)
+      const row = await first<{ position: number | null }>(
+        db,
+        Prisma.sql`select max(asignaturas.orden_asignatura_en_ciclo) as position from asignaturas
+          where asignaturas.carrera_id = ${careerId}::uuid and asignaturas.ciclo_asignatura = ${cycle}`,
+      )
+      return nullableNumber(row?.position)
     },
     async insertSubject(careerId, columns) {
       const id = uuid7()
-      await executor.insert(asignaturas).values({ ...byColumnName(asignaturas, columns), asignaturaId: id, carreraId: careerId, asignaturaActiva: true } as typeof asignaturas.$inferInsert)
+      await db.$executeRaw(insertColumns(SUBJECTS_TABLE, { ...columns, asignatura_id: Prisma.sql`${id}::uuid`, carrera_id: Prisma.sql`${careerId}::uuid`, asignatura_activa: true }))
       return id
     },
     async subjectGeneratesSyllabus(subjectId) {
-      const [row] = await executor.select({ value: asignaturas.generaSilaboAsignatura }).from(asignaturas).where(eq(asignaturas.asignaturaId, subjectId)).limit(1)
+      const row = await first<{ value: boolean }>(
+        db,
+        Prisma.sql`select asignaturas.genera_silabo_asignatura as value from asignaturas where asignaturas.asignatura_id = ${subjectId}::uuid limit 1`,
+      )
       return row ? row.value : null
     },
     async lockSubject(subjectId, careerId) {
-      const [row] = await executor
-        .select({ id: asignaturas.asignaturaId, careerId: asignaturas.carreraId, totalHours: asignaturas.totalHorasAsignatura, columns: subjectFields() })
-        .from(asignaturas)
-        .where(and(eq(asignaturas.asignaturaId, subjectId), eq(asignaturas.carreraId, careerId)))
-        .limit(1)
-        .for("update")
+      const row = await first<SubjectLock & { career_id: string; total_hours: number | null }>(
+        db,
+        Prisma.sql`select asignaturas.asignatura_id::text as id, asignaturas.carrera_id::text as career_id, asignaturas.total_horas_asignatura as total_hours,
+            ${SUBJECT_SELECTION}
+          from asignaturas where asignaturas.asignatura_id = ${subjectId}::uuid and asignaturas.carrera_id = ${careerId}::uuid limit 1 for update`,
+      )
       if (!row) return null
-      return { id: row.id, careerId: row.careerId, totalHours: row.totalHours === null ? null : Number(row.totalHours), columns: row.columns as Record<SubjectColumn, SubjectValue> }
+      const columns = Object.fromEntries(SUBJECT_COLUMNS.map((name) => [name, row[name]])) as Record<SubjectColumn, SubjectValue>
+      return { id: row.id, careerId: row.career_id, totalHours: nullableNumber(row.total_hours), columns }
     },
     async updateSubject(subjectId, columns) {
-      await executor.update(asignaturas).set(byColumnName(asignaturas, columns)).where(eq(asignaturas.asignaturaId, subjectId))
+      await db.$executeRaw(updateColumns(SUBJECTS_TABLE, columns, Prisma.sql`"asignaturas"."asignatura_id" = ${subjectId}::uuid`))
     },
     async subjectsOfParallel(parallelId) {
-      const rows = await executor.select({ id: paralelos.asignaturaId }).from(paralelos).where(eq(paralelos.paraleloId, parallelId))
+      const rows = await db.$queryRaw<{ id: string }[]>`select paralelos.asignatura_id::text as id from paralelos where paralelos.paralelo_id = ${parallelId}::uuid`
       return rows.map((row) => row.id)
     },
     parallelsWithStartedSyllabus: (parallelIds) => progress.parallelsWithStartedSyllabus(parallelIds),
-    async lockParallel(parallelId, careerId) {
-      const [row] = await executor
-        .select({ id: paralelos.paraleloId, subjectId: paralelos.asignaturaId, code: paralelos.codigoParalelo, shift: paralelos.jornadaParalelo })
-        .from(paralelos)
-        .where(and(eq(paralelos.paraleloId, parallelId), IN_CAREER(careerId)))
-        .limit(1)
-        .for("update")
-      return row ?? null
-    },
+    lockParallel: (parallelId, careerId) =>
+      first(
+        db,
+        Prisma.sql`select paralelos.paralelo_id::text as id, paralelos.asignatura_id::text as "subjectId", paralelos.codigo_paralelo as code, paralelos.jornada_paralelo as shift
+          from paralelos where paralelos.paralelo_id = ${parallelId}::uuid and ${IN_CAREER(careerId)} limit 1 for update`,
+      ),
     hasCoordinatorRole: (userId, careerId) =>
-      hasRows(
-        executor
-          .select({ id: asignacionesRol.asignacionRolId })
-          .from(asignacionesRol)
-          .where(and(ACTIVE_ROLE, eq(asignacionesRol.usuarioId, userId), eq(asignacionesRol.carreraId, careerId), eq(asignacionesRol.rol, "coordinador")))
-          .limit(1),
+      found(
+        db,
+        Prisma.sql`select asignaciones_rol.asignacion_rol_id from asignaciones_rol
+          where asignaciones_rol.asignacion_rol_activa = true and asignaciones_rol.usuario_id = ${userId}::uuid
+            and asignaciones_rol.carrera_id = ${careerId}::uuid and asignaciones_rol.rol = ${"coordinador"} limit 1`,
       ),
     async effectiveRoles(userId) {
-      const rows = await executor.select({ role: asignacionesRol.rol }).from(asignacionesRol).where(and(ACTIVE_ROLE, eq(asignacionesRol.usuarioId, userId)))
+      const rows = await db.$queryRaw<{ role: string }[]>`select asignaciones_rol.rol as role from asignaciones_rol
+        where asignaciones_rol.asignacion_rol_activa = true and asignaciones_rol.usuario_id = ${userId}::uuid`
       return rows.map((row) => row.role)
     },
-    async teacherGrant(userId, careerId) {
-      const [row] = await executor
-        .select({ id: asignacionesRol.asignacionRolId, active: asignacionesRol.asignacionRolActiva })
-        .from(asignacionesRol)
-        .where(and(eq(asignacionesRol.usuarioId, userId), eq(asignacionesRol.carreraId, careerId), eq(asignacionesRol.rol, "docente")))
-        .orderBy(desc(asignacionesRol.asignacionRolActiva))
-        .limit(1)
-      return row ?? null
-    },
+    teacherGrant: (userId, careerId) =>
+      first(
+        db,
+        Prisma.sql`select asignaciones_rol.asignacion_rol_id::text as id, asignaciones_rol.asignacion_rol_activa as active from asignaciones_rol
+          where asignaciones_rol.usuario_id = ${userId}::uuid and asignaciones_rol.carrera_id = ${careerId}::uuid and asignaciones_rol.rol = ${"docente"}
+          order by asignaciones_rol.asignacion_rol_activa desc limit 1`,
+      ),
     async insertTeacherGrant(userId, careerId) {
-      await executor
-        .insert(asignacionesRol)
-        .values({ asignacionRolId: uuid7(), usuarioId: userId, carreraId: careerId, rol: "docente", asignacionRolActiva: true, asignadoEn: fromEpoch(now) })
+      await db.$executeRaw`insert into asignaciones_rol (asignacion_rol_id, usuario_id, carrera_id, rol, asignacion_rol_activa, asignado_en)
+        values (${uuid7()}::uuid, ${userId}::uuid, ${careerId}::uuid, ${"docente"}, true, ${fromEpoch(now)})`
     },
     async activateGrant(grantId) {
-      await executor.update(asignacionesRol).set({ asignacionRolActiva: true }).where(eq(asignacionesRol.asignacionRolId, grantId))
+      await db.$executeRaw`update asignaciones_rol set asignacion_rol_activa = true where asignaciones_rol.asignacion_rol_id = ${grantId}::uuid`
     },
     async eligibleTeacherRole(userId, careerId) {
-      const [row] = await executor
-        .select({ id: asignacionesRol.asignacionRolId })
-        .from(asignacionesRol)
-        .where(
-          and(
-            ACTIVE_ROLE,
-            eq(asignacionesRol.usuarioId, userId),
-            eq(asignacionesRol.carreraId, careerId),
-            eq(asignacionesRol.rol, "docente"),
-            exists(executor.select({ id: usuarios.usuarioId }).from(usuarios).where(and(eq(usuarios.usuarioId, asignacionesRol.usuarioId), ELIGIBLE_USER))),
-          ),
-        )
-        .limit(1)
+      const row = await first<{ id: string }>(
+        db,
+        Prisma.sql`select asignaciones_rol.asignacion_rol_id::text as id from asignaciones_rol
+          where asignaciones_rol.asignacion_rol_activa = true and asignaciones_rol.usuario_id = ${userId}::uuid
+            and asignaciones_rol.carrera_id = ${careerId}::uuid and asignaciones_rol.rol = ${"docente"}
+            and exists (select usuarios.usuario_id from usuarios where usuarios.usuario_id = asignaciones_rol.usuario_id and ${ELIGIBLE_USER})
+          limit 1`,
+      )
       return row?.id ?? null
     },
     parallelHasActiveTeacher: (parallelId) =>
-      hasRows(executor.select({ id: asignacionesParalelo.asignacionParaleloId }).from(asignacionesParalelo).where(ACTIVE_ASSIGNMENT(parallelId)).limit(1)),
+      found(db, Prisma.sql`select asignaciones_paralelo.asignacion_paralelo_id from asignaciones_paralelo where ${ACTIVE_ASSIGNMENT(parallelId)} limit 1`),
     async insertTeacherAssignment(roleId, parallelId) {
       const id = uuid7()
-      await executor
-        .insert(asignacionesParalelo)
-        .values({ asignacionParaleloId: id, asignacionRolId: roleId, paraleloId: parallelId, asignacionParaleloActiva: true, asignadoEn: fromEpoch(now) })
+      await db.$executeRaw`insert into asignaciones_paralelo (asignacion_paralelo_id, asignacion_rol_id, paralelo_id, asignacion_paralelo_activa, asignado_en)
+        values (${id}::uuid, ${roleId}::uuid, ${parallelId}::uuid, true, ${fromEpoch(now)})`
       return id
     },
     async restartForParallel(parallelId) {
       await progress.restartForParallel(parallelId)
     },
-    async lockCurrentConvocation(careerId) {
-      const [row] = await executor
-        .select({ id: convocatoriasCarreras.convocatoriaCarreraId, state: convocatoriasCarreras.estadoConvocatoriaCarrera, processState: convocatoriasUniversidad.estadoConvocatoriaUniversidad })
-        .from(convocatoriasCarreras)
-        .innerJoin(convocatoriasUniversidad, eq(convocatoriasUniversidad.convocatoriaUniversidadId, convocatoriasCarreras.convocatoriaUniversidadId))
-        .where(and(eq(convocatoriasCarreras.carreraId, careerId), inArray(convocatoriasUniversidad.estadoConvocatoriaUniversidad, ["abierto", "pausado"])))
-        .orderBy(asc(convocatoriasCarreras.convocatoriaCarreraId))
-        .limit(1)
-        .for("share", { of: convocatoriasCarreras })
-      return row ?? null
-    },
+    lockCurrentConvocation: (careerId) =>
+      first(
+        db,
+        Prisma.sql`select convocatorias_carreras.convocatoria_carrera_id::text as id, convocatorias_carreras.estado_convocatoria_carrera as state,
+            convocatorias_universidad.estado_convocatoria_universidad as "processState"
+          from convocatorias_carreras
+          inner join convocatorias_universidad on convocatorias_universidad.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id
+          where convocatorias_carreras.carrera_id = ${careerId}::uuid and convocatorias_universidad.estado_convocatoria_universidad in (${"abierto"}, ${"pausado"})
+          order by convocatorias_carreras.convocatoria_carrera_id asc limit ${1} for share of convocatorias_carreras`,
+      ),
     async generateParallelSyllabus(convocationId, parallelId) {
       await progress.generateConvocation(convocationId, { parallelId, allowEmpty: true, skipIncomplete: true, notifyTeacher: true })
     },
     async activeTeacherAssignment(parallelId) {
-      const [row] = await executor.select({ id: asignacionesParalelo.asignacionParaleloId }).from(asignacionesParalelo).where(ACTIVE_ASSIGNMENT(parallelId)).limit(1)
+      const row = await first<{ id: string }>(
+        db,
+        Prisma.sql`select asignaciones_paralelo.asignacion_paralelo_id::text as id from asignaciones_paralelo where ${ACTIVE_ASSIGNMENT(parallelId)} limit 1`,
+      )
       return row?.id ?? null
     },
     async lockTeacherAssignment(assignmentId, careerId) {
@@ -178,36 +177,33 @@ export function careerWriteTx(executor: Executor, afterCommit: AfterCommit, now:
     },
     deleteTeacherAssignment: (assignmentId) => deletions.deleteTeacherAssignment(assignmentId),
     async lockActiveSubject(subjectId, careerId) {
-      const [row] = await executor
-        .select({ id: asignaturas.asignaturaId })
-        .from(asignaturas)
-        .where(and(eq(asignaturas.asignaturaId, subjectId), eq(asignaturas.asignaturaActiva, true), eq(asignaturas.carreraId, careerId)))
-        .limit(1)
-        .for("update")
+      const row = await first<{ id: string }>(
+        db,
+        Prisma.sql`select asignaturas.asignatura_id::text as id from asignaturas
+          where asignaturas.asignatura_id = ${subjectId}::uuid and asignaturas.asignatura_activa = true and asignaturas.carrera_id = ${careerId}::uuid
+          limit 1 for update`,
+      )
       return row?.id ?? null
     },
     async existingParallelCodes(subjectId, upperCodes) {
-      const rows = await executor
-        .select({ code: paralelos.codigoParalelo })
-        .from(paralelos)
-        .where(and(eq(paralelos.asignaturaId, subjectId), inArray(sql`upper(${paralelos.codigoParalelo})`, upperCodes)))
+      if (upperCodes.length === 0) return []
+      const rows = await db.$queryRaw<{ code: string }[]>`select paralelos.codigo_paralelo as code from paralelos
+        where paralelos.asignatura_id = ${subjectId}::uuid and upper(paralelos.codigo_paralelo) in (${Prisma.join(upperCodes)})`
       return rows.map((row) => row.code)
     },
     async insertParallel(subjectId, code, shift) {
       const id = uuid7()
-      await executor.insert(paralelos).values({ paraleloId: id, asignaturaId: subjectId, codigoParalelo: code, jornadaParalelo: shift as string })
+      await db.$executeRaw`insert into paralelos (paralelo_id, asignatura_id, codigo_paralelo, jornada_paralelo) values (${id}::uuid, ${subjectId}::uuid, ${code}, ${shift as string})`
       return id
     },
     parallelCodeTaken: (subjectId, exceptId, upperCode) =>
-      hasRows(
-        executor
-          .select({ id: paralelos.paraleloId })
-          .from(paralelos)
-          .where(and(eq(paralelos.asignaturaId, subjectId), ne(paralelos.paraleloId, exceptId), sql`upper(${paralelos.codigoParalelo}) = ${upperCode}`))
-          .limit(1),
+      found(
+        db,
+        Prisma.sql`select paralelos.paralelo_id from paralelos
+          where paralelos.asignatura_id = ${subjectId}::uuid and paralelos.paralelo_id <> ${exceptId}::uuid and upper(paralelos.codigo_paralelo) = ${upperCode} limit 1`,
       ),
     async updateParallel(parallelId, code, shift) {
-      await executor.update(paralelos).set({ codigoParalelo: code, jornadaParalelo: shift as string }).where(eq(paralelos.paraleloId, parallelId))
+      await db.$executeRaw`update paralelos set codigo_paralelo = ${code}, jornada_paralelo = ${shift as string} where paralelos.paralelo_id = ${parallelId}::uuid`
     },
     parallelHasSentSyllabus: (parallelId) => progress.parallelHasSentSyllabus(parallelId),
     async restartSentForParallel(parallelId) {
@@ -222,104 +218,81 @@ export function careerWriteTx(executor: Executor, afterCommit: AfterCommit, now:
   }
 }
 
-export function curriculumTx(executor: Executor, afterCommit: AfterCommit, now: number, options: WriteOptions = {}): CurriculumTx {
-  const { work: progress, notice } = work(executor, afterCommit, now, options)
+const REQUIREMENT = Prisma.sql`requisitos_asignatura.requisito_asignatura_id::text as id, requisitos_asignatura.tipo_requisito_asignatura as type`
+
+export function curriculumTx(db: Db, afterCommit: AfterCommit, now: number, options: WriteOptions = {}): CurriculumTx {
+  const { work: progress, notice } = work(db, afterCommit, now, options)
   return {
-    careerLocked: (careerId) => careerDataLocked(executor, careerId),
-    lockCareer: (careerId, curriculumId) => lockCareer(executor, careerId, curriculumId),
+    careerLocked: (careerId) => careerDataLocked(db, careerId),
+    lockCareer: (careerId, curriculumId) => lockCareer(db, careerId, curriculumId),
     async maxCycle(careerId) {
-      const [row] = await executor.select({ cycle: max(asignaturas.cicloAsignatura) }).from(asignaturas).where(eq(asignaturas.carreraId, careerId))
-      return row?.cycle === null || row?.cycle === undefined ? null : Number(row.cycle)
+      const row = await first<{ cycle: number | null }>(db, Prisma.sql`select max(asignaturas.ciclo_asignatura) as cycle from asignaturas where asignaturas.carrera_id = ${careerId}::uuid`)
+      return nullableNumber(row?.cycle)
     },
     async updateCycleCount(careerId, cycleCount) {
-      await executor.update(carreras).set({ numeroCiclos: cycleCount }).where(eq(carreras.carreraId, careerId))
+      await db.$executeRaw`update carreras set numero_ciclos = ${cycleCount} where carreras.carrera_id = ${careerId}::uuid`
     },
     async lockSubjects(careerId, subjectIds) {
-      const rows = await executor
-        .select({ id: asignaturas.asignaturaId, cycle: asignaturas.cicloAsignatura })
-        .from(asignaturas)
-        .where(and(eq(asignaturas.carreraId, careerId), inArray(asignaturas.asignaturaId, subjectIds)))
-        .for("update")
-      return rows.map((row) => ({ id: row.id, cycle: row.cycle === null ? null : Number(row.cycle) }))
+      if (subjectIds.length === 0) return []
+      const rows = await db.$queryRaw<{ id: string; cycle: number | null }[]>`select asignaturas.asignatura_id::text as id, asignaturas.ciclo_asignatura as cycle from asignaturas
+        where asignaturas.carrera_id = ${careerId}::uuid and asignaturas.asignatura_id in (${Prisma.join(subjectIds.map((id) => Prisma.sql`${id}::uuid`))}) for update`
+      return rows.map((row) => ({ id: row.id, cycle: nullableNumber(row.cycle) }))
     },
-    async prerequisites(careerId) {
-      return executor
-        .select({ subjectId: requisitosAsignatura.asignaturaId, requirementId: requisitosAsignatura.requisitoId })
-        .from(requisitosAsignatura)
-        .where(and(eq(requisitosAsignatura.tipoRequisitoAsignatura, "prerrequisito"), subjectInCareer(executor, requisitosAsignatura.asignaturaId, careerId)))
-    },
-    async findRequirement(subjectId, requirementId) {
-      const [row] = await executor
-        .select(REQUIREMENT)
-        .from(requisitosAsignatura)
-        .where(and(eq(requisitosAsignatura.asignaturaId, subjectId), eq(requisitosAsignatura.requisitoId, requirementId)))
-        .limit(1)
-      return row ?? null
-    },
+    prerequisites: (careerId) =>
+      db.$queryRaw<{ subjectId: string; requirementId: string }[]>`select requisitos_asignatura.asignatura_id::text as "subjectId", requisitos_asignatura.requisito_id::text as "requirementId"
+        from requisitos_asignatura
+        where requisitos_asignatura.tipo_requisito_asignatura = ${"prerrequisito"} and ${SUBJECT_IN_CAREER(Prisma.sql`requisitos_asignatura.asignatura_id`, careerId)}`,
+    findRequirement: (subjectId, requirementId) =>
+      first(
+        db,
+        Prisma.sql`select ${REQUIREMENT} from requisitos_asignatura
+          where requisitos_asignatura.asignatura_id = ${subjectId}::uuid and requisitos_asignatura.requisito_id = ${requirementId}::uuid limit 1`,
+      ),
     async insertRequirement(subjectId, requirementId, type) {
       const id = uuid7()
-      await executor.insert(requisitosAsignatura).values({ requisitoAsignaturaId: id, asignaturaId: subjectId, requisitoId: requirementId, tipoRequisitoAsignatura: type })
+      await db.$executeRaw`insert into requisitos_asignatura (requisito_asignatura_id, asignatura_id, requisito_id, tipo_requisito_asignatura)
+        values (${id}::uuid, ${subjectId}::uuid, ${requirementId}::uuid, ${type})`
       return id
     },
-    async lockRequirement(requirementId, careerId) {
-      const [row] = await executor
-        .select(REQUIREMENT)
-        .from(requisitosAsignatura)
-        .where(
-          and(
-            subjectInCareer(executor, requisitosAsignatura.asignaturaId, careerId),
-            subjectInCareer(executor, requisitosAsignatura.requisitoId, careerId),
-            eq(requisitosAsignatura.requisitoAsignaturaId, requirementId),
-          ),
-        )
-        .limit(1)
-        .for("update")
-      return row ?? null
-    },
+    lockRequirement: (requirementId, careerId) =>
+      first(
+        db,
+        Prisma.sql`select ${REQUIREMENT} from requisitos_asignatura
+          where ${SUBJECT_IN_CAREER(Prisma.sql`requisitos_asignatura.asignatura_id`, careerId)} and ${SUBJECT_IN_CAREER(Prisma.sql`requisitos_asignatura.requisito_id`, careerId)}
+            and requisitos_asignatura.requisito_asignatura_id = ${requirementId}::uuid
+          limit 1 for update`,
+      ),
     async deleteRequirement(requirementId) {
-      await executor.delete(requisitosAsignatura).where(eq(requisitosAsignatura.requisitoAsignaturaId, requirementId))
+      await db.$executeRaw`delete from requisitos_asignatura where requisitos_asignatura.requisito_asignatura_id = ${requirementId}::uuid`
     },
     async lockSubject(subjectId, careerId) {
-      const [row] = await executor
-        .select({
-          id: asignaturas.asignaturaId,
-          code: asignaturas.codigoAsignatura,
-          name: asignaturas.nombreAsignatura,
-          cycle: asignaturas.cicloAsignatura,
-          position: asignaturas.ordenAsignaturaEnCiclo,
-        })
-        .from(asignaturas)
-        .where(and(eq(asignaturas.carreraId, careerId), eq(asignaturas.asignaturaId, subjectId)))
-        .limit(1)
-        .for("update")
-      return row ? { ...row, cycle: row.cycle === null ? null : Number(row.cycle), position: Number(row.position) } : null
+      const row = await first<{ id: string; code: string; name: string; cycle: number | null; position: number }>(
+        db,
+        Prisma.sql`select asignaturas.asignatura_id::text as id, asignaturas.codigo_asignatura as code, asignaturas.nombre_asignatura as name,
+            asignaturas.ciclo_asignatura as cycle, asignaturas.orden_asignatura_en_ciclo as position
+          from asignaturas where asignaturas.carrera_id = ${careerId}::uuid and asignaturas.asignatura_id = ${subjectId}::uuid limit 1 for update`,
+      )
+      return row ? { ...row, cycle: nullableNumber(row.cycle), position: Number(row.position) } : null
     },
     async subjectUsage(subjectId) {
-      const parallels = await executor.$count(paralelos, eq(paralelos.asignaturaId, subjectId))
-      const syllabi = await executor.$count(
-        silabos,
-        and(
-          exists(executor.select({ id: paralelos.paraleloId }).from(paralelos).where(and(eq(paralelos.paraleloId, silabos.paraleloId), eq(paralelos.asignaturaId, subjectId)))),
-          SYLLABUS_ALIVE,
-        ),
-      )
-      return { parallels, syllabi }
+      const [parallels] = await db.$queryRaw<{ total: number }[]>`select count(*)::int as total from paralelos where paralelos.asignatura_id = ${subjectId}::uuid`
+      const [syllabi] = await db.$queryRaw<{ total: number }[]>`select count(*)::int as total from silabos
+        where exists (select paralelos.paralelo_id from paralelos where paralelos.paralelo_id = silabos.paralelo_id and paralelos.asignatura_id = ${subjectId}::uuid)
+          and ${SYLLABUS_ALIVE}`
+      return { parallels: Number(parallels?.total ?? 0), syllabi: Number(syllabi?.total ?? 0) }
     },
     async deleteSubject(subjectId) {
-      await executor.delete(requisitosAsignatura).where(or(eq(requisitosAsignatura.asignaturaId, subjectId), eq(requisitosAsignatura.requisitoId, subjectId)))
-      await executor.delete(asignaturas).where(eq(asignaturas.asignaturaId, subjectId))
+      await db.$executeRaw`delete from requisitos_asignatura where requisitos_asignatura.asignatura_id = ${subjectId}::uuid or requisitos_asignatura.requisito_id = ${subjectId}::uuid`
+      await db.$executeRaw`delete from asignaturas where asignaturas.asignatura_id = ${subjectId}::uuid`
     },
     async lockCycleSubjects(careerId, cycle) {
-      const rows = await executor
-        .select({ id: asignaturas.asignaturaId, position: asignaturas.ordenAsignaturaEnCiclo })
-        .from(asignaturas)
-        .where(and(eq(asignaturas.carreraId, careerId), sql`${asignaturas.cicloAsignatura} = ${cycle}`))
-        .orderBy(asc(asignaturas.ordenAsignaturaEnCiclo), asc(asignaturas.nombreAsignatura))
-        .for("update")
+      const rows = await db.$queryRaw<{ id: string; position: number }[]>`select asignaturas.asignatura_id::text as id, asignaturas.orden_asignatura_en_ciclo as position from asignaturas
+        where asignaturas.carrera_id = ${careerId}::uuid and asignaturas.ciclo_asignatura = ${cycle}
+        order by asignaturas.orden_asignatura_en_ciclo asc, asignaturas.nombre_asignatura asc for update`
       return rows.map((row) => ({ id: row.id, position: Number(row.position) }))
     },
     async setPosition(subjectId, position) {
-      await executor.update(asignaturas).set({ ordenAsignaturaEnCiclo: position }).where(eq(asignaturas.asignaturaId, subjectId))
+      await db.$executeRaw`update asignaturas set orden_asignatura_en_ciclo = ${position} where asignaturas.asignatura_id = ${subjectId}::uuid`
     },
     async sync(confirmed, careerId) {
       await progress.sync(confirmed, careerId)
@@ -328,64 +301,52 @@ export function curriculumTx(executor: Executor, afterCommit: AfterCommit, now: 
   }
 }
 
-function sharedDeps(executor: Executor) {
-  return {
-    careerActive: (careerId: string) =>
-      hasRows(executor.select({ id: carreras.carreraId }).from(carreras).where(and(eq(carreras.carreraId, careerId), eq(carreras.carreraActiva, true))).limit(1)),
-  }
+function careerActive(db: Db) {
+  return (careerId: string) =>
+    found(db, Prisma.sql`select carreras.carrera_id from carreras where carreras.carrera_id = ${careerId}::uuid and carreras.carrera_activa = true limit 1`)
 }
 
-export function careerWriteDepsOn(executor: Executor, transaction: TransactionRunner, options: WriteOptions = {}): Omit<CareerWriteDeps, "bridge"> {
+function subjectExists(db: Db, ...conditions: Prisma.Sql[]): Promise<boolean> {
+  return found(db, Prisma.sql`select asignaturas.asignatura_id from asignaturas where ${Prisma.join(conditions, " and ")} limit 1`)
+}
+
+export function createCareerWriteDeps(prisma: PrismaService, options: WriteOptions = {}): Omit<CareerWriteDeps, "bridge"> {
   const now = options.now ?? systemNow
   return {
-    ...sharedDeps(executor),
-    subjectInCareer: (subjectId, careerId) => subjectExists(executor, eq(asignaturas.asignaturaId, subjectId), eq(asignaturas.carreraId, careerId)),
+    careerActive: careerActive(prisma),
+    subjectInCareer: (subjectId, careerId) => subjectExists(prisma, Prisma.sql`asignaturas.asignatura_id = ${subjectId}::uuid`, Prisma.sql`asignaturas.carrera_id = ${careerId}::uuid`),
     activeSubjectInCareer: (subjectId, careerId) =>
-      subjectExists(executor, eq(asignaturas.asignaturaId, subjectId), eq(asignaturas.asignaturaActiva, true), eq(asignaturas.carreraId, careerId)),
+      subjectExists(
+        prisma,
+        Prisma.sql`asignaturas.asignatura_id = ${subjectId}::uuid`,
+        Prisma.sql`asignaturas.asignatura_activa = true`,
+        Prisma.sql`asignaturas.carrera_id = ${careerId}::uuid`,
+      ),
     subjectCodeTaken: (careerId, code, except) =>
       subjectExists(
-        executor,
-        eq(asignaturas.codigoAsignatura, code),
-        eq(asignaturas.carreraId, careerId),
-        except === null ? undefined : ne(asignaturas.asignaturaId, except),
+        prisma,
+        ...[
+          Prisma.sql`asignaturas.codigo_asignatura = ${code}`,
+          Prisma.sql`asignaturas.carrera_id = ${careerId}::uuid`,
+          ...(except === null ? [] : [Prisma.sql`asignaturas.asignatura_id <> ${except}::uuid`]),
+        ],
       ),
-    eligibleUserExists: (userId) =>
-      hasRows(executor.select({ id: usuarios.usuarioId }).from(usuarios).where(and(eq(usuarios.usuarioId, userId), ELIGIBLE_USER)).limit(1)),
+    eligibleUserExists: (userId) => found(prisma, Prisma.sql`select usuarios.usuario_id from usuarios where usuarios.usuario_id = ${userId}::uuid and ${ELIGIBLE_USER} limit 1`),
     parallelInCareer: (parallelId, careerId) =>
-      hasRows(
-        executor
-          .select({ id: paralelos.paraleloId })
-          .from(paralelos)
-          .where(
-            and(
-              eq(paralelos.paraleloId, parallelId),
-              inArray(
-                paralelos.asignaturaId,
-                executor
-                  .select({ id: asignaturas.asignaturaId })
-                  .from(asignaturas)
-                  .where(and(eq(asignaturas.asignaturaActiva, true), eq(asignaturas.carreraId, careerId))),
-              ),
-            ),
-          )
-          .limit(1),
+      found(
+        prisma,
+        Prisma.sql`select paralelos.paralelo_id from paralelos where paralelos.paralelo_id = ${parallelId}::uuid
+          and paralelos.asignatura_id in (select asignaturas.asignatura_id from asignaturas where asignaturas.asignatura_activa = true and asignaturas.carrera_id = ${careerId}::uuid)
+          limit 1`,
       ),
-    transaction: (run) => withAfterCommit((afterCommit) => transaction((inner) => run(careerWriteTx(inner, afterCommit, now(), options)))),
+    transaction: (run) => inTransactionAfterCommit(prisma, (tx, afterCommit) => run(careerWriteTx(tx, afterCommit, now(), options))),
   }
 }
 
-export function curriculumDepsOn(executor: Executor, transaction: TransactionRunner, options: WriteOptions = {}): Omit<CurriculumDeps, "bridge"> {
+export function createCurriculumDeps(prisma: PrismaService, options: WriteOptions = {}): Omit<CurriculumDeps, "bridge"> {
   const now = options.now ?? systemNow
   return {
-    ...sharedDeps(executor),
-    transaction: (run) => withAfterCommit((afterCommit) => transaction((inner) => run(curriculumTx(inner, afterCommit, now(), options)))),
+    careerActive: careerActive(prisma),
+    transaction: (run) => inTransactionAfterCommit(prisma, (tx, afterCommit) => run(curriculumTx(tx, afterCommit, now(), options))),
   }
-}
-
-export function createCareerWriteDeps(): Omit<CareerWriteDeps, "bridge"> {
-  return careerWriteDepsOn(db as unknown as Executor, dbTransaction)
-}
-
-export function createCurriculumDeps(): Omit<CurriculumDeps, "bridge"> {
-  return curriculumDepsOn(db as unknown as Executor, dbTransaction)
 }

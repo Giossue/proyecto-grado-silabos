@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { Prisma } from "../../../generated/prisma/client"
-import { CREDENTIAL_PROVIDER } from "../../../server/auth/credentials"
+import { CREDENTIAL_PROVIDER } from "../../../server/auth/credentialProvider"
 import type { CredentialStore } from "../../../server/identity/authentication"
 import { rowsOf, type RawExecutor } from "./raw-executor"
 

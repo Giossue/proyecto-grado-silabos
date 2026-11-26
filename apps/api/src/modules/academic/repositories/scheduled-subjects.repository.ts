@@ -1,23 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common"
 import { Prisma } from "../../../generated/prisma/client"
 import { PrismaService } from "../../../prisma/prisma.service"
+import { uuidList } from "../../../prisma/sql"
+import { IN_PROGRESS, SYLLABUS_SCOPE, TOUCHED_SYLLABUS } from "../../../server/academic/academicSql"
 import type { CareerParallelRecord, ScheduledSubjectRecord, ScheduledSubjectsRepository } from "../../../server/academic/scheduledSubjects"
-
-export const uuidList = (ids: string[]) => Prisma.join(ids.map((id) => Prisma.sql`${id}::uuid`))
-
-export const SYLLABUS_SCOPE = Prisma.sql`exists (select * from convocatorias_carreras where silabos.convocatoria_carrera_id = convocatorias_carreras.convocatoria_carrera_id
-  and exists (select * from convocatorias_universidad where convocatorias_carreras.convocatoria_universidad_id = convocatorias_universidad.convocatoria_universidad_id))`
-
-const IN_PROGRESS = Prisma.sql`exists (select * from convocatorias_carreras where silabos.convocatoria_carrera_id = convocatorias_carreras.convocatoria_carrera_id
-  and estado_convocatoria_carrera in ('abierta', 'pausada')
-  and exists (select * from convocatorias_universidad where convocatorias_carreras.convocatoria_universidad_id = convocatorias_universidad.convocatoria_universidad_id
-    and estado_convocatoria_universidad in ('abierto', 'pausado'))
-  and exists (select * from convocatorias_universidad where convocatorias_carreras.convocatoria_universidad_id = convocatorias_universidad.convocatoria_universidad_id))`
-
-export const TOUCHED_SYLLABUS = Prisma.sql`(silabos.estado_silabo != 'sin_iniciar' or silabos.iniciado_en is not null
-  or exists (select * from convocatorias_carreras where silabos.convocatoria_carrera_id = convocatorias_carreras.convocatoria_carrera_id
-    and estado_convocatoria_carrera = 'cerrada'
-    and exists (select * from convocatorias_universidad where convocatorias_carreras.convocatoria_universidad_id = convocatorias_universidad.convocatoria_universidad_id)))`
 
 type SubjectRow = { id: string; codigo: string; nombre: string; ciclo: number | null; activo: boolean; genera: boolean; campus: string | null; modalidad: string | null }
 

@@ -1,8 +1,7 @@
-import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm"
-import { db } from "@/db"
-import { epochText } from "@/db/expressions"
-import { carreras, convocatoriasCarreras, convocatoriasUniversidad, periodosAcademicos, silabos } from "@/db/schema"
-import { careerLabelSql } from "../academic/careerLabel"
+import { Prisma } from "../../generated/prisma/client"
+import type { Db } from "../../prisma/db"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { epochText, uuidList } from "../../prisma/sql"
 import { systemNow } from "../shared/clock"
 import { notificationScope, recipientsOn, type Mail, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
@@ -13,11 +12,12 @@ import { adaptProcessToTemplate, convocationsToReopen, processSyllabusCounts, Re
 import { processRepositoryOn } from "./processQueries"
 import type { ProcessWriteDeps, ProcessWriteTx } from "./processWrites"
 import { dbTransaction, type TransactionRunner } from "./reviewDecisionStore"
-import type { Executor } from "./teacherSyllabusQueries"
+import { careerLabelSql } from "./syllabusSql"
+import { rowsOf } from "./teacherSyllabusQueries"
 
-const PROCESS_ALIVE = sql`exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)`
+const PROCESS_ALIVE = Prisma.sql`exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)`
 
-export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now: number, mail?: Mail): ProcessWriteTx {
+export function processWriteTx(executor: Db, afterCommit: AfterCommit, now: number, mail?: Mail): ProcessWriteTx {
   const notifications = notificationScope(executor, afterCommit, now, mail)
   const work = new InProgressWork(executor, afterCommit, notifications)
   const catchUp = new ReopenCatchUp(work, afterCommit)
@@ -25,22 +25,16 @@ export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now
   return {
     notifications,
     async lockProcess(id) {
-      const [row] = await executor
-        .select({
-          id: convocatoriasUniversidad.convocatoriaUniversidadId,
-          state: convocatoriasUniversidad.estadoConvocatoriaUniversidad,
-          periodId: convocatoriasUniversidad.periodoAcademicoId,
-          period: periodosAcademicos.codigoPeriodoAcademico,
-          dueAt: epochText(convocatoriasUniversidad.fechaEntrega),
-          extensions: convocatoriasUniversidad.cantidadProrrogas,
-          periodEndsOn: periodosAcademicos.fechaFinPeriodo,
-          finalized: isNotNull(convocatoriasUniversidad.finalizadaEn).mapWith(Boolean),
-        })
-        .from(convocatoriasUniversidad)
-        .leftJoin(periodosAcademicos, eq(periodosAcademicos.periodoAcademicoId, convocatoriasUniversidad.periodoAcademicoId))
-        .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, id))
-        .limit(1)
-        .for("update", { of: convocatoriasUniversidad })
+      const [row] = await rowsOf<{ id: string; state: string; periodId: string; period: string | null; dueAt: string; extensions: number; periodEndsOn: string | null; finalized: boolean }>(
+        executor,
+        Prisma.sql`select convocatorias_universidad.convocatoria_universidad_id::text as id, convocatorias_universidad.estado_convocatoria_universidad as state,
+            convocatorias_universidad.periodo_academico_id::text as "periodId", periodos_academicos.codigo_periodo_academico as period,
+            ${epochText(Prisma.raw("convocatorias_universidad.fecha_entrega"))} as "dueAt", convocatorias_universidad.cantidad_prorrogas as extensions,
+            periodos_academicos.fecha_fin_periodo::text as "periodEndsOn", (convocatorias_universidad.finalizada_en is not null) as finalized
+          from convocatorias_universidad
+          left join periodos_academicos on periodos_academicos.periodo_academico_id = convocatorias_universidad.periodo_academico_id
+          where convocatorias_universidad.convocatoria_universidad_id = ${id}::uuid limit 1 for update of convocatorias_universidad`,
+      )
       return row
         ? {
             ...row,
@@ -52,20 +46,20 @@ export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now
         : null
     },
     async lockConvocations(processId) {
-      const rows = await executor
-        .select({ id: convocatoriasCarreras.convocatoriaCarreraId })
-        .from(convocatoriasCarreras)
-        .where(and(eq(convocatoriasCarreras.convocatoriaUniversidadId, processId), PROCESS_ALIVE))
-        .for("update")
+      const rows = await rowsOf<{ id: string }>(
+        executor,
+        Prisma.sql`select convocatorias_carreras.convocatoria_carrera_id::text as id from convocatorias_carreras
+          where (convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid and ${PROCESS_ALIVE}) for update`,
+      )
       return rows.map((row) => row.id)
     },
     async lockSyllabi(convocationIds) {
       if (convocationIds.length === 0) return []
-      const rows = await executor
-        .select({ id: silabos.silaboId })
-        .from(silabos)
-        .where(and(inArray(silabos.convocatoriaCarreraId, convocationIds), SYLLABUS_ALIVE))
-        .for("update", { of: silabos })
+      const rows = await rowsOf<{ id: string }>(
+        executor,
+        Prisma.sql`select silabos.silabo_id::text as id from silabos
+          where (silabos.convocatoria_carrera_id in (${uuidList(convocationIds)}) and ${SYLLABUS_ALIVE}) for update of silabos`,
+      )
       return rows.map((row) => row.id)
     },
     teachersForProcess: (id) => recipients.teachersForProcess(id),
@@ -76,11 +70,11 @@ export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now
       if (syllabusIds.length > 0) await work.deleteAggregates(syllabusIds)
     },
     async deleteProcess(processId, convocationIds) {
-      await executor.execute(sql`SET LOCAL app.reinicio_institucional = 'off'`)
+      await executor.$executeRaw`SET LOCAL app.reinicio_institucional = 'off'`
       if (convocationIds.length > 0) {
-        await executor.delete(convocatoriasCarreras).where(and(inArray(convocatoriasCarreras.convocatoriaCarreraId, convocationIds), PROCESS_ALIVE))
+        await executor.$executeRaw`delete from convocatorias_carreras where (convocatorias_carreras.convocatoria_carrera_id in (${uuidList(convocationIds)}) and ${PROCESS_ALIVE})`
       }
-      await executor.delete(convocatoriasUniversidad).where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, processId))
+      await executor.$executeRaw`delete from convocatorias_universidad where convocatorias_universidad.convocatoria_universidad_id = ${processId}::uuid`
     },
     templateProblem: (errorKey) => institutionalTemplateProblem(executor, errorKey),
     async lockOtherProcesses(processId) {
@@ -95,35 +89,41 @@ export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now
     reopen: (processId) => reopenProcess(work, processId),
     applyPlan: (plan, convocationIds, periodId) => catchUp.apply(plan, convocationIds, periodId),
     async generateReopened(convocationIds) {
-      const locked = await executor
-        .select({ id: convocatoriasCarreras.convocatoriaCarreraId })
-        .from(convocatoriasCarreras)
-        .where(and(inArray(convocatoriasCarreras.convocatoriaCarreraId, convocationIds), PROCESS_ALIVE))
-        .orderBy(asc(convocatoriasCarreras.convocatoriaCarreraId))
-        .for("update")
+      const locked =
+        convocationIds.length === 0
+          ? await rowsOf<{ id: string }>(
+              executor,
+              Prisma.sql`select convocatorias_carreras.convocatoria_carrera_id::text as id from convocatorias_carreras
+                where (false and ${PROCESS_ALIVE}) order by convocatorias_carreras.convocatoria_carrera_id asc for update`,
+            )
+          : await rowsOf<{ id: string }>(
+              executor,
+              Prisma.sql`select convocatorias_carreras.convocatoria_carrera_id::text as id from convocatorias_carreras
+                where (convocatorias_carreras.convocatoria_carrera_id in (${uuidList(convocationIds)}) and ${PROCESS_ALIVE})
+                order by convocatorias_carreras.convocatoria_carrera_id asc for update`,
+            )
       for (const convocation of locked) await work.generateConvocation(convocation.id, { allowEmpty: true, skipIncomplete: true })
     },
     async openConvocations(processId) {
-      return executor
-        .select({ id: convocatoriasCarreras.convocatoriaCarreraId, careerLabel: sql<string>`${careerLabelSql("carreras")}` })
-        .from(convocatoriasCarreras)
-        .innerJoin(carreras, eq(carreras.carreraId, convocatoriasCarreras.carreraId))
-        .where(and(eq(convocatoriasCarreras.convocatoriaUniversidadId, processId), eq(convocatoriasCarreras.estadoConvocatoriaCarrera, "abierta"), PROCESS_ALIVE))
+      return rowsOf<{ id: string; careerLabel: string }>(
+        executor,
+        Prisma.sql`select convocatorias_carreras.convocatoria_carrera_id::text as id, ${careerLabelSql("carreras")} as "careerLabel"
+          from convocatorias_carreras inner join carreras on carreras.carrera_id = convocatorias_carreras.carrera_id
+          where (convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid and convocatorias_carreras.estado_convocatoria_carrera = ${"abierta"} and ${PROCESS_ALIVE})`,
+      )
     },
     async updateState(processId, state) {
-      await executor.update(convocatoriasUniversidad).set({ estadoConvocatoriaUniversidad: state }).where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, processId))
+      await executor.$executeRaw`update convocatorias_universidad set estado_convocatoria_universidad = ${state} where convocatorias_universidad.convocatoria_universidad_id = ${processId}::uuid`
     },
     async extendDeadline(processId, dueAt, extension) {
-      await executor
-        .update(convocatoriasUniversidad)
-        .set({ fechaEntrega: dueAt, cantidadProrrogas: extension })
-        .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, processId))
+      await executor.$executeRaw`update convocatorias_universidad set fecha_entrega = ${dueAt}::timestamptz, cantidad_prorrogas = ${extension}
+        where convocatorias_universidad.convocatoria_universidad_id = ${processId}::uuid`
     },
     teachersWithPendingWork: (id) => recipients.teachersWithPendingWork(id),
   }
 }
 
-export function processWriteDepsOn(executor: Executor, transaction: TransactionRunner, options: WriteOptions = {}): Omit<ProcessWriteDeps, "bridge"> {
+export function processWriteDepsOn(executor: Db, transaction: TransactionRunner, options: WriteOptions = {}): Omit<ProcessWriteDeps, "bridge"> {
   const now = options.now ?? systemNow
   const processes = processRepositoryOn(executor, () => Promise.reject(new Error("read only")))
   return {
@@ -134,6 +134,6 @@ export function processWriteDepsOn(executor: Executor, transaction: TransactionR
   }
 }
 
-export function createProcessWriteDeps(): Omit<ProcessWriteDeps, "bridge"> {
-  return processWriteDepsOn(db, dbTransaction)
+export function createProcessWriteDeps(prisma: PrismaService): Omit<ProcessWriteDeps, "bridge"> {
+  return processWriteDepsOn(prisma, dbTransaction(prisma))
 }

@@ -1,12 +1,12 @@
 import { HttpFailure, Missing } from "../http/failures"
 import { MODELS } from "../http/models"
-import { sql, type SQL } from "drizzle-orm"
-import { db } from "@/db"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { Prisma } from "../../generated/prisma/client"
+import type { Db } from "../../prisma/db"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { apiJson, serverError, validationError } from "../http/responses"
 import { forbidden, isUuid } from "./structure"
-import { findActiveCareer } from "./structureQueries"
+import { IN_CAREER, SYLLABUS_SCOPE, TOUCHED_SYLLABUS } from "./academicSql"
 import { unmatchedRoute, routeAllows } from "../http/router"
 
 export interface DeletionTx {
@@ -35,74 +35,45 @@ class Rejected extends Error {
   }
 }
 
-const SYLLABUS_SCOPE = sql`exists (select * from convocatorias_carreras where silabos.convocatoria_carrera_id = convocatorias_carreras.convocatoria_carrera_id
-  and exists (select * from convocatorias_universidad where convocatorias_carreras.convocatoria_universidad_id = convocatorias_universidad.convocatoria_universidad_id))`
+type Runner = Pick<Db, "$queryRaw" | "$executeRaw">
 
-const IN_CAREER = (careerId: string) => sql`exists (select * from asignaturas where paralelos.asignatura_id = asignaturas.asignatura_id
-  and asignaturas.carrera_id = ${careerId}::uuid)`
-
-type Executor = { execute(query: SQL): Promise<{ rows: unknown[] }> }
-
-async function first<T>(executor: Executor, query: SQL): Promise<T | null> {
-  return ((await executor.execute(query)).rows[0] as T | undefined) ?? null
+async function first<T>(runner: Runner, query: Prisma.Sql): Promise<T | null> {
+  const rows = await runner.$queryRaw<T[]>(query)
+  return rows[0] ?? null
 }
 
-async function exists(executor: Executor, query: SQL): Promise<boolean> {
-  return (await first<{ found: boolean }>(executor, sql`select exists (${query}) as found`))?.found === true
+async function exists(runner: Runner, query: Prisma.Sql): Promise<boolean> {
+  return (await first<{ found: boolean }>(runner, Prisma.sql`select exists (${query}) as found`))?.found === true
 }
 
-export function deletionTx(tx: Executor): DeletionTx {
+export function deletionTx(tx: Runner): DeletionTx {
   return {
-    async lockPeriod(id) {
-      const row = await first<{ id: string; code: string }>(tx, sql`select periodo_academico_id::text as id, codigo_periodo_academico as code
-        from periodos_academicos where periodo_academico_id = ${id}::uuid limit 1 for update`)
-      return row
-    },
-    periodHasProcess: (id) => exists(tx, sql`select * from convocatorias_universidad where periodo_academico_id = ${id}::uuid`),
+    lockPeriod: (id) =>
+      first(tx, Prisma.sql`select periodo_academico_id::text as id, codigo_periodo_academico as code
+        from periodos_academicos where periodo_academico_id = ${id}::uuid limit 1 for update`),
+    periodHasProcess: (id) => exists(tx, Prisma.sql`select * from convocatorias_universidad where periodo_academico_id = ${id}::uuid`),
     async deletePeriod(id) {
-      await tx.execute(sql`delete from periodos_academicos where periodo_academico_id = ${id}::uuid`)
+      await tx.$executeRaw`delete from periodos_academicos where periodo_academico_id = ${id}::uuid`
     },
-    async lockTeacherAssignment(id, careerId) {
-      return first<{ id: string }>(tx, sql`select asignaciones_paralelo.asignacion_paralelo_id::text as id from asignaciones_paralelo
+    lockTeacherAssignment: (id, careerId) =>
+      first(tx, Prisma.sql`select asignaciones_paralelo.asignacion_paralelo_id::text as id from asignaciones_paralelo
         where exists (select * from paralelos where asignaciones_paralelo.paralelo_id = paralelos.paralelo_id and ${IN_CAREER(careerId)})
-          and asignaciones_paralelo.asignacion_paralelo_id = ${id}::uuid limit 1 for update`)
-    },
+          and asignaciones_paralelo.asignacion_paralelo_id = ${id}::uuid limit 1 for update`),
     async deleteTeacherAssignment(id) {
-      await tx.execute(sql`delete from asignaciones_paralelo where asignacion_paralelo_id = ${id}::uuid`)
+      await tx.$executeRaw`delete from asignaciones_paralelo where asignacion_paralelo_id = ${id}::uuid`
     },
-    async lockParallel(id, careerId) {
-      return first<{ id: string; code: string }>(tx, sql`select paralelos.paralelo_id::text as id, paralelos.codigo_paralelo as code from paralelos
-        where paralelos.paralelo_id = ${id}::uuid and ${IN_CAREER(careerId)} limit 1 for update`)
-    },
-    parallelHasTeacherAssignment: (id) => exists(tx, sql`select * from asignaciones_paralelo where paralelo_id = ${id}::uuid`),
-    parallelHasTouchedSyllabus: (id) =>
-      exists(
-        tx,
-        sql`select * from silabos where paralelo_id = ${id}::uuid
-          and (estado_silabo != 'sin_iniciar' or iniciado_en is not null
-            or exists (select * from convocatorias_carreras where silabos.convocatoria_carrera_id = convocatorias_carreras.convocatoria_carrera_id
-              and estado_convocatoria_carrera = 'cerrada'
-              and exists (select * from convocatorias_universidad where convocatorias_carreras.convocatoria_universidad_id = convocatorias_universidad.convocatoria_universidad_id)))
-          and ${SYLLABUS_SCOPE}`,
-      ),
+    lockParallel: (id, careerId) =>
+      first(tx, Prisma.sql`select paralelos.paralelo_id::text as id, paralelos.codigo_paralelo as code from paralelos
+        where paralelos.paralelo_id = ${id}::uuid and ${IN_CAREER(careerId)} limit 1 for update`),
+    parallelHasTeacherAssignment: (id) => exists(tx, Prisma.sql`select * from asignaciones_paralelo where paralelo_id = ${id}::uuid`),
+    parallelHasTouchedSyllabus: (id) => exists(tx, Prisma.sql`select * from silabos where paralelo_id = ${id}::uuid and ${TOUCHED_SYLLABUS} and ${SYLLABUS_SCOPE}`),
     async deleteParallelSyllabi(id) {
-      await tx.execute(sql`delete from silabos where paralelo_id = ${id}::uuid and ${SYLLABUS_SCOPE}`)
+      await tx.$executeRaw`delete from silabos where paralelo_id = ${id}::uuid and ${SYLLABUS_SCOPE}`
     },
     async deleteParallel(id) {
-      await tx.execute(sql`delete from paralelos where paralelo_id = ${id}::uuid`)
+      await tx.$executeRaw`delete from paralelos where paralelo_id = ${id}::uuid`
     },
   }
-}
-
-export function createAcademicDeletionStore(): AcademicDeletionStore {
-  return {
-    careerActive: async (careerId) => (await findActiveCareer(careerId)) !== null,
-    transaction: (work) => db.transaction((tx) => work(deletionTx(tx as unknown as Executor))),
-  }
-}
-
-function defaultDeps(): AcademicDeletionDeps {
-  return { bridge: defaultBridgeDeps(), store: createAcademicDeletionStore() }
 }
 
 function rejectWith(message: string): never {
@@ -132,7 +103,7 @@ export async function deleteGovernanceRecord(
   request: Request,
   entity: string,
   recordId: string,
-  deps: AcademicDeletionDeps = defaultDeps(),
+  deps: AcademicDeletionDeps,
 ): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
@@ -157,7 +128,7 @@ export async function deleteCareerRecord(
   request: Request,
   entity: string,
   recordId: string,
-  deps: AcademicDeletionDeps = defaultDeps(),
+  deps: AcademicDeletionDeps,
 ): Promise<Response> {
   if (entity !== "asignacion_docente" || !routeAllows(request)) return unmatchedRoute(request)
   const context = await careerSession(request, deps)
@@ -175,7 +146,7 @@ export async function deleteCareerRecord(
   )
 }
 
-export async function deleteParallel(request: Request, parallelId: string, deps: AcademicDeletionDeps = defaultDeps()): Promise<Response> {
+export async function deleteParallel(request: Request, parallelId: string, deps: AcademicDeletionDeps): Promise<Response> {
   if (!routeAllows(request)) return unmatchedRoute(request)
   const context = await careerSession(request, deps)
   if (context instanceof Response) return context

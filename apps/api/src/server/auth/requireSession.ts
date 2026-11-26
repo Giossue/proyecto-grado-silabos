@@ -1,10 +1,9 @@
-import { createSessionStore } from "./store"
 import { resolveActiveRole, eligibleAssignments } from "./activeRole"
 import { sharedAuth, sessionLifetimeMinutes, INACTIVE_ACCOUNT } from "./betterAuth"
 import { fromController } from "./controllerResponse"
 import { queueResponseCookies } from "./cookieQueue"
 import { betterAuthSessions } from "./sessionGateway"
-import type { AppSession, BridgeConfig, BridgeDeps, ResolvedSession, SessionRequirements, SessionUser } from "./types"
+import type { AppSession, BridgeConfig, BridgeDeps, ResolvedSession, SessionRequirements, SessionStore, SessionUser } from "./types"
 import { appKey } from "../http/config"
 import { parseAppKey } from "../http/encrypter"
 import { expectsJson } from "../http/request"
@@ -53,9 +52,25 @@ export function sessionConfig(): BridgeConfig {
   return cachedConfig
 }
 
-export function defaultBridgeDeps(): BridgeDeps {
+let boundStore: SessionStore | null = null
+
+export function bindSessionStore(store: SessionStore): void {
+  boundStore = store
+}
+
+function sessionStore(): SessionStore {
+  if (boundStore === null) throw new Error("The session store is not bound.")
+  return boundStore
+}
+
+const delegatedStore: SessionStore = {
+  findUser: (id) => sessionStore().findUser(id),
+  effectiveRoleAssignments: (userId) => sessionStore().effectiveRoleAssignments(userId),
+}
+
+export function defaultBridgeDeps(store: SessionStore = delegatedStore): BridgeDeps {
   return {
-    store: createSessionStore(),
+    store,
     sessions: betterAuthSessions(sharedAuth),
     config: sessionConfig(),
     now: () => Math.floor(Date.now() / 1000),

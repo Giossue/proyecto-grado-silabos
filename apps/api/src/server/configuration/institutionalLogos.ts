@@ -1,12 +1,9 @@
-import { sql } from "drizzle-orm"
-import { db } from "@/db"
 import { isUuid } from "../academic/structure"
 import { requestRoot } from "../http/request"
 import { fileBase64, fileModifiedAt, publicPath } from "../http/storage"
 import { storageWriter } from "../http/storageWriter"
 import { localFile, storedFile, type FileSource } from "../storage/fileSource"
 import { LOGO_DISK, type LogoStore, type StoredFaculty, type StoredLogo } from "../shared/logoStore"
-import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 
 export type { LogoStore, StoredFaculty, StoredLogo }
 
@@ -76,21 +73,5 @@ export async function embeddedLogos(facultyId: string | null, store: LogoStore):
   return {
     institution: await fileBase64(await institutionFile()),
     faculty: await fileBase64(await facultyFile(await findFaculty(facultyId, store))),
-  }
-}
-
-export function createLogoStore(executor: Executor = db as unknown as Executor): LogoStore {
-  return {
-    async faculty(id) {
-      const [row] = await rowsOf<{ id: string; has_logo: boolean; disk: string | null; path: string | null; classification: string | null }>(
-        executor,
-        sql`select facultades.facultad_id::text as id, archivos.archivo_id is not null as has_logo, archivos.disco as disk,
-            archivos.ruta_archivo as path, archivos.categoria as classification
-          from facultades left join archivos on archivos.archivo_id = facultades.logo_archivo_id
-          where facultades.facultad_id = ${id}::uuid limit 1`,
-      )
-      if (!row) return null
-      return { id: row.id, logo: row.has_logo ? { disk: row.disk ?? DISK, path: row.path, classification: row.classification } : null }
-    },
   }
 }

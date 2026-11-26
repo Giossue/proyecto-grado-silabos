@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm"
-import { uuidList } from "../http/sql"
+import { Prisma } from "../../generated/prisma/client"
+import { uuidList } from "../../prisma/sql"
 import { phpEquals, type PhpRecord } from "../configuration/phpValues"
 import { decidedHandovers } from "./coordinationHandover"
 import { institutionalTemplateProblem } from "./convocationWriteStore"
@@ -30,8 +30,8 @@ export function displayDay(day: string): string {
 export async function anotherProcessInProgress(executor: Executor, processId: string, lock = false): Promise<boolean> {
   const rows = await rowsOf<{ id: string }>(
     executor,
-    sql`select convocatoria_universidad_id::text as id from convocatorias_universidad where estado_convocatoria_universidad in ('abierto', 'pausado')
-      and convocatoria_universidad_id <> ${processId}::uuid ${lock ? sql`for update` : sql`limit 1`}`,
+    Prisma.sql`select convocatoria_universidad_id::text as id from convocatorias_universidad where estado_convocatoria_universidad in ('abierto', 'pausado')
+      and convocatoria_universidad_id <> ${processId}::uuid ${lock ? Prisma.sql`for update` : Prisma.sql`limit 1`}`,
   )
   return rows.length > 0
 }
@@ -77,7 +77,7 @@ export class FinalizedChangeNotice {
   async guardHandover(confirmed: boolean, careerId: string): Promise<void> {
     const convocations = confirmed ? [] : await this.reopenable(careerId, null)
     if (convocations.length === 0) return
-    const syllabi = await this.work.syllabi(sql`silabos.convocatoria_carrera_id in (${uuidList(convocations.map((convocation) => convocation.id))}) and ${SYLLABUS_ALIVE}`)
+    const syllabi = await this.work.syllabi(Prisma.sql`silabos.convocatoria_carrera_id in (${uuidList(convocations.map((convocation) => convocation.id))}) and ${SYLLABUS_ALIVE}`)
     if ((await decidedHandovers(this.executor, syllabi)).length > 0) throw this.warning(convocations)
   }
 
@@ -86,7 +86,7 @@ export class FinalizedChangeNotice {
     const today = institutionDay(this.now)
     const processes = await rowsOf<{ id: string; state: string; due_at: number; extensions: number; ends_on: string }>(
       this.executor,
-      sql`select proceso.convocatoria_universidad_id::text as id, proceso.estado_convocatoria_universidad as state, extract(epoch from proceso.fecha_entrega)::bigint as due_at,
+      Prisma.sql`select proceso.convocatoria_universidad_id::text as id, proceso.estado_convocatoria_universidad as state, extract(epoch from proceso.fecha_entrega)::bigint as due_at,
           proceso.cantidad_prorrogas as extensions, to_char(periodo.fecha_fin_periodo, 'YYYY-MM-DD') as ends_on
         from convocatorias_universidad proceso inner join periodos_academicos periodo on periodo.periodo_academico_id = proceso.periodo_academico_id
         where proceso.estado_convocatoria_universidad = 'cerrado' and periodo.fecha_fin_periodo >= ${today}::date
@@ -94,7 +94,7 @@ export class FinalizedChangeNotice {
             inner join periodos_academicos periodo_posterior on periodo_posterior.periodo_academico_id = posterior.periodo_academico_id
             where posterior.convocatoria_universidad_id <> proceso.convocatoria_universidad_id
               and (posterior.estado_convocatoria_universidad in ('abierto', 'pausado') or periodo_posterior.fecha_inicio_periodo > periodo.fecha_inicio_periodo))
-          ${periodId === null ? sql`` : sql`and proceso.periodo_academico_id = ${periodId}::uuid`}`,
+          ${periodId === null ? Prisma.empty : Prisma.sql`and proceso.periodo_academico_id = ${periodId}::uuid`}`,
     )
     const reopenable: string[] = []
     for (const process of processes) {
@@ -107,10 +107,10 @@ export class FinalizedChangeNotice {
     }
     if (reopenable.length === 0) return []
     const careers =
-      typeof careerIds === "string" ? sql`and convocatoria.carrera_id = ${careerIds}::uuid` : Array.isArray(careerIds) ? sql`and ${idsIn(sql`convocatoria.carrera_id`, careerIds)}` : sql``
+      typeof careerIds === "string" ? Prisma.sql`and convocatoria.carrera_id = ${careerIds}::uuid` : Array.isArray(careerIds) ? Prisma.sql`and ${idsIn(Prisma.sql`convocatoria.carrera_id`, careerIds)}` : Prisma.empty
     return rowsOf<ReopenableConvocation>(
       this.executor,
-      sql`select convocatoria.convocatoria_carrera_id::text as id, periodo.codigo_periodo_academico as period
+      Prisma.sql`select convocatoria.convocatoria_carrera_id::text as id, periodo.codigo_periodo_academico as period
         from convocatorias_carreras convocatoria
           inner join convocatorias_universidad proceso on proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
           inner join periodos_academicos periodo on periodo.periodo_academico_id = proceso.periodo_academico_id
@@ -125,14 +125,14 @@ export class FinalizedChangeNotice {
       (
         await rowsOf<{ id: string; period_id: string }>(
           this.executor,
-          sql`select convocatoria.convocatoria_carrera_id::text as id, proceso.periodo_academico_id::text as period_id from convocatorias_carreras convocatoria
+          Prisma.sql`select convocatoria.convocatoria_carrera_id::text as id, proceso.periodo_academico_id::text as period_id from convocatorias_carreras convocatoria
             inner join convocatorias_universidad proceso on proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
             where convocatoria.convocatoria_carrera_id in (${uuidList(convocationIds)})`,
         )
       ).map((row) => [row.id, row.period_id]),
     )
-    const subjects = subjectIds === null ? sql`` : sql`and exists (select 1 from paralelos materia where materia.paralelo_id = silabos.paralelo_id and ${idsIn(sql`materia.asignatura_id`, subjectIds)})`
-    const syllabi = await this.work.syllabi(sql`silabos.convocatoria_carrera_id in (${uuidList(convocationIds)}) ${subjects} and ${SYLLABUS_ALIVE}`, { ordered: true })
+    const subjects = subjectIds === null ? Prisma.empty : Prisma.sql`and exists (select 1 from paralelos materia where materia.paralelo_id = silabos.paralelo_id and ${idsIn(Prisma.sql`materia.asignatura_id`, subjectIds)})`
+    const syllabi = await this.work.syllabi(Prisma.sql`silabos.convocatoria_carrera_id in (${uuidList(convocationIds)}) ${subjects} and ${SYLLABUS_ALIVE}`, { ordered: true })
     const reaching: PhpRecord = {}
     const profiles = new Map<string, PhpRecord>()
     for (const syllabus of syllabi) {
@@ -146,7 +146,7 @@ export class FinalizedChangeNotice {
       }
       const [facts] = await rowsOf<{ teacher: string | null; generates: boolean }>(
         this.executor,
-        sql`select (select asignacion.asignacion_paralelo_id::text from asignaciones_paralelo asignacion where asignacion.paralelo_id = ${parallel.id}::uuid
+        Prisma.sql`select (select asignacion.asignacion_paralelo_id::text from asignaciones_paralelo asignacion where asignacion.paralelo_id = ${parallel.id}::uuid
               and asignacion.asignacion_paralelo_activa = true limit 1) as teacher,
             (asignatura.asignatura_activa and asignatura.genera_silabo_asignatura) as generates
           from asignaturas asignatura where asignatura.asignatura_id = ${parallel.subject_id}::uuid`,
@@ -165,12 +165,12 @@ export class FinalizedChangeNotice {
   private async parallelsWithoutSyllabus(convocationId: string, subjectIds: string[] | null): Promise<string[]> {
     const rows = await rowsOf<{ id: string }>(
       this.executor,
-      sql`select paralelo.paralelo_id::text as id from paralelos paralelo
+      Prisma.sql`select paralelo.paralelo_id::text as id from paralelos paralelo
         where exists (select 1 from asignaturas asignatura where asignatura.asignatura_id = paralelo.asignatura_id
             and asignatura.carrera_id = (select carrera_id from convocatorias_carreras where convocatoria_carrera_id = ${convocationId}::uuid)
             and asignatura.asignatura_activa = true and asignatura.genera_silabo_asignatura = true)
           and exists (select 1 from asignaciones_paralelo asignacion where asignacion.paralelo_id = paralelo.paralelo_id and asignacion.asignacion_paralelo_activa = true)
-          ${subjectIds === null ? sql`` : sql`and ${idsIn(sql`paralelo.asignatura_id`, subjectIds)}`}
+          ${subjectIds === null ? Prisma.empty : Prisma.sql`and ${idsIn(Prisma.sql`paralelo.asignatura_id`, subjectIds)}`}
           and paralelo.paralelo_id not in (select silabos.paralelo_id from silabos where silabos.convocatoria_carrera_id = ${convocationId}::uuid and ${SYLLABUS_ALIVE})
         order by paralelo.paralelo_id asc`,
     )

@@ -1,16 +1,18 @@
 import { archivedSections } from "../documents/syllabusSnapshot"
+import type { PrismaService } from "../../prisma/prisma.service"
 import { failModelNotFound, HttpFailure } from "../http/failures"
 import type { ArchivedField } from "./syllabusDetailQueries"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { aborted, apiJson, validationError } from "../http/responses"
-import { createLogoStore, presentationLogos, type LogoStore } from "../configuration/institutionalLogos"
+import { presentationLogos } from "../configuration/institutionalLogos"
+import { createLogoStore, type LogoStore } from "../shared/logoStore"
 import { isPhpArray, list, phpShape, phpString, record, type PhpRecord } from "../configuration/phpValues"
 import { profileTemplates } from "../configuration/subjectProfileFields"
 import { presentDefinition, resolveVariables, syllabusSectionPayload, templatePresentationOf, type TemplateField } from "../configuration/templatePresentation"
 import { CAREER, INSTITUTIONAL, responsesEnabled, responseTemplate, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
-import { createTemplateStore, type TemplateStore } from "../configuration/templateStore"
+import { createTemplateStore, type TemplateStore } from "../shared/templateStore"
 import { institutionToday } from "../shared/clock"
 import type { DraftSyllabus } from "./draftField"
 import { isoFromSeconds } from "./draftField"
@@ -69,8 +71,8 @@ export interface SyllabusDetailStore {
 
 export type SyllabusDetailDeps = { bridge: BridgeDeps; store: SyllabusDetailStore; templates: TemplateStore; logos: LogoStore; today: () => string }
 
-export function defaultSyllabusDetailDeps(): SyllabusDetailDeps {
-  return { bridge: defaultBridgeDeps(), store: createSyllabusDetailStore(), templates: createTemplateStore(), logos: createLogoStore(), today: institutionToday }
+export function defaultSyllabusDetailDeps(prisma: PrismaService): SyllabusDetailDeps {
+  return { bridge: defaultBridgeDeps(), store: createSyllabusDetailStore(prisma), templates: createTemplateStore(prisma), logos: createLogoStore(prisma), today: institutionToday }
 }
 
 const REVIEWED_STATES = ["en_revision", "aprobado"]
@@ -227,7 +229,7 @@ export function syllabusDetailBinder(syllabusId: string, deps: Pick<SyllabusDeta
   }
 }
 
-export async function teacherSyllabusDetail(request: Request, syllabusId: string, deps: SyllabusDetailDeps = defaultSyllabusDetailDeps()): Promise<Response> {
+export async function teacherSyllabusDetail(request: Request, syllabusId: string, deps: SyllabusDetailDeps): Promise<Response> {
   const bound = await requireBound(request, syllabusDetailBinder(syllabusId, deps), deps.bridge)
   if (bound instanceof Response) return bound
   return teacherSyllabusDetailFor(request, bound.session, bound.bound, deps)

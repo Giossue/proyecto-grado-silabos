@@ -1,3 +1,4 @@
+import type { PrismaService } from "../../prisma/prisma.service"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
@@ -43,8 +44,8 @@ export type ReviewApprovalDeps = {
   transaction<T>(work: (tx: ReviewApprovalTx) => Promise<T>): Promise<T>
 }
 
-export function defaultReviewApprovalDeps(): ReviewApprovalDeps {
-  return { bridge: defaultBridgeDeps(), settings: () => signatureSettings(), ...createReviewApprovalDeps() }
+export function defaultReviewApprovalDeps(prisma: PrismaService): ReviewApprovalDeps {
+  return { bridge: defaultBridgeDeps(), settings: () => signatureSettings(), ...createReviewApprovalDeps(prisma) }
 }
 
 const COORDINATION = "coordinacion"
@@ -82,7 +83,7 @@ function iso8601(seconds: number): string {
   return `${new Date(seconds * 1000).toISOString().slice(0, 19)}+00:00`
 }
 
-export async function approveReview(request: Request, revisionId: string, deps: ReviewApprovalDeps = defaultReviewApprovalDeps()): Promise<Response> {
+export async function approveReview(request: Request, revisionId: string, deps: ReviewApprovalDeps): Promise<Response> {
   const bound = await requireBound(request.clone(), approvalRevisionBinder(revisionId, deps), deps.bridge)
   if (bound instanceof Response) return bound
   return approveReviewFor(request, { session: bound.session, ...bound.bound }, deps)

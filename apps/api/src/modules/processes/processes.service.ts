@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common"
 import type { AppSession, BridgeDeps } from "../../server/auth/types"
 import type { PhpArray } from "../../server/http/input"
-import type { TemplateStore } from "../../server/configuration/templateStore"
+import type { TemplateStore } from "../../server/shared/templateStore"
 import { closeBoundProcess, type ClosingDeps } from "../../server/syllabus/processClosing"
 import { createProcessFor, pauseBoundProcess, processImpactOf, processList, type ProcessCoreDeps, type ProcessRow } from "../../server/syllabus/processes"
 import { deleteBoundProcess, extendBoundProcessDeadline, resumeBoundProcess, type ProcessWriteDeps } from "../../server/syllabus/processWrites"

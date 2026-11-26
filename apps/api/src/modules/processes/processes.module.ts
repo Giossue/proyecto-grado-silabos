@@ -1,7 +1,8 @@
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common"
 import { PhpInputMiddleware } from "../../common/middleware/php-input.middleware"
 import { institutionToday } from "../../server/shared/clock"
-import { createTemplateStore } from "../../server/configuration/templateStore"
+import { PrismaService } from "../../prisma/prisma.service"
+import { createTemplateStore } from "../../server/shared/templateStore"
 import { createClosingDeps } from "../../server/syllabus/processClosingStore"
 import { createProcessWriteDeps } from "../../server/syllabus/processWriteStore"
 import { ProcessPreloader } from "./process.preloader"
@@ -16,10 +17,10 @@ import { INSTITUTION_TODAY, PROCESS_CLOSING, PROCESS_WRITES, TEMPLATE_STORE } fr
     ProcessesRepository,
     ProcessesService,
     ProcessPreloader,
-    { provide: TEMPLATE_STORE, useFactory: createTemplateStore },
+    { provide: TEMPLATE_STORE, useFactory: (prisma: PrismaService) => createTemplateStore(prisma), inject: [PrismaService] },
     { provide: INSTITUTION_TODAY, useValue: institutionToday },
-    { provide: PROCESS_WRITES, useFactory: createProcessWriteDeps },
-    { provide: PROCESS_CLOSING, useFactory: createClosingDeps },
+    { provide: PROCESS_WRITES, useFactory: (prisma: PrismaService) => createProcessWriteDeps(prisma), inject: [PrismaService] },
+    { provide: PROCESS_CLOSING, useFactory: (prisma: PrismaService) => createClosingDeps(prisma), inject: [PrismaService] },
   ],
   exports: [ProcessesRepository, TEMPLATE_STORE, INSTITUTION_TODAY],
 })

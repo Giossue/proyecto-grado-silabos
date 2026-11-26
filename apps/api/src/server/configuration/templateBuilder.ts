@@ -1,4 +1,4 @@
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import { inputValue, requestInput, type PhpArray } from "../http/input"
 import { apiJson, validationError } from "../http/responses"
 import { excludedColumnPath, tableDesignSchema } from "@silabos/shared/schemas/template"
@@ -7,12 +7,10 @@ import { defineBlock } from "./blockDefinition"
 import { defaultFacultyUrl, institutionUrl } from "./institutionalLogos"
 import { list, phpIntCast, phpShape, phpToBool, record, type PhpRecord } from "./phpValues"
 import { blockDesigns, buildTable, designWithKeys, lockedTable, readTable } from "./repeatableTable"
-import { createTemplateLockStore } from "./templateLockQueries"
 import { documentAppearance, presentDefinition, presentSections, variableCatalog, type SyllabusTemplate } from "./templatePresentation"
 import { boundTemplate, FORBIDDEN, managesTemplates, type TemplateReadDeps } from "./templateReads"
 import { initialValue, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import { toRuntime } from "./templateDraft"
-import { createTemplateStore } from "./templateStore"
 
 export type TemplateLock = { period: string | null; deliveryOn: string | null }
 
@@ -23,9 +21,6 @@ export interface TemplateLockStore {
 
 export type TemplateBuilderDeps = TemplateReadDeps & { locks: TemplateLockStore }
 
-export function defaultTemplateBuilderDeps(): TemplateBuilderDeps {
-  return { bridge: defaultBridgeDeps(), store: createTemplateStore(), locks: createTemplateLockStore() }
-}
 
 const PROCESS_LOCK = "Proceso activo"
 const INSTITUTIONAL_NAME = "Plantilla institucional de sílabo"
@@ -90,7 +85,7 @@ async function builderProps(request: Request, template: SyllabusTemplate, defini
   }
 }
 
-export async function templateIndex(request: Request, deps: TemplateBuilderDeps = defaultTemplateBuilderDeps()): Promise<Response> {
+export async function templateIndex(request: Request, deps: TemplateBuilderDeps): Promise<Response> {
   let template: SyllabusTemplate | null = null
   const session = await requireSession(
     request,
@@ -117,7 +112,7 @@ export async function templateIndexOf(request: Request, found: SyllabusTemplate 
   return apiJson(phpShape(await builderProps(request, found, found.definition, deps)))
 }
 
-export async function templateShow(request: Request, templateId: string, deps: TemplateBuilderDeps = defaultTemplateBuilderDeps()): Promise<Response> {
+export async function templateShow(request: Request, templateId: string, deps: TemplateBuilderDeps): Promise<Response> {
   const bound = await boundTemplate(request, templateId, deps)
   if (bound instanceof Response) return bound
   if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
@@ -166,7 +161,7 @@ function validatedDesign(input: PhpArray): PhpRecord {
   return design
 }
 
-export async function designTemplateTable(request: Request, templateId: string, deps: TemplateBuilderDeps = defaultTemplateBuilderDeps()): Promise<Response> {
+export async function designTemplateTable(request: Request, templateId: string, deps: TemplateBuilderDeps): Promise<Response> {
   const original = request.clone()
   const input = await requestInput(request)
   const bound = await boundTemplate(original, templateId, deps)

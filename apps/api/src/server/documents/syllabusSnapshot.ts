@@ -1,4 +1,5 @@
-import { embeddedLogos, type LogoStore } from "../configuration/institutionalLogos"
+import { embeddedLogos } from "../configuration/institutionalLogos"
+import type { LogoStore } from "../shared/logoStore"
 import { isPhpArray, list, phpCount, record, type PhpRecord } from "../configuration/phpValues"
 import { conditionResponses, conditionShows, evaluateConditions, clearHidden, type Answers } from "../configuration/responseConditions"
 import { resolveVariables, type SyllabusTemplate } from "../configuration/templatePresentation"

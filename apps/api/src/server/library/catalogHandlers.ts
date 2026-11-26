@@ -1,5 +1,4 @@
-import { sql } from "drizzle-orm"
-import { db } from "@/db"
+import type { Db } from "../../prisma/db"
 import { requireSession, defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession, SessionRequirements } from "../auth/types"
 import { phpQuery, type PhpValue } from "../http/input"
@@ -31,10 +30,11 @@ function envInteger(name: string, fallback: number): number {
   return Number.isNaN(parsed) ? 0 : parsed
 }
 
-async function storedSettings(): Promise<Map<string, unknown>> {
+async function storedSettings(db: Db): Promise<Map<string, unknown>> {
   try {
-    const result = await db.execute(sql`select clave_ajuste, valor_ajuste from ajustes_sistema where clave_ajuste in ('library.driver', 'library.base_url')`)
-    return new Map((result.rows as { clave_ajuste: string; valor_ajuste: unknown }[]).map((row) => [row.clave_ajuste, row.valor_ajuste]))
+    const rows = await db.$queryRaw<{ clave_ajuste: string; valor_ajuste: unknown }[]>`select clave_ajuste, valor_ajuste from ajustes_sistema
+      where clave_ajuste in ('library.driver', 'library.base_url')`
+    return new Map(rows.map((row) => [row.clave_ajuste, row.valor_ajuste]))
   } catch {
     return new Map()
   }
@@ -47,8 +47,8 @@ function asConfigString(value: unknown): string {
   return ""
 }
 
-export async function catalogSettings(): Promise<CatalogSettings> {
-  const stored = await storedSettings()
+export async function catalogSettings(db: Db): Promise<CatalogSettings> {
+  const stored = await storedSettings(db)
   const pick = (field: string, environment: string | undefined) => (stored.has(field) ? stored.get(field) : (environment ?? null))
   return {
     driver: asConfigString(pick("library.driver", process.env.CATALOG_DRIVER ?? "disabled")),
@@ -59,16 +59,22 @@ export async function catalogSettings(): Promise<CatalogSettings> {
   }
 }
 
-async function facultyLibraries(careerId: string): Promise<string[]> {
-  const result = await db.execute(sql`select f.bibliotecas_koha_facultad as libraries from carreras c
-    join facultades f on f.facultad_id = c.facultad_id where c.carrera_id = ${careerId} limit 1`)
-  const libraries = (result.rows[0] as { libraries?: unknown } | undefined)?.libraries
+async function facultyLibraries(db: Db, careerId: string): Promise<string[]> {
+  const [row] = await db.$queryRaw<{ libraries: unknown }[]>`select f.bibliotecas_koha_facultad as libraries from carreras c
+    join facultades f on f.facultad_id = c.facultad_id where c.carrera_id = ${careerId}::uuid limit 1`
+  const libraries = row?.libraries
   if (typeof libraries !== "object" || libraries === null) return []
   return Object.values(libraries).flatMap((code) => (typeof code === "string" ? [code] : typeof code === "number" ? [String(code)] : []))
 }
 
-export function defaultCatalogDeps(): CatalogDeps {
-  return { bridge: defaultBridgeDeps(), limiter: sharedRateLimiter(), settings: catalogSettings, fetch: kohaFetch, facultyLibraries }
+export function defaultCatalogDeps(db: Db): CatalogDeps {
+  return {
+    bridge: defaultBridgeDeps(),
+    limiter: sharedRateLimiter(),
+    settings: () => catalogSettings(db),
+    fetch: kohaFetch,
+    facultyLibraries: (careerId) => facultyLibraries(db, careerId),
+  }
 }
 
 type Authorized = { session: AppSession; finish: (response: Response) => Response; catalog: () => Promise<BibliographicCatalog> }
@@ -100,7 +106,7 @@ function phpIntval(value: PhpValue | undefined): number {
   return phpFilterInt(value) ?? 1
 }
 
-export async function searchCatalog(request: Request, deps: CatalogDeps = defaultCatalogDeps()): Promise<Response> {
+export async function searchCatalog(request: Request, deps: CatalogDeps): Promise<Response> {
   const authorized = await authorize(request, deps, "docente")
   if (authorized instanceof Response) return authorized
   const { session, finish } = authorized
@@ -117,7 +123,7 @@ export async function searchCatalog(request: Request, deps: CatalogDeps = defaul
   }
 }
 
-export async function catalogLibraries(request: Request, deps: CatalogDeps = defaultCatalogDeps()): Promise<Response> {
+export async function catalogLibraries(request: Request, deps: CatalogDeps): Promise<Response> {
   const authorized = await authorize(request, deps, "administrador")
   if (authorized instanceof Response) return authorized
   try {

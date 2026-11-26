@@ -1,42 +1,26 @@
 import { activeRoleSchema, loginSchema, passwordUpdateSchema } from "@silabos/shared/schemas/auth"
 import { filterEmailShape } from "@silabos/shared/schemas/email"
 import { passwordStrength } from "./passwordPolicy"
-import { sql, type SQL } from "drizzle-orm"
 import { isAPIError } from "better-auth/api"
-import { db } from "@/db"
-import { bcryptHash, bcryptVerify } from "../auth/bcrypt"
-import { sharedAuth, type Auth } from "../auth/betterAuth"
-import { defaultBridgeDeps, establish, requireSession } from "../auth/requireSession"
-import { sharedAttemptLimiter, type AttemptLimiter } from "../auth/attemptLimiter"
+import type { Auth } from "../auth/betterAuth"
+import { establish, requireSession } from "../auth/requireSession"
+import type { AttemptLimiter } from "../auth/attemptLimiter"
 import { isEligible } from "../auth/activeRole"
 import { controllerJson, emptyResponse, fromController } from "../auth/controllerResponse"
 import { withSetCookies } from "../auth/cookieQueue"
-import { mirrorCredentialPassword, type CredentialExecutor } from "../auth/credentials"
-import { clientIp, sessionRandom } from "../auth/runtime"
+import { clientIp } from "../auth/runtime"
 import type { AppSession, BridgeDeps, ResolvedSession } from "../auth/types"
-import { institutionToday } from "../shared/clock"
 import { isPhpArray, requestInput, type PhpValue } from "../http/input"
 import { aborted, apiJson, serverError, unauthenticated, validationError } from "../http/responses"
-import { sharedRateLimiter, throttle, type RateLimiter } from "../http/throttle"
+import { throttle, type RateLimiter } from "../http/throttle"
 import { validateSchema } from "../http/schemaValidation"
-import { createProfileRepository, sessionPayload, type ProfileRepository } from "./session"
+import { sessionPayload, type ProfileRepository } from "./session"
 
 export type Credential = { id: string }
 
 export interface CredentialStore {
   findActiveUserByEmail(email: string): Promise<Credential | null>
   mirrorPassword(userId: string): Promise<void>
-}
-
-export function credentialStoreOn(executor: CredentialExecutor): CredentialStore {
-  return {
-    async findActiveUserByEmail(email) {
-      const [row] = (await executor.execute(sql`select usuario_id from usuarios where correo_electronico = ${email} and usuario_activo = true limit 1` as SQL))
-        .rows as { usuario_id: string }[]
-      return row ? { id: String(row.usuario_id) } : null
-    },
-    mirrorPassword: (userId) => mirrorCredentialPassword(executor, userId),
-  }
 }
 
 export type AuthenticationDeps = {
@@ -52,34 +36,6 @@ export type AuthenticationDeps = {
   dummyHash: () => Promise<string>
   production: () => boolean
   pwned?: (prefix: string) => Promise<string>
-}
-
-let dummy: Promise<string> | null = null
-
-export function authenticationDepsOn(
-  bridge: BridgeDeps,
-  credentials: CredentialStore,
-  overrides: Partial<Omit<AuthenticationDeps, "bridge" | "credentials">> = {},
-): AuthenticationDeps {
-  const cost = Number.parseInt(process.env.BCRYPT_ROUNDS ?? "12", 10)
-  return {
-    bridge,
-    auth: sharedAuth,
-    credentials,
-    profiles: createProfileRepository(),
-    today: institutionToday,
-    timezone: () => process.env.DISPLAY_TIMEZONE ?? "America/Guayaquil",
-    throttles: sharedRateLimiter(),
-    attempts: sharedAttemptLimiter(),
-    verifyPassword: bcryptVerify,
-    dummyHash: () => (dummy ??= bcryptHash(sessionRandom(40), cost)),
-    production: () => process.env.APP_ENV === "production",
-    ...overrides,
-  }
-}
-
-export function defaultAuthenticationDeps(): AuthenticationDeps {
-  return authenticationDepsOn(defaultBridgeDeps(), credentialStoreOn(db as unknown as CredentialExecutor))
 }
 
 export const TOO_MANY = "Demasiados intentos. Intente nuevamente en unos minutos."
@@ -115,7 +71,7 @@ export function apiErrorCode(error: unknown): string | null {
   return typeof code === "string" ? code : null
 }
 
-export async function login(request: Request, deps: AuthenticationDeps = defaultAuthenticationDeps()): Promise<Response> {
+export async function login(request: Request, deps: AuthenticationDeps): Promise<Response> {
   if (!(await deps.bridge.sessions.fromWebApp(request))) return apiJson({ message: WEB_APP_ONLY }, 400)
   const input = await requestInput(request)
   if (isPhpArray(("email" in input ? input.email : input.correo_electronico) ?? null)) return serverError()
@@ -168,14 +124,14 @@ function signInEmail(deps: AuthenticationDeps, email: string, password: string, 
   return deps.auth().api.signInEmail({ body: { email, password, rememberMe: true }, headers: request.headers, returnHeaders: true })
 }
 
-export async function logout(request: Request, deps: AuthenticationDeps = defaultAuthenticationDeps()): Promise<Response> {
+export async function logout(request: Request, deps: AuthenticationDeps): Promise<Response> {
   const session = await requireSession(request, {}, deps.bridge)
   if (session instanceof Response) return session
   const { headers } = await deps.auth().api.signOut({ headers: request.headers, returnHeaders: true })
   return withSetCookies(emptyResponse(204), headers.getSetCookie())
 }
 
-export async function selectActiveRole(request: Request, deps: AuthenticationDeps = defaultAuthenticationDeps()): Promise<Response> {
+export async function selectActiveRole(request: Request, deps: AuthenticationDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true }, deps.bridge)
   if (session instanceof Response) return session
   const input = await requestInput(request)
@@ -188,14 +144,14 @@ export async function selectActiveRole(request: Request, deps: AuthenticationDep
   return sessionAnswer(await establish(session.session, session.user, deps.bridge), deps)
 }
 
-export async function leaveActiveRole(request: Request, deps: AuthenticationDeps = defaultAuthenticationDeps()): Promise<Response> {
+export async function leaveActiveRole(request: Request, deps: AuthenticationDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "optional" }, deps.bridge)
   if (session instanceof Response) return session
   if (session.activeRole !== null) await deps.bridge.sessions.setActiveRole(session.session, null)
   return sessionAnswer(await establish(session.session, session.user, deps.bridge), deps)
 }
 
-export async function updatePassword(request: Request, deps: AuthenticationDeps = defaultAuthenticationDeps()): Promise<Response> {
+export async function updatePassword(request: Request, deps: AuthenticationDeps): Promise<Response> {
   const session = await requireSession(request, {}, deps.bridge)
   if (session instanceof Response) return session
   const { user } = session

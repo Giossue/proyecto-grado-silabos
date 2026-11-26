@@ -6,7 +6,7 @@ import { careerTeacherSchema } from "@silabos/shared/schemas/people"
 import { validateSchema } from "../http/schemaValidation"
 import { collapseNameColumns, fullName, ROLE_ADMINISTRATOR, ROLE_COORDINATOR, ROLE_TEACHER } from "./accountRules"
 import { createCareerTeacher, RESEND, removeCareerTeacher, resendActivation, type Account } from "./accounts"
-import { bindAccount, defaultIdentityWriteDeps, perform, stringOf, type IdentityWriteDeps } from "./accountWrites"
+import { bindAccount, perform, stringOf, type IdentityWriteDeps } from "./accountWrites"
 
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
@@ -26,7 +26,7 @@ async function mayResend(session: AppSession, target: Account, deps: IdentityWri
   return session.activeRole?.role === ROLE_COORDINATOR && (await teachesInCareer(session, target, deps))
 }
 
-export async function storeCareerTeacher(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function storeCareerTeacher(request: Request, deps: IdentityWriteDeps): Promise<Response> {
   const original = request.clone()
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
@@ -49,7 +49,7 @@ export async function storeCareerTeacher(request: Request, deps: IdentityWriteDe
   return apiJson({ message })
 }
 
-export async function destroyCareerTeacher(request: Request, id: string, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function destroyCareerTeacher(request: Request, id: string, deps: IdentityWriteDeps): Promise<Response> {
   const bound = await bindAccount(request, id, deps)
   if (bound instanceof Response) return bound
   const { session, target, original } = bound
@@ -67,7 +67,7 @@ export async function destroyCareerTeacher(request: Request, id: string, deps: I
   return apiJson({ message })
 }
 
-export async function resendCareerTeacherActivation(request: Request, id: string, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function resendCareerTeacherActivation(request: Request, id: string, deps: IdentityWriteDeps): Promise<Response> {
   const bound = await bindAccount(request, id, deps, { throttled: true })
   if (bound instanceof Response) return bound
   const { session, target, original, finish } = bound

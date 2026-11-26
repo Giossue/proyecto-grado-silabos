@@ -1,5 +1,5 @@
 import type { Provider } from "@nestjs/common"
-import { searchCatalog } from "../../server/library/catalogHandlers"
+import { defaultCatalogDeps, searchCatalog } from "../../server/library/catalogHandlers"
 import { teacherSupportDocuments } from "../../server/academic/supportDocuments"
 import type { BridgeDeps } from "../../server/auth/types"
 import { defaultConvocationWriteDeps } from "../../server/syllabus/convocationWrites"
@@ -14,6 +14,8 @@ import { defaultReviewDetailDeps } from "../../server/syllabus/reviewDetails"
 import { defaultSubmissionDeps } from "../../server/syllabus/submission"
 import { defaultSyllabusDetailDeps } from "../../server/syllabus/syllabusDetail"
 import { defaultTeacherSyllabusDeps } from "../../server/syllabus/teacherSyllabi"
+import { PrismaService } from "../../prisma/prisma.service"
+import { AcademicDeps } from "../academic/academic-deps"
 import { AUTH_BRIDGE } from "../auth/auth.tokens"
 import {
   CONVOCATION_DEPS,
@@ -36,8 +38,8 @@ export type TeacherResources = {
   catalogSearch(request: Request): Promise<Response>
 }
 
-function withBridge(token: symbol, defaults: () => { bridge: BridgeDeps }): Provider {
-  return { provide: token, useFactory: (bridge: BridgeDeps) => ({ ...defaults(), bridge }), inject: [AUTH_BRIDGE] }
+function withBridge(token: symbol, defaults: (prisma: PrismaService) => { bridge: BridgeDeps }): Provider {
+  return { provide: token, useFactory: (bridge: BridgeDeps, prisma: PrismaService) => ({ ...defaults(prisma), bridge }), inject: [AUTH_BRIDGE, PrismaService] }
 }
 
 export const SYLLABUS_DEPS_PROVIDERS: Provider[] = [
@@ -53,5 +55,12 @@ export const SYLLABUS_DEPS_PROVIDERS: Provider[] = [
   withBridge(DRAFT_FIELD_DEPS, defaultDraftFieldDeps),
   withBridge(DRAFT_VALIDATION_DEPS, defaultDraftValidationDeps),
   withBridge(SUBMISSION_DEPS, defaultSubmissionDeps),
-  { provide: TEACHER_RESOURCES, useValue: { supportDocuments: (request: Request) => teacherSupportDocuments(request), catalogSearch: (request: Request) => searchCatalog(request) } satisfies TeacherResources },
+  {
+    provide: TEACHER_RESOURCES,
+    useFactory: (academic: AcademicDeps, prisma: PrismaService): TeacherResources => ({
+      supportDocuments: (request: Request) => teacherSupportDocuments(request, academic.supportDocuments()),
+      catalogSearch: (request: Request) => searchCatalog(request, defaultCatalogDeps(prisma)),
+    }),
+    inject: [AcademicDeps, PrismaService],
+  },
 ]

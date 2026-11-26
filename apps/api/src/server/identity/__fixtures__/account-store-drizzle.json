@@ -1,0 +1,519 @@
+{
+ "nested": [
+  {
+   "text": "savepoint identity_1",
+   "values": []
+  },
+  {
+   "text": "release savepoint identity_1",
+   "values": []
+  }
+ ],
+ "lockAccount": [
+  {
+   "text": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null from \"usuarios\" where \"usuarios\".\"usuario_id\" = $1 limit $2 for update",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    1
+   ]
+  }
+ ],
+ "lockAccountByEmail": [
+  {
+   "text": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null from \"usuarios\" where lower(\"usuarios\".\"correo_electronico\") = $1 limit $2 for update",
+   "values": [
+    "ana@x.ec",
+    1
+   ]
+  }
+ ],
+ "insertAccount": [
+  {
+   "text": "insert into \"usuarios\" (\"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"correo_verificado_en\", \"contrasena\", \"usuario_activo\", \"codigo_recordarme\", \"secreto_dos_factores\", \"codigos_recuperacion_dos_factores\", \"dos_factores_confirmado_en\", \"formacion_experiencia_usuario\", \"preferencias_accesibilidad_usuario\", \"preferencias_correo_usuario\") values ($1, $2, $3, $4, $5, $6, default, default, default, default, default, default, default)",
+   "values": [
+    "01a1c5ba-0000-7000-8000-000000000099",
+    "Ana",
+    "ana@x.ec",
+    null,
+    "$2y$h",
+    true
+   ]
+  },
+  {
+   "text": "insert into \"cuentas_usuario\" (\"id\", \"account_id\", \"provider_id\", \"user_id\", \"access_token\", \"refresh_token\", \"id_token\", \"access_token_expires_at\", \"refresh_token_expires_at\", \"scope\", \"password\", \"created_at\", \"updated_at\") values ($1, $2, $3, $4, default, default, default, default, default, default, $5, default, default)",
+   "values": [
+    "01a1c5ba-0000-7000-8000-000000000099",
+    "01a1c5ba-0000-7000-8000-000000000099",
+    "credential",
+    "01a1c5ba-0000-7000-8000-000000000099",
+    "$2y$h"
+   ]
+  }
+ ],
+ "updateIdentity": [
+  {
+   "text": "update \"usuarios\" set \"nombre_usuario\" = $1, \"correo_electronico\" = $2 where \"usuarios\".\"usuario_id\" = $3",
+   "values": [
+    "Ana",
+    "ana@x.ec",
+    "01a1c5ba-10b4-7129-925f-c28a9489323c"
+   ]
+  }
+ ],
+ "setActive": [
+  {
+   "text": "update \"usuarios\" set \"usuario_activo\" = $1 where \"usuarios\".\"usuario_id\" = $2",
+   "values": [
+    false,
+    "01a1c5ba-10b4-7129-925f-c28a9489323c"
+   ]
+  }
+ ],
+ "lockFormation": [
+  {
+   "text": "select \"formacion_experiencia_usuario\" from \"usuarios\" where \"usuarios\".\"usuario_id\" = $1 limit $2 for update",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    1
+   ]
+  }
+ ],
+ "setFormation": [
+  {
+   "text": "update \"usuarios\" set \"formacion_experiencia_usuario\" = $1 where \"usuarios\".\"usuario_id\" = $2",
+   "values": [
+    "Ing.",
+    "01a1c5ba-10b4-7129-925f-c28a9489323c"
+   ]
+  }
+ ],
+ "setAccessibility": [
+  {
+   "text": "update \"usuarios\" set \"preferencias_accesibilidad_usuario\" = $1 where \"usuarios\".\"usuario_id\" = $2",
+   "values": [
+    "{\"high_contrast\":true,\"text_size\":\"130\",\"no_motion\":false,\"dyslexia\":false}",
+    "01a1c5ba-10b4-7129-925f-c28a9489323c"
+   ]
+  }
+ ],
+ "effectiveRoles": [
+  {
+   "text": "select \"rol\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"usuario_id\" = $1 and \"asignaciones_rol\".\"asignacion_rol_activa\" = $2)",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    true
+   ]
+  }
+ ],
+ "lockEffectiveGrants": [
+  {
+   "text": "select \"asignacion_rol_id\", \"usuario_id\", \"rol\", \"carrera_id\", \"asignacion_rol_activa\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"usuario_id\" = $1 and \"asignaciones_rol\".\"asignacion_rol_activa\" = $2) for update",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    true
+   ]
+  }
+ ],
+ "lockCurrentCoordinator": [
+  {
+   "text": "select \"asignaciones_rol\".\"asignacion_rol_id\", \"asignaciones_rol\".\"usuario_id\", \"usuarios\".\"nombre_usuario\" from \"asignaciones_rol\" inner join \"usuarios\" on (\"usuarios\".\"usuario_id\" = \"asignaciones_rol\".\"usuario_id\" and \"usuarios\".\"usuario_activo\" = $1) where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $2 and \"asignaciones_rol\".\"carrera_id\" = $3 and \"asignaciones_rol\".\"usuario_id\" <> $4 and \"asignaciones_rol\".\"rol\" = $5) limit $6 for update of \"asignaciones_rol\"",
+   "values": [
+    true,
+    true,
+    "01a1c5ba-10b4-7129-925f-c28a9489323d",
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    "coordinador",
+    1
+   ]
+  }
+ ],
+ "lockCurrentCoordinatorNull": [
+  {
+   "text": "select \"asignaciones_rol\".\"asignacion_rol_id\", \"asignaciones_rol\".\"usuario_id\", \"usuarios\".\"nombre_usuario\" from \"asignaciones_rol\" inner join \"usuarios\" on (\"usuarios\".\"usuario_id\" = \"asignaciones_rol\".\"usuario_id\" and \"usuarios\".\"usuario_activo\" = $1) where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $2 and \"asignaciones_rol\".\"carrera_id\" is null and \"asignaciones_rol\".\"usuario_id\" <> $3 and \"asignaciones_rol\".\"rol\" = $4) limit $5 for update of \"asignaciones_rol\"",
+   "values": [
+    true,
+    true,
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    "coordinador",
+    1
+   ]
+  }
+ ],
+ "findGrantActiveFirst": [
+  {
+   "text": "select \"asignacion_rol_id\", \"usuario_id\", \"rol\", \"carrera_id\", \"asignacion_rol_activa\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"usuario_id\" = $1 and \"asignaciones_rol\".\"rol\" = $2 and \"asignaciones_rol\".\"carrera_id\" = $3) order by \"asignaciones_rol\".\"asignacion_rol_activa\" desc limit $4",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    "docente",
+    "01a1c5ba-10b4-7129-925f-c28a9489323d",
+    1
+   ]
+  }
+ ],
+ "findGrantNull": [
+  {
+   "text": "select \"asignacion_rol_id\", \"usuario_id\", \"rol\", \"carrera_id\", \"asignacion_rol_activa\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"usuario_id\" = $1 and \"asignaciones_rol\".\"rol\" = $2 and \"asignaciones_rol\".\"carrera_id\" is null) limit $3",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    "administrador",
+    1
+   ]
+  }
+ ],
+ "lockActiveGrant": [
+  {
+   "text": "select \"asignacion_rol_id\", \"usuario_id\", \"rol\", \"carrera_id\", \"asignacion_rol_activa\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"usuario_id\" = $1 and \"asignaciones_rol\".\"rol\" = $2 and \"asignaciones_rol\".\"carrera_id\" = $3 and \"asignaciones_rol\".\"asignacion_rol_activa\" = $4) limit $5 for update",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    "docente",
+    "01a1c5ba-10b4-7129-925f-c28a9489323d",
+    true,
+    1
+   ]
+  }
+ ],
+ "insertGrant": [
+  {
+   "text": "insert into \"asignaciones_rol\" (\"asignacion_rol_id\", \"usuario_id\", \"carrera_id\", \"asignacion_rol_activa\", \"asignado_en\", \"rol\") values ($1, $2, $3, $4, to_timestamp($5), $6)",
+   "values": [
+    "01a1c5ba-0000-7000-8000-000000000099",
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    "01a1c5ba-10b4-7129-925f-c28a9489323d",
+    true,
+    1800000000,
+    "docente"
+   ]
+  }
+ ],
+ "insertGrantNull": [
+  {
+   "text": "insert into \"asignaciones_rol\" (\"asignacion_rol_id\", \"usuario_id\", \"carrera_id\", \"asignacion_rol_activa\", \"asignado_en\", \"rol\") values ($1, $2, $3, $4, to_timestamp($5), $6)",
+   "values": [
+    "01a1c5ba-0000-7000-8000-000000000099",
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    null,
+    true,
+    1800000000,
+    "administrador"
+   ]
+  }
+ ],
+ "setGrantActive": [
+  {
+   "text": "update \"asignaciones_rol\" set \"asignacion_rol_activa\" = $1 where \"asignaciones_rol\".\"asignacion_rol_id\" = $2",
+   "values": [
+    true,
+    "01a1c5ba-10b4-7129-925f-c28a9489323e"
+   ]
+  }
+ ],
+ "invitationRole": [
+  {
+   "text": "select \"rol\", \"carrera_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"usuario_id\" = $1 and \"asignaciones_rol\".\"asignacion_rol_activa\" = $2) limit $3",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    true,
+    1
+   ]
+  },
+  {
+   "text": "select (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1\n    then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) from \"carreras\" where \"carreras\".\"carrera_id\" = $1",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323d"
+   ]
+  }
+ ],
+ "invitationRoleNull": [
+  {
+   "text": "select \"rol\", \"carrera_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"usuario_id\" = $1 and \"asignaciones_rol\".\"asignacion_rol_activa\" = $2) limit $3",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    true,
+    1
+   ]
+  }
+ ],
+ "lockActiveParallelAssignments": [
+  {
+   "text": "select \"asignacion_paralelo_id\" from \"asignaciones_paralelo\" where (\"asignaciones_paralelo\".\"asignacion_rol_id\" = $1 and \"asignaciones_paralelo\".\"asignacion_paralelo_activa\" = $2) for update",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323e",
+    true
+   ]
+  }
+ ],
+ "deleteParallelAssignment": [
+  {
+   "text": "delete from \"asignaciones_paralelo\" where \"asignaciones_paralelo\".\"asignacion_paralelo_id\" = $1",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323e"
+   ]
+  }
+ ],
+ "closeParallelAssignments": [
+  {
+   "text": "update \"asignaciones_paralelo\" set \"asignacion_paralelo_activa\" = $1 where (\"asignaciones_paralelo\".\"asignacion_rol_id\" in (select \"asignacion_rol_id\" from \"asignaciones_rol\" where \"asignaciones_rol\".\"usuario_id\" = $2) and \"asignaciones_paralelo\".\"asignacion_paralelo_activa\" = $3)",
+   "values": [
+    false,
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    true
+   ]
+  }
+ ],
+ "lockEffectiveCoordinations": [
+  {
+   "text": "select \"asignaciones_rol\".\"asignacion_rol_id\", \"asignaciones_rol\".\"carrera_id\", (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1\n    then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) from \"asignaciones_rol\" left join \"carreras\" on \"carreras\".\"carrera_id\" = \"asignaciones_rol\".\"carrera_id\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $1 and \"asignaciones_rol\".\"usuario_id\" = $2 and \"asignaciones_rol\".\"rol\" = $3) for update of \"asignaciones_rol\"",
+   "values": [
+    true,
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    "coordinador"
+   ]
+  }
+ ],
+ "isEffectiveAdministrator": [
+  {
+   "text": "select \"asignacion_rol_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $1 and \"asignaciones_rol\".\"usuario_id\" = $2 and \"asignaciones_rol\".\"rol\" = $3) limit $4",
+   "values": [
+    true,
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    "administrador",
+    1
+   ]
+  }
+ ],
+ "otherActiveAdministratorExists": [
+  {
+   "text": "select \"asignacion_rol_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $1 and \"asignaciones_rol\".\"usuario_id\" <> $2 and \"asignaciones_rol\".\"rol\" = $3 and exists (select \"usuario_id\" from \"usuarios\" where (\"asignaciones_rol\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"usuarios\".\"usuario_activo\" = $4))) limit $5",
+   "values": [
+    true,
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    "administrador",
+    true,
+    1
+   ]
+  }
+ ],
+ "syllabiInProgress": [
+  {
+   "text": "select \"carreras\".\"carrera_id\", count(distinct \"silabos\".\"silabo_id\") from \"docentes_vigentes_silabo\" inner join \"silabos\" on \"silabos\".\"silabo_id\" = \"docentes_vigentes_silabo\".\"silabo_id\" inner join \"convocatorias_carreras\" on \"convocatorias_carreras\".\"convocatoria_carrera_id\" = \"silabos\".\"convocatoria_carrera_id\" inner join \"carreras\" on \"carreras\".\"carrera_id\" = \"convocatorias_carreras\".\"carrera_id\" where (\"docentes_vigentes_silabo\".\"usuario_id\" = $1 and \"silabos\".\"estado_silabo\" in ($2, $3, $4) and \"convocatorias_carreras\".\"estado_convocatoria_carrera\" = $5) group by \"carreras\".\"carrera_id\"",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    "borrador",
+    "en_revision",
+    "correccion_solicitada",
+    "abierta"
+   ]
+  },
+  {
+   "text": "select (case when (select count(*) from carreras mismo_nombre where mismo_nombre.nombre_carrera = carreras.nombre_carrera) > 1\n    then carreras.nombre_carrera || ' · ' || coalesce(carreras.codigo_carrera, '') else carreras.nombre_carrera end) from \"carreras\" where \"carreras\".\"carrera_id\" = $1",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323d"
+   ]
+  }
+ ],
+ "hasActiveInvitation": [
+  {
+   "text": "select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = $1 and (\"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null) and \"invitaciones_activacion\".\"expira_en\" > to_timestamp($2)) limit $3",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    1800000000,
+    1
+   ]
+  }
+ ],
+ "invalidateInvitations": [
+  {
+   "text": "update \"invitaciones_activacion\" set \"invalidada_en\" = to_timestamp($1) where (\"invitaciones_activacion\".\"usuario_id\" = $2 and (\"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null))",
+   "values": [
+    1800000000,
+    "01a1c5ba-10b4-7129-925f-c28a9489323c"
+   ]
+  }
+ ],
+ "insertInvitation": [
+  {
+   "text": "insert into \"invitaciones_activacion\" (\"invitacion_activacion_id\", \"usuario_id\", \"hash_activacion\", \"expira_en\", \"usada_en\", \"invalidada_en\", \"emitida_por_usuario_id\", \"creada_en\") values ($1, $2, $3, to_timestamp($4), default, default, $5, to_timestamp($6))",
+   "values": [
+    "01a1c5ba-0000-7000-8000-000000000099",
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    "abc",
+    1800003600,
+    "01a1c5ba-10b4-7129-925f-c28a9489323d",
+    1800000000
+   ]
+  }
+ ],
+ "latestInvitationIssuer": [
+  {
+   "text": "select \"emitida_por_usuario_id\" from \"invitaciones_activacion\" where \"invitaciones_activacion\".\"usuario_id\" = $1 order by \"invitaciones_activacion\".\"creada_en\" desc limit $2",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    1
+   ]
+  },
+  {
+   "text": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null from \"usuarios\" where \"usuarios\".\"usuario_id\" = $1 limit $2",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323d",
+    1
+   ]
+  }
+ ],
+ "deleteSessions": [
+  {
+   "text": "delete from \"sesiones_usuario\" where \"sesiones_usuario\".\"user_id\" = $1",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c"
+   ]
+  }
+ ],
+ "deleteSessionsExcept": [
+  {
+   "text": "delete from \"sesiones_usuario\" where (\"sesiones_usuario\".\"user_id\" = $1 and \"sesiones_usuario\".\"id\" <> $2)",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    "s-1"
+   ]
+  }
+ ],
+ "deleteSession": [
+  {
+   "text": "delete from \"sesiones_usuario\" where (\"sesiones_usuario\".\"id\" = $1 and \"sesiones_usuario\".\"user_id\" = $2)",
+   "values": [
+    "s-1",
+    "01a1c5ba-10b4-7129-925f-c28a9489323c"
+   ]
+  }
+ ],
+ "hasActivity": [
+  {
+   "text": "select \"asignacion_paralelo_id\" from \"asignaciones_paralelo\" where \"asignaciones_paralelo\".\"asignacion_rol_id\" in (select \"asignacion_rol_id\" from \"asignaciones_rol\" where \"asignaciones_rol\".\"usuario_id\" = $1) limit $2",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    1
+   ]
+  },
+  {
+   "text": "select \"revision_silabo_id\" from \"revisiones_silabo\" where \"revisiones_silabo\".\"enviado_por\" = $1 limit $2",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    1
+   ]
+  },
+  {
+   "text": "select \"exportacion_silabo_id\" from \"exportaciones_silabo\" where \"exportaciones_silabo\".\"solicitado_por\" = $1 limit $2",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    1
+   ]
+  },
+  {
+   "text": "select \"archivo_id\" from \"archivos\" where \"archivos\".\"subido_por\" = $1 limit $2",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    1
+   ]
+  },
+  {
+   "text": "select \"firma_silabo_id\" from \"firmas_silabo\" where \"firmas_silabo\".\"usuario_id\" = $1 limit $2",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    1
+   ]
+  }
+ ],
+ "purgeAccount": [
+  {
+   "text": "delete from \"notificaciones\" where \"notificaciones\".\"usuario_id\" = $1",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c"
+   ]
+  },
+  {
+   "text": "delete from \"sesiones_usuario\" where \"sesiones_usuario\".\"user_id\" = $1",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c"
+   ]
+  },
+  {
+   "text": "delete from \"asignaciones_rol\" where \"asignaciones_rol\".\"usuario_id\" = $1",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c"
+   ]
+  },
+  {
+   "text": "delete from \"usuarios\" where \"usuarios\".\"usuario_id\" = $1",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c"
+   ]
+  }
+ ],
+ "careerLocked": [
+  {
+   "text": "select \"convocatoria_carrera_id\" from \"convocatorias_carreras\" where (\"convocatorias_carreras\".\"carrera_id\" = $1 and \"convocatorias_carreras\".\"estado_convocatoria_carrera\" = $2 and exists (select \"convocatoria_universidad_id\" from \"convocatorias_universidad\" where (\"convocatorias_carreras\".\"convocatoria_universidad_id\" = \"convocatorias_universidad\".\"convocatoria_universidad_id\" and \"convocatorias_universidad\".\"estado_convocatoria_universidad\" in ($3, $4)))) limit $5",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323d",
+    "abierta",
+    "abierto",
+    "pausado",
+    1
+   ]
+  }
+ ],
+ "repo.findAccount": [
+  {
+   "text": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null from \"usuarios\" where \"usuarios\".\"usuario_id\" = $1 limit $2",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    1
+   ]
+  }
+ ],
+ "repo.findGrant": [
+  {
+   "text": "select \"asignacion_rol_id\", \"usuario_id\", \"rol\", \"carrera_id\", \"asignacion_rol_activa\" from \"asignaciones_rol\" where \"asignaciones_rol\".\"asignacion_rol_id\" = $1 limit $2",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323e",
+    1
+   ]
+  }
+ ],
+ "repo.emailTaken": [
+  {
+   "text": "select count(*) as count from \"usuarios\" where \"usuarios\".\"correo_electronico\" = $1;",
+   "values": [
+    "ana@x.ec"
+   ]
+  }
+ ],
+ "repo.emailTakenIgnoring": [
+  {
+   "text": "select count(*) as count from \"usuarios\" where (\"usuarios\".\"correo_electronico\" = $1 and \"usuarios\".\"usuario_id\" <> $2);",
+   "values": [
+    "ana@x.ec",
+    "01a1c5ba-10b4-7129-925f-c28a9489323c"
+   ]
+  }
+ ],
+ "repo.activeCareer": [
+  {
+   "text": "select count(*) as count from \"carreras\" where (\"carreras\".\"carrera_id\" = $1 and \"carreras\".\"carrera_activa\" = $2);",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323d",
+    true
+   ]
+  }
+ ],
+ "repo.hasEffectiveRole": [
+  {
+   "text": "select \"asignacion_rol_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"usuario_id\" = $1 and \"asignaciones_rol\".\"asignacion_rol_activa\" = $2 and \"asignaciones_rol\".\"rol\" = $3 and \"asignaciones_rol\".\"carrera_id\" = $4) limit $5",
+   "values": [
+    "01a1c5ba-10b4-7129-925f-c28a9489323c",
+    true,
+    "docente",
+    "01a1c5ba-10b4-7129-925f-c28a9489323d",
+    1
+   ]
+  }
+ ]
+}

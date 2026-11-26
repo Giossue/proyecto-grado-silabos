@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
-import { createTemplateStore } from "../../server/configuration/templateStore"
+import { PrismaService } from "../../prisma/prisma.service"
+import { createTemplateStore } from "../../server/shared/templateStore"
 import { institutionToday } from "../../server/shared/clock"
 import { libraryReviewCounts } from "../../server/library/reviewQueries"
 import { DashboardController } from "./dashboard.controller"
@@ -14,9 +15,9 @@ import { PrismaSetupRepository } from "./setup.repository"
     PrismaDashboardRepository,
     PrismaSetupRepository,
     DashboardService,
-    { provide: DASHBOARD_TEMPLATES, useFactory: createTemplateStore },
+    { provide: DASHBOARD_TEMPLATES, useFactory: (prisma: PrismaService) => createTemplateStore(prisma), inject: [PrismaService] },
     { provide: DASHBOARD_TODAY, useValue: institutionToday },
-    { provide: LIBRARY_COUNTS, useValue: libraryReviewCounts },
+    { provide: LIBRARY_COUNTS, useFactory: (prisma: PrismaService) => () => libraryReviewCounts(prisma), inject: [PrismaService] },
   ],
 })
 export class DashboardModule {}

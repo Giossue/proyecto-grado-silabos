@@ -1,4 +1,5 @@
 import { MODELS } from "../http/models"
+import type { PrismaService } from "../../prisma/prisma.service"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { AppSession } from "../auth/types"
 import { requestInput, type PhpArray } from "../http/input"
@@ -15,7 +16,7 @@ import { createSubjectProfileWriteDeps } from "./subjectProfileWriteStore"
 import { toRuntime } from "./templateDraft"
 import { templateFields } from "./templatePresentation"
 import { careerResponse, fieldConditions, normalizeFieldDocument, responseTemplate, TemplateValidationError } from "./templateRuntime"
-import type { TemplateStore } from "./templateStore"
+import type { TemplateStore } from "../shared/templateStore"
 import { unmatchedRoute, modelNotFound, routeAllows } from "../http/router"
 
 export interface SubjectProfileTx {
@@ -31,8 +32,8 @@ export type SubjectProfileWriteDeps = SubjectProfileDeps & {
   transaction<T>(work: (tx: SubjectProfileTx) => Promise<T>): Promise<T>
 }
 
-export function defaultSubjectProfileWriteDeps(): SubjectProfileWriteDeps {
-  return { ...defaultSubjectProfileDeps(), bridge: defaultBridgeDeps(), ...createSubjectProfileWriteDeps() }
+export function defaultSubjectProfileWriteDeps(prisma: PrismaService): SubjectProfileWriteDeps {
+  return { ...defaultSubjectProfileDeps(prisma), bridge: defaultBridgeDeps(), ...createSubjectProfileWriteDeps(prisma) }
 }
 
 const FIELD_GONE = "El proyecto de carrera incluye un campo que ya no existe en la plantilla."
@@ -68,7 +69,7 @@ async function saveValues(tx: SubjectProfileTx, session: AppSession, subjectId: 
   }
 }
 
-export async function updateSubjectProfile(request: Request, subjectId: string, deps: SubjectProfileWriteDeps = defaultSubjectProfileWriteDeps()): Promise<Response> {
+export async function updateSubjectProfile(request: Request, subjectId: string, deps: SubjectProfileWriteDeps): Promise<Response> {
   const original = request.clone()
   if (!routeAllows(request)) return unmatchedRoute(request)
   let careerId: string | null = null

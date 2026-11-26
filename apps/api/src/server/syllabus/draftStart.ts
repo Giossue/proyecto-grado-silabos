@@ -1,4 +1,5 @@
 import { HttpFailure, Missing, reportedServerError } from "../http/failures"
+import type { PrismaService } from "../../prisma/prisma.service"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
@@ -7,14 +8,14 @@ import { expectsJson } from "../http/request"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
 import { lockVersionSchema } from "@silabos/shared/schemas/syllabus"
 import { validateSchema } from "../http/schemaValidation"
-import { createLogoStore, type LogoStore } from "../configuration/institutionalLogos"
+import { createLogoStore, type LogoStore } from "../shared/logoStore"
 import { phpShape, type PhpRecord } from "../configuration/phpValues"
 import { profileTemplates } from "../configuration/subjectProfileFields"
 import { phpIntCast, toRuntime } from "../configuration/templateDraft"
 import { type SyllabusTemplate, teacherEditable, type TemplateField } from "../configuration/templatePresentation"
 import { fieldResponseNormalize } from "../configuration/templateRehearsal"
 import { fieldCarried, INSTITUTIONAL, responseWithin, TemplateValidationError } from "../configuration/templateRuntime"
-import type { TemplateStore } from "../configuration/templateStore"
+import type { TemplateStore } from "../shared/templateStore"
 import { institutionToday } from "../shared/clock"
 import { mayEdit, mayStart, mayView } from "./policy"
 import { syllabusPayload, type DetailSyllabus, type SyllabusDetailStore } from "./syllabusDetail"
@@ -48,12 +49,12 @@ export type DraftStartDeps = {
   transaction<T>(work: (tx: DraftStartTx) => Promise<T>): Promise<T>
 }
 
-export function defaultDraftStartDeps(): DraftStartDeps {
-  const store = createDraftStartStore()
+export function defaultDraftStartDeps(prisma: PrismaService): DraftStartDeps {
+  const store = createDraftStartStore(prisma)
   return {
     bridge: defaultBridgeDeps(),
     store: store.detail,
-    logos: createLogoStore(),
+    logos: createLogoStore(prisma),
     today: institutionToday,
     now: () => Math.floor(Date.now() / 1000),
     transaction: store.transaction,
@@ -120,7 +121,7 @@ async function inheritPreviousPeriod(tx: DraftStartTx, template: SyllabusTemplat
   }
 }
 
-export async function startDraft(request: Request, syllabusId: string, deps: DraftStartDeps = defaultDraftStartDeps()): Promise<Response> {
+export async function startDraft(request: Request, syllabusId: string, deps: DraftStartDeps): Promise<Response> {
   const auth = await bound(request, syllabusId, null, deps)
   if (auth instanceof Response) return auth
   return startDraftFor(request, auth, deps)
@@ -152,7 +153,7 @@ function conflict(request: Request, version: number): Response {
     : apiJson({ message: CONFLICT }, 409)
 }
 
-export async function copySyllabusContent(request: Request, syllabusId: string, sourceId: string, deps: DraftStartDeps = defaultDraftStartDeps()): Promise<Response> {
+export async function copySyllabusContent(request: Request, syllabusId: string, sourceId: string, deps: DraftStartDeps): Promise<Response> {
   const auth = await bound(request, syllabusId, sourceId, deps)
   if (auth instanceof Response) return auth
   return copySyllabusContentFor(request, auth, deps)

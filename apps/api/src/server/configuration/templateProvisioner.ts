@@ -17,7 +17,7 @@ import { contentForField, DraftRequest, fieldDocument, prepareDraft, toRuntime, 
 import type { SyllabusTemplate } from "./templatePresentation"
 import { boundTemplate, FORBIDDEN, managesTemplates } from "./templateReads"
 import { normalizeFieldDocument, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
-import { createTemplateStore, type TemplateStore } from "./templateStore"
+import type { TemplateStore } from "../shared/templateStore"
 import type { DocumentSection, StoredField } from "./templateStructure"
 
 export const PROCESS_LOCK_REASON = "Proceso activo"
@@ -50,8 +50,8 @@ export type ProvisionDeps = {
   newFieldId: () => string
 }
 
-export function defaultProvisionDeps(provision: ProvisionStore): ProvisionDeps {
-  return { bridge: defaultBridgeDeps(), store: createTemplateStore(), provision, newTemplateId: uuid7, newBlockId: randomUUID, newFieldId: uuid7 }
+export function defaultProvisionDeps(provision: ProvisionStore, store: TemplateStore): ProvisionDeps {
+  return { bridge: defaultBridgeDeps(), store, provision, newTemplateId: uuid7, newBlockId: randomUUID, newFieldId: uuid7 }
 }
 
 async function buildStructure(tx: ProvisionTx, deps: Pick<ProvisionDeps, "newBlockId" | "newFieldId">, templateId: string, structure: DraftSection[], definition: TemplateDefinition): Promise<void> {

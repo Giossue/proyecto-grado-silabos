@@ -11,7 +11,7 @@ import {
   type TemplateDefinition,
 } from "./templateRuntime"
 import { isCareerField, templateFields, type SyllabusTemplate, type TemplateField } from "./templatePresentation"
-import type { TemplateStore } from "./templateStore"
+import type { TemplateStore } from "../shared/templateStore"
 
 export type ProfileContext = { template: SyllabusTemplate; definition: TemplateDefinition; store: TemplateStore }
 

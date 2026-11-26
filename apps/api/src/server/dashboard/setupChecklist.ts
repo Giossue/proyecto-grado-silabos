@@ -1,9 +1,10 @@
 import { failModelNotFound } from "../http/failures"
 import { MODELS } from "../http/models"
-import { facultyIsConfigured, type StoredFaculty } from "../configuration/institutionalLogos"
+import type { StoredFaculty } from "../shared/logoStore"
+import { facultyIsConfigured } from "../configuration/institutionalLogos"
 import { profileComplete } from "../configuration/subjectProfileFields"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
-import type { TemplateStore } from "../configuration/templateStore"
+import type { TemplateStore } from "../shared/templateStore"
 import { templateProblem } from "../syllabus/processes"
 import type { ConvocationRecord, ProcessRecord } from "./dashboard"
 

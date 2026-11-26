@@ -1,9 +1,8 @@
-import { and, eq, exists, sql } from "drizzle-orm"
-import { db } from "@/db"
-import { epochText, hasRows } from "@/db/expressions"
-import { carreras, convocatoriasCarreras, convocatoriasUniversidad } from "@/db/schema"
-import { careerLabelSql } from "../academic/careerLabel"
-import { createTemplateStore } from "../configuration/templateStore"
+import { Prisma } from "../../generated/prisma/client"
+import type { Db } from "../../prisma/db"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { epochText, hasRows } from "../../prisma/sql"
+import { createTemplateStore } from "../shared/templateStore"
 import { createDashboardRepository } from "../dashboard/dashboardQueries"
 import { coordinatorReadiness, type CoordinatorReadiness } from "../dashboard/setupChecklist"
 import { setupRepositoryOn } from "../dashboard/setupQueries"
@@ -18,7 +17,8 @@ import { templateProblem } from "./processes"
 import { dbTransaction, type TransactionRunner } from "./reviewDecisionStore"
 import { failModelNotFound } from "../http/failures"
 import { MODELS } from "../http/models"
-import type { Executor } from "./teacherSyllabusQueries"
+import { careerLabelSql } from "./syllabusSql"
+import { rowsOf } from "./teacherSyllabusQueries"
 
 export function institutionDay(seconds: number): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: process.env.DISPLAY_TIMEZONE ?? "America/Guayaquil", year: "numeric", month: "2-digit", day: "2-digit" }).format(
@@ -43,13 +43,13 @@ export function convocationBlockers(readiness: CoordinatorReadiness): string[] {
   return blockers
 }
 
-export async function institutionalTemplateProblem(executor: Executor, errorKey: string): Promise<string | null> {
+export async function institutionalTemplateProblem(executor: Db, errorKey: string): Promise<string | null> {
   const template = await createTemplateStore(executor).template()
   if (template === null) failModelNotFound(MODELS.template)
   return templateProblem(template, template.definition, errorKey)
 }
 
-export function convocationWriteTx(executor: Executor, afterCommit: AfterCommit, now: number, mail?: Mail): ConvocationWriteTx {
+export function convocationWriteTx(executor: Db, afterCommit: AfterCommit, now: number, mail?: Mail): ConvocationWriteTx {
   const work = new InProgressWork(executor, afterCommit)
   const recipients = recipientsOn(executor)
   return {
@@ -57,61 +57,43 @@ export function convocationWriteTx(executor: Executor, afterCommit: AfterCommit,
     generateConvocation: (id, options) => work.generateConvocation(id, options),
     teacherSyllabusCounts: (ids) => recipients.teacherSyllabusCounts(ids),
     async lockProcess(id) {
-      const [row] = await executor
-        .select({
-          id: convocatoriasUniversidad.convocatoriaUniversidadId,
-          state: convocatoriasUniversidad.estadoConvocatoriaUniversidad,
-          periodId: convocatoriasUniversidad.periodoAcademicoId,
-        })
-        .from(convocatoriasUniversidad)
-        .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, id))
-        .limit(1)
-        .for("update")
+      const [row] = await rowsOf<{ id: string; state: string; periodId: string }>(
+        executor,
+        Prisma.sql`select convocatorias_universidad.convocatoria_universidad_id::text as id, convocatorias_universidad.estado_convocatoria_universidad as state,
+            convocatorias_universidad.periodo_academico_id::text as "periodId"
+          from convocatorias_universidad where convocatorias_universidad.convocatoria_universidad_id = ${id}::uuid limit 1 for update`,
+      )
       return row ?? null
     },
     async careerHasConvocation(careerId, processId) {
       return hasRows(
-        executor
-          .select({ id: convocatoriasCarreras.convocatoriaCarreraId })
-          .from(convocatoriasCarreras)
-          .where(
-            and(
-              eq(convocatoriasCarreras.carreraId, careerId),
-              eq(convocatoriasCarreras.convocatoriaUniversidadId, processId),
-              exists(
-                executor
-                  .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
-                  .from(convocatoriasUniversidad)
-                  .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, convocatoriasCarreras.convocatoriaUniversidadId)),
-              ),
-            ),
-          )
-          .limit(1),
+        rowsOf(
+          executor,
+          Prisma.sql`select convocatorias_carreras.convocatoria_carrera_id from convocatorias_carreras
+            where (convocatorias_carreras.carrera_id = ${careerId}::uuid and convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid
+              and exists (select convocatorias_universidad.convocatoria_universidad_id from convocatorias_universidad
+                where convocatorias_universidad.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id))
+            limit 1`,
+        ),
       )
     },
     async createConvocation(careerId, processId) {
       const id = uuid7()
-      await executor
-        .insert(convocatoriasCarreras)
-        .values({ convocatoriaCarreraId: id, carreraId: careerId, convocatoriaUniversidadId: processId, estadoConvocatoriaCarrera: "preparacion" })
+      await executor.$executeRaw`insert into convocatorias_carreras (convocatoria_carrera_id, carrera_id, estado_convocatoria_carrera, convocatoria_universidad_id)
+        values (${id}::uuid, ${careerId}::uuid, ${"preparacion"}, ${processId}::uuid)`
       return id
     },
     async lockConvocation(id) {
-      const [row] = await executor
-        .select({
-          id: convocatoriasCarreras.convocatoriaCarreraId,
-          careerId: convocatoriasCarreras.carreraId,
-          careerLabel: sql<string>`${careerLabelSql("carreras")}`,
-          state: convocatoriasCarreras.estadoConvocatoriaCarrera,
-          processState: convocatoriasUniversidad.estadoConvocatoriaUniversidad,
-          dueAt: epochText(convocatoriasUniversidad.fechaEntrega),
-        })
-        .from(convocatoriasCarreras)
-        .innerJoin(convocatoriasUniversidad, eq(convocatoriasUniversidad.convocatoriaUniversidadId, convocatoriasCarreras.convocatoriaUniversidadId))
-        .innerJoin(carreras, eq(carreras.carreraId, convocatoriasCarreras.carreraId))
-        .where(eq(convocatoriasCarreras.convocatoriaCarreraId, id))
-        .limit(1)
-        .for("update", { of: convocatoriasCarreras })
+      const [row] = await rowsOf<{ id: string; careerId: string; careerLabel: string; state: string; processState: string; dueAt: string }>(
+        executor,
+        Prisma.sql`select convocatorias_carreras.convocatoria_carrera_id::text as id, convocatorias_carreras.carrera_id::text as "careerId",
+            ${careerLabelSql("carreras")} as "careerLabel", convocatorias_carreras.estado_convocatoria_carrera as state,
+            convocatorias_universidad.estado_convocatoria_universidad as "processState", ${epochText(Prisma.raw("convocatorias_universidad.fecha_entrega"))} as "dueAt"
+          from convocatorias_carreras
+          inner join convocatorias_universidad on convocatorias_universidad.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id
+          inner join carreras on carreras.carrera_id = convocatorias_carreras.carrera_id
+          where convocatorias_carreras.convocatoria_carrera_id = ${id}::uuid limit 1 for update of convocatorias_carreras`,
+      )
       return row ? { ...row, dueAt: Number(row.dueAt) } : null
     },
     async readinessBlockers(careerId) {
@@ -128,29 +110,29 @@ export function convocationWriteTx(executor: Executor, afterCommit: AfterCommit,
     },
     templateProblem: (errorKey) => institutionalTemplateProblem(executor, errorKey),
     async updateState(id, state) {
-      await executor.update(convocatoriasCarreras).set({ estadoConvocatoriaCarrera: state }).where(eq(convocatoriasCarreras.convocatoriaCarreraId, id))
+      await executor.$executeRaw`update convocatorias_carreras set estado_convocatoria_carrera = ${state} where convocatorias_carreras.convocatoria_carrera_id = ${id}::uuid`
     },
   }
 }
 
-export function convocationWriteDepsOn(executor: Executor, transaction: TransactionRunner, options: WriteOptions = {}): Omit<ConvocationWriteDeps, "bridge"> {
+export function convocationWriteDepsOn(executor: Db, transaction: TransactionRunner, options: WriteOptions = {}): Omit<ConvocationWriteDeps, "bridge"> {
   const now = options.now ?? systemNow
   const repository = convocationRepositoryOn(executor, () => Promise.reject(new Error("read only")))
   return {
     convocation: (id) => repository.convocation(id),
     openProcessExists: (id) =>
       hasRows(
-        executor
-          .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
-          .from(convocatoriasUniversidad)
-          .where(and(eq(convocatoriasUniversidad.convocatoriaUniversidadId, id), eq(convocatoriasUniversidad.estadoConvocatoriaUniversidad, "abierto")))
-          .limit(1),
+        rowsOf(
+          executor,
+          Prisma.sql`select convocatorias_universidad.convocatoria_universidad_id from convocatorias_universidad
+            where (convocatorias_universidad.convocatoria_universidad_id = ${id}::uuid and convocatorias_universidad.estado_convocatoria_universidad = ${"abierto"}) limit 1`,
+        ),
       ),
     nowMs: options.now === undefined ? () => Date.now() : () => now() * 1000,
     transaction: (work) => withAfterCommit((afterCommit) => transaction((inner) => work(convocationWriteTx(inner, afterCommit, now(), options.mail)))),
   }
 }
 
-export function createConvocationWriteDeps(): Omit<ConvocationWriteDeps, "bridge"> {
-  return convocationWriteDepsOn(db, dbTransaction)
+export function createConvocationWriteDeps(prisma: PrismaService): Omit<ConvocationWriteDeps, "bridge"> {
+  return convocationWriteDepsOn(prisma, dbTransaction(prisma))
 }

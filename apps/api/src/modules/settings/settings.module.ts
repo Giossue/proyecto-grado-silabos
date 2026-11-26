@@ -1,5 +1,6 @@
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common"
 import { PhpInputMiddleware } from "../../common/middleware/php-input.middleware"
+import { PrismaService } from "../../prisma/prisma.service"
 import { bcryptVerify } from "../../server/auth/bcrypt"
 import { createCatalog } from "../../server/library/catalog"
 import { catalogSettings } from "../../server/library/catalogHandlers"
@@ -17,7 +18,11 @@ import { CONNECTION_FETCH, LIBRARY_DIRECTORY, PASSWORD_VERIFIER, SETTINGS_ENVIRO
     { provide: SETTINGS_ENVIRONMENT, useValue: () => process.env },
     { provide: PASSWORD_VERIFIER, useValue: bcryptVerify },
     { provide: CONNECTION_FETCH, useValue: (url: string, init: RequestInit) => fetch(url, init) },
-    { provide: LIBRARY_DIRECTORY, useValue: async () => createCatalog(await catalogSettings(), kohaFetch).libraries() },
+    {
+      provide: LIBRARY_DIRECTORY,
+      useFactory: (prisma: PrismaService) => async () => createCatalog(await catalogSettings(prisma), kohaFetch).libraries(),
+      inject: [PrismaService],
+    },
   ],
 })
 export class SettingsModule implements NestModule {

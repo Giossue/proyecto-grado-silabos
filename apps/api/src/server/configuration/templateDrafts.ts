@@ -1,22 +1,16 @@
-import { defaultBridgeDeps } from "../auth/requireSession"
 import { requestInput, type PhpArray } from "../http/input"
 import { apiJson, validationError } from "../http/responses"
-import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
+import { throttle, type RateLimiter, type Throttle } from "../http/throttle"
 import { phpShape, type PhpRecord } from "./phpValues"
 import { DraftRequest, draftProblems, prepareDraft, toRuntime, validatedSections } from "./templateDraft"
 import { boundTemplate, FORBIDDEN, managesTemplates, type TemplateReadDeps } from "./templateReads"
 import { PREVIEW_UNAVAILABLE, rehearseImpact, rehearsePreview, type RehearsalStore } from "./templateRehearsal"
-import { createRehearsalStore } from "./templateRehearsalStore"
 import { TemplateValidationError } from "./templateRuntime"
-import { createTemplateStore } from "./templateStore"
 import type { AppSession } from "../auth/types"
 import type { SyllabusTemplate } from "./templatePresentation"
 
 export type TemplateDraftDeps = TemplateReadDeps & { rehearsal: RehearsalStore; limiter: RateLimiter }
 
-export function defaultTemplateDraftDeps(): TemplateDraftDeps {
-  return { bridge: defaultBridgeDeps(), store: createTemplateStore(), rehearsal: createRehearsalStore(), limiter: sharedRateLimiter() }
-}
 
 type Draft = { session: AppSession; template: SyllabusTemplate; input: PhpArray }
 
@@ -34,7 +28,7 @@ async function draftOf(
   return { ...bound, input }
 }
 
-export async function checkTemplateDraft(request: Request, templateId: string, deps: TemplateDraftDeps = defaultTemplateDraftDeps()): Promise<Response> {
+export async function checkTemplateDraft(request: Request, templateId: string, deps: TemplateDraftDeps): Promise<Response> {
   let gate: Throttle | null = null
   const finish = (response: Response) => (gate as Throttle | null)?.decorate(response) ?? response
   const draft = await draftOf(request, templateId, deps, (user) => {
@@ -65,7 +59,7 @@ async function rendered(work: () => Promise<Response>): Promise<Response> {
   }
 }
 
-export async function previewTemplateDraft(request: Request, templateId: string, deps: TemplateDraftDeps = defaultTemplateDraftDeps()): Promise<Response> {
+export async function previewTemplateDraft(request: Request, templateId: string, deps: TemplateDraftDeps): Promise<Response> {
   const draft = await draftOf(request, templateId, deps)
   if (draft instanceof Response) return draft
   return previewTemplateDraftOf(draft.input, draft.template, deps.rehearsal)
@@ -82,7 +76,7 @@ export async function previewTemplateDraftOf(input: PhpArray, template: Syllabus
   })
 }
 
-export async function templateDraftImpact(request: Request, templateId: string, deps: TemplateDraftDeps = defaultTemplateDraftDeps()): Promise<Response> {
+export async function templateDraftImpact(request: Request, templateId: string, deps: TemplateDraftDeps): Promise<Response> {
   const draft = await draftOf(request, templateId, deps)
   if (draft instanceof Response) return draft
   return templateDraftImpactOf(draft.input, draft.template, deps.rehearsal)

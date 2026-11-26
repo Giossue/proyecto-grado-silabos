@@ -6,7 +6,7 @@ import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionPay
 import type { BridgeDeps } from "../../server/auth/types"
 import { fakeTemplateStore, goldenTemplate } from "../../server/configuration/testing"
 import type { SyllabusTemplate } from "../../server/configuration/templatePresentation"
-import type { TemplateStore } from "../../server/configuration/templateStore"
+import type { TemplateStore } from "../../server/shared/templateStore"
 import { dashboardDeadline, dashboardIndex, type ConvocationRecord, type DashboardRepository, type ProcessRecord, type TeacherSyllabus } from "../../server/dashboard/dashboard"
 import type { CareerReadinessFacts, SetupRepository } from "../../server/dashboard/setupChecklist"
 import { createRateLimiter, type RateLimiter } from "../../server/http/throttle"

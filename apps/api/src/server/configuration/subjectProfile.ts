@@ -2,16 +2,14 @@ import { modelNotFoundResponse } from "../http/failures"
 import { officialDefinition } from "./officialTemplate"
 import { fromController } from "../auth/controllerResponse"
 import { MODELS } from "../http/models"
-import { sql } from "drizzle-orm"
-import { db } from "@/db"
+import type { Db } from "../../prisma/db"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
-import { findActiveCareer } from "../academic/structureQueries"
 import { jsonError, apiJson, validationError } from "../http/responses"
 import { phpObject, phpShape } from "./phpValues"
 import { normalizeFieldDocument, responsesEnabled, responseTemplate, TemplateValidationError } from "./templateRuntime"
 import { fieldSection, presentDefinition, variableCatalog } from "./templatePresentation"
-import { createTemplateStore, type TemplateStore } from "./templateStore"
+import { createTemplateStore, type TemplateStore } from "../shared/templateStore"
 import { profileComplete, profileFields, profilePositions, profileValues, type ProfileContext } from "./subjectProfileFields"
 import { unmatchedRoute, modelNotFound, routeAllows } from "../http/router"
 
@@ -22,19 +20,22 @@ export type SubjectProfileDeps = {
   careerActive: (careerId: string) => Promise<boolean>
 }
 
-async function subjectCareer(subjectId: string): Promise<string | null> {
-  const [row] = (await db.execute(sql`select carrera_id::text as carrera_id from asignaturas where asignatura_id = ${subjectId}::uuid limit 1`)).rows as {
-    carrera_id: string
-  }[]
+async function subjectCareer(db: Db, subjectId: string): Promise<string | null> {
+  const [row] = await db.$queryRaw<{ carrera_id: string }[]>`select carrera_id::text as carrera_id from asignaturas where asignatura_id = ${subjectId}::uuid limit 1`
   return row?.carrera_id ?? null
 }
 
-export function defaultSubjectProfileDeps(): SubjectProfileDeps {
+async function careerActive(db: Db, careerId: string): Promise<boolean> {
+  const [row] = await db.$queryRaw<{ id: string }[]>`select carrera_id::text as id from carreras where carrera_activa = true and carrera_id = ${careerId}::uuid limit 1`
+  return row !== undefined
+}
+
+export function defaultSubjectProfileDeps(db: Db): SubjectProfileDeps {
   return {
     bridge: defaultBridgeDeps(),
-    store: createTemplateStore(),
-    subjectCareer,
-    careerActive: async (careerId) => (await findActiveCareer(careerId)) !== null,
+    store: createTemplateStore(db),
+    subjectCareer: (subjectId) => subjectCareer(db, subjectId),
+    careerActive: (careerId) => careerActive(db, careerId),
   }
 }
 
@@ -58,7 +59,7 @@ export async function profileContext(store: TemplateStore): Promise<ProfileConte
   return { template, definition: template.definition, store }
 }
 
-export async function showSubjectProfile(request: Request, subjectId: string, deps: SubjectProfileDeps = defaultSubjectProfileDeps()): Promise<Response> {
+export async function showSubjectProfile(request: Request, subjectId: string, deps: SubjectProfileDeps): Promise<Response> {
   if (!routeAllows(request)) return unmatchedRoute(request)
   let careerId: string | null = null
   const session = await requireSession(

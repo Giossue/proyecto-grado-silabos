@@ -52,6 +52,7 @@ function deps(): GovernanceWriteDeps {
     activeFacultyExists: async (id) => faculties.get(id)?.active === true,
     facultyExists: async (id) => faculties.has(id),
     careerCodeTaken: async (code, except) => [...careers.values()].some((career) => career.code === code && career.id !== except),
+    deletions: { bridge: fakeDeps(world), store: { careerActive: async () => true, transaction: async () => Promise.reject(new Error("unused")) } },
     files: { storage, newObjectId: () => "01a2aaaa-0000-7000-8000-00000000f11e", newLogoId: () => "6b1d0c1e-3a5f-4c2b-9d8e-7f6a5b4c3d2e" },
     async transaction(work) {
       log.push("begin")

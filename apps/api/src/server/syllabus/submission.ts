@@ -1,4 +1,5 @@
 import { HttpFailure, Missing } from "../http/failures"
+import type { PrismaService } from "../../prisma/prisma.service"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
@@ -80,10 +81,10 @@ export type SubmissionDeps = {
   newId: () => string
 }
 
-export function defaultSubmissionDeps(): SubmissionDeps {
+export function defaultSubmissionDeps(prisma: PrismaService): SubmissionDeps {
   return {
     bridge: defaultBridgeDeps(),
-    ...createSubmissionDeps(),
+    ...createSubmissionDeps(prisma),
     settings: () => signatureSettings(),
     today: institutionToday,
     now: () => Math.floor(Date.now() / 1000),
@@ -199,7 +200,7 @@ async function versionInput(request: Request, schema: z.ZodType): Promise<{ inpu
   return { input, errors: (await validateSchema(schema, input)).errors }
 }
 
-export async function submissionStatement(request: Request, syllabusId: string, deps: SubmissionDeps = defaultSubmissionDeps()): Promise<Response> {
+export async function submissionStatement(request: Request, syllabusId: string, deps: SubmissionDeps): Promise<Response> {
   const auth = await bound(request.clone(), syllabusId, deps)
   if (auth instanceof Response) return auth
   return submissionStatementFor(request, auth, deps)
@@ -220,7 +221,7 @@ export async function submissionStatementFor(request: Request, auth: SubmissionB
   })
 }
 
-export async function submitSyllabus(request: Request, syllabusId: string, deps: SubmissionDeps = defaultSubmissionDeps()): Promise<Response> {
+export async function submitSyllabus(request: Request, syllabusId: string, deps: SubmissionDeps): Promise<Response> {
   const auth = await bound(request.clone(), syllabusId, deps)
   if (auth instanceof Response) return auth
   return submitSyllabusFor(request, auth, deps)

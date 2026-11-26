@@ -1,12 +1,11 @@
 import { aborted } from "../http/responses"
 import { fromController } from "../auth/controllerResponse"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { apiJson } from "../http/responses"
-import { configuredFacultyUrl, type StoredLogo } from "../configuration/institutionalLogos"
-import { institutionToday } from "../shared/clock"
+import { configuredFacultyUrl } from "../configuration/institutionalLogos"
+import type { StoredLogo } from "../shared/logoStore"
 import { baseOptions, CONVOCATION_LOCK_REASON, forbidden } from "./structure"
-import { createGovernanceRepository } from "./governanceQueries"
 
 export type GovernanceProcess = { id: string; periodId: string; state: string }
 export type GovernanceFaculty = { id: string; name: string; campus: string; libraries: unknown; active: boolean; logo: StoredLogo | null }
@@ -48,10 +47,6 @@ const CAMPUS_LOCATIONS = [
   "Extensión San Miguel",
   "Sede Chimbo",
 ]
-
-function defaultDeps(): GovernanceDeps {
-  return { bridge: defaultBridgeDeps(), governance: createGovernanceRepository(), today: institutionToday }
-}
 
 function periodStatus(period: GovernancePeriod, today: string): { status: string; label: string } {
   if (period.endsOn < today) return { status: "finalizado", label: "Finalizado" }
@@ -141,7 +136,7 @@ async function governancePayload(request: Request, deps: GovernanceDeps): Promis
   }
 }
 
-export async function academicGovernance(request: Request, section: string | null, deps: GovernanceDeps = defaultDeps()): Promise<Response> {
+export async function academicGovernance(request: Request, section: string | null, deps: GovernanceDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!session.user.active || session.activeRole?.role !== "administrador") return forbidden()

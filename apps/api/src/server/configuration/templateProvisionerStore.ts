@@ -7,6 +7,7 @@ import { uuid7 } from "../http/uuid7"
 import { officialDefinition, officialSections } from "./officialTemplate"
 import { phpShape, type PhpRecord } from "./phpValues"
 import { buildStructure, defaultProvisionDeps, type ProvisionDeps, type ProvisionStore, type ProvisionTx } from "./templateProvisioner"
+import { createTemplateStore } from "./templateStore"
 import { structureStoreOn, structureTx } from "./templateStructureStore"
 
 const coordinationJoin = eq(camposPlantilla.campoPlantillaId, definicionesCampo.campoPlantillaId)
@@ -101,7 +102,10 @@ export function provisionStoreOn(executor: Executor, transaction: <T>(work: (exe
 }
 
 export function createProvisionDeps(): ProvisionDeps {
-  return defaultProvisionDeps(provisionStoreOn(db, (work) => db.transaction((tx) => work(tx))))
+  return defaultProvisionDeps(
+    provisionStoreOn(db, (work) => db.transaction((tx) => work(tx))),
+    createTemplateStore(),
+  )
 }
 
 export async function provisionOfficialTemplate(tx: ProvisionTx, ids = { template: uuid7, block: randomUUID, field: uuid7 }): Promise<string | null> {

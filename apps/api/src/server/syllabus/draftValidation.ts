@@ -1,4 +1,5 @@
 import { HttpFailure, Missing } from "../http/failures"
+import type { PrismaService } from "../../prisma/prisma.service"
 import { ruleFailures } from "@silabos/shared/lib/blocks/rules"
 import type { BlockRule } from "@silabos/shared/lib/blocks/types"
 import { defaultBridgeDeps } from "../auth/requireSession"
@@ -29,7 +30,7 @@ import {
   TemplateValidationError,
   type TemplateDefinition,
 } from "../configuration/templateRuntime"
-import type { TemplateStore } from "../configuration/templateStore"
+import type { TemplateStore } from "../shared/templateStore"
 import { institutionToday } from "../shared/clock"
 import type { DraftSyllabus, LockedSyllabus } from "./draftField"
 import { identificationOf, type IdentificationSource } from "./identificationCard"
@@ -59,8 +60,8 @@ export interface DraftValidationStore {
 
 export type DraftValidationDeps = { bridge: BridgeDeps; store: DraftValidationStore; today: () => string }
 
-export function defaultDraftValidationDeps(): DraftValidationDeps {
-  return { bridge: defaultBridgeDeps(), store: createDraftValidationStore(), today: institutionToday }
+export function defaultDraftValidationDeps(prisma: PrismaService): DraftValidationDeps {
+  return { bridge: defaultBridgeDeps(), store: createDraftValidationStore(prisma), today: institutionToday }
 }
 
 function answered(template: PhpRecord, value: PhpRecord, definition: TemplateDefinition): boolean {
@@ -194,7 +195,7 @@ export function draftValidationBinder(syllabusId: string, deps: Pick<DraftValida
   }
 }
 
-export async function validateDraft(request: Request, syllabusId: string, deps: DraftValidationDeps = defaultDraftValidationDeps()): Promise<Response> {
+export async function validateDraft(request: Request, syllabusId: string, deps: DraftValidationDeps): Promise<Response> {
   const bound = await requireBound(request, draftValidationBinder(syllabusId, deps), deps.bridge)
   if (bound instanceof Response) return bound
   return validateDraftFor(bound.session, bound.bound, deps)

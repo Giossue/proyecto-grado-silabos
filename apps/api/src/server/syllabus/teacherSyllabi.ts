@@ -1,4 +1,5 @@
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import type { PrismaService } from "../../prisma/prisma.service"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { phpQuery, type PhpArray } from "../http/input"
 import { strnatcasecmp } from "../http/naturalSort"
@@ -50,8 +51,8 @@ const PER_PAGE = 20
 const SYLLABUS_STATES = ["sin_iniciar", "borrador", "en_revision", "correccion_solicitada", "aprobado"]
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
-export function defaultTeacherSyllabusDeps(): TeacherSyllabusDeps {
-  return { bridge: defaultBridgeDeps(), syllabi: createTeacherSyllabusRepository() }
+export function defaultTeacherSyllabusDeps(prisma: PrismaService): TeacherSyllabusDeps {
+  return { bridge: defaultBridgeDeps(), syllabi: createTeacherSyllabusRepository(prisma) }
 }
 
 export function phpFalsy(value: string | null): boolean {
@@ -66,7 +67,7 @@ async function teacherInput(request: Request, session: AppSession): Promise<{ se
   return { session, input }
 }
 
-export async function teacherSyllabi(request: Request, deps: TeacherSyllabusDeps = defaultTeacherSyllabusDeps()): Promise<Response> {
+export async function teacherSyllabi(request: Request, deps: TeacherSyllabusDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   return teacherSyllabiFor(request, session, deps)
@@ -101,7 +102,7 @@ export async function teacherSyllabiFor(request: Request, authenticated: AppSess
   })
 }
 
-export async function teacherHistory(request: Request, deps: TeacherSyllabusDeps = defaultTeacherSyllabusDeps()): Promise<Response> {
+export async function teacherHistory(request: Request, deps: TeacherSyllabusDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   return teacherHistoryFor(request, session, deps)
@@ -119,7 +120,7 @@ export async function teacherHistoryFor(request: Request, authenticated: AppSess
   return apiJson({ careers: [...groups.values()].sort((left, right) => strnatcasecmp(left.name, right.name)) })
 }
 
-export async function teacherHistoryCareer(request: Request, career: string, deps: TeacherSyllabusDeps = defaultTeacherSyllabusDeps()): Promise<Response> {
+export async function teacherHistoryCareer(request: Request, career: string, deps: TeacherSyllabusDeps): Promise<Response> {
   if (!routeAllows(request)) return unmatchedRoute(request)
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session

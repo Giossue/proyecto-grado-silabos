@@ -1,140 +1,125 @@
-import { and, count, desc, eq, inArray, notExists, sql } from "drizzle-orm"
-import { db } from "@/db"
-import { hasRows } from "@/db/expressions"
-import { asignacionesRol, carreras, convocatoriasCarreras, convocatoriasUniversidad, definicionesCampo, periodosAcademicos, silabos } from "@/db/schema"
-import { institutionDateSql } from "../http/sql"
+import { Prisma } from "../../generated/prisma/client"
+import { inTransaction, type Db } from "../../prisma/db"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { hasRows, institutionDateSql } from "../../prisma/sql"
 import { uuid7 } from "../http/uuid7"
-import type { ProcessRepository, ProcessTx } from "./processes"
-import type { Executor } from "./teacherSyllabusQueries"
+import type { ProcessRepository, ProcessRow, ProcessTx } from "./processes"
+import { rowsOf } from "./teacherSyllabusQueries"
 
-const PROCESS = {
-  id: convocatoriasUniversidad.convocatoriaUniversidadId,
-  state: convocatoriasUniversidad.estadoConvocatoriaUniversidad,
-  period: periodosAcademicos.codigoPeriodoAcademico,
-  periodId: convocatoriasUniversidad.periodoAcademicoId,
-  periodEndsOn: periodosAcademicos.fechaFinPeriodo,
-  startsOn: sql<string>`${institutionDateSql(sql`${convocatoriasUniversidad.fechaInicio}`)}`,
-  dueOn: sql<string>`${institutionDateSql(sql`${convocatoriasUniversidad.fechaEntrega}`)}`,
-  convocationsCount: sql<number>`(select count(*) from convocatorias_carreras where ${convocatoriasUniversidad.convocatoriaUniversidadId} = convocatorias_carreras.convocatoria_universidad_id
-    and exists (select 1 from convocatorias_universidad vigente where vigente.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id))`.mapWith(Number),
-  extensions: convocatoriasUniversidad.cantidadProrrogas,
+const PROCESS_COLUMNS = Prisma.sql`convocatorias_universidad.convocatoria_universidad_id::text as id, convocatorias_universidad.estado_convocatoria_universidad as state,
+  periodos_academicos.codigo_periodo_academico as period, convocatorias_universidad.periodo_academico_id::text as "periodId",
+  periodos_academicos.fecha_fin_periodo::text as "periodEndsOn",
+  ${institutionDateSql(Prisma.raw("convocatorias_universidad.fecha_inicio"))} as "startsOn",
+  ${institutionDateSql(Prisma.raw("convocatorias_universidad.fecha_entrega"))} as "dueOn",
+  ((select count(*) from convocatorias_carreras where convocatorias_universidad.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id
+    and exists (select 1 from convocatorias_universidad vigente where vigente.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)))::int as "convocationsCount",
+  convocatorias_universidad.cantidad_prorrogas as extensions`
+
+function processes(executor: Db, tail: Prisma.Sql): Promise<ProcessRow[]> {
+  return rowsOf<ProcessRow>(
+    executor,
+    Prisma.sql`select ${PROCESS_COLUMNS} from convocatorias_universidad
+      inner join periodos_academicos on periodos_academicos.periodo_academico_id = convocatorias_universidad.periodo_academico_id ${tail}`,
+  )
 }
 
-function processes(executor: Executor) {
-  return executor
-    .select(PROCESS)
-    .from(convocatoriasUniversidad)
-    .innerJoin(periodosAcademicos, eq(periodosAcademicos.periodoAcademicoId, convocatoriasUniversidad.periodoAcademicoId))
-}
-
-function processTx(executor: Executor): ProcessTx {
+function processTx(executor: Db): ProcessTx {
   return {
     async lockProcess(id) {
-      const [row] = await executor
-        .select({ state: convocatoriasUniversidad.estadoConvocatoriaUniversidad })
-        .from(convocatoriasUniversidad)
-        .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, id))
-        .limit(1)
-        .for("update")
+      const [row] = await rowsOf<{ state: string }>(
+        executor,
+        Prisma.sql`select convocatorias_universidad.estado_convocatoria_universidad as state from convocatorias_universidad
+          where convocatorias_universidad.convocatoria_universidad_id = ${id}::uuid limit 1 for update`,
+      )
       return row?.state ?? null
     },
     async pause(id) {
-      const process = eq(convocatoriasUniversidad.convocatoriaUniversidadId, id)
-      await executor.update(convocatoriasUniversidad).set({ estadoConvocatoriaUniversidad: "pausado" }).where(process)
-      await executor.update(convocatoriasUniversidad).set({ pausadoEn: sql`clock_timestamp()` }).where(process)
+      await executor.$executeRaw`update convocatorias_universidad set estado_convocatoria_universidad = ${"pausado"} where convocatorias_universidad.convocatoria_universidad_id = ${id}::uuid`
+      await executor.$executeRaw`update convocatorias_universidad set pausado_en = clock_timestamp() where convocatorias_universidad.convocatoria_universidad_id = ${id}::uuid`
     },
     async lockInProgress() {
-      const [row] = await executor
-        .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId, periodId: convocatoriasUniversidad.periodoAcademicoId })
-        .from(convocatoriasUniversidad)
-        .where(inArray(convocatoriasUniversidad.estadoConvocatoriaUniversidad, ["abierto", "pausado"]))
-        .limit(1)
-        .for("update")
+      const [row] = await rowsOf<{ id: string; periodId: string }>(
+        executor,
+        Prisma.sql`select convocatorias_universidad.convocatoria_universidad_id::text as id, convocatorias_universidad.periodo_academico_id::text as "periodId"
+          from convocatorias_universidad where convocatorias_universidad.estado_convocatoria_universidad in (${"abierto"}, ${"pausado"}) limit 1 for update`,
+      )
       if (!row) return null
-      const [period] = await executor
-        .select({ code: periodosAcademicos.codigoPeriodoAcademico })
-        .from(periodosAcademicos)
-        .where(eq(periodosAcademicos.periodoAcademicoId, row.periodId))
-        .limit(1)
+      const [period] = await rowsOf<{ code: string }>(
+        executor,
+        Prisma.sql`select periodos_academicos.codigo_periodo_academico as code from periodos_academicos where periodos_academicos.periodo_academico_id = ${row.periodId}::uuid limit 1`,
+      )
       return { id: row.id, period: period?.code ?? null }
     },
     periodHasProcess: (periodId) =>
       hasRows(
-        executor
-          .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
-          .from(convocatoriasUniversidad)
-          .where(eq(convocatoriasUniversidad.periodoAcademicoId, periodId))
-          .limit(1),
+        rowsOf(
+          executor,
+          Prisma.sql`select convocatorias_universidad.convocatoria_universidad_id from convocatorias_universidad
+            where convocatorias_universidad.periodo_academico_id = ${periodId}::uuid limit 1`,
+        ),
       ),
     async createProcess(periodId, startsAt, dueAt) {
       const id = uuid7()
-      await executor.insert(convocatoriasUniversidad).values({
-        periodoAcademicoId: periodId,
-        fechaInicio: startsAt,
-        fechaEntrega: dueAt,
-        estadoConvocatoriaUniversidad: "abierto",
-        convocatoriaUniversidadId: id,
-      })
+      await executor.$executeRaw`insert into convocatorias_universidad (convocatoria_universidad_id, fecha_inicio, fecha_entrega, estado_convocatoria_universidad, periodo_academico_id)
+        values (${id}::uuid, ${startsAt}::timestamptz, ${dueAt}::timestamptz, ${"abierto"}, ${periodId}::uuid)`
       return id
     },
   }
 }
 
-export function processRepositoryOn(executor: Executor, transaction: <T>(work: (tx: ProcessTx) => Promise<T>) => Promise<T>): ProcessRepository {
+export function processRepositoryOn(executor: Db, transaction: <T>(work: (tx: ProcessTx) => Promise<T>) => Promise<T>): ProcessRepository {
   return {
-    list: () => processes(executor).orderBy(desc(convocatoriasUniversidad.fechaInicio)),
+    list: () => processes(executor, Prisma.sql`order by convocatorias_universidad.fecha_inicio desc`),
     templateHasFields: (templateId) =>
       hasRows(
-        executor
-          .select({ id: definicionesCampo.definicionCampoId })
-          .from(definicionesCampo)
-          .where(and(eq(definicionesCampo.plantillaId, templateId), eq(definicionesCampo.vigenteEnPlantilla, true)))
-          .limit(1),
+        rowsOf(
+          executor,
+          Prisma.sql`select definiciones_campo.definicion_campo_id from definiciones_campo
+            where (definiciones_campo.plantilla_id = ${templateId}::uuid and definiciones_campo.vigente_en_plantilla = true) limit 1`,
+        ),
       ),
     periods: () =>
-      executor
-        .select({ id: periodosAcademicos.periodoAcademicoId, codigo: periodosAcademicos.codigoPeriodoAcademico })
-        .from(periodosAcademicos)
-        .orderBy(desc(periodosAcademicos.fechaInicioPeriodo)),
+      rowsOf<{ id: string; codigo: string }>(
+        executor,
+        Prisma.sql`select periodos_academicos.periodo_academico_id::text as id, periodos_academicos.codigo_periodo_academico as codigo
+          from periodos_academicos order by periodos_academicos.fecha_inicio_periodo desc`,
+      ),
     async find(id) {
-      const [row] = await processes(executor).where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, id)).limit(1)
+      const [row] = await processes(executor, Prisma.sql`where convocatorias_universidad.convocatoria_universidad_id = ${id}::uuid limit 1`)
       return row ?? null
     },
     counts: (processId) =>
-      executor
-        .select({ state: silabos.estadoSilabo, total: count() })
-        .from(silabos)
-        .innerJoin(convocatoriasCarreras, eq(convocatoriasCarreras.convocatoriaCarreraId, silabos.convocatoriaCarreraId))
-        .where(eq(convocatoriasCarreras.convocatoriaUniversidadId, processId))
-        .groupBy(silabos.estadoSilabo),
+      rowsOf<{ state: string; total: number }>(
+        executor,
+        Prisma.sql`select silabos.estado_silabo as state, count(*)::int as total from silabos
+          inner join convocatorias_carreras on convocatorias_carreras.convocatoria_carrera_id = silabos.convocatoria_carrera_id
+          where convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid group by silabos.estado_silabo`,
+      ),
     async periodEndsOn(periodId) {
-      const [row] = await executor
-        .select({ endsOn: periodosAcademicos.fechaFinPeriodo })
-        .from(periodosAcademicos)
-        .where(eq(periodosAcademicos.periodoAcademicoId, periodId))
-        .limit(1)
+      const [row] = await rowsOf<{ endsOn: string }>(
+        executor,
+        Prisma.sql`select periodos_academicos.fecha_fin_periodo::text as "endsOn" from periodos_academicos where periodos_academicos.periodo_academico_id = ${periodId}::uuid limit 1`,
+      )
       return row?.endsOn ?? null
     },
-    activeCareerCount: () => executor.$count(carreras, eq(carreras.carreraActiva, true)),
-    activeCareersWithoutCoordinator: () =>
-      executor.$count(
-        carreras,
-        and(
-          eq(carreras.carreraActiva, true),
-          notExists(
-            executor
-              .select({ id: asignacionesRol.asignacionRolId })
-              .from(asignacionesRol)
-              .where(and(eq(asignacionesRol.carreraId, carreras.carreraId), eq(asignacionesRol.rol, "coordinador"), eq(asignacionesRol.asignacionRolActiva, true))),
-          ),
-        ),
-      ),
+    async activeCareerCount() {
+      const [row] = await rowsOf<{ total: number }>(executor, Prisma.sql`select count(*)::int as total from carreras where carreras.carrera_activa = true`)
+      return row?.total ?? 0
+    },
+    async activeCareersWithoutCoordinator() {
+      const [row] = await rowsOf<{ total: number }>(
+        executor,
+        Prisma.sql`select count(*)::int as total from carreras where (carreras.carrera_activa = true and not exists (select asignaciones_rol.asignacion_rol_id from asignaciones_rol
+          where (asignaciones_rol.carrera_id = carreras.carrera_id and asignaciones_rol.rol = ${"coordinador"} and asignaciones_rol.asignacion_rol_activa = true)))`,
+      )
+      return row?.total ?? 0
+    },
     transaction,
   }
 }
 
-export function createProcessRepository(): ProcessRepository {
-  return processRepositoryOn(db, (work) => db.transaction((tx) => work(processTx(tx))))
+export function createProcessRepository(prisma: PrismaService): ProcessRepository {
+  return processRepositoryOn(prisma, (work) => inTransaction(prisma, (tx) => work(processTx(tx))))
 }
 
 export { processTx }

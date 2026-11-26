@@ -1,137 +1,87 @@
-import { and, eq, exists, inArray, isNotNull, notInArray, sql, type SQL } from "drizzle-orm"
-import type { AnyPgColumn } from "drizzle-orm/pg-core"
-import { fromEpoch, jsonText } from "@/db/expressions"
-import {
-  asignacionesRol,
-  asignaturas,
-  carreras,
-  convocatoriasCarreras,
-  convocatoriasUniversidad,
-  docentesVigentesSilabo,
-  exportacionesSilabo,
-  notificaciones,
-  paralelos,
-  revisionesSilabo,
-  silabos,
-  usuarios,
-} from "@/db/schema"
+import { Prisma } from "../../generated/prisma/client"
+import type { Db } from "../../prisma/db"
+import { fromEpoch, jsonText } from "../../prisma/sql"
 import { frontendUrl } from "../mail/config"
 import { queueMail } from "../mail/sendMailJob"
 import { uuid7 } from "../http/uuid7"
 import type { QueuedMail } from "../mail/mailables"
 import type { AfterCommit } from "../queue/dispatch"
 import { phpJsonDecode } from "../configuration/phpValues"
-import type { Executor } from "../syllabus/teacherSyllabusQueries"
 import { notificationEmailConfig } from "./config"
 import type { NotificationScope, NotificationTx } from "./store"
 
-const SYLLABUS_ALIVE = sql`exists (select 1 from convocatorias_carreras vivo where vivo.convocatoria_carrera_id = silabos.convocatoria_carrera_id
+const SYLLABUS_ALIVE = Prisma.sql`exists (select 1 from convocatorias_carreras vivo where vivo.convocatoria_carrera_id = silabos.convocatoria_carrera_id
   and exists (select 1 from convocatorias_universidad vivo_proceso where vivo_proceso.convocatoria_universidad_id = vivo.convocatoria_universidad_id))`
+
+const PROCESS_ALIVE = Prisma.sql`exists (select convocatorias_universidad.convocatoria_universidad_id from convocatorias_universidad
+  where convocatorias_universidad.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)`
 
 async function firstValue(query: PromiseLike<{ value: string | null }[]>): Promise<string | null> {
   const [row] = await query
   return row?.value ?? null
 }
 
-function processAlive(executor: Executor): SQL {
-  return exists(
-    executor
-      .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
-      .from(convocatoriasUniversidad)
-      .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, convocatoriasCarreras.convocatoriaUniversidadId)),
-  )
-}
-
-async function processOfSyllabus(executor: Executor, syllabusId: string | null): Promise<string | null> {
+async function processOfSyllabus(db: Db, syllabusId: string | null): Promise<string | null> {
   if (syllabusId === null) return null
   const convocationId = await firstValue(
-    executor
-      .select({ value: silabos.convocatoriaCarreraId })
-      .from(silabos)
-      .where(and(eq(silabos.silaboId, syllabusId), SYLLABUS_ALIVE))
-      .limit(1),
+    db.$queryRaw<{ value: string }[]>`select silabos.convocatoria_carrera_id::text as value from silabos
+      where silabos.silabo_id = ${syllabusId}::uuid and ${SYLLABUS_ALIVE} limit 1`,
   )
-  return convocationId === null ? null : processOfConvocation(executor, convocationId)
+  return convocationId === null ? null : processOfConvocation(db, convocationId)
 }
 
-function processOfConvocation(executor: Executor, convocationId: string): Promise<string | null> {
+function processOfConvocation(db: Db, convocationId: string): Promise<string | null> {
   return firstValue(
-    executor
-      .select({ value: convocatoriasCarreras.convocatoriaUniversidadId })
-      .from(convocatoriasCarreras)
-      .where(and(eq(convocatoriasCarreras.convocatoriaCarreraId, convocationId), processAlive(executor)))
-      .limit(1),
+    db.$queryRaw<{ value: string }[]>`select convocatorias_carreras.convocatoria_universidad_id::text as value from convocatorias_carreras
+      where convocatorias_carreras.convocatoria_carrera_id = ${convocationId}::uuid and ${PROCESS_ALIVE} limit 1`,
   )
 }
 
-export function notificationTx(executor: Executor): NotificationTx {
+type RecipientRow = { id: string; name: string; email: string; verified: boolean; preferences: string | null }
+
+export function notificationTx(db: Db): NotificationTx {
   return {
     async recipients(ids) {
-      const rows = await executor
-        .select({
-          id: usuarios.usuarioId,
-          name: usuarios.nombreUsuario,
-          email: usuarios.correoElectronico,
-          verified: isNotNull(usuarios.correoVerificadoEn).mapWith(Boolean),
-          preferences: jsonText(usuarios.preferenciasCorreoUsuario),
-        })
-        .from(usuarios)
-        .where(and(inArray(usuarios.usuarioId, ids), eq(usuarios.usuarioActivo, true)))
-      return rows.map((row) => ({ ...row, preferences: phpJsonDecode(row.preferences) }))
+      const rows = await db.$queryRaw<RecipientRow[]>`select usuarios.usuario_id::text as id, usuarios.nombre_usuario as name, usuarios.correo_electronico as email,
+          usuarios.correo_verificado_en is not null as verified, ${jsonText(Prisma.raw("usuarios.preferencias_correo_usuario"))} as preferences
+        from usuarios
+        where usuarios.usuario_id = any(${ids}::uuid[]) and usuarios.usuario_activo = true`
+      return rows.map((row) => ({ ...row, verified: Boolean(row.verified), preferences: phpJsonDecode(row.preferences) }))
     },
     async periodOf(resourceType, resourceId) {
       let processId: string | null = null
       if (resourceType === "proceso_silabos") processId = resourceId
-      else if (resourceType === "convocatoria") processId = await processOfConvocation(executor, resourceId)
-      else if (resourceType === "silabo") processId = await processOfSyllabus(executor, resourceId)
+      else if (resourceType === "convocatoria") processId = await processOfConvocation(db, resourceId)
+      else if (resourceType === "silabo") processId = await processOfSyllabus(db, resourceId)
       else if (resourceType === "artefacto_exportacion") {
         const syllabusId = await firstValue(
-          executor
-            .select({ value: revisionesSilabo.silaboId })
-            .from(exportacionesSilabo)
-            .innerJoin(revisionesSilabo, eq(revisionesSilabo.revisionSilaboId, exportacionesSilabo.revisionSilaboId))
-            .where(eq(exportacionesSilabo.exportacionSilaboId, resourceId))
-            .limit(1),
+          db.$queryRaw<{ value: string }[]>`select revisiones_silabo.silabo_id::text as value from exportaciones_silabo
+            inner join revisiones_silabo on revisiones_silabo.revision_silabo_id = exportaciones_silabo.revision_silabo_id
+            where exportaciones_silabo.exportacion_silabo_id = ${resourceId}::uuid limit 1`,
         )
-        processId = await processOfSyllabus(executor, syllabusId)
+        processId = await processOfSyllabus(db, syllabusId)
       }
       if (processId === null) return null
       return firstValue(
-        executor
-          .select({ value: convocatoriasUniversidad.periodoAcademicoId })
-          .from(convocatoriasUniversidad)
-          .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, processId))
-          .limit(1),
+        db.$queryRaw<{ value: string | null }[]>`select convocatorias_universidad.periodo_academico_id::text as value from convocatorias_universidad
+          where convocatorias_universidad.convocatoria_universidad_id = ${processId}::uuid limit 1`,
       )
     },
     async create(row) {
-      const inserted = await executor
-        .insert(notificaciones)
-        .values({
-          notificacionId: uuid7(),
-          usuarioId: row.userId,
-          claveUnica: row.key,
-          tipoNotificacion: row.type,
-          tituloNotificacion: row.title,
-          mensajeNotificacion: row.message,
-          tipoRecurso: row.resourceType,
-          recursoId: row.resourceId,
-          periodoAcademicoId: row.periodId,
-          notificadoEn: fromEpoch(row.notifiedAt),
-        })
-        .onConflictDoNothing({ target: [notificaciones.usuarioId, notificaciones.claveUnica] })
-        .returning({ id: notificaciones.notificacionId })
+      const inserted = await db.$queryRaw<{ id: string }[]>`insert into notificaciones (notificacion_id, usuario_id, clave_unica, tipo_notificacion, titulo_notificacion,
+          mensaje_notificacion, tipo_recurso, recurso_id, periodo_academico_id, notificado_en)
+        values (${uuid7()}::uuid, ${row.userId}::uuid, ${row.key}, ${row.type}, ${row.title}, ${row.message}, ${row.resourceType}, ${row.resourceId}::uuid,
+          ${row.periodId}::uuid, ${fromEpoch(row.notifiedAt)})
+        on conflict (usuario_id, clave_unica) do nothing
+        returning notificacion_id::text as id`
       return inserted.length > 0
     },
     subjectOf(syllabusId) {
       return firstValue(
-        executor
-          .select({ value: asignaturas.nombreAsignatura })
-          .from(silabos)
-          .innerJoin(paralelos, eq(paralelos.paraleloId, silabos.paraleloId))
-          .innerJoin(asignaturas, eq(asignaturas.asignaturaId, paralelos.asignaturaId))
-          .where(eq(silabos.silaboId, syllabusId))
-          .limit(1),
+        db.$queryRaw<{ value: string }[]>`select asignaturas.nombre_asignatura as value from silabos
+          inner join paralelos on paralelos.paralelo_id = silabos.paralelo_id
+          inner join asignaturas on asignaturas.asignatura_id = paralelos.asignatura_id
+          where silabos.silabo_id = ${syllabusId}::uuid limit 1`,
       )
     },
   }
@@ -141,8 +91,8 @@ export type Mail = (mail: QueuedMail) => Promise<unknown>
 
 export type WriteOptions = { now?: () => number; mail?: Mail }
 
-export function notificationScope(executor: Executor, afterCommit: AfterCommit, now: number, mail: Mail = queueMail): NotificationScope {
-  return { tx: notificationTx(executor), afterCommit, mail, now, email: notificationEmailConfig(), frontendUrl: frontendUrl() }
+export function notificationScope(db: Db, afterCommit: AfterCommit, now: number, mail: Mail = queueMail): NotificationScope {
+  return { tx: notificationTx(db), afterCommit, mail, now, email: notificationEmailConfig(), frontendUrl: frontendUrl() }
 }
 
 function unique(values: string[]): string[] {
@@ -153,8 +103,8 @@ async function ids(query: PromiseLike<{ id: string | null }[]>): Promise<string[
   return unique((await query).map((row) => row.id).filter((id): id is string => typeof id === "string"))
 }
 
-function activeUser(executor: Executor, user: AnyPgColumn): SQL {
-  return exists(executor.select({ id: usuarios.usuarioId }).from(usuarios).where(and(eq(usuarios.usuarioId, user), eq(usuarios.usuarioActivo, true))))
+function activeUser(user: Prisma.Sql): Prisma.Sql {
+  return Prisma.sql`exists (select usuarios.usuario_id from usuarios where usuarios.usuario_id = ${user} and usuarios.usuario_activo = true)`
 }
 
 export type Recipients = {
@@ -170,61 +120,39 @@ export type Recipients = {
   administrators(): Promise<string[]>
 }
 
-export function recipientsOn(executor: Executor): Recipients {
+const ROLE_USER = Prisma.raw("asignaciones_rol.usuario_id")
+const TEACHER_USER = Prisma.raw("docentes_vigentes_silabo.usuario_id")
+
+export function recipientsOn(db: Db): Recipients {
   const coordinatorsForCareers = async (careerIds: string[]) =>
     careerIds.length === 0
       ? []
       : ids(
-          executor
-            .select({ id: asignacionesRol.usuarioId })
-            .from(asignacionesRol)
-            .where(
-              and(
-                eq(asignacionesRol.rol, "coordinador"),
-                inArray(asignacionesRol.carreraId, careerIds),
-                eq(asignacionesRol.asignacionRolActiva, true),
-                activeUser(executor, asignacionesRol.usuarioId),
-              ),
-            ),
+          db.$queryRaw<{ id: string }[]>`select asignaciones_rol.usuario_id::text as id from asignaciones_rol
+            where asignaciones_rol.rol = 'coordinador' and asignaciones_rol.carrera_id = any(${careerIds}::uuid[])
+              and asignaciones_rol.asignacion_rol_activa = true and ${activeUser(ROLE_USER)}`,
         )
   const withRole = (role: string) =>
     ids(
-      executor
-        .select({ id: asignacionesRol.usuarioId })
-        .from(asignacionesRol)
-        .where(and(eq(asignacionesRol.asignacionRolActiva, true), eq(asignacionesRol.rol, role), activeUser(executor, asignacionesRol.usuarioId))),
+      db.$queryRaw<{ id: string }[]>`select asignaciones_rol.usuario_id::text as id from asignaciones_rol
+        where asignaciones_rol.asignacion_rol_activa = true and asignaciones_rol.rol = ${role} and ${activeUser(ROLE_USER)}`,
     )
   const convocationsOf = (processId: string) =>
     ids(
-      executor
-        .select({ id: convocatoriasCarreras.convocatoriaCarreraId })
-        .from(convocatoriasCarreras)
-        .where(and(eq(convocatoriasCarreras.convocatoriaUniversidadId, processId), processAlive(executor))),
+      db.$queryRaw<{ id: string }[]>`select convocatorias_carreras.convocatoria_carrera_id::text as id from convocatorias_carreras
+        where convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid and ${PROCESS_ALIVE}`,
     )
   const teacherSyllabusCounts = async (convocationIds: string[], exceptStates: string[] = []) => {
     const counts = new Map<string, number>()
     if (convocationIds.length === 0) return counts
-    const rows = await executor
-      .select({ userId: docentesVigentesSilabo.usuarioId, syllabusId: docentesVigentesSilabo.silaboId })
-      .from(docentesVigentesSilabo)
-      .where(
-        and(
-          activeUser(executor, docentesVigentesSilabo.usuarioId),
-          exists(
-            executor
-              .select({ id: silabos.silaboId })
-              .from(silabos)
-              .where(
-                and(
-                  eq(silabos.silaboId, docentesVigentesSilabo.silaboId),
-                  inArray(silabos.convocatoriaCarreraId, convocationIds),
-                  exceptStates.length === 0 ? undefined : notInArray(silabos.estadoSilabo, exceptStates),
-                  SYLLABUS_ALIVE,
-                ),
-              ),
-          ),
-        ),
-      )
+    const except = exceptStates.length === 0 ? Prisma.empty : Prisma.sql`and silabos.estado_silabo <> all(${exceptStates}::text[])`
+    const rows = await db.$queryRaw<{ userId: string; syllabusId: string }[]>`select docentes_vigentes_silabo.usuario_id::text as "userId",
+        docentes_vigentes_silabo.silabo_id::text as "syllabusId"
+      from docentes_vigentes_silabo
+      where ${activeUser(TEACHER_USER)}
+        and exists (select silabos.silabo_id from silabos
+          where silabos.silabo_id = docentes_vigentes_silabo.silabo_id and silabos.convocatoria_carrera_id = any(${convocationIds}::uuid[])
+            ${except} and ${SYLLABUS_ALIVE})`
     const seen = new Set<string>()
     for (const row of rows) {
       const key = `${row.userId}|${row.syllabusId}`
@@ -237,43 +165,26 @@ export function recipientsOn(executor: Executor): Recipients {
   return {
     teachersFor: (syllabusId) =>
       ids(
-        executor
-          .select({ id: docentesVigentesSilabo.usuarioId })
-          .from(docentesVigentesSilabo)
-          .where(and(eq(docentesVigentesSilabo.silaboId, syllabusId), activeUser(executor, docentesVigentesSilabo.usuarioId))),
+        db.$queryRaw<{ id: string }[]>`select docentes_vigentes_silabo.usuario_id::text as id from docentes_vigentes_silabo
+          where docentes_vigentes_silabo.silabo_id = ${syllabusId}::uuid and ${activeUser(TEACHER_USER)}`,
       ),
     teacherSyllabusCounts,
     coordinatorsForCareer: (careerId) => coordinatorsForCareers([careerId]),
     coordinatorsForCareers,
     async coordinatorsForProcess(processId) {
       let careers = await ids(
-        executor
-          .select({ id: convocatoriasCarreras.carreraId })
-          .from(convocatoriasCarreras)
-          .where(and(eq(convocatoriasCarreras.convocatoriaUniversidadId, processId), processAlive(executor))),
+        db.$queryRaw<{ id: string }[]>`select convocatorias_carreras.carrera_id::text as id from convocatorias_carreras
+          where convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid and ${PROCESS_ALIVE}`,
       )
-      if (careers.length === 0) careers = await ids(executor.select({ id: carreras.carreraId }).from(carreras).where(eq(carreras.carreraActiva, true)))
+      if (careers.length === 0) careers = await ids(db.$queryRaw<{ id: string }[]>`select carreras.carrera_id::text as id from carreras where carreras.carrera_activa = true`)
       return coordinatorsForCareers(careers)
     },
     async coordinatorsWithPendingWork(processId) {
       const careers = await ids(
-        executor
-          .select({ id: convocatoriasCarreras.carreraId })
-          .from(convocatoriasCarreras)
-          .where(
-            and(
-              eq(convocatoriasCarreras.convocatoriaUniversidadId, processId),
-              processAlive(executor),
-              exists(
-                executor
-                  .select({ id: silabos.silaboId })
-                  .from(silabos)
-                  .where(
-                    and(eq(silabos.convocatoriaCarreraId, convocatoriasCarreras.convocatoriaCarreraId), notInArray(silabos.estadoSilabo, ["aprobado"]), SYLLABUS_ALIVE),
-                  ),
-              ),
-            ),
-          ),
+        db.$queryRaw<{ id: string }[]>`select convocatorias_carreras.carrera_id::text as id from convocatorias_carreras
+          where convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid and ${PROCESS_ALIVE}
+            and exists (select silabos.silabo_id from silabos
+              where silabos.convocatoria_carrera_id = convocatorias_carreras.convocatoria_carrera_id and silabos.estado_silabo not in ('aprobado') and ${SYLLABUS_ALIVE})`,
       )
       return coordinatorsForCareers(careers)
     },

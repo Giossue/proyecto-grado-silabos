@@ -1,9 +1,9 @@
 import { MODELS } from "../http/models"
 import { failServerError, Missing } from "../http/failures"
 import { randomUUID } from "node:crypto"
-import { sql, type SQL } from "drizzle-orm"
+import { Prisma } from "../../generated/prisma/client"
 import { storageWriter } from "../http/storageWriter"
-import { uuidList } from "../http/sql"
+import { uuidList } from "../../prisma/sql"
 import { uuid7 } from "../http/uuid7"
 import type { AfterCommit } from "../queue/dispatch"
 import { loadSubjectContext } from "../configuration/subjectProfilePreview"
@@ -21,7 +21,7 @@ import {
   TemplateValidationError,
   withoutOwnOptions,
 } from "../configuration/templateRuntime"
-import { createTemplateStore, type TemplateStore } from "../configuration/templateStore"
+import { createTemplateStore, type TemplateStore } from "../shared/templateStore"
 import { recipientsOn } from "../notifications/queries"
 import { scheduleWorkflowNotification, storeInternalNotifications, type NotificationScope } from "../notifications/store"
 import { sameStructure, fieldResponseNormalize, documentIsEmpty } from "../configuration/templateRehearsal"
@@ -29,7 +29,7 @@ import { dataGet } from "./identificationCard"
 import { DOCUMENT_PATHS, GenerationRejected, purgeRequired, SENT_STATES, type GenerateOptions, type WorkScope, type WorkSyllabus } from "./inProgressWorkHelpers"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
-export const SYLLABUS_ALIVE = sql`exists (select 1 from convocatorias_carreras vivo where vivo.convocatoria_carrera_id = silabos.convocatoria_carrera_id
+export const SYLLABUS_ALIVE = Prisma.sql`exists (select 1 from convocatorias_carreras vivo where vivo.convocatoria_carrera_id = silabos.convocatoria_carrera_id
   and exists (select 1 from convocatorias_universidad vivo_proceso where vivo_proceso.convocatoria_universidad_id = vivo.convocatoria_universidad_id))`
 
 type ParallelRow = { id: string; subject_id: string; code: string; shift: string | null; subject: string; campus: string | null; modality: string | null; teachers: number }
@@ -45,33 +45,33 @@ type DocumentsFor = (parallel: ParallelRow, syllabus: WorkSyllabus) => Promise<M
 
 export type SubjectProfiles = Map<string, Map<string, PhpRecord | null>>
 
-export function idsIn(column: SQL, ids: string[]): SQL {
-  return ids.length === 0 ? sql`0 = 1` : sql`${column} in (${uuidList(ids)})`
+export function idsIn(column: Prisma.Sql, ids: string[]): Prisma.Sql {
+  return ids.length === 0 ? Prisma.sql`0 = 1` : Prisma.sql`${column} in (${uuidList(ids)})`
 }
 
-export function forSubjects(subjectIds: string[]): SQL {
-  return sql`exists (select 1 from paralelos paralelo_materia where paralelo_materia.paralelo_id = silabos.paralelo_id and ${idsIn(sql`paralelo_materia.asignatura_id`, subjectIds)})`
+export function forSubjects(subjectIds: string[]): Prisma.Sql {
+  return Prisma.sql`exists (select 1 from paralelos paralelo_materia where paralelo_materia.paralelo_id = silabos.paralelo_id and ${idsIn(Prisma.sql`paralelo_materia.asignatura_id`, subjectIds)})`
 }
 
-export function inProgressFilter(scope: WorkScope = {}): SQL {
-  const conditions: SQL[] = []
+export function inProgressFilter(scope: WorkScope = {}): Prisma.Sql {
+  const conditions: Prisma.Sql[] = []
   if (scope.subjectId != null) conditions.push(forSubjects([scope.subjectId]))
   if (scope.subjectIds != null) conditions.push(forSubjects(scope.subjectIds))
-  const convocation: SQL[] = [
-    sql`convocatoria_curso.convocatoria_carrera_id = silabos.convocatoria_carrera_id`,
-    sql`convocatoria_curso.estado_convocatoria_carrera in ('abierta', 'pausada')`,
-    sql`exists (select 1 from convocatorias_universidad proceso_curso where proceso_curso.convocatoria_universidad_id = convocatoria_curso.convocatoria_universidad_id
+  const convocation: Prisma.Sql[] = [
+    Prisma.sql`convocatoria_curso.convocatoria_carrera_id = silabos.convocatoria_carrera_id`,
+    Prisma.sql`convocatoria_curso.estado_convocatoria_carrera in ('abierta', 'pausada')`,
+    Prisma.sql`exists (select 1 from convocatorias_universidad proceso_curso where proceso_curso.convocatoria_universidad_id = convocatoria_curso.convocatoria_universidad_id
       and proceso_curso.estado_convocatoria_universidad in ('abierto', 'pausado'))`,
   ]
-  if (typeof scope.careerIds === "string") convocation.push(sql`convocatoria_curso.carrera_id = ${scope.careerIds}::uuid`)
-  if (Array.isArray(scope.careerIds)) convocation.push(idsIn(sql`convocatoria_curso.carrera_id`, scope.careerIds))
+  if (typeof scope.careerIds === "string") convocation.push(Prisma.sql`convocatoria_curso.carrera_id = ${scope.careerIds}::uuid`)
+  if (Array.isArray(scope.careerIds)) convocation.push(idsIn(Prisma.sql`convocatoria_curso.carrera_id`, scope.careerIds))
   if (scope.periodId != null) {
-    convocation.push(sql`exists (select 1 from convocatorias_universidad proceso_periodo where proceso_periodo.convocatoria_universidad_id = convocatoria_curso.convocatoria_universidad_id
+    convocation.push(Prisma.sql`exists (select 1 from convocatorias_universidad proceso_periodo where proceso_periodo.convocatoria_universidad_id = convocatoria_curso.convocatoria_universidad_id
       and proceso_periodo.periodo_academico_id = ${scope.periodId}::uuid)`)
   }
-  conditions.push(sql`exists (select 1 from convocatorias_carreras convocatoria_curso where ${sql.join(convocation, sql` and `)})`)
+  conditions.push(Prisma.sql`exists (select 1 from convocatorias_carreras convocatoria_curso where ${Prisma.join(convocation, " and ")})`)
   conditions.push(SYLLABUS_ALIVE)
-  return sql.join(conditions, sql` and `)
+  return Prisma.join(conditions, " and ")
 }
 
 function dataSet(target: PhpRecord, path: string, value: unknown): void {
@@ -114,7 +114,7 @@ function backToDraftRequired(count: number): Record<string, string[]> {
   }
 }
 
-const WORK_SYLLABUS_COLUMNS = sql`silabos.silabo_id::text as id, silabos.convocatoria_carrera_id::text as convocation_id, silabos.paralelo_id::text as parallel_id,
+const WORK_SYLLABUS_COLUMNS = Prisma.sql`silabos.silabo_id::text as id, silabos.convocatoria_carrera_id::text as convocation_id, silabos.paralelo_id::text as parallel_id,
   silabos.estado_silabo as state, silabos.datos_academicos_silabo::text as context, silabos.iniciado_en is not null as started, silabos.version_borrador as version`
 
 type WorkSyllabusRow = { id: string; convocation_id: string; parallel_id: string; state: string; context: string; started: boolean; version: number }
@@ -157,16 +157,16 @@ export class InProgressWork {
     return { template, definition: template.definition!, store: this.templates }
   }
 
-  async syllabi(where: SQL, options: { lock?: boolean; ordered?: boolean } = {}): Promise<WorkSyllabus[]> {
+  async syllabi(where: Prisma.Sql, options: { lock?: boolean; ordered?: boolean } = {}): Promise<WorkSyllabus[]> {
     const rows = await rowsOf<WorkSyllabusRow>(
       this.executor,
-      sql`select ${WORK_SYLLABUS_COLUMNS} from silabos where ${where} ${options.ordered ? sql`order by silabos.silabo_id asc` : sql``} ${options.lock ? sql`for update of silabos` : sql``}`,
+      Prisma.sql`select ${WORK_SYLLABUS_COLUMNS} from silabos where ${where} ${options.ordered ? Prisma.sql`order by silabos.silabo_id asc` : Prisma.empty} ${options.lock ? Prisma.sql`for update of silabos` : Prisma.empty}`,
     )
     return rows.map(workSyllabus)
   }
 
   async count(scope: WorkScope = {}): Promise<number> {
-    const [row] = await rowsOf<{ count: number }>(this.executor, sql`select count(*)::int as count from silabos where ${inProgressFilter(scope)}`)
+    const [row] = await rowsOf<{ count: number }>(this.executor, Prisma.sql`select count(*)::int as count from silabos where ${inProgressFilter(scope)}`)
     return Number(row.count)
   }
 
@@ -189,7 +189,7 @@ export class InProgressWork {
     if (syllabusIds.length === 0) return teachers
     const rows = await rowsOf<{ syllabus_id: string; user_id: string }>(
       this.executor,
-      sql`select distinct docentes.silabo_id::text as syllabus_id, docentes.usuario_id::text as user_id from docentes_vigentes_silabo docentes
+      Prisma.sql`select distinct docentes.silabo_id::text as syllabus_id, docentes.usuario_id::text as user_id from docentes_vigentes_silabo docentes
         where docentes.silabo_id in (${uuidList(syllabusIds)})`,
     )
     for (const row of rows) teachers.set(row.syllabus_id, [...(teachers.get(row.syllabus_id) ?? []), row.user_id])
@@ -201,7 +201,7 @@ export class InProgressWork {
     if (typeof name === "string") return name
     const [row] = await rowsOf<{ name: string }>(
       this.executor,
-      sql`select asignatura.nombre_asignatura as name from paralelos paralelo inner join asignaturas asignatura on asignatura.asignatura_id = paralelo.asignatura_id
+      Prisma.sql`select asignatura.nombre_asignatura as name from paralelos paralelo inner join asignaturas asignatura on asignatura.asignatura_id = paralelo.asignatura_id
         where paralelo.paralelo_id = ${syllabus.parallelId}::uuid limit 1`,
     )
     if (!row) failServerError()
@@ -242,7 +242,7 @@ export class InProgressWork {
     if (convocationIds.length === 0) return facts
     const rows = await rowsOf<{ id: string; career_id: string; period_id: string }>(
       this.executor,
-      sql`select convocatoria.convocatoria_carrera_id::text as id, convocatoria.carrera_id::text as career_id, proceso.periodo_academico_id::text as period_id
+      Prisma.sql`select convocatoria.convocatoria_carrera_id::text as id, convocatoria.carrera_id::text as career_id, proceso.periodo_academico_id::text as period_id
         from convocatorias_carreras convocatoria inner join convocatorias_universidad proceso on proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
         where convocatoria.convocatoria_carrera_id in (${uuidList(convocationIds)})`,
     )
@@ -277,7 +277,7 @@ export class InProgressWork {
     }
     const locked = await rowsOf<{ id: string }>(
       this.executor,
-      sql`select convocatoria_carrera_id::text as id from convocatorias_carreras where convocatoria_carrera_id in (${uuidList(convocationIds)})
+      Prisma.sql`select convocatoria_carrera_id::text as id from convocatorias_carreras where convocatoria_carrera_id in (${uuidList(convocationIds)})
         and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id) for update`,
     )
     let generated = 0
@@ -288,7 +288,7 @@ export class InProgressWork {
   }
 
   async restartForParallel(parallelId: string): Promise<number> {
-    const syllabi = await this.syllabi(sql`${inProgressFilter()} and silabos.paralelo_id = ${parallelId}::uuid`, { lock: true })
+    const syllabi = await this.syllabi(Prisma.sql`${inProgressFilter()} and silabos.paralelo_id = ${parallelId}::uuid`, { lock: true })
     if (syllabi.length === 0) return 0
     await this.deleteAggregates(syllabi.map((syllabus) => syllabus.id))
     for (const syllabus of syllabi) await this.generateForParallel(syllabus.convocationId, syllabus.parallelId)
@@ -296,7 +296,7 @@ export class InProgressWork {
   }
 
   async restartSentForParallel(parallelId: string): Promise<number> {
-    const syllabi = await this.syllabi(sql`${inProgressFilter()} and silabos.paralelo_id = ${parallelId}::uuid and silabos.estado_silabo in ('en_revision', 'aprobado')`, {
+    const syllabi = await this.syllabi(Prisma.sql`${inProgressFilter()} and silabos.paralelo_id = ${parallelId}::uuid and silabos.estado_silabo in ('en_revision', 'aprobado')`, {
       lock: true,
     })
     const teachers = await this.currentTeachers(syllabi.map((syllabus) => syllabus.id))
@@ -311,7 +311,7 @@ export class InProgressWork {
   }
 
   async refreshParallel(parallelId: string): Promise<number> {
-    const syllabi = await this.syllabi(sql`${inProgressFilter()} and silabos.paralelo_id = ${parallelId}::uuid`, { lock: true })
+    const syllabi = await this.syllabi(Prisma.sql`${inProgressFilter()} and silabos.paralelo_id = ${parallelId}::uuid`, { lock: true })
     for (const syllabus of syllabi) await this.applyIdentification(syllabus)
     return syllabi.length
   }
@@ -319,7 +319,7 @@ export class InProgressWork {
   private async applyIdentification(syllabus: WorkSyllabus): Promise<void> {
     const [row] = await rowsOf<{ name: string; code: string; faculty: string | null; faculty_id: string | null }>(
       this.executor,
-      sql`select carrera.nombre_carrera as name, carrera.codigo_carrera as code, facultad.nombre_facultad as faculty, carrera.facultad_id::text as faculty_id
+      Prisma.sql`select carrera.nombre_carrera as name, carrera.codigo_carrera as code, facultad.nombre_facultad as faculty, carrera.facultad_id::text as faculty_id
         from convocatorias_carreras convocatoria inner join carreras carrera on carrera.carrera_id = convocatoria.carrera_id
           left join facultades facultad on facultad.facultad_id = carrera.facultad_id
         where convocatoria.convocatoria_carrera_id = ${syllabus.convocationId}::uuid limit 1`,
@@ -341,7 +341,7 @@ export class InProgressWork {
 
   private async saveContext(syllabus: WorkSyllabus, context: PhpRecord): Promise<void> {
     if (phpIdentical(context, syllabus.context)) return
-    await this.executor.execute(sql`update silabos set datos_academicos_silabo = ${JSON.stringify(phpShape(context))}::jsonb where silabo_id = ${syllabus.id}::uuid`)
+    await this.executor.$executeRaw(Prisma.sql`update silabos set datos_academicos_silabo = ${JSON.stringify(phpShape(context))}::jsonb where silabo_id = ${syllabus.id}::uuid`)
     syllabus.context = context
   }
 
@@ -349,7 +349,7 @@ export class InProgressWork {
     if (parallelIds.length === 0) return []
     const rows = await rowsOf<{ id: string }>(
       this.executor,
-      sql`select silabos.paralelo_id::text as id from silabos where ${inProgressFilter()} and ${idsIn(sql`silabos.paralelo_id`, parallelIds)}
+      Prisma.sql`select silabos.paralelo_id::text as id from silabos where ${inProgressFilter()} and ${idsIn(Prisma.sql`silabos.paralelo_id`, parallelIds)}
         and (silabos.estado_silabo != 'sin_iniciar' or silabos.iniciado_en is not null)`,
     )
     return [...new Set(rows.map((row) => row.id))]
@@ -359,7 +359,7 @@ export class InProgressWork {
     if (parallelIds.length === 0) return []
     const rows = await rowsOf<{ id: string }>(
       this.executor,
-      sql`select silabos.paralelo_id::text as id from silabos where ${inProgressFilter()} and ${idsIn(sql`silabos.paralelo_id`, parallelIds)}
+      Prisma.sql`select silabos.paralelo_id::text as id from silabos where ${inProgressFilter()} and ${idsIn(Prisma.sql`silabos.paralelo_id`, parallelIds)}
         and silabos.estado_silabo in ('en_revision', 'aprobado')`,
     )
     return [...new Set(rows.map((row) => row.id))]
@@ -376,7 +376,7 @@ export class InProgressWork {
     }
     const stored = await rowsOf<{ field_id: string; value: string | null }>(
       this.executor,
-      sql`select definicion_campo_id::text as field_id, valor_campo::text as value from valores_campo where silabo_id = ${syllabus.id}::uuid`,
+      Prisma.sql`select definicion_campo_id::text as field_id, valor_campo::text as value from valores_campo where silabo_id = ${syllabus.id}::uuid`,
     )
     const fieldIds = [...new Set(stored.map((row) => row.field_id))]
     const keys = new Map(
@@ -384,7 +384,7 @@ export class InProgressWork {
         ? []
         : await rowsOf<{ id: string; key: string | null }>(
             this.executor,
-            sql`select definicion.definicion_campo_id::text as id, campo.clave_campo_plantilla as key from definiciones_campo definicion
+            Prisma.sql`select definicion.definicion_campo_id::text as id, campo.clave_campo_plantilla as key from definiciones_campo definicion
               left join campos_plantilla campo on campo.campo_plantilla_id = definicion.campo_plantilla_id
               where definicion.definicion_campo_id in (${uuidList(fieldIds)})`,
           )
@@ -396,7 +396,7 @@ export class InProgressWork {
       if (key !== "") previous.set(key, phpJsonDecode(row.value))
     }
     const context = await this.profileContext()
-    const [subject] = await rowsOf<{ id: string }>(this.executor, sql`select asignatura_id::text as id from paralelos where paralelo_id = ${syllabus.parallelId}::uuid limit 1`)
+    const [subject] = await rowsOf<{ id: string }>(this.executor, Prisma.sql`select asignatura_id::text as id from paralelos where paralelo_id = ${syllabus.parallelId}::uuid limit 1`)
     if (!subject) failServerError()
     const templates = await profileTemplates(context, subject.id)
     let state = syllabus.state
@@ -404,16 +404,16 @@ export class InProgressWork {
       await this.clearHistory([syllabus.id])
       state = "borrador"
     }
-    await this.executor.execute(sql`delete from valores_campo where silabo_id = ${syllabus.id}::uuid`)
+    await this.executor.$executeRaw(Prisma.sql`delete from valores_campo where silabo_id = ${syllabus.id}::uuid`)
     for (const field of templateFields(context.template)) {
       if (!isCareerField(field)) continue
       const template = templates[field.id] ?? field.content
       const document = teacherEditable(field, templates) ? this.stillFits(field, previous.get(field.key) ?? null, template, context) : template
       const value = document === null || documentIsEmpty(document, context.definition) ? template : document
-      await this.executor.execute(sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
+      await this.executor.$executeRaw(Prisma.sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
         values (${uuid7()}::uuid, ${syllabus.id}::uuid, ${field.id}::uuid, ${JSON.stringify(phpShape(value))}::jsonb)`)
     }
-    await this.executor.execute(sql`update silabos set estado_silabo = ${state}, version_borrador = ${syllabus.version + 1}, guardado_en = to_timestamp(${this.now()})
+    await this.executor.$executeRaw(Prisma.sql`update silabos set estado_silabo = ${state}, version_borrador = ${syllabus.version + 1}, guardado_en = to_timestamp(${this.now()})
       where silabo_id = ${syllabus.id}::uuid`)
   }
 
@@ -440,7 +440,7 @@ export class InProgressWork {
   async subjectsInProgress(careerId: string, subjectIds: string[] | null = null): Promise<string[]> {
     const rows = await rowsOf<{ id: string }>(
       this.executor,
-      sql`select paralelos.asignatura_id::text as id from silabos inner join paralelos on paralelos.paralelo_id = silabos.paralelo_id
+      Prisma.sql`select paralelos.asignatura_id::text as id from silabos inner join paralelos on paralelos.paralelo_id = silabos.paralelo_id
         where ${inProgressFilter({ careerIds: careerId, subjectIds })}`,
     )
     return [...new Set(rows.map((row) => row.id))]
@@ -484,7 +484,7 @@ export class InProgressWork {
   private async parallelById(parallelId: string): Promise<ParallelRow | null> {
     const [parallel] = await rowsOf<ParallelRow>(
       this.executor,
-      sql`select paralelo.paralelo_id::text as id, paralelo.asignatura_id::text as subject_id, paralelo.codigo_paralelo as code, paralelo.jornada_paralelo as shift,
+      Prisma.sql`select paralelo.paralelo_id::text as id, paralelo.asignatura_id::text as subject_id, paralelo.codigo_paralelo as code, paralelo.jornada_paralelo as shift,
           asignatura.nombre_asignatura as subject, facultad.campus_facultad as campus,
           coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modality, 0 as teachers
         from paralelos paralelo
@@ -565,7 +565,7 @@ export class InProgressWork {
   private async heldValues(syllabusId: string): Promise<Map<string, unknown>> {
     const rows = await rowsOf<{ field_id: string; value: string | null }>(
       this.executor,
-      sql`select definicion_campo_id::text as field_id, valor_campo::text as value from valores_campo where silabo_id = ${syllabusId}::uuid`,
+      Prisma.sql`select definicion_campo_id::text as field_id, valor_campo::text as value from valores_campo where silabo_id = ${syllabusId}::uuid`,
     )
     return new Map(rows.map((row) => [row.field_id, phpJsonDecode(row.value)]))
   }
@@ -575,7 +575,7 @@ export class InProgressWork {
     if (found === undefined) {
       const [row] = await rowsOf<{ value: string | null }>(
         this.executor,
-        sql`select valor_campo::text as value from valores_campo where silabo_id = ${syllabus.id}::uuid and definicion_campo_id = ${field.id}::uuid limit 1`,
+        Prisma.sql`select valor_campo::text as value from valores_campo where silabo_id = ${syllabus.id}::uuid and definicion_campo_id = ${field.id}::uuid limit 1`,
       )
       found = row ? { value: phpJsonDecode(row.value) } : undefined
     }
@@ -592,20 +592,20 @@ export class InProgressWork {
       for (const [fieldId, document] of item.documents) {
         const [existing] = await rowsOf<{ id: string; value: string | null }>(
           this.executor,
-          sql`select valor_campo_id::text as id, valor_campo::text as value from valores_campo where silabo_id = ${syllabus.id}::uuid and definicion_campo_id = ${fieldId}::uuid limit 1`,
+          Prisma.sql`select valor_campo_id::text as id, valor_campo::text as value from valores_campo where silabo_id = ${syllabus.id}::uuid and definicion_campo_id = ${fieldId}::uuid limit 1`,
         )
         const encoded = JSON.stringify(phpShape(document))
         if (existing) {
           if (!phpIdentical(phpJsonDecode(existing.value), phpJsonDecode(encoded))) {
-            await this.executor.execute(sql`update valores_campo set valor_campo = ${encoded}::jsonb where valor_campo_id = ${existing.id}::uuid`)
+            await this.executor.$executeRaw(Prisma.sql`update valores_campo set valor_campo = ${encoded}::jsonb where valor_campo_id = ${existing.id}::uuid`)
           }
         } else {
-          await this.executor.execute(sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
+          await this.executor.$executeRaw(Prisma.sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
             values (${uuid7()}::uuid, ${syllabus.id}::uuid, ${fieldId}::uuid, ${encoded}::jsonb)`)
         }
       }
       if (item.backToDraft) {
-        await this.executor.execute(sql`update silabos set datos_academicos_silabo = ${JSON.stringify(phpShape(item.context))}::jsonb, estado_silabo = 'borrador',
+        await this.executor.$executeRaw(Prisma.sql`update silabos set datos_academicos_silabo = ${JSON.stringify(phpShape(item.context))}::jsonb, estado_silabo = 'borrador',
           version_borrador = ${syllabus.version + 1}, guardado_en = to_timestamp(${this.now()}) where silabo_id = ${syllabus.id}::uuid`)
         await scheduleWorkflowNotification(this.scope(), {
           syllabusId: syllabus.id,
@@ -622,26 +622,26 @@ export class InProgressWork {
 
   async clearHistory(syllabusIds: string[]): Promise<string[]> {
     const executor = this.executor
-    await executor.execute(sql`SET LOCAL app.reinicio_institucional = 'on'`)
+    await executor.$executeRaw(Prisma.sql`SET LOCAL app.reinicio_institucional = 'on'`)
     if (syllabusIds.length === 0) return []
     const revisionIds = (
-      await rowsOf<{ id: string }>(executor, sql`select revision_silabo_id::text as id from revisiones_silabo where silabo_id in (${uuidList(syllabusIds)})`)
+      await rowsOf<{ id: string }>(executor, Prisma.sql`select revision_silabo_id::text as id from revisiones_silabo where silabo_id in (${uuidList(syllabusIds)})`)
     ).map((row) => row.id)
     const exports =
       revisionIds.length === 0
         ? []
         : await rowsOf<{ object_id: string | null }>(
             executor,
-            sql`select archivo_pdf_id::text as object_id from exportaciones_silabo where revision_silabo_id in (${uuidList(revisionIds)})`,
+            Prisma.sql`select archivo_pdf_id::text as object_id from exportaciones_silabo where revision_silabo_id in (${uuidList(revisionIds)})`,
           )
     const objectIds = [...new Set(exports.map((row) => row.object_id).filter((id): id is string => id !== null && id !== ""))]
     const objects =
       objectIds.length === 0
         ? []
-        : await rowsOf<{ disk: string; path: string }>(executor, sql`select disco as disk, ruta_archivo as path from archivos where archivo_id in (${uuidList(objectIds)})`)
-    await executor.execute(sql`delete from firmas_silabo where silabo_id in (${uuidList(syllabusIds)})`)
-    if (revisionIds.length > 0) await executor.execute(sql`delete from exportaciones_silabo where revision_silabo_id in (${uuidList(revisionIds)})`)
-    if (objectIds.length > 0) await executor.execute(sql`delete from archivos where archivo_id in (${uuidList(objectIds)})`)
+        : await rowsOf<{ disk: string; path: string }>(executor, Prisma.sql`select disco as disk, ruta_archivo as path from archivos where archivo_id in (${uuidList(objectIds)})`)
+    await executor.$executeRaw(Prisma.sql`delete from firmas_silabo where silabo_id in (${uuidList(syllabusIds)})`)
+    if (revisionIds.length > 0) await executor.$executeRaw(Prisma.sql`delete from exportaciones_silabo where revision_silabo_id in (${uuidList(revisionIds)})`)
+    if (objectIds.length > 0) await executor.$executeRaw(Prisma.sql`delete from archivos where archivo_id in (${uuidList(objectIds)})`)
     this.afterCommit(async () => {
       for (const object of objects) {
         try {
@@ -650,22 +650,22 @@ export class InProgressWork {
       }
     })
     if (revisionIds.length === 0) return []
-    await executor.execute(sql`delete from envios_biblioteca where revision_silabo_id in (${uuidList(revisionIds)})`)
-    await executor.execute(sql`delete from revisiones_coordinacion where revision_silabo_id in (${uuidList(revisionIds)})`)
-    await executor.execute(sql`delete from aprobaciones where revision_silabo_id in (${uuidList(revisionIds)})`)
+    await executor.$executeRaw(Prisma.sql`delete from envios_biblioteca where revision_silabo_id in (${uuidList(revisionIds)})`)
+    await executor.$executeRaw(Prisma.sql`delete from revisiones_coordinacion where revision_silabo_id in (${uuidList(revisionIds)})`)
+    await executor.$executeRaw(Prisma.sql`delete from aprobaciones where revision_silabo_id in (${uuidList(revisionIds)})`)
     const ordered = await rowsOf<{ id: string }>(
       executor,
-      sql`select revision_silabo_id::text as id from revisiones_silabo where revision_silabo_id in (${uuidList(revisionIds)}) order by numero_revision desc`,
+      Prisma.sql`select revision_silabo_id::text as id from revisiones_silabo where revision_silabo_id in (${uuidList(revisionIds)}) order by numero_revision desc`,
     )
-    for (const row of ordered) await executor.execute(sql`delete from revisiones_silabo where revision_silabo_id = ${row.id}::uuid`)
+    for (const row of ordered) await executor.$executeRaw(Prisma.sql`delete from revisiones_silabo where revision_silabo_id = ${row.id}::uuid`)
     return revisionIds
   }
 
   async deleteAggregates(syllabusIds: string[]): Promise<void> {
     const revisionIds = await this.clearHistory(syllabusIds)
     const resources = [...syllabusIds, ...revisionIds]
-    if (resources.length > 0) await this.executor.execute(sql`delete from notificaciones where recurso_id in (${uuidList(resources)})`)
-    if (syllabusIds.length > 0) await this.executor.execute(sql`delete from silabos where silabo_id in (${uuidList(syllabusIds)}) and ${SYLLABUS_ALIVE}`)
+    if (resources.length > 0) await this.executor.$executeRaw(Prisma.sql`delete from notificaciones where recurso_id in (${uuidList(resources)})`)
+    if (syllabusIds.length > 0) await this.executor.$executeRaw(Prisma.sql`delete from silabos where silabo_id in (${uuidList(syllabusIds)}) and ${SYLLABUS_ALIVE}`)
   }
 
   private async institutionalTemplate(): Promise<SyllabusTemplate> {
@@ -674,10 +674,10 @@ export class InProgressWork {
     return this.template
   }
 
-  private async parallelRows(where: ReturnType<typeof sql>, careerId: string, lock: boolean): Promise<ParallelRow[]> {
+  private async parallelRows(where: Prisma.Sql, careerId: string, lock: boolean): Promise<ParallelRow[]> {
     return rowsOf<ParallelRow>(
       this.executor,
-      sql`select paralelo.paralelo_id::text as id, paralelo.asignatura_id::text as subject_id, paralelo.codigo_paralelo as code, paralelo.jornada_paralelo as shift,
+      Prisma.sql`select paralelo.paralelo_id::text as id, paralelo.asignatura_id::text as subject_id, paralelo.codigo_paralelo as code, paralelo.jornada_paralelo as shift,
           asignatura.nombre_asignatura as subject, facultad.campus_facultad as campus,
           coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modality,
           (select count(*)::int from asignaciones_paralelo asignacion where asignacion.paralelo_id = paralelo.paralelo_id and asignacion.asignacion_paralelo_activa = true
@@ -689,7 +689,7 @@ export class InProgressWork {
           inner join carreras carrera on carrera.carrera_id = asignatura.carrera_id
           left join facultades facultad on facultad.facultad_id = carrera.facultad_id
         where ${where}
-        order by paralelo.asignatura_id asc, paralelo.codigo_paralelo asc ${lock ? sql`for update of paralelo` : sql``}`,
+        order by paralelo.asignatura_id asc, paralelo.codigo_paralelo asc ${lock ? Prisma.sql`for update of paralelo` : Prisma.empty}`,
     )
   }
 
@@ -697,7 +697,7 @@ export class InProgressWork {
     const subject = await loadSubjectContext(this.executor, parallel.subject_id)
     const [period] = await rowsOf<{ code: string; weeks: number | null }>(
       this.executor,
-      sql`select codigo_periodo_academico as code, cantidad_semanas_lectivas as weeks from periodos_academicos where periodo_academico_id = ${periodId}::uuid limit 1`,
+      Prisma.sql`select codigo_periodo_academico as code, cantidad_semanas_lectivas as weeks from periodos_academicos where periodo_academico_id = ${periodId}::uuid limit 1`,
     )
     if (subject === null || !period || parallel.modality === null) failServerError()
     return {
@@ -710,7 +710,7 @@ export class InProgressWork {
   private async convocationPeriod(convocationId: string): Promise<{ careerId: string; periodId: string }> {
     const [row] = await rowsOf<{ career_id: string; period_id: string }>(
       this.executor,
-      sql`select convocatoria.carrera_id::text as career_id, proceso.periodo_academico_id::text as period_id
+      Prisma.sql`select convocatoria.carrera_id::text as career_id, proceso.periodo_academico_id::text as period_id
         from convocatorias_carreras convocatoria inner join convocatorias_universidad proceso on proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
         where convocatoria.convocatoria_carrera_id = ${convocationId}::uuid limit 1`,
     )
@@ -721,14 +721,14 @@ export class InProgressWork {
   private async generate(convocationId: string, periodId: string, parallel: ParallelRow): Promise<string> {
     const context = await this.academicContext(parallel, periodId)
     const id = uuid7()
-    await this.executor.execute(sql`insert into silabos (silabo_id, convocatoria_carrera_id, paralelo_id, datos_academicos_silabo, estado_silabo)
+    await this.executor.$executeRaw(Prisma.sql`insert into silabos (silabo_id, convocatoria_carrera_id, paralelo_id, datos_academicos_silabo, estado_silabo)
       values (${id}::uuid, ${convocationId}::uuid, ${parallel.id}::uuid, ${JSON.stringify(phpShape(context))}::jsonb, 'sin_iniciar')`)
     const template = await this.institutionalTemplate()
     const templates = await profileTemplates({ template, definition: template.definition!, store: this.templates }, parallel.subject_id)
     for (const field of templateFields(template)) {
       if (!isCareerField(field)) continue
       const value = templates[field.id] ?? field.content
-      await this.executor.execute(sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
+      await this.executor.$executeRaw(Prisma.sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
         values (${uuid7()}::uuid, ${id}::uuid, ${field.id}::uuid, ${JSON.stringify(phpShape(value))}::jsonb)`)
     }
     return id
@@ -736,20 +736,20 @@ export class InProgressWork {
 
   async generateForParallel(convocationId: string, parallelId: string): Promise<string> {
     const { careerId, periodId } = await this.convocationPeriod(convocationId)
-    const [parallel] = await this.parallelRows(sql`paralelo.paralelo_id = ${parallelId}::uuid`, careerId, false)
+    const [parallel] = await this.parallelRows(Prisma.sql`paralelo.paralelo_id = ${parallelId}::uuid`, careerId, false)
     if (!parallel) failServerError()
     return this.generate(convocationId, periodId, parallel)
   }
 
   async generateConvocation(convocationId: string, options: GenerateOptions = {}): Promise<number> {
     const { careerId, periodId } = await this.convocationPeriod(convocationId)
-    const filters = [sql`asignatura.carrera_id = ${careerId}::uuid`, sql`asignatura.asignatura_activa = true`, sql`asignatura.genera_silabo_asignatura = true`]
-    if (options.subjectId != null) filters.push(sql`paralelo.asignatura_id = ${options.subjectId}::uuid`)
-    if (options.subjectIds != null) filters.push(options.subjectIds.length === 0 ? sql`false` : sql`paralelo.asignatura_id in (${uuidList(options.subjectIds)})`)
-    if (options.parallelId != null) filters.push(sql`paralelo.paralelo_id = ${options.parallelId}::uuid`)
-    const parallels = await this.parallelRows(sql.join(filters, sql` and `), careerId, true)
+    const filters = [Prisma.sql`asignatura.carrera_id = ${careerId}::uuid`, Prisma.sql`asignatura.asignatura_activa = true`, Prisma.sql`asignatura.genera_silabo_asignatura = true`]
+    if (options.subjectId != null) filters.push(Prisma.sql`paralelo.asignatura_id = ${options.subjectId}::uuid`)
+    if (options.subjectIds != null) filters.push(options.subjectIds.length === 0 ? Prisma.sql`false` : Prisma.sql`paralelo.asignatura_id in (${uuidList(options.subjectIds)})`)
+    if (options.parallelId != null) filters.push(Prisma.sql`paralelo.paralelo_id = ${options.parallelId}::uuid`)
+    const parallels = await this.parallelRows(Prisma.join(filters, " and "), careerId, true)
     if (parallels.length > 0) {
-      await this.executor.execute(sql`select asignacion_paralelo_id from asignaciones_paralelo where paralelo_id in (${uuidList(parallels.map((row) => row.id))})
+      await this.executor.$queryRaw(Prisma.sql`select asignacion_paralelo_id from asignaciones_paralelo where paralelo_id in (${uuidList(parallels.map((row) => row.id))})
         and asignacion_paralelo_activa = true for update`)
     }
     if (parallels.length === 0 && options.allowEmpty) return 0
@@ -758,7 +758,7 @@ export class InProgressWork {
       (
         await rowsOf<{ id: string }>(
           this.executor,
-          sql`select silabos.paralelo_id::text as id from silabos where silabos.convocatoria_carrera_id = ${convocationId}::uuid and ${SYLLABUS_ALIVE}`,
+          Prisma.sql`select silabos.paralelo_id::text as id from silabos where silabos.convocatoria_carrera_id = ${convocationId}::uuid and ${SYLLABUS_ALIVE}`,
         )
       ).map((row) => row.id),
     )
@@ -785,7 +785,7 @@ export class InProgressWork {
     await this.generateForParallel(syllabus.convocationId, syllabus.parallelId)
     const [fresh] = await rowsOf<{ id: string }>(
       this.executor,
-      sql`select silabos.silabo_id::text as id from silabos where silabos.convocatoria_carrera_id = ${syllabus.convocationId}::uuid
+      Prisma.sql`select silabos.silabo_id::text as id from silabos where silabos.convocatoria_carrera_id = ${syllabus.convocationId}::uuid
         and silabos.paralelo_id = ${syllabus.parallelId}::uuid and ${SYLLABUS_ALIVE} limit 1`,
     )
     if (!fresh) failServerError()

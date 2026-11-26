@@ -3,7 +3,8 @@ import { RolesGuard } from "../../common/guards/roles.guard"
 import { SessionGuard } from "../../common/guards/session.guard"
 import { PrismaModule } from "../../prisma/prisma.module"
 import { PrismaService } from "../../prisma/prisma.service"
-import { defaultBridgeDeps } from "../../server/auth/requireSession"
+import { bindAuthDatabase } from "../../server/auth/betterAuth"
+import { bindSessionStore, defaultBridgeDeps } from "../../server/auth/requireSession"
 import type { SessionStore } from "../../server/auth/types"
 import { sharedRateLimiter } from "../../server/http/throttle"
 import { createAccountRepository } from "../../server/identity/accountStore"
@@ -22,6 +23,12 @@ import { SessionController } from "./session.controller"
 
 const prismaBacked = <T>(token: symbol, build: (prisma: PrismaService) => T) => ({ provide: token, useFactory: build, inject: [PrismaService] })
 
+function authBridge(store: SessionStore, prisma: PrismaService) {
+  bindAuthDatabase(prisma)
+  bindSessionStore(store)
+  return defaultBridgeDeps(store)
+}
+
 @Global()
 @Module({
   imports: [PrismaModule],
@@ -33,10 +40,10 @@ const prismaBacked = <T>(token: symbol, build: (prisma: PrismaService) => T) => 
     prismaBacked(CREDENTIAL_STORE, credentialStoreOn),
     prismaBacked(RECOVERY_REPOSITORY, recoveryRepositoryOn),
     prismaBacked(TWO_FACTOR_STORE, twoFactorStoreOn),
-    { provide: ACCOUNT_REPOSITORY, useFactory: createAccountRepository },
-    { provide: AUTH_BRIDGE, useFactory: (store: SessionStore) => ({ ...defaultBridgeDeps(), store }), inject: [SESSION_STORE] },
+    prismaBacked(ACCOUNT_REPOSITORY, createAccountRepository),
+    { provide: AUTH_BRIDGE, useFactory: authBridge, inject: [SESSION_STORE, PrismaService] },
     { provide: RATE_LIMITER, useFactory: sharedRateLimiter },
-    { provide: IDENTITY_RUNTIME, useFactory: defaultIdentityRuntime },
+    prismaBacked(IDENTITY_RUNTIME, defaultIdentityRuntime),
     IdentityDeps,
     SessionGuard,
     RolesGuard,

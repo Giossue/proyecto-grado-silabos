@@ -1,4 +1,5 @@
 import { Readable } from "node:stream"
+import type { PrismaService } from "../../prisma/prisma.service"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
@@ -33,8 +34,8 @@ export interface DocumentStore {
 
 export type DocumentDeps = { bridge: BridgeDeps; store: DocumentStore; now: () => number }
 
-export function defaultDocumentDeps(): DocumentDeps {
-  return { bridge: defaultBridgeDeps(), store: createDocumentStore(), now: () => Math.floor(Date.now() / 1000) }
+export function defaultDocumentDeps(prisma: PrismaService): DocumentDeps {
+  return { bridge: defaultBridgeDeps(), store: createDocumentStore(prisma), now: () => Math.floor(Date.now() / 1000) }
 }
 
 const COMPLETED = "completado"
@@ -60,7 +61,7 @@ export function revisionDocumentsBinder(revisionId: string, deps: Pick<DocumentD
   return async (user) => (await loaded(deps, revisionId, user.id)) ?? modelNotFound(MODELS.revision, revisionId)
 }
 
-export async function revisionDocuments(request: Request, revisionId: string, deps: DocumentDeps = defaultDocumentDeps()): Promise<Response> {
+export async function revisionDocuments(request: Request, revisionId: string, deps: DocumentDeps): Promise<Response> {
   const bound = await requireBound(request, revisionDocumentsBinder(revisionId, deps), deps.bridge)
   if (bound instanceof Response) return bound
   return revisionDocumentsFor(bound.session, bound.bound, deps)
@@ -105,7 +106,7 @@ export function exportBinder(artifactId: string, deps: Pick<DocumentDeps, "store
   }
 }
 
-export async function downloadExport(request: Request, artifactId: string, deps: DocumentDeps = defaultDocumentDeps()): Promise<Response> {
+export async function downloadExport(request: Request, artifactId: string, deps: DocumentDeps): Promise<Response> {
   const bound = await requireBound(request, exportBinder(artifactId, deps), deps.bridge)
   if (bound instanceof Response) return bound
   return downloadExportFor(bound.session, bound.bound)
@@ -137,8 +138,8 @@ export type DocumentRequestDeps = DocumentDeps & {
   newId(): string
 }
 
-export function defaultDocumentRequestDeps(): DocumentRequestDeps {
-  return { ...defaultDocumentDeps(), limiter: sharedRateLimiter(), ...createDocumentRequestParts() }
+export function defaultDocumentRequestDeps(prisma: PrismaService): DocumentRequestDeps {
+  return { ...defaultDocumentDeps(prisma), limiter: sharedRateLimiter(), ...createDocumentRequestParts(prisma) }
 }
 
 async function settleRequest(original: Request, deps: DocumentRequestDeps, work: () => Promise<Response>): Promise<Response> {
@@ -159,7 +160,7 @@ export function documentRequestBinder(revisionId: string, deps: Pick<DocumentDep
 
 export const DOCUMENT_REQUEST_LIMIT = { name: "throttle:20,1", maxAttempts: 20, decaySeconds: 60 }
 
-export async function requestRevisionDocuments(request: Request, revisionId: string, deps: DocumentRequestDeps = defaultDocumentRequestDeps()): Promise<Response> {
+export async function requestRevisionDocuments(request: Request, revisionId: string, deps: DocumentRequestDeps): Promise<Response> {
   let gate: Throttle | null = null
   const finish = (response: Response) => (gate as Throttle | null)?.decorate(response) ?? response
   const binder = documentRequestBinder(revisionId, deps)

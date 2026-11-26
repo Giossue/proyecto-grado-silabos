@@ -1,4 +1,5 @@
 import { fromController } from "../auth/controllerResponse"
+import type { PrismaService } from "../../prisma/prisma.service"
 import { HttpFailure, Missing, modelNotFoundResponse } from "../http/failures"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
@@ -24,7 +25,7 @@ import {
   TemplateValidationError,
   type TemplateDefinition,
 } from "../configuration/templateRuntime"
-import { createTemplateStore, type TemplateStore } from "../configuration/templateStore"
+import { createTemplateStore, type TemplateStore } from "../shared/templateStore"
 import type { PhpRecord } from "../configuration/phpValues"
 import { institutionToday } from "../shared/clock"
 import { identificationOf, type IdentificationSource } from "./identificationCard"
@@ -64,11 +65,11 @@ export type DraftFieldDeps = {
   newId: () => string
 }
 
-export function defaultDraftFieldDeps(): DraftFieldDeps {
+export function defaultDraftFieldDeps(prisma: PrismaService): DraftFieldDeps {
   return {
     bridge: defaultBridgeDeps(),
-    store: createDraftFieldStore(),
-    templates: createTemplateStore(),
+    store: createDraftFieldStore(prisma),
+    templates: createTemplateStore(prisma),
     today: institutionToday,
     now: () => Math.floor(Date.now() / 1000),
     newId: uuid7,
@@ -153,7 +154,7 @@ function documentErrors(value: PhpValue | undefined, definition: TemplateDefinit
   }
 }
 
-export async function updateDraftField(request: Request, syllabusId: string, fieldId: string, deps: DraftFieldDeps = defaultDraftFieldDeps()): Promise<Response> {
+export async function updateDraftField(request: Request, syllabusId: string, fieldId: string, deps: DraftFieldDeps): Promise<Response> {
   const bound = await requireBound(request.clone(), draftFieldBinder(syllabusId, fieldId, deps), deps.bridge)
   if (bound instanceof Response) return bound
   return updateDraftFieldFor(request, { session: bound.session, ...bound.bound }, deps)

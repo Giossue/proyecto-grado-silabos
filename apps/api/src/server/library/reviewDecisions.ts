@@ -1,4 +1,4 @@
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray } from "../http/input"
@@ -8,14 +8,13 @@ import { LIBRARY_COMMENT_REASONS, libraryCommentSchema, OTHER_REASON } from "@si
 import { signatureSchema } from "@silabos/shared/schemas/signature"
 import { list } from "../configuration/phpValues"
 import { scheduleWorkflowNotification, type NotificationScope } from "../notifications/store"
-import { SignatureRejected, signatureSettings, type SignatureSettings } from "../signatures/cmsVerifier"
+import { SignatureRejected, type SignatureSettings } from "../signatures/cmsVerifier"
 import { decisionSignatureFrom } from "../signatures/decisionSignature"
 import { signDecision, type SignatureTx, type Verifier } from "../signatures/signDecision"
 import { decisionBlock, hasRole, mayReview, ROLE_LIBRARIAN } from "../syllabus/policy"
 import { blockedDecision, Missing, Rejected, settle, type DecisionRevision, type DecisionSyllabus } from "../syllabus/reviewDecisions"
 import type { ReviewDetailStore, ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
-import { createLibraryDecisionDeps } from "./reviewDecisionStore"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
 
@@ -43,10 +42,6 @@ export type LibraryDecisionDeps = {
   verify?: Verifier
   now: () => number
   transaction<T>(work: (tx: LibraryDecisionTx) => Promise<T>): Promise<T>
-}
-
-export function defaultLibraryDecisionDeps(): LibraryDecisionDeps {
-  return { bridge: defaultBridgeDeps(), settings: () => signatureSettings(), ...createLibraryDecisionDeps() }
 }
 
 const LIBRARY = "biblioteca"
@@ -107,7 +102,7 @@ async function signedSettle(original: Request, deps: LibraryDecisionDeps, work: 
   })
 }
 
-export async function verifyLibraryReview(request: Request, revisionId: string, deps: LibraryDecisionDeps = defaultLibraryDecisionDeps()): Promise<Response> {
+export async function verifyLibraryReview(request: Request, revisionId: string, deps: LibraryDecisionDeps): Promise<Response> {
   const original = request.clone()
   const bound = await bindRevision(original, revisionId, deps)
   if (bound instanceof Response) return bound
@@ -157,7 +152,7 @@ export function commentRefusal(session: AppSession, syllabus: DetailSyllabus): R
   return block === null ? null : blockedDecision(block)
 }
 
-export async function commentLibraryReview(request: Request, revisionId: string, deps: LibraryDecisionDeps = defaultLibraryDecisionDeps()): Promise<Response> {
+export async function commentLibraryReview(request: Request, revisionId: string, deps: LibraryDecisionDeps): Promise<Response> {
   const original = request.clone()
   const bound = await bindRevision(original, revisionId, deps)
   if (bound instanceof Response) return bound

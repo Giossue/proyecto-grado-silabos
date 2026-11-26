@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm"
-import { uuidList } from "../http/sql"
+import { Prisma } from "../../generated/prisma/client"
+import { uuidList } from "../../prisma/sql"
 import { phpEquals, phpShape, type PhpRecord } from "../configuration/phpValues"
 import { recipientsOn } from "../notifications/queries"
 import { storeInternalNotifications } from "../notifications/store"
@@ -61,11 +61,11 @@ function unique(values: string[]): string[] {
 export async function templateChangedSince(executor: Executor, reference: "pausado_en" | "reopen", processId: string): Promise<TemplateChange | null> {
   const moment =
     reference === "pausado_en"
-      ? sql`(select pausado_en from convocatorias_universidad where convocatoria_universidad_id = ${processId}::uuid)`
-      : sql`(select coalesce(pausado_en, finalizada_en) from convocatorias_universidad where convocatoria_universidad_id = ${processId}::uuid)`
+      ? Prisma.sql`(select pausado_en from convocatorias_universidad where convocatoria_universidad_id = ${processId}::uuid)`
+      : Prisma.sql`(select coalesce(pausado_en, finalizada_en) from convocatorias_universidad where convocatoria_universidad_id = ${processId}::uuid)`
   const [row] = await rowsOf<{ changed_at: string | null; key: string | null }>(
     executor,
-    sql`select plantilla.plantilla_modificada_en::text as changed_at,
+    Prisma.sql`select plantilla.plantilla_modificada_en::text as changed_at,
         to_char(plantilla.plantilla_modificada_en at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as key
       from (select plantilla_modificada_en from plantilla_silabo limit 1) plantilla
       where ${moment} is not null and plantilla.plantilla_modificada_en > ${moment}`,
@@ -76,11 +76,11 @@ export async function templateChangedSince(executor: Executor, reference: "pausa
 export async function processSyllabusCounts(executor: Executor, processId: string, toReopen: boolean): Promise<Record<string, number>> {
   const counts: Record<string, number> = Object.fromEntries(EMPTY_COUNTS.map((state) => [state, 0]))
   const scope = toReopen
-    ? sql`convocatorias_carreras.estado_convocatoria_carrera = 'cerrada' and convocatorias_carreras.estado_previo_cierre_convocatoria_carrera is not null`
-    : sql`convocatorias_carreras.estado_convocatoria_carrera in ('abierta', 'pausada')`
+    ? Prisma.sql`convocatorias_carreras.estado_convocatoria_carrera = 'cerrada' and convocatorias_carreras.estado_previo_cierre_convocatoria_carrera is not null`
+    : Prisma.sql`convocatorias_carreras.estado_convocatoria_carrera in ('abierta', 'pausada')`
   const rows = await rowsOf<{ state: string; total: number }>(
     executor,
-    sql`select silabos.estado_silabo as state, count(*)::int as total from silabos
+    Prisma.sql`select silabos.estado_silabo as state, count(*)::int as total from silabos
       inner join convocatorias_carreras on convocatorias_carreras.convocatoria_carrera_id = silabos.convocatoria_carrera_id
       where convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid and ${scope} group by silabos.estado_silabo`,
   )
@@ -92,7 +92,7 @@ export async function adaptProcessToTemplate(work: InProgressWork, processId: st
   const executor = work.executor
   const convocations = await rowsOf<{ id: string }>(
     executor,
-    sql`select convocatoria_carrera_id::text as id from convocatorias_carreras where convocatoria_universidad_id = ${processId}::uuid
+    Prisma.sql`select convocatoria_carrera_id::text as id from convocatorias_carreras where convocatoria_universidad_id = ${processId}::uuid
       and estado_convocatoria_carrera in ('abierta', 'pausada')
       and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)
       order by convocatoria_carrera_id asc for update`,
@@ -100,7 +100,7 @@ export async function adaptProcessToTemplate(work: InProgressWork, processId: st
   const syllabi =
     convocations.length === 0
       ? []
-      : await work.syllabi(sql`silabos.convocatoria_carrera_id in (${uuidList(convocations.map((row) => row.id))}) and ${SYLLABUS_ALIVE}`, { lock: true, ordered: true })
+      : await work.syllabi(Prisma.sql`silabos.convocatoria_carrera_id in (${uuidList(convocations.map((row) => row.id))}) and ${SYLLABUS_ALIVE}`, { lock: true, ordered: true })
   const teacherIds = await recipientsOn(executor).teachersForProcess(processId)
   for (const syllabus of syllabi) await work.adaptToTemplate(syllabus)
   const [title, message] = workflowMessage(TEMPLATE_REDONE, null, null)
@@ -119,7 +119,7 @@ export async function adaptProcessToTemplate(work: InProgressWork, processId: st
 export async function convocationsToReopen(executor: Executor, processId: string): Promise<string[]> {
   const rows = await rowsOf<{ id: string }>(
     executor,
-    sql`select convocatoria_carrera_id::text as id from convocatorias_carreras where convocatoria_universidad_id = ${processId}::uuid
+    Prisma.sql`select convocatoria_carrera_id::text as id from convocatorias_carreras where convocatoria_universidad_id = ${processId}::uuid
       and estado_convocatoria_carrera = 'cerrada' and estado_previo_cierre_convocatoria_carrera is not null
       and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)
       order by convocatoria_carrera_id asc for update`,
@@ -131,26 +131,26 @@ export async function reopenProcess(work: InProgressWork, processId: string): Pr
   const executor = work.executor
   const convocations = await rowsOf<{ id: string; previous: string }>(
     executor,
-    sql`select convocatoria_carrera_id::text as id, estado_previo_cierre_convocatoria_carrera as previous from convocatorias_carreras
+    Prisma.sql`select convocatoria_carrera_id::text as id, estado_previo_cierre_convocatoria_carrera as previous from convocatorias_carreras
       where convocatoria_universidad_id = ${processId}::uuid and estado_convocatoria_carrera = 'cerrada' and estado_previo_cierre_convocatoria_carrera is not null
       and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)
       order by convocatoria_carrera_id asc for update`,
   )
   const ids = convocations.map((row) => row.id)
-  const syllabi = ids.length === 0 ? [] : await work.syllabi(sql`silabos.convocatoria_carrera_id in (${uuidList(ids)}) and ${SYLLABUS_ALIVE}`, { lock: true, ordered: true })
+  const syllabi = ids.length === 0 ? [] : await work.syllabi(Prisma.sql`silabos.convocatoria_carrera_id in (${uuidList(ids)}) and ${SYLLABUS_ALIVE}`, { lock: true, ordered: true })
   for (const syllabus of syllabi) {
     if (Object.prototype.hasOwnProperty.call(syllabus.context, CLOSED_DOCUMENT)) {
       const context = Object.fromEntries(Object.entries(syllabus.context).filter(([key]) => key !== CLOSED_DOCUMENT))
-      await executor.execute(sql`update silabos set datos_academicos_silabo = ${JSON.stringify(phpShape(context))}::jsonb where silabo_id = ${syllabus.id}::uuid`)
+      await executor.$executeRaw(Prisma.sql`update silabos set datos_academicos_silabo = ${JSON.stringify(phpShape(context))}::jsonb where silabo_id = ${syllabus.id}::uuid`)
     }
   }
   const reopened = convocations.filter((row) => row.previous === "abierta").map((row) => row.id)
   if (ids.length > 0) {
-    await executor.execute(sql`update convocatorias_carreras set estado_convocatoria_carrera = estado_previo_cierre_convocatoria_carrera, estado_previo_cierre_convocatoria_carrera = null
+    await executor.$executeRaw(Prisma.sql`update convocatorias_carreras set estado_convocatoria_carrera = estado_previo_cierre_convocatoria_carrera, estado_previo_cierre_convocatoria_carrera = null
       where convocatoria_carrera_id in (${uuidList(ids)})
         and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)`)
   }
-  await executor.execute(sql`update convocatorias_universidad set estado_convocatoria_universidad = 'abierto', finalizada_en = null, pausado_en = null
+  await executor.$executeRaw(Prisma.sql`update convocatorias_universidad set estado_convocatoria_universidad = 'abierto', finalizada_en = null, pausado_en = null
     where convocatoria_universidad_id = ${processId}::uuid`)
   return reopened
 }
@@ -167,7 +167,7 @@ export class ReopenCatchUp {
 
   private async planned(convocationIds: string[]): Promise<PlannedSyllabus[]> {
     if (convocationIds.length === 0) return []
-    const syllabi = await this.work.syllabi(sql`silabos.convocatoria_carrera_id in (${uuidList(convocationIds)}) and ${SYLLABUS_ALIVE}`, { lock: true, ordered: true })
+    const syllabi = await this.work.syllabi(Prisma.sql`silabos.convocatoria_carrera_id in (${uuidList(convocationIds)}) and ${SYLLABUS_ALIVE}`, { lock: true, ordered: true })
     const planned: PlannedSyllabus[] = []
     for (const syllabus of syllabi) {
       const [row] = await rowsOf<{
@@ -180,7 +180,7 @@ export class ReopenCatchUp {
         generates: boolean
       }>(
         this.executor,
-        sql`select convocatoria.carrera_id::text as career_id, periodo.codigo_periodo_academico as period_code, periodo.cantidad_semanas_lectivas as period_weeks,
+        Prisma.sql`select convocatoria.carrera_id::text as career_id, periodo.codigo_periodo_academico as period_code, periodo.cantidad_semanas_lectivas as period_weeks,
             paralelo.codigo_paralelo as parallel_code, paralelo.jornada_paralelo as parallel_shift, paralelo.asignatura_id::text as subject_id,
             (asignatura.asignatura_activa and asignatura.genera_silabo_asignatura) as generates
           from convocatorias_carreras convocatoria
@@ -209,7 +209,7 @@ export class ReopenCatchUp {
     if (parallelIds.length === 0) return found
     const rows = await rowsOf<{ parallel_id: string; after_close: boolean | null; user_id: string; email: string | null }>(
       this.executor,
-      sql`select asignacion.paralelo_id::text as parallel_id,
+      Prisma.sql`select asignacion.paralelo_id::text as parallel_id,
           asignacion.asignado_en >= date_trunc('second', (select finalizada_en from convocatorias_universidad where convocatoria_universidad_id = ${processId}::uuid)) as after_close,
           rol.usuario_id::text as user_id, usuario.correo_electronico as email
         from asignaciones_paralelo asignacion
@@ -226,7 +226,7 @@ export class ReopenCatchUp {
     if (SENT_STATES.includes(syllabus.state)) {
       const [revision] = await rowsOf<{ author: string | null }>(
         this.executor,
-        sql`select enviado_por::text as author from revisiones_silabo where silabo_id = ${syllabus.id}::uuid
+        Prisma.sql`select enviado_por::text as author from revisiones_silabo where silabo_id = ${syllabus.id}::uuid
           and exists (select 1 from silabos where silabos.silabo_id = revisiones_silabo.silabo_id and ${SYLLABUS_ALIVE}) order by numero_revision desc limit 1`,
       )
       const author = revision?.author ?? null
@@ -241,7 +241,7 @@ export class ReopenCatchUp {
     if (careers.length === 0) return []
     const rows = await rowsOf<{ id: string }>(
       this.executor,
-      sql`select carrera_id::text as id from asignaciones_rol where rol = 'coordinador'
+      Prisma.sql`select carrera_id::text as id from asignaciones_rol where rol = 'coordinador'
         and carrera_id in (${uuidList(careers)})
         and asignado_en >= date_trunc('second', (select finalizada_en from convocatorias_universidad where convocatoria_universidad_id = ${processId}::uuid))`,
     )
@@ -298,7 +298,7 @@ export class ReopenCatchUp {
         : (
             await rowsOf<{ id: string }>(
               this.executor,
-              sql`select carrera_id::text as id from convocatorias_carreras where convocatoria_carrera_id in (${uuidList(convocationIds)})
+              Prisma.sql`select carrera_id::text as id from convocatorias_carreras where convocatoria_carrera_id in (${uuidList(convocationIds)})
                 and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)`,
             )
           ).map((row) => row.id)

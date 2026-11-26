@@ -2,22 +2,15 @@ import { accountActivationSchema, passwordResetSchema, recoveryLinkSchema } from
 import { passwordStrength, storedPassword } from "./passwordPolicy"
 import { createHash, createHmac } from "node:crypto"
 import { setTimeout as sleep } from "node:timers/promises"
-import { sql, type SQL } from "drizzle-orm"
-import { db } from "@/db"
-import { bcryptHash, bcryptVerify } from "../auth/bcrypt"
-import { defaultBridgeDeps } from "../auth/requireSession"
 import { controllerJson, fromController } from "../auth/controllerResponse"
-import { deleteUserSessions, storeCredentialPassword } from "../auth/credentials"
-import { clientIp, runtimeOf, type AuthRuntime } from "../auth/runtime"
+import { clientIp, type AuthRuntime } from "../auth/runtime"
 import { isPhpArray, requestInput, type PhpArray } from "../http/input"
 import { serverError, validationError } from "../http/responses"
 import { throttle, type RateLimiter, type Throttle } from "../http/throttle"
 import { validateSchema } from "../http/schemaValidation"
 import type { QueuedMail } from "../mail/mailables"
-import { sharedMailer } from "../mail/mailer"
 import { stringOf } from "./accountWrites"
 import { transliterate } from "./authentication"
-import { lazyRateLimiter } from "./twoFactor"
 
 export type Invitation = { id: string; userId: string; hash: string; expiresAt: number; usedAt: number | null; invalidatedAt: number | null }
 
@@ -54,63 +47,6 @@ export type RecoveryDeps = {
   sendMail: (mail: QueuedMail) => Promise<unknown>
 }
 
-type Executor = { execute(query: SQL): Promise<{ rows: unknown[]; rowCount?: number | null }> }
-
-const epoch = (column: SQL) => sql`extract(epoch from ${column})::bigint`
-const seconds = (value: unknown): number | null => (value === null || value === undefined ? null : Number(value))
-
-export function recoveryStoreOn(executor: Executor): RecoveryStore {
-  const rows = async (query: SQL) => (await executor.execute(query)).rows as Record<string, unknown>[]
-  return {
-    async userByEmail(email) {
-      const [row] = await rows(sql`select usuario_id, correo_electronico from usuarios where correo_electronico = ${email} limit 1`)
-      return row ? { id: String(row.usuario_id), email: String(row.correo_electronico) } : null
-    },
-    async resetToken(email) {
-      const [row] = await rows(sql`select token, ${epoch(sql`created_at`)} as created from restablecimientos_contrasena where email = ${email} limit 1`)
-      return row ? { token: String(row.token), createdAt: seconds(row.created) } : null
-    },
-    async deleteResetTokens(email) {
-      await executor.execute(sql`delete from restablecimientos_contrasena where email = ${email}`)
-    },
-    async insertResetToken(email, hash, at) {
-      await executor.execute(sql`insert into restablecimientos_contrasena (email, token, created_at) values (${email}, ${hash}, to_timestamp(${at}))`)
-    },
-    setPassword: (userId, hash) => storeCredentialPassword(executor, userId, hash),
-    deleteSessions: (userId) => deleteUserSessions(executor, userId),
-    async lockInvitation(hash) {
-      const [row] = await rows(sql`select invitacion_activacion_id, usuario_id, hash_activacion, ${epoch(sql`expira_en`)} as expires,
-          ${epoch(sql`usada_en`)} as used, ${epoch(sql`invalidada_en`)} as invalidated
-        from invitaciones_activacion where hash_activacion = ${hash} limit 1 for update`)
-      if (!row) return null
-      return {
-        id: String(row.invitacion_activacion_id),
-        userId: String(row.usuario_id),
-        hash: String(row.hash_activacion),
-        expiresAt: Number(row.expires),
-        usedAt: seconds(row.used),
-        invalidatedAt: seconds(row.invalidated),
-      }
-    },
-    async lockUser(userId) {
-      const [row] = await rows(sql`select usuario_id, usuario_activo, correo_verificado_en is not null as verified
-        from usuarios where usuario_id = ${userId}::uuid limit 1 for update`)
-      return row ? { id: String(row.usuario_id), active: row.usuario_activo === true, verified: row.verified === true } : null
-    },
-    async activate(userId, hash, at) {
-      await storeCredentialPassword(executor, userId, hash)
-      await executor.execute(sql`update usuarios set correo_verificado_en = to_timestamp(${at}) where usuario_id = ${userId}::uuid`)
-    },
-    async useInvitation(id, at) {
-      await executor.execute(sql`update invitaciones_activacion set usada_en = to_timestamp(${at}) where invitacion_activacion_id = ${id}::uuid`)
-    },
-    async invalidateOtherInvitations(userId, exceptId, at) {
-      await executor.execute(sql`update invitaciones_activacion set invalidada_en = to_timestamp(${at})
-        where usuario_id = ${userId}::uuid and usada_en is null and invalidada_en is null and invitacion_activacion_id <> ${exceptId}::uuid`)
-    },
-  }
-}
-
 export function timebox(milliseconds: number): Timebox {
   return async (work) => {
     const start = performance.now()
@@ -123,24 +59,6 @@ export function timebox(milliseconds: number): Timebox {
       const remainder = milliseconds - (performance.now() - start)
       if (!early && remainder > 0) await sleep(remainder)
     }
-  }
-}
-
-export function defaultRecoveryDeps(): RecoveryDeps {
-  const executor = db as unknown as Executor
-  const cost = Number.parseInt(process.env.BCRYPT_ROUNDS ?? "12", 10)
-  return {
-    runtime: runtimeOf(defaultBridgeDeps()),
-    store: {
-      direct: (work) => work(recoveryStoreOn(executor)),
-      transaction: (work) => db.transaction((tx) => work(recoveryStoreOn(tx as unknown as Executor))),
-    },
-    throttles: lazyRateLimiter(),
-    verifyHash: bcryptVerify,
-    hashPassword: (plain) => bcryptHash(plain, cost),
-    timebox: timebox(200),
-    production: () => process.env.APP_ENV === "production",
-    sendMail: (mail) => sharedMailer().send(mail),
   }
 }
 
@@ -264,7 +182,7 @@ async function linkOutcome(request: Request, deps: RecoveryDeps): Promise<Respon
   return finish(controllerJson({ message: LINK_SENT }, 202))
 }
 
-export async function sendResetLink(request: Request, deps: RecoveryDeps = defaultRecoveryDeps()): Promise<Response> {
+export async function sendResetLink(request: Request, deps: RecoveryDeps): Promise<Response> {
   try {
     return await linkOutcome(request, deps)
   } catch (error) {
@@ -273,10 +191,10 @@ export async function sendResetLink(request: Request, deps: RecoveryDeps = defau
   }
 }
 
-export function resetPassword(request: Request, deps: RecoveryDeps = defaultRecoveryDeps()): Promise<Response> {
+export function resetPassword(request: Request, deps: RecoveryDeps): Promise<Response> {
   return resetOutcome(request, deps)
 }
 
-export function activateAccount(request: Request, deps: RecoveryDeps = defaultRecoveryDeps()): Promise<Response> {
+export function activateAccount(request: Request, deps: RecoveryDeps): Promise<Response> {
   return activationOutcome(request, deps)
 }

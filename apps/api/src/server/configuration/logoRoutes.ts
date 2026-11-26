@@ -5,15 +5,12 @@ import { expectsJson } from "../http/request"
 import { publicPath } from "../http/storage"
 import { unmatchedRoute, modelNotFound, routeAllows, unknownRoute } from "../http/router"
 import type { FileSource } from "../storage/fileSource"
-import { createLogoStore, facultyFile, institutionFile, type LogoStore } from "./institutionalLogos"
+import type { LogoStore } from "../shared/logoStore"
+import { facultyFile, institutionFile } from "./institutionalLogos"
 
 export type LogoRouteDeps = { store: LogoStore }
 
 const FACULTY_MODEL = "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Faculty"
-
-function defaultLogoRouteDeps(): LogoRouteDeps {
-  return { store: createLogoStore() }
-}
 
 async function logoFile(request: Request, file: FileSource): Promise<Response> {
   const response = fromController(await binaryFileResponse(request, file, { "Cache-Control": "max-age=300, public" }))
@@ -25,7 +22,7 @@ export async function institutionLogo(request: Request): Promise<Response> {
   return logoFile(request, await institutionFile())
 }
 
-export async function facultyLogo(request: Request, facultyId: string, deps: LogoRouteDeps = defaultLogoRouteDeps()): Promise<Response> {
+export async function facultyLogo(request: Request, facultyId: string, deps: LogoRouteDeps): Promise<Response> {
   if (!routeAllows(request)) return unmatchedRoute(request)
   const faculty = isUuid(facultyId) ? await deps.store.faculty(facultyId) : null
   if (faculty === null) return expectsJson(request) ? modelNotFound(FACULTY_MODEL, facultyId) : unknownRoute(request)

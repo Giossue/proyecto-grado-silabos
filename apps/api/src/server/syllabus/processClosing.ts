@@ -1,3 +1,4 @@
+import type { PrismaService } from "../../prisma/prisma.service"
 import { HttpFailure, Missing } from "../http/failures"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
@@ -31,8 +32,8 @@ export type ClosingDeps = {
   transaction<T>(work: (tx: ClosingTx) => Promise<T>): Promise<T>
 }
 
-export function defaultClosingDeps(): ClosingDeps {
-  return { bridge: defaultBridgeDeps(), ...createClosingDeps() }
+export function defaultClosingDeps(prisma: PrismaService): ClosingDeps {
+  return { bridge: defaultBridgeDeps(), ...createClosingDeps(prisma) }
 }
 
 const CLOSABLE = [PROCESS_OPEN, PROCESS_PAUSED]
@@ -62,7 +63,7 @@ async function boundProcess(request: Request, id: string, deps: ClosingDeps): Pr
   return { session, process }
 }
 
-export async function closeProcess(request: Request, id: string, deps: ClosingDeps = defaultClosingDeps()): Promise<Response> {
+export async function closeProcess(request: Request, id: string, deps: ClosingDeps): Promise<Response> {
   const original = request.clone()
   const bound = await boundProcess(original, id, deps)
   if (bound instanceof Response) return bound

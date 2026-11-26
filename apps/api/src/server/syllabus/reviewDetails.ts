@@ -3,7 +3,9 @@ import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { aborted, apiJson, validationError } from "../http/responses"
-import { createLogoStore, presentationLogos, type LogoStore } from "../configuration/institutionalLogos"
+import { presentationLogos } from "../configuration/institutionalLogos"
+import { createLogoStore, type LogoStore } from "../shared/logoStore"
+import type { PrismaService } from "../../prisma/prisma.service"
 import { isPhpArray, list, phpShape, record, type PhpRecord } from "../configuration/phpValues"
 import { templatePresentationOf } from "../configuration/templatePresentation"
 import { TemplateValidationError } from "../configuration/templateRuntime"
@@ -48,8 +50,8 @@ export interface ReviewDetailStore {
 
 export type ReviewDetailDeps = { bridge: BridgeDeps; store: ReviewDetailStore; libraryReviews: LibraryReviewRepository; logos: LogoStore }
 
-export function defaultReviewDetailDeps(): ReviewDetailDeps {
-  return { bridge: defaultBridgeDeps(), store: createReviewDetailStore(), libraryReviews: createLibraryReviewRepository(), logos: createLogoStore() }
+export function defaultReviewDetailDeps(prisma: PrismaService): ReviewDetailDeps {
+  return { bridge: defaultBridgeDeps(), store: createReviewDetailStore(prisma), libraryReviews: createLibraryReviewRepository(prisma), logos: createLogoStore(prisma) }
 }
 
 const LIBRARY = "biblioteca"
@@ -132,7 +134,7 @@ export function reviewDetailBinder(revisionId: string, deps: Pick<ReviewDetailDe
   return async (user) => (await bindRevision(revisionId, deps, user.id)) ?? modelNotFound(MODELS.revision, revisionId)
 }
 
-export async function coordinationReviewDetail(request: Request, revisionId: string, deps: ReviewDetailDeps = defaultReviewDetailDeps()): Promise<Response> {
+export async function coordinationReviewDetail(request: Request, revisionId: string, deps: ReviewDetailDeps): Promise<Response> {
   const bound = await requireBound(request, reviewDetailBinder(revisionId, deps), deps.bridge)
   if (bound instanceof Response) return bound
   return coordinationReviewDetailFor(request, bound.session, bound.bound, deps)
@@ -215,7 +217,7 @@ export async function coordinationReviewDetailFor(
   })
 }
 
-export async function libraryReviewDetail(request: Request, revisionId: string, deps: ReviewDetailDeps = defaultReviewDetailDeps()): Promise<Response> {
+export async function libraryReviewDetail(request: Request, revisionId: string, deps: ReviewDetailDeps): Promise<Response> {
   let revision: ReviewRevision | null = null
   const authorized = await authorizeListing(request, { bridge: deps.bridge, reviews: deps.libraryReviews }, async () => {
     revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null

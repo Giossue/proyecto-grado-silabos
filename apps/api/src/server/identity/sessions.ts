@@ -1,6 +1,4 @@
-import { sql } from "drizzle-orm"
-import { db } from "@/db"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { apiJson } from "../http/responses"
 import { isoFromSeconds } from "../syllabus/draftField"
@@ -12,27 +10,6 @@ export interface ActiveSessionStore {
 }
 
 export type ActiveSessionDeps = { bridge: BridgeDeps; store: ActiveSessionStore }
-
-export function createActiveSessionStore(): ActiveSessionStore {
-  return {
-    async sessions(userId) {
-      const result = await db.execute(
-        sql`select id, ip_address, user_agent, extract(epoch from updated_at)::bigint as last_activity from sesiones_usuario
-          where user_id = ${userId}::uuid and expires_at > now() order by updated_at desc, id asc`,
-      )
-      return (result.rows as { id: string; ip_address: string | null; user_agent: string | null; last_activity: string | number }[]).map((row) => ({
-        id: row.id,
-        ip: row.ip_address,
-        agent: row.user_agent,
-        lastActivity: Number(row.last_activity),
-      }))
-    },
-  }
-}
-
-export function defaultActiveSessionDeps(): ActiveSessionDeps {
-  return { bridge: defaultBridgeDeps(), store: createActiveSessionStore() }
-}
 
 const BROWSERS: [string[], string][] = [
   [["Edg/"], "Edge"],
@@ -57,7 +34,7 @@ export function deviceLabel(agent: string): string {
   return `${pick(agent, BROWSERS, "Navegador desconocido")} en ${pick(agent, PLATFORMS, "dispositivo desconocido")}`
 }
 
-export async function activeSessions(request: Request, deps: ActiveSessionDeps = defaultActiveSessionDeps()): Promise<Response> {
+export async function activeSessions(request: Request, deps: ActiveSessionDeps): Promise<Response> {
   const session = await requireSession(request, {}, deps.bridge)
   if (session instanceof Response) return session
   const rows = await deps.store.sessions(session.user.id)

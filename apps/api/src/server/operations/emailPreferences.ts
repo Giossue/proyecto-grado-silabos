@@ -1,10 +1,8 @@
-import { sql } from "drizzle-orm"
-import { db } from "@/db"
 import { requireSession, defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { isPhpArray, requestInput, phpCount, type PhpArray, type PhpValue } from "../http/input"
 import { apiJson, validationError } from "../http/responses"
-import { sharedRateLimiter, throttle, type RateLimiter } from "../http/throttle"
+import { throttle, type RateLimiter } from "../http/throttle"
 import { emailOptionsFor } from "./emailNoticeCatalog"
 
 export type EmailPreferencesDeps = { bridge: BridgeDeps }
@@ -36,18 +34,6 @@ export async function showEmailPreferences(
   return apiJson({ options: emailOptionsFor(roles, session.user.emailPreferences) })
 }
 
-function createEmailPreferencesRepository(): EmailPreferencesRepository {
-  return {
-    async save(userId, preferences) {
-      await db.execute(sql`update usuarios set preferencias_correo_usuario = ${JSON.stringify(preferences)}::jsonb where usuario_id = ${userId}`)
-    },
-  }
-}
-
-function defaultUpdateDeps(): EmailPreferencesUpdateDeps {
-  return { bridge: defaultBridgeDeps(), limiter: sharedRateLimiter(), preferences: createEmailPreferencesRepository() }
-}
-
 function validate(value: PhpValue | undefined, allowed: string[]): Record<string, string[]> {
   const errors: Record<string, string[]> = {}
   const add = (key: string, message: string) => {
@@ -72,7 +58,7 @@ function storedPreferences(current: unknown): Record<string, unknown> {
   return { "0": current }
 }
 
-export async function updateEmailPreferences(request: Request, deps: EmailPreferencesUpdateDeps = defaultUpdateDeps()): Promise<Response> {
+export async function updateEmailPreferences(request: Request, deps: EmailPreferencesUpdateDeps): Promise<Response> {
   const limit = (userId: string) => ({ key: `throttle:20,1:${userId}`, maxAttempts: 20, decaySeconds: 60 })
   let gate: ReturnType<typeof throttle> | null = null
   const session = await requireSession(

@@ -1,6 +1,7 @@
 import type { AttemptLimiter } from "../../server/auth/attemptLimiter"
 import { bcryptHash, bcryptVerify } from "../../server/auth/bcrypt"
-import { sharedAuth, type Auth } from "../../server/auth/betterAuth"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { bindAuthDatabase, sharedAuth, type Auth } from "../../server/auth/betterAuth"
 import { sessionRandom } from "../../server/auth/runtime"
 import { redisReplayGuard, type TotpReplayGuard } from "../../server/auth/totp"
 import { institutionToday } from "../../server/shared/clock"
@@ -37,7 +38,8 @@ const bcryptCost = () => Number.parseInt(process.env.BCRYPT_ROUNDS ?? "12", 10)
 
 let dummy: Promise<string> | null = null
 
-export function defaultIdentityRuntime(): IdentityRuntime {
+export function defaultIdentityRuntime(prisma: PrismaService): IdentityRuntime {
+  bindAuthDatabase(prisma)
   const hashPassword = (plain: string) => bcryptHash(plain, bcryptCost())
   return {
     auth: sharedAuth,

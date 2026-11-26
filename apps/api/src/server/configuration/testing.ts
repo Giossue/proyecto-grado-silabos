@@ -2,7 +2,7 @@ import golden from "./__fixtures__/template-golden.json"
 import type { PhpRecord } from "./phpValues"
 import { trustedDefinition } from "./templateRuntime"
 import type { SyllabusTemplate, TemplateSection } from "./templatePresentation"
-import type { LiveField, StoredValue, TemplateStore } from "./templateStore"
+import type { LiveField, StoredValue, TemplateStore } from "../shared/templateStore"
 
 export const TEMPLATE_ID = "01a1c5ba-10b4-7129-925f-c28a9489323c"
 

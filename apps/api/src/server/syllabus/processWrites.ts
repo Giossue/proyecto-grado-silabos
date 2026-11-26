@@ -1,3 +1,4 @@
+import type { PrismaService } from "../../prisma/prisma.service"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
@@ -66,8 +67,8 @@ export type ProcessWriteDeps = {
   transaction<T>(work: (tx: ProcessWriteTx) => Promise<T>): Promise<T>
 }
 
-export function defaultProcessWriteDeps(): ProcessWriteDeps {
-  return { bridge: defaultBridgeDeps(), ...createProcessWriteDeps() }
+export function defaultProcessWriteDeps(prisma: PrismaService): ProcessWriteDeps {
+  return { bridge: defaultBridgeDeps(), ...createProcessWriteDeps(prisma) }
 }
 
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
@@ -102,7 +103,7 @@ async function bindProcess(request: Request, id: string, deps: ProcessWriteDeps)
   return { session, process }
 }
 
-export async function deleteProcess(request: Request, id: string, deps: ProcessWriteDeps = defaultProcessWriteDeps()): Promise<Response> {
+export async function deleteProcess(request: Request, id: string, deps: ProcessWriteDeps): Promise<Response> {
   const original = request.clone()
   const bound = await bindProcess(request, id, deps)
   if (bound instanceof Response) return bound
@@ -163,7 +164,7 @@ async function notifyProcessResumed(tx: ProcessWriteTx, process: LockedSyllabusP
   }
 }
 
-export async function resumeProcess(request: Request, id: string, deps: ProcessWriteDeps = defaultProcessWriteDeps()): Promise<Response> {
+export async function resumeProcess(request: Request, id: string, deps: ProcessWriteDeps): Promise<Response> {
   const original = request.clone()
   const bound = await bindProcess(original.clone(), id, deps)
   if (bound instanceof Response) return bound
@@ -208,7 +209,7 @@ function iso8601(seconds: number): string {
 
 type DeadlineConfirmation = { code: string; counts: Record<string, number>; pending: Record<string, number> | null }
 
-export async function extendProcessDeadline(request: Request, id: string, deps: ProcessWriteDeps = defaultProcessWriteDeps()): Promise<Response> {
+export async function extendProcessDeadline(request: Request, id: string, deps: ProcessWriteDeps): Promise<Response> {
   const original = request.clone()
   const bound = await bindProcess(request, id, deps)
   if (bound instanceof Response) return bound

@@ -1,6 +1,7 @@
 import { HttpFailure, Missing, reportedServerError } from "../http/failures"
 
 export { Missing }
+import type { PrismaService } from "../../prisma/prisma.service"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
@@ -42,8 +43,8 @@ export type ReviewDecisionDeps = {
   transaction<T>(work: (tx: ReviewDecisionTx) => Promise<T>): Promise<T>
 }
 
-export function defaultReviewDecisionDeps(): ReviewDecisionDeps {
-  return { bridge: defaultBridgeDeps(), ...createReviewDecisionDeps() }
+export function defaultReviewDecisionDeps(prisma: PrismaService): ReviewDecisionDeps {
+  return { bridge: defaultBridgeDeps(), ...createReviewDecisionDeps(prisma) }
 }
 
 export class Rejected extends Error {
@@ -90,7 +91,7 @@ function rejectRevision(message: string): never {
   throw new Rejected(validationError({ revision: [message] }))
 }
 
-export async function requestCorrection(request: Request, revisionId: string, deps: ReviewDecisionDeps = defaultReviewDecisionDeps()): Promise<Response> {
+export async function requestCorrection(request: Request, revisionId: string, deps: ReviewDecisionDeps): Promise<Response> {
   const bound = await bindRevision(request, revisionId, deps)
   if (bound instanceof Response) return bound
   return requestCorrectionFor(request, bound, deps)
@@ -140,7 +141,7 @@ export function decisionSyllabusBinder(syllabusId: string, deps: Pick<ReviewDeci
   }
 }
 
-export async function resetSyllabus(request: Request, syllabusId: string, deps: ReviewDecisionDeps = defaultReviewDecisionDeps()): Promise<Response> {
+export async function resetSyllabus(request: Request, syllabusId: string, deps: ReviewDecisionDeps): Promise<Response> {
   const bound = await requireBound(request, decisionSyllabusBinder(syllabusId, deps), deps.bridge)
   if (bound instanceof Response) return bound
   return resetSyllabusFor(request, bound.session, bound.bound, deps)

@@ -1,128 +1,56 @@
-import { and, eq, inArray } from "drizzle-orm"
-import { db, type Executor } from "@/db"
-import { fromEpoch } from "@/db/expressions"
-import { archivos, documentosApoyo } from "@/db/schema"
-import { withAfterCommit } from "../queue/dispatch"
-import { findActiveCareer } from "./structureQueries"
+import { type Db, inTransaction } from "../../prisma/db"
+import type { PrismaService } from "../../prisma/prisma.service"
 import type { SupportDocumentViewStore, SupportDocumentViewTx } from "./supportDocumentView"
-import { VIEW_NONE, VIEW_PENDING, VIEW_READY, type StoredObjectInput, type SupportDocumentTx, type SupportDocumentWriteStore } from "./supportDocumentWrites"
+import { VIEW_NONE, VIEW_PENDING, VIEW_READY, type StoredObjectInput } from "./supportDocumentWrites"
 
-export async function insertStoredObject(executor: Executor, row: StoredObjectInput): Promise<void> {
-  await executor.insert(archivos).values({
-    archivoId: row.id,
-    disco: row.disk,
-    rutaArchivo: row.path,
-    nombreArchivo: row.name,
-    tipoArchivo: row.mime,
-    tamanoBytes: row.size,
-    hashArchivo: row.sha256,
-    categoria: row.classification,
-    subidoPor: row.ownerId,
-    almacenadoEn: fromEpoch(row.storedAt),
+export async function insertStoredObject(db: Db, row: StoredObjectInput): Promise<void> {
+  await db.archivos.create({
+    data: {
+      archivo_id: row.id,
+      disco: row.disk,
+      ruta_archivo: row.path,
+      nombre_archivo: row.name,
+      tipo_archivo: row.mime,
+      tamano_bytes: BigInt(row.size),
+      hash_archivo: row.sha256,
+      categoria: row.classification,
+      subido_por: row.ownerId,
+      almacenado_en: new Date(row.storedAt * 1000),
+    },
   })
 }
 
-function writeTx(executor: Executor): SupportDocumentTx {
-  return {
-    insertObject: (row) => insertStoredObject(executor, row),
-    async insertDocument(row) {
-      await executor.insert(documentosApoyo).values({
-        documentoApoyoId: row.id,
-        carreraId: row.careerId,
-        tituloDocumento: row.title,
-        archivoId: row.objectId,
-        archivoVistaId: row.previewId,
-        estadoVista: row.view,
-        subidoPor: row.uploadedBy,
-        subidoEn: fromEpoch(row.uploadedAt),
-      })
-    },
-    async lockDocument(id) {
-      const [row] = await executor
-        .select({ id: documentosApoyo.documentoApoyoId, careerId: documentosApoyo.carreraId, objectId: documentosApoyo.archivoId, previewId: documentosApoyo.archivoVistaId })
-        .from(documentosApoyo)
-        .where(eq(documentosApoyo.documentoApoyoId, id))
-        .limit(1)
-        .for("update")
-      return row ?? null
-    },
-    async objects(ids) {
-      if (ids.length === 0) return []
-      return executor.select({ disk: archivos.disco, path: archivos.rutaArchivo }).from(archivos).where(inArray(archivos.archivoId, ids))
-    },
-    async deleteDocument(id) {
-      await executor.delete(documentosApoyo).where(eq(documentosApoyo.documentoApoyoId, id))
-    },
-    async deleteObjects(ids) {
-      if (ids.length > 0) await executor.delete(archivos).where(inArray(archivos.archivoId, ids))
-    },
-  }
-}
-
-export function supportDocumentStoreOn(executor: Executor, transaction: <T>(work: (executor: Executor) => Promise<T>) => Promise<T>): SupportDocumentWriteStore {
-  return {
-    careerActive: async (careerId) => (await findActiveCareer(careerId)) !== null,
-    async documentCareer(id) {
-      const [row] = await executor.select({ careerId: documentosApoyo.carreraId }).from(documentosApoyo).where(eq(documentosApoyo.documentoApoyoId, id)).limit(1)
-      return row?.careerId ?? null
-    },
-    async readable(id) {
-      const [row] = await executor
-        .select({
-          id: documentosApoyo.documentoApoyoId,
-          careerId: documentosApoyo.carreraId,
-          title: documentosApoyo.tituloDocumento,
-          view: documentosApoyo.estadoVista,
-          disk: archivos.disco,
-          path: archivos.rutaArchivo,
-        })
-        .from(documentosApoyo)
-        .leftJoin(archivos, eq(archivos.archivoId, documentosApoyo.archivoVistaId))
-        .where(eq(documentosApoyo.documentoApoyoId, id))
-        .limit(1)
-      if (!row) return null
-      return { id: row.id, careerId: row.careerId, title: row.title, view: row.view, preview: row.disk !== null && row.path !== null ? { disk: row.disk, path: row.path } : null }
-    },
-    transaction: (work) => withAfterCommit((afterCommit) => transaction((tx) => work(writeTx(tx), afterCommit))),
-  }
-}
-
-export function createSupportDocumentWriteStore(): SupportDocumentWriteStore {
-  return supportDocumentStoreOn(db as unknown as Executor, (work) => db.transaction((tx) => work(tx as unknown as Executor)))
-}
-
-function viewTx(executor: Executor): SupportDocumentViewTx {
+function viewTx(db: Db): SupportDocumentViewTx {
   return {
     async lockPending(id) {
-      const [row] = await executor.select({ view: documentosApoyo.estadoVista }).from(documentosApoyo).where(eq(documentosApoyo.documentoApoyoId, id)).limit(1).for("update")
+      const [row] = await db.$queryRaw<{ view: string }[]>`select documentos_apoyo.estado_vista as view from documentos_apoyo
+        where documentos_apoyo.documento_apoyo_id = ${id}::uuid limit 1 for update`
       return row?.view === VIEW_PENDING
     },
-    insertObject: (row) => insertStoredObject(executor, row),
+    insertObject: (row) => insertStoredObject(db, row),
     async markReady(id, previewId) {
-      await executor.update(documentosApoyo).set({ archivoVistaId: previewId, estadoVista: VIEW_READY }).where(eq(documentosApoyo.documentoApoyoId, id))
+      await db.documentos_apoyo.updateMany({ where: { documento_apoyo_id: id }, data: { archivo_vista_id: previewId, estado_vista: VIEW_READY } })
     },
   }
 }
 
-export function supportDocumentViewStoreOn(executor: Executor, transaction: <T>(work: (executor: Executor) => Promise<T>) => Promise<T>): SupportDocumentViewStore {
+export function createSupportDocumentViewStore(prisma: PrismaService): SupportDocumentViewStore {
   return {
     async pending(id) {
-      const [row] = await executor
-        .select({ view: documentosApoyo.estadoVista, disk: archivos.disco, path: archivos.rutaArchivo, name: archivos.nombreArchivo, ownerId: archivos.subidoPor })
-        .from(documentosApoyo)
-        .innerJoin(archivos, eq(archivos.archivoId, documentosApoyo.archivoId))
-        .where(eq(documentosApoyo.documentoApoyoId, id))
-        .limit(1)
-      if (!row || row.view !== VIEW_PENDING) return null
-      return { disk: row.disk, path: row.path, name: row.name, ownerId: row.ownerId }
+      const row = await prisma.documentos_apoyo.findFirst({
+        where: { documento_apoyo_id: id },
+        select: {
+          estado_vista: true,
+          archivos_documentos_apoyo_archivo_idToarchivos: { select: { disco: true, ruta_archivo: true, nombre_archivo: true, subido_por: true } },
+        },
+      })
+      if (!row || row.estado_vista !== VIEW_PENDING) return null
+      const original = row.archivos_documentos_apoyo_archivo_idToarchivos
+      return { disk: original.disco, path: original.ruta_archivo, name: original.nombre_archivo, ownerId: original.subido_por }
     },
     async markWithoutView(id) {
-      await executor.update(documentosApoyo).set({ estadoVista: VIEW_NONE }).where(and(eq(documentosApoyo.documentoApoyoId, id), eq(documentosApoyo.estadoVista, VIEW_PENDING)))
+      await prisma.documentos_apoyo.updateMany({ where: { documento_apoyo_id: id, estado_vista: VIEW_PENDING }, data: { estado_vista: VIEW_NONE } })
     },
-    transaction: (work) => transaction((tx) => work(viewTx(tx))),
+    transaction: (work) => inTransaction(prisma, (tx) => work(viewTx(tx))),
   }
-}
-
-export function createSupportDocumentViewStore(): SupportDocumentViewStore {
-  return supportDocumentViewStoreOn(db as unknown as Executor, (work) => db.transaction((tx) => work(tx as unknown as Executor)))
 }

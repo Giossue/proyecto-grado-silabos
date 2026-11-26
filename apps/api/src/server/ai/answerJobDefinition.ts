@@ -1,3 +1,4 @@
+import type { PrismaService } from "../../prisma/prisma.service"
 import { appKey } from "../http/config"
 import { uuid7 } from "../http/uuid7"
 import { dispatch } from "../queue/dispatch"
@@ -11,8 +12,8 @@ import { TemplateAssistant } from "./templateAssistant"
 
 export type AnswerJobData = { messageId: string }
 
-export function defaultAnswerDeps(): AnswerDeps {
-  const store = createAssistantStore()
+export function defaultAnswerDeps(prisma: PrismaService): AnswerDeps {
+  const store = createAssistantStore(prisma)
   return {
     store,
     assistant: () => {
@@ -38,8 +39,14 @@ export function createAnswerJob(deps: () => AnswerDeps) {
   })
 }
 
-export const answerTemplateAssistantJob = createAnswerJob(defaultAnswerDeps)
+export function answerTemplateAssistantJobOn(prisma: PrismaService) {
+  return createAnswerJob(() => defaultAnswerDeps(prisma))
+}
+
+const dispatchedAnswerJob = createAnswerJob(() => {
+  throw new Error("AnswerTemplateAssistantJob runs only in the worker, built with answerTemplateAssistantJobOn.")
+})
 
 export function dispatchTemplateAssistantAnswer(messageId: string): Promise<string> {
-  return dispatch(answerTemplateAssistantJob, { messageId })
+  return dispatch(dispatchedAnswerJob, { messageId })
 }

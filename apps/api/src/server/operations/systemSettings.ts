@@ -1,6 +1,5 @@
-import { sql, type SQL } from "drizzle-orm"
-import { db } from "@/db"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import type { Db } from "../../prisma/db"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { DecryptError, decrypt } from "../http/encrypter"
 import { apiJson } from "../http/responses"
@@ -77,28 +76,15 @@ export function environmentSettings(environment: SettingsEnvironment): Record<st
   }
 }
 
-export function storedSettingsOn(executor: { execute(query: SQL): Promise<{ rows: unknown[] }> }): () => Promise<Map<string, unknown>> {
+export function storedSettingsOn(db: Db): () => Promise<Map<string, unknown>> {
   return async () => {
     try {
-      const result = await executor.execute(sql`select clave_ajuste, valor_ajuste from ajustes_sistema`)
-      return new Map((result.rows as { clave_ajuste: string; valor_ajuste: unknown }[]).map((row) => [row.clave_ajuste, row.valor_ajuste]))
+      const rows = await db.$queryRaw<{ clave_ajuste: string; valor_ajuste: unknown }[]>`select clave_ajuste, valor_ajuste from ajustes_sistema`
+      return new Map(rows.map((row) => [row.clave_ajuste, row.valor_ajuste]))
     } catch {
       return new Map()
     }
   }
-}
-
-export async function storedSettings(): Promise<Map<string, unknown>> {
-  try {
-    const result = await db.execute(sql`select clave_ajuste, valor_ajuste from ajustes_sistema`)
-    return new Map((result.rows as { clave_ajuste: string; valor_ajuste: unknown }[]).map((row) => [row.clave_ajuste, row.valor_ajuste]))
-  } catch {
-    return new Map()
-  }
-}
-
-function defaultDeps(): SystemSettingsDeps {
-  return { bridge: defaultBridgeDeps(), stored: storedSettings, environment: () => process.env }
 }
 
 export function effectiveSettings(stored: Map<string, unknown>, environment: SettingsEnvironment, key: Buffer): Record<string, unknown> {
@@ -132,7 +118,7 @@ export function describeSettings(stored: Map<string, unknown>, environment: Sett
   return result
 }
 
-export async function showSystemSettings(request: Request, deps: SystemSettingsDeps = defaultDeps()): Promise<Response> {
+export async function showSystemSettings(request: Request, deps: SystemSettingsDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (session.activeRole?.role !== "administrador") return apiJson({ message: FORBIDDEN }, 403)

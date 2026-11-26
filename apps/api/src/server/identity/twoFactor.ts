@@ -1,19 +1,15 @@
-import { sharedRedis } from "../redis/connection"
 import { phpString } from "../configuration/phpValues"
-import { sql, type SQL } from "drizzle-orm"
-import { db } from "@/db"
 import { sharedAttemptLimiter, type AttemptLimiter } from "../auth/attemptLimiter"
-import { bcryptVerify } from "../auth/bcrypt"
-import { sharedAuth, type Auth } from "../auth/betterAuth"
+import type { Auth } from "../auth/betterAuth"
 import { controllerJson, fromController } from "../auth/controllerResponse"
 import { withSetCookies } from "../auth/cookieQueue"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import { clientIp } from "../auth/runtime"
-import { redisReplayGuard, type TotpReplayGuard } from "../auth/totp"
+import type { TotpReplayGuard } from "../auth/totp"
 import type { AppSession, BridgeDeps } from "../auth/types"
 import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { jsonError, apiJson, serverError, unauthenticated, validationError } from "../http/responses"
-import { sharedRateLimiter, throttle, type RateLimiter } from "../http/throttle"
+import { throttle, type RateLimiter } from "../http/throttle"
 import { validateSchema } from "../http/schemaValidation"
 import { passwordConfirmationSchema, twoFactorChallengeSchema, twoFactorConfirmationSchema, twoFactorDisableSchema } from "@silabos/shared/schemas/twoFactor"
 import { apiErrorCode, TOO_MANY, WEB_APP_ONLY } from "./authentication"
@@ -36,52 +32,12 @@ export type TwoFactorDeps = {
   verifyPassword: (plain: string, hash: string) => Promise<boolean | null>
 }
 
-type Executor = { execute(query: SQL): Promise<{ rows: unknown[] }> }
-
-export function twoFactorStoreOn(executor: Executor): TwoFactorStore {
-  return {
-    async account(userId) {
-      const [row] = (
-        await executor.execute(sql`select u.usuario_id, u.correo_electronico, d.id is not null as has_secret,
-            u.dos_factores_confirmado_en is not null as confirmed
-          from usuarios u left join dos_factores_usuario d on d.user_id = u.usuario_id
-          where u.usuario_id = ${userId}::uuid limit 1`)
-      ).rows as { usuario_id: string; correo_electronico: string; has_secret: boolean; confirmed: boolean }[]
-      if (!row) return null
-      return { id: row.usuario_id, email: row.correo_electronico, pending: row.has_secret, confirmed: row.confirmed && row.has_secret }
-    },
-    async clearLegacy(userId) {
-      await executor.execute(sql`update usuarios set secreto_dos_factores = null, codigos_recuperacion_dos_factores = null
-        where usuario_id = ${userId}::uuid and (secreto_dos_factores is not null or codigos_recuperacion_dos_factores is not null)`)
-    },
-  }
-}
-
-export function lazyRateLimiter(): RateLimiter {
-  return {
-    attempt: (key, maxAttempts, decaySeconds, now) => sharedRateLimiter().attempt(key, maxAttempts, decaySeconds, now),
-    attempts: (key, now) => sharedRateLimiter().attempts(key, now),
-  }
-}
-
 export function lazyAttemptLimiter(): AttemptLimiter {
   return {
     tooManyAttempts: (key, maxAttempts) => sharedAttemptLimiter().tooManyAttempts(key, maxAttempts),
     hit: (key, decaySeconds) => sharedAttemptLimiter().hit(key, decaySeconds),
     clear: (key) => sharedAttemptLimiter().clear(key),
     availableIn: (key) => sharedAttemptLimiter().availableIn(key),
-  }
-}
-
-export function defaultTwoFactorDeps(): TwoFactorDeps {
-  return {
-    bridge: defaultBridgeDeps(),
-    auth: sharedAuth,
-    store: twoFactorStoreOn(db as unknown as Executor),
-    replay: redisReplayGuard(sharedRedis),
-    throttles: lazyRateLimiter(),
-    attempts: lazyAttemptLimiter(),
-    verifyPassword: bcryptVerify,
   }
 }
 
@@ -111,7 +67,7 @@ async function verifyCode(deps: TwoFactorDeps, request: Request, code: string, r
   return { userId: String(body.user?.id ?? ""), token: body.token ?? null, cookies: headers.getSetCookie() }
 }
 
-export async function twoFactorChallenge(request: Request, deps: TwoFactorDeps = defaultTwoFactorDeps()): Promise<Response> {
+export async function twoFactorChallenge(request: Request, deps: TwoFactorDeps): Promise<Response> {
   if (!(await deps.bridge.sessions.fromWebApp(request))) return apiJson({ message: WEB_APP_ONLY }, 400)
   const gate = throttle(deps.throttles, { key: `two-factor-ip:${clientIp(request) ?? ""}`, maxAttempts: 10, decaySeconds: 60 }, deps.bridge.now)
   const limited = await gate.hit()
@@ -172,7 +128,7 @@ async function recoveryCodesOf(deps: TwoFactorDeps, userId: string): Promise<str
   return (await deps.auth().api.viewBackupCodes({ body: { userId } })).backupCodes
 }
 
-export async function enableTwoFactor(request: Request, deps: TwoFactorDeps = defaultTwoFactorDeps()): Promise<Response> {
+export async function enableTwoFactor(request: Request, deps: TwoFactorDeps): Promise<Response> {
   const context = await confirmedPassword(request, deps)
   if (context instanceof Response) return context
   const password = phpString(context.input.current_password)
@@ -196,7 +152,7 @@ async function claimedCode<T>(deps: TwoFactorDeps, userId: string, code: string,
   }
 }
 
-export async function confirmTwoFactor(request: Request, deps: TwoFactorDeps = defaultTwoFactorDeps()): Promise<Response> {
+export async function confirmTwoFactor(request: Request, deps: TwoFactorDeps): Promise<Response> {
   const context = await authenticated(request, deps)
   if (context instanceof Response) return context
   const { input, account } = context
@@ -209,7 +165,7 @@ export async function confirmTwoFactor(request: Request, deps: TwoFactorDeps = d
   return withSetCookies(apiJson({ ...statusPayload(fresh), recovery_codes: await recoveryCodesOf(deps, account.id) }), verified.cookies)
 }
 
-export async function regenerateRecoveryCodes(request: Request, deps: TwoFactorDeps = defaultTwoFactorDeps()): Promise<Response> {
+export async function regenerateRecoveryCodes(request: Request, deps: TwoFactorDeps): Promise<Response> {
   const context = await confirmedPassword(request, deps)
   if (context instanceof Response) return context
   if (!context.account.confirmed) return fromController(jsonError(422, NOT_ACTIVE))
@@ -217,7 +173,7 @@ export async function regenerateRecoveryCodes(request: Request, deps: TwoFactorD
   return apiJson({ ...statusPayload(await freshAccount(deps, context.account)), recovery_codes: backupCodes })
 }
 
-export async function disableTwoFactor(request: Request, deps: TwoFactorDeps = defaultTwoFactorDeps()): Promise<Response> {
+export async function disableTwoFactor(request: Request, deps: TwoFactorDeps): Promise<Response> {
   const context = await authenticated(request, deps)
   if (context instanceof Response) return context
   const { input, account } = context

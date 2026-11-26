@@ -1,72 +1,61 @@
-import { and, asc, eq, inArray } from "drizzle-orm"
-import { db } from "@/db"
-import { jsonText } from "@/db/expressions"
-import { asignaturas, carreras, valoresCampo } from "@/db/schema"
+import { type Db, inTransactionAfterCommit } from "../../prisma/db"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { uuidList } from "../../prisma/sql"
 import { phpJsonDecode } from "../configuration/phpValues"
 import { careerDataLocked, subjectProfileTx } from "../configuration/subjectProfileWriteStore"
-import { createTemplateStore } from "../configuration/templateStore"
+import { createTemplateStore } from "../shared/templateStore"
 import { systemNow } from "../shared/clock"
-import { type WriteOptions } from "../notifications/queries"
-import { withAfterCommit } from "../queue/dispatch"
-import { dbTransaction, type TransactionRunner } from "../syllabus/reviewDecisionStore"
-import type { Executor } from "../syllabus/teacherSyllabusQueries"
+import type { WriteOptions } from "../notifications/queries"
+import type { AfterCommit } from "../queue/afterCommit"
 import type { FichaApplyTx, FichaImportDeps, FichaImportStore, FichaReader } from "./fichaImports"
 
-export function fichaReaderOn(executor: Executor): FichaReader {
+export function fichaReader(db: Db): FichaReader {
   return {
-    store: createTemplateStore(executor),
+    store: createTemplateStore(db),
     async activeCareer(careerId) {
-      const [row] = await executor
-        .select({ id: carreras.carreraId, name: carreras.nombreCarrera })
-        .from(carreras)
-        .where(and(eq(carreras.carreraActiva, true), eq(carreras.carreraId, careerId)))
-        .limit(1)
-      return row ?? null
+      const row = await db.carreras.findFirst({ where: { carrera_activa: true, carrera_id: careerId }, select: { carrera_id: true, nombre_carrera: true } })
+      return row ? { id: row.carrera_id, name: row.nombre_carrera } : null
     },
     async subjects(careerId) {
-      const rows = await executor
-        .select({ id: asignaturas.asignaturaId, code: asignaturas.codigoAsignatura, name: asignaturas.nombreAsignatura, cycle: asignaturas.cicloAsignatura })
-        .from(asignaturas)
-        .where(and(eq(asignaturas.carreraId, careerId), eq(asignaturas.asignaturaActiva, true), eq(asignaturas.generaSilaboAsignatura, true)))
-        .orderBy(asc(asignaturas.cicloAsignatura), asc(asignaturas.ordenAsignaturaEnCiclo), asc(asignaturas.codigoAsignatura), asc(asignaturas.asignaturaId))
-      return rows.map((row) => ({ id: row.id, code: row.code, name: row.name, cycle: row.cycle === null ? null : Number(row.cycle) }))
+      const rows = await db.asignaturas.findMany({
+        where: { carrera_id: careerId, asignatura_activa: true, genera_silabo_asignatura: true },
+        select: { asignatura_id: true, codigo_asignatura: true, nombre_asignatura: true, ciclo_asignatura: true },
+        orderBy: [{ ciclo_asignatura: "asc" }, { orden_asignatura_en_ciclo: "asc" }, { codigo_asignatura: "asc" }, { asignatura_id: "asc" }],
+      })
+      return rows.map((row) => ({ id: row.asignatura_id, code: row.codigo_asignatura, name: row.nombre_asignatura, cycle: row.ciclo_asignatura }))
     },
   }
 }
 
-export function fichaImportStoreOn(executor: Executor): FichaImportStore {
+export function fichaImportStore(db: Db): FichaImportStore {
   return {
-    ...fichaReaderOn(executor),
+    ...fichaReader(db),
     async careerActive(careerId) {
-      const [row] = await executor.select({ active: carreras.carreraActiva }).from(carreras).where(eq(carreras.carreraId, careerId)).limit(1)
-      return row?.active === true
+      const row = await db.carreras.findFirst({ where: { carrera_id: careerId }, select: { carrera_activa: true } })
+      return row?.carrera_activa === true
     },
-    careerLocked: (careerId) => careerDataLocked(executor, careerId),
+    careerLocked: (careerId) => careerDataLocked(db, careerId),
     async currentValues(subjectIds, fieldIds) {
       if (subjectIds.length === 0 || fieldIds.length === 0) return []
-      const rows = await executor
-        .select({ subjectId: valoresCampo.asignaturaId, fieldId: valoresCampo.definicionCampoId, value: jsonText(valoresCampo.valorCampo) })
-        .from(valoresCampo)
-        .where(and(inArray(valoresCampo.asignaturaId, subjectIds), inArray(valoresCampo.definicionCampoId, fieldIds)))
-      return rows.map((row) => ({ subjectId: row.subjectId ?? "", fieldId: row.fieldId, value: phpJsonDecode(row.value) }))
+      const rows = await db.$queryRaw<{ subject_id: string | null; field_id: string; value: string | null }[]>`select valores_campo.asignatura_id::text as subject_id,
+          valores_campo.definicion_campo_id::text as field_id, valores_campo.valor_campo::text as value
+        from valores_campo where valores_campo.asignatura_id in (${uuidList(subjectIds)}) and valores_campo.definicion_campo_id in (${uuidList(fieldIds)})`
+      return rows.map((row) => ({ subjectId: row.subject_id ?? "", fieldId: row.field_id, value: phpJsonDecode(row.value) }))
     },
   }
 }
 
-function fichaApplyTx(executor: Executor, afterCommit: Parameters<typeof subjectProfileTx>[1], now: number, options: WriteOptions): FichaApplyTx {
-  const profile = subjectProfileTx(executor, afterCommit, now, options)
+function fichaApplyTx(db: Db, afterCommit: AfterCommit, now: number, options: WriteOptions): FichaApplyTx {
+  const profile = subjectProfileTx(db, afterCommit, now, options)
   return {
-    ...fichaReaderOn(executor),
+    ...fichaReader(db),
     async lockCareer(careerId) {
-      await executor.select().from(carreras).where(eq(carreras.carreraId, careerId)).limit(1).for("update")
+      await db.$queryRaw`select carreras.carrera_id from carreras where carreras.carrera_id = ${careerId}::uuid limit 1 for update`
     },
     careerLocked: profile.careerLocked,
     async storedValue(subjectId, fieldId) {
-      const [row] = await executor
-        .select({ value: jsonText(valoresCampo.valorCampo) })
-        .from(valoresCampo)
-        .where(and(eq(valoresCampo.asignaturaId, subjectId), eq(valoresCampo.definicionCampoId, fieldId)))
-        .limit(1)
+      const [row] = await db.$queryRaw<{ value: string | null }[]>`select valores_campo.valor_campo::text as value from valores_campo
+        where valores_campo.asignatura_id = ${subjectId}::uuid and valores_campo.definicion_campo_id = ${fieldId}::uuid limit 1`
       return row === undefined ? null : phpJsonDecode(row.value)
     },
     saveValue: profile.saveValue,
@@ -74,15 +63,11 @@ function fichaApplyTx(executor: Executor, afterCommit: Parameters<typeof subject
   }
 }
 
-export function fichaImportDepsOn(executor: Executor, transaction: TransactionRunner, options: WriteOptions = {}): Pick<FichaImportDeps, "store" | "now" | "transaction"> {
+export function createFichaImportDeps(prisma: PrismaService, options: WriteOptions = {}): Pick<FichaImportDeps, "store" | "now" | "transaction"> {
   const now = options.now ?? systemNow
   return {
-    store: fichaImportStoreOn(executor),
+    store: fichaImportStore(prisma),
     now,
-    transaction: (work) => withAfterCommit((afterCommit) => transaction((inner) => work(fichaApplyTx(inner, afterCommit, now(), options)))),
+    transaction: (work) => inTransactionAfterCommit(prisma, (tx, afterCommit) => work(fichaApplyTx(tx, afterCommit, now(), options))),
   }
-}
-
-export function createFichaImportDeps(): Pick<FichaImportDeps, "store" | "now" | "transaction"> {
-  return fichaImportDepsOn(db, dbTransaction)
 }

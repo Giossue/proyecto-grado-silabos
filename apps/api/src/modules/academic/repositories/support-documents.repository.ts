@@ -1,33 +1,16 @@
 import { Inject, Injectable } from "@nestjs/common"
 import { PrismaService } from "../../../prisma/prisma.service"
 import type { SupportDocumentRecord, SupportDocumentRepository } from "../../../server/academic/supportDocuments"
-import type { ReadableDocument, StoredObjectInput, SupportDocumentTx, SupportDocumentWriteStore } from "../../../server/academic/supportDocumentWrites"
-import { withAfterCommit } from "../../../server/queue/dispatch"
+import type { ReadableDocument, SupportDocumentTx, SupportDocumentWriteStore } from "../../../server/academic/supportDocumentWrites"
+import { insertStoredObject } from "../../../server/academic/supportDocumentWriteStore"
 import type { Prisma } from "../../../generated/prisma/client"
-import { TRANSACTION_OPTIONS } from "../../../prisma/db"
+import { inTransactionAfterCommit } from "../../../prisma/db"
 import { AcademicStructurePrismaRepository } from "./academic-structure.repository"
 import { epochDate } from "./prisma-values"
 
 type Runner = Prisma.TransactionClient
 
 type DocumentRow = { id: string; title: string; size: string; view: string; uploaded_at: string }
-
-export async function insertStoredObject(runner: Runner, row: StoredObjectInput): Promise<void> {
-  await runner.archivos.create({
-    data: {
-      archivo_id: row.id,
-      disco: row.disk,
-      ruta_archivo: row.path,
-      nombre_archivo: row.name,
-      tipo_archivo: row.mime,
-      tamano_bytes: BigInt(row.size),
-      hash_archivo: row.sha256,
-      categoria: row.classification,
-      subido_por: row.ownerId,
-      almacenado_en: epochDate(row.storedAt),
-    },
-  })
-}
 
 function writeTx(runner: Runner): SupportDocumentTx {
   return {
@@ -110,6 +93,6 @@ export class SupportDocumentsPrismaRepository implements SupportDocumentReposito
   }
 
   transaction<T>(work: (tx: SupportDocumentTx, afterCommit: (callback: () => unknown) => void) => Promise<T>): Promise<T> {
-    return withAfterCommit((afterCommit) => this.prisma.$transaction((runner) => work(writeTx(runner), afterCommit), TRANSACTION_OPTIONS))
+    return inTransactionAfterCommit(this.prisma, (runner, afterCommit) => work(writeTx(runner), afterCommit))
   }
 }

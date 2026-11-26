@@ -1,4 +1,4 @@
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { AppSession } from "../auth/types"
 import { importTemplate, type TemplateSelect } from "../excel/importTemplate"
 import { importKey, phpIntValue, phpIsNumeric, phpLength, PhpMap, ctypeDigit } from "../excel/importKeys"
@@ -7,7 +7,6 @@ import type { ImportRow } from "../excel/spreadsheetReader"
 import { xlsxDownload } from "../excel/workbook"
 import type { PhpArray } from "../http/input"
 import { apiJson } from "../http/responses"
-import { sharedRateLimiter } from "../http/throttle"
 import { settle } from "../syllabus/reviewDecisions"
 import type { CareerContext, CareerWriteTx } from "./careerWrites"
 import { insertCareerSubject } from "./careerWrites"
@@ -15,7 +14,6 @@ import type { CurriculumTx } from "./curriculumWrites"
 import { addRequirement, curriculumMutation } from "./curriculumWrites"
 import type { GovernanceWriteTx } from "./governanceWrites"
 import { CURRICULAR_UNITS, STUDY_MODALITIES } from "./structure"
-import { createStructureImportStore, createStructureImportTransactions } from "./structureImportStore"
 
 export const CAREER_COLUMNS = { facultad: "Facultad", modalidad: "Modalidad", codigo: "Código de carrera", nombre: "Nombre de la carrera", ciclos: "Número de ciclos" }
 
@@ -78,10 +76,6 @@ export type StructureImportTransactions = {
 
 export type StructureImportDeps = ImportDeps & StructureImportTransactions & { store: StructureImportStore }
 
-export function defaultStructureImportDeps(): StructureImportDeps {
-  return { bridge: defaultBridgeDeps(), limiter: sharedRateLimiter(), store: createStructureImportStore(), ...createStructureImportTransactions() }
-}
-
 const forbiddenWith = (message: string) => apiJson({ message }, 403)
 
 function mayImportCareers(session: AppSession): boolean {
@@ -120,7 +114,7 @@ async function templateResponse(headers: string[], selects: TemplateSelect[], no
   return xlsxDownload(await importTemplate(headers, selects, notes, { now: deps.now() }), filename)
 }
 
-export async function careerImportTemplate(request: Request, deps: StructureImportDeps = defaultStructureImportDeps()): Promise<Response> {
+export async function careerImportTemplate(request: Request, deps: StructureImportDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!mayImportCareers(session)) return forbiddenWith(CAREERS_FORBIDDEN)
@@ -128,7 +122,7 @@ export async function careerImportTemplate(request: Request, deps: StructureImpo
   return templateResponse(Object.values(CAREER_COLUMNS), [{ column: 0, options: faculties }, { column: 1, options: STUDY_MODALITIES }], CAREER_NOTES, "plantilla-carreras.xlsx", deps)
 }
 
-export async function curriculumImportTemplate(request: Request, deps: StructureImportDeps = defaultStructureImportDeps()): Promise<Response> {
+export async function curriculumImportTemplate(request: Request, deps: StructureImportDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if ((await curriculumCareer(session, deps)) === null) return forbiddenWith(CURRICULUM_FORBIDDEN)
@@ -181,7 +175,7 @@ async function checkCareers(rows: ImportRow[], deps: StructureImportDeps): Promi
   return { checked, payloads }
 }
 
-export async function importCareers(request: Request, deps: StructureImportDeps = defaultStructureImportDeps()): Promise<Response> {
+export async function importCareers(request: Request, deps: StructureImportDeps): Promise<Response> {
   const ready = await importSession(request, deps, 10)
   if (ready instanceof Response) return ready
   const { session, original, finish } = ready
@@ -308,7 +302,7 @@ async function checkCurriculum(
   return { checked, payloads, existing }
 }
 
-export async function importCurriculum(request: Request, deps: StructureImportDeps = defaultStructureImportDeps()): Promise<Response> {
+export async function importCurriculum(request: Request, deps: StructureImportDeps): Promise<Response> {
   const ready = await importSession(request, deps, 10)
   if (ready instanceof Response) return ready
   const { session, original, finish } = ready

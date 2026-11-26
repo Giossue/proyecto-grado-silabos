@@ -27,7 +27,7 @@ import {
 } from "./templatePresentation"
 import { profileTemplates, type ProfileContext } from "./subjectProfileFields"
 import { contentForField, type DraftSection } from "./templateDraft"
-import type { LiveField, StoredValue, TemplateStore } from "./templateStore"
+import type { LiveField, StoredValue, TemplateStore } from "../shared/templateStore"
 
 export const REHEARSAL_UNAVAILABLE = "No se pudo calcular qué sílabos cambian ahora."
 export const PREVIEW_UNAVAILABLE = "No se pudo armar la vista previa ahora. Intente de nuevo."

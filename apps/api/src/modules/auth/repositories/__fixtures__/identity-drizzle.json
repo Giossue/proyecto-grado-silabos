@@ -1,0 +1,324 @@
+{
+ "findUser": {
+  "queries": [
+   {
+    "sql": "select u.usuario_id, coalesce(c.password, u.contrasena) as contrasena, u.usuario_activo, u.correo_verificado_en::text as correo_verificado_en, u.preferencias_correo_usuario from usuarios u left join cuentas_usuario c on c.user_id = u.usuario_id and c.provider_id = 'credential' where u.usuario_id = $1 limit 1",
+    "params": [
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   }
+  ],
+  "expected": {
+   "id": "0193a3c2-1111-7000-8000-000000000001",
+   "passwordHash": "$2y$12$hash",
+   "active": true,
+   "emailVerifiedAt": "2026-01-01 00:00:00+00",
+   "emailPreferences": {
+    "a": true
+   }
+  }
+ },
+ "findUserMissing": {
+  "queries": [
+   {
+    "sql": "select u.usuario_id, coalesce(c.password, u.contrasena) as contrasena, u.usuario_activo, u.correo_verificado_en::text as correo_verificado_en, u.preferencias_correo_usuario from usuarios u left join cuentas_usuario c on c.user_id = u.usuario_id and c.provider_id = 'credential' where u.usuario_id = $1 limit 1",
+    "params": [
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   }
+  ],
+  "expected": null
+ },
+ "effectiveRoleAssignments": {
+  "queries": [
+   {
+    "sql": "select a.asignacion_rol_id, a.usuario_id, a.rol, a.carrera_id, case when c.carrera_id is null then null when (select count(*) from carreras same where same.nombre_carrera = c.nombre_carrera) > 1 then c.nombre_carrera || ' · ' || c.codigo_carrera else c.nombre_carrera end as career_label from asignaciones_rol a left join carreras c on c.carrera_id = a.carrera_id where a.usuario_id = $1 and a.asignacion_rol_activa = true order by a.asignado_en asc, a.asignacion_rol_id asc",
+    "params": [
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   }
+  ],
+  "expected": [
+   {
+    "id": "r-1",
+    "userId": "0193a3c2-1111-7000-8000-000000000001",
+    "role": "docente",
+    "careerId": "c-1",
+    "careerLabel": "Software · SW"
+   }
+  ]
+ },
+ "profile": {
+  "queries": [
+   {
+    "sql": "select u.nombre_usuario, u.correo_electronico, u.formacion_experiencia_usuario, u.preferencias_accesibilidad_usuario, d.id is not null as two_factor_secret, d.id is not null and u.dos_factores_confirmado_en is not null as two_factor_confirmed from usuarios u left join dos_factores_usuario d on d.user_id = u.usuario_id where u.usuario_id = $1::uuid",
+    "params": [
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   }
+  ],
+  "expected": {
+   "name": "ANA",
+   "email": "ana@silabos.test",
+   "formation": null,
+   "accessibility": {
+    "text_size": "130"
+   },
+   "twoFactorSecret": true,
+   "twoFactorConfirmed": false
+  }
+ },
+ "profileMissing": {
+  "queries": [
+   {
+    "sql": "select u.nombre_usuario, u.correo_electronico, u.formacion_experiencia_usuario, u.preferencias_accesibilidad_usuario, d.id is not null as two_factor_secret, d.id is not null and u.dos_factores_confirmado_en is not null as two_factor_confirmed from usuarios u left join dos_factores_usuario d on d.user_id = u.usuario_id where u.usuario_id = $1::uuid",
+    "params": [
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   }
+  ],
+  "expected": null
+ },
+ "sessions": {
+  "queries": [
+   {
+    "sql": "select id, ip_address, user_agent, extract(epoch from updated_at)::bigint as last_activity from sesiones_usuario where user_id = $1::uuid and expires_at > now() order by updated_at desc, id asc",
+    "params": [
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   }
+  ],
+  "expected": [
+   {
+    "id": "s-1",
+    "ip": "203.0.113.5",
+    "agent": "Firefox/1",
+    "lastActivity": 1800000000
+   }
+  ]
+ },
+ "findActiveUserByEmail": {
+  "queries": [
+   {
+    "sql": "select usuario_id from usuarios where correo_electronico = $1 and usuario_activo = true limit 1",
+    "params": [
+     "ana@silabos.test"
+    ]
+   }
+  ],
+  "expected": {
+   "id": "0193a3c2-1111-7000-8000-000000000001"
+  }
+ },
+ "mirrorPassword": {
+  "queries": [
+   {
+    "sql": "update usuarios set contrasena = c.password from cuentas_usuario c where usuarios.usuario_id = $1::uuid and c.user_id = usuarios.usuario_id and c.provider_id = $2 and c.password is not null",
+    "params": [
+     "0193a3c2-1111-7000-8000-000000000001",
+     "credential"
+    ]
+   }
+  ],
+  "expected": "__undefined__"
+ },
+ "resetToken": {
+  "queries": [
+   {
+    "sql": "select token, extract(epoch from created_at)::bigint as created from restablecimientos_contrasena where email = $1 limit 1",
+    "params": [
+     "ana@silabos.test"
+    ]
+   }
+  ],
+  "expected": {
+   "token": "$2y$hash",
+   "createdAt": 1799999000
+  }
+ },
+ "userByEmail": {
+  "queries": [
+   {
+    "sql": "select usuario_id, correo_electronico from usuarios where correo_electronico = $1 limit 1",
+    "params": [
+     "ana@silabos.test"
+    ]
+   }
+  ],
+  "expected": {
+   "id": "0193a3c2-1111-7000-8000-000000000001",
+   "email": "ana@silabos.test"
+  }
+ },
+ "lockInvitation": {
+  "queries": [
+   {
+    "sql": "select invitacion_activacion_id, usuario_id, hash_activacion, extract(epoch from expira_en)::bigint as expires, extract(epoch from usada_en)::bigint as used, extract(epoch from invalidada_en)::bigint as invalidated from invitaciones_activacion where hash_activacion = $1 limit 1 for update",
+    "params": [
+     "abc"
+    ]
+   }
+  ],
+  "expected": {
+   "id": "i-1",
+   "userId": "0193a3c2-1111-7000-8000-000000000001",
+   "hash": "abc",
+   "expiresAt": 1800003600,
+   "usedAt": null,
+   "invalidatedAt": 1799990000
+  }
+ },
+ "lockUser": {
+  "queries": [
+   {
+    "sql": "select usuario_id, usuario_activo, correo_verificado_en is not null as verified from usuarios where usuario_id = $1::uuid limit 1 for update",
+    "params": [
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   }
+  ],
+  "expected": {
+   "id": "0193a3c2-1111-7000-8000-000000000001",
+   "active": true,
+   "verified": false
+  }
+ },
+ "deleteResetTokens": {
+  "queries": [
+   {
+    "sql": "delete from restablecimientos_contrasena where email = $1",
+    "params": [
+     "ana@silabos.test"
+    ]
+   }
+  ],
+  "expected": "__undefined__"
+ },
+ "insertResetToken": {
+  "queries": [
+   {
+    "sql": "insert into restablecimientos_contrasena (email, token, created_at) values ($1, $2, to_timestamp($3))",
+    "params": [
+     "ana@silabos.test",
+     "$2y$hash",
+     1800000000
+    ]
+   }
+  ],
+  "expected": "__undefined__"
+ },
+ "setPassword": {
+  "queries": [
+   {
+    "sql": "insert into cuentas_usuario (id, account_id, provider_id, user_id, password) values ($1, $2, $3, $4::uuid, $5) on conflict (provider_id, account_id) do update set password = excluded.password, updated_at = now()",
+    "params": [
+     "00000000-0000-4000-8000-00000000000a",
+     "0193a3c2-1111-7000-8000-000000000001",
+     "credential",
+     "0193a3c2-1111-7000-8000-000000000001",
+     "$2y$new"
+    ]
+   },
+   {
+    "sql": "update usuarios set contrasena = $1 where usuario_id = $2::uuid",
+    "params": [
+     "$2y$new",
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   }
+  ],
+  "expected": "__undefined__"
+ },
+ "deleteSessions": {
+  "queries": [
+   {
+    "sql": "delete from sesiones_usuario where user_id = $1::uuid",
+    "params": [
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   }
+  ],
+  "expected": 3
+ },
+ "activate": {
+  "queries": [
+   {
+    "sql": "insert into cuentas_usuario (id, account_id, provider_id, user_id, password) values ($1, $2, $3, $4::uuid, $5) on conflict (provider_id, account_id) do update set password = excluded.password, updated_at = now()",
+    "params": [
+     "00000000-0000-4000-8000-00000000000a",
+     "0193a3c2-1111-7000-8000-000000000001",
+     "credential",
+     "0193a3c2-1111-7000-8000-000000000001",
+     "$2y$new"
+    ]
+   },
+   {
+    "sql": "update usuarios set contrasena = $1 where usuario_id = $2::uuid",
+    "params": [
+     "$2y$new",
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   },
+   {
+    "sql": "update usuarios set correo_verificado_en = to_timestamp($1) where usuario_id = $2::uuid",
+    "params": [
+     1800000000,
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   }
+  ],
+  "expected": "__undefined__"
+ },
+ "useInvitation": {
+  "queries": [
+   {
+    "sql": "update invitaciones_activacion set usada_en = to_timestamp($1) where invitacion_activacion_id = $2::uuid",
+    "params": [
+     1800000000,
+     "i-1"
+    ]
+   }
+  ],
+  "expected": "__undefined__"
+ },
+ "invalidateOtherInvitations": {
+  "queries": [
+   {
+    "sql": "update invitaciones_activacion set invalidada_en = to_timestamp($1) where usuario_id = $2::uuid and usada_en is null and invalidada_en is null and invitacion_activacion_id <> $3::uuid",
+    "params": [
+     1800000000,
+     "0193a3c2-1111-7000-8000-000000000001",
+     "i-1"
+    ]
+   }
+  ],
+  "expected": "__undefined__"
+ },
+ "twoFactorAccount": {
+  "queries": [
+   {
+    "sql": "select u.usuario_id, u.correo_electronico, d.id is not null as has_secret, u.dos_factores_confirmado_en is not null as confirmed from usuarios u left join dos_factores_usuario d on d.user_id = u.usuario_id where u.usuario_id = $1::uuid limit 1",
+    "params": [
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   }
+  ],
+  "expected": {
+   "id": "0193a3c2-1111-7000-8000-000000000001",
+   "email": "ana@silabos.test",
+   "pending": true,
+   "confirmed": true
+  }
+ },
+ "clearLegacy": {
+  "queries": [
+   {
+    "sql": "update usuarios set secreto_dos_factores = null, codigos_recuperacion_dos_factores = null where usuario_id = $1::uuid and (secreto_dos_factores is not null or codigos_recuperacion_dos_factores is not null)",
+    "params": [
+     "0193a3c2-1111-7000-8000-000000000001"
+    ]
+   }
+  ],
+  "expected": "__undefined__"
+ }
+}

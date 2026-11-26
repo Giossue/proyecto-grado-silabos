@@ -1,5 +1,4 @@
 import { MODELS } from "../http/models"
-import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { requestInput, type PhpArray } from "../http/input"
 import { apiJson, validationError } from "../http/responses"
@@ -9,7 +8,6 @@ import { validateSchema } from "../http/schemaValidation"
 import { requestBoolean } from "../syllabus/inProgressWorkHelpers"
 import { Missing, settle } from "../syllabus/reviewDecisions"
 import { careerSession, invalid, type CareerContext } from "./careerWrites"
-import { createCurriculumDeps } from "./careerWriteStore"
 import { phpIntCast } from "./governanceWrites"
 import { CONVOCATION_LOCK_REASON } from "./structure"
 import { unmatchedRoute, routeAllows } from "../http/router"
@@ -43,10 +41,6 @@ export type CurriculumDeps = {
   transaction<T>(work: (tx: CurriculumTx) => Promise<T>): Promise<T>
 }
 
-export function defaultCurriculumDeps(): CurriculumDeps {
-  return { bridge: defaultBridgeDeps(), ...createCurriculumDeps() }
-}
-
 type Mutation = (tx: CurriculumTx, career: CurriculumCareer, context: CareerContext, input: PhpArray) => Promise<string>
 
 async function curriculumChange(
@@ -73,7 +67,7 @@ function confirmedSync(tx: CurriculumTx, context: CareerContext, input: PhpArray
   return tx.sync(requestBoolean(input.confirm_purge), context.careerId)
 }
 
-export function updateCurriculumConfiguration(request: Request, curriculumId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
+export function updateCurriculumConfiguration(request: Request, curriculumId: string, deps: CurriculumDeps): Promise<Response> {
   return curriculumChange(
     request,
     [curriculumId],
@@ -134,7 +128,7 @@ export async function curriculumMutation(tx: CurriculumTx, context: CareerContex
   })
 }
 
-export function createSubjectRequirement(request: Request, curriculumId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
+export function createSubjectRequirement(request: Request, curriculumId: string, deps: CurriculumDeps): Promise<Response> {
   return curriculumChange(
     request,
     [curriculumId],
@@ -144,7 +138,7 @@ export function createSubjectRequirement(request: Request, curriculumId: string,
   )
 }
 
-export function deleteSubjectRequirement(request: Request, curriculumId: string, requirementId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
+export function deleteSubjectRequirement(request: Request, curriculumId: string, requirementId: string, deps: CurriculumDeps): Promise<Response> {
   return curriculumChange(request, [curriculumId, requirementId], deps, null, async (tx, career, context, input) => {
     const requirement = await tx.lockRequirement(requirementId, career.id)
     if (requirement === null) throw new Missing(MODELS.requirement, requirementId)
@@ -154,7 +148,7 @@ export function deleteSubjectRequirement(request: Request, curriculumId: string,
   })
 }
 
-export function deleteCurriculumSubject(request: Request, curriculumId: string, subjectId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
+export function deleteCurriculumSubject(request: Request, curriculumId: string, subjectId: string, deps: CurriculumDeps): Promise<Response> {
   return curriculumChange(request, [curriculumId, subjectId], deps, null, async (tx, career, context, input) => {
     const subject = await tx.lockSubject(subjectId, career.id)
     if (subject === null) throw new Missing(MODELS.subject, subjectId)
@@ -174,7 +168,7 @@ export function deleteCurriculumSubject(request: Request, curriculumId: string, 
   })
 }
 
-export function updateSubjectLayout(request: Request, curriculumId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
+export function updateSubjectLayout(request: Request, curriculumId: string, deps: CurriculumDeps): Promise<Response> {
   return curriculumChange(
     request,
     [curriculumId],

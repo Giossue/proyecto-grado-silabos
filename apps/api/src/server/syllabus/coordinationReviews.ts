@@ -1,3 +1,4 @@
+import type { PrismaService } from "../../prisma/prisma.service"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
@@ -61,8 +62,8 @@ export type CoordinationReviewDeps = { bridge: BridgeDeps; reviews: Coordination
 const PER_PAGE = 20
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
-export function defaultCoordinationReviewDeps(): CoordinationReviewDeps {
-  return { bridge: defaultBridgeDeps(), reviews: createCoordinationReviewRepository() }
+export function defaultCoordinationReviewDeps(prisma: PrismaService): CoordinationReviewDeps {
+  return { bridge: defaultBridgeDeps(), reviews: createCoordinationReviewRepository(prisma) }
 }
 
 export function reviewStage(row: { approved: boolean; verified: boolean }): string {
@@ -87,7 +88,7 @@ function currentPage(request: Request): number {
   return resolveCurrentPage(queryParams(new URL(request.url)).get("page") ?? null)
 }
 
-export async function coordinationReviews(request: Request, deps: CoordinationReviewDeps = defaultCoordinationReviewDeps()): Promise<Response> {
+export async function coordinationReviews(request: Request, deps: CoordinationReviewDeps): Promise<Response> {
   const session = await coordinator(request, deps)
   if (session instanceof Response) return session
   return coordinationReviewsFor(request, session, deps)
@@ -119,7 +120,7 @@ export async function coordinationReviewsFor(request: Request, authenticated: Ap
   return apiJson({ filters: { search }, syllabi: paginate(request, data, total, page) })
 }
 
-export async function coordinationHistory(request: Request, deps: CoordinationReviewDeps = defaultCoordinationReviewDeps()): Promise<Response> {
+export async function coordinationHistory(request: Request, deps: CoordinationReviewDeps): Promise<Response> {
   const session = await coordinator(request, deps)
   if (session instanceof Response) return session
   return coordinationHistoryFor(request, session, deps)
@@ -161,7 +162,7 @@ export function comparisonBinder(beforeId: string, afterId: string, deps: Pick<C
   }
 }
 
-export async function compareRevisions(request: Request, beforeId: string, afterId: string, deps: CoordinationReviewDeps = defaultCoordinationReviewDeps()): Promise<Response> {
+export async function compareRevisions(request: Request, beforeId: string, afterId: string, deps: CoordinationReviewDeps): Promise<Response> {
   const bound = await requireBound(request, comparisonBinder(beforeId, afterId, deps), deps.bridge)
   if (bound instanceof Response) return bound
   return compareRevisionsFor(bound.session, bound.bound, deps)

@@ -1,3 +1,4 @@
+import type { PrismaService } from "../../prisma/prisma.service"
 import { carbonInstant, institutionDateOfValue } from "@silabos/shared/lib/phpDates"
 import { HttpFailure, Missing } from "../http/failures"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
@@ -10,7 +11,7 @@ import { mergeErrors, validateSchema } from "../http/schemaValidation"
 import { list, phpString } from "../configuration/phpValues"
 import { normalizeFieldDocument, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
-import { createTemplateStore, type TemplateStore } from "../configuration/templateStore"
+import { createTemplateStore, type TemplateStore } from "../shared/templateStore"
 import { institutionToday } from "../shared/clock"
 import { hasRole, PROCESS_OPEN, PROCESS_PAUSED, ROLE_ADMINISTRATOR } from "./policy"
 import { TEMPLATE_NAME } from "./convocations"
@@ -60,8 +61,8 @@ const TEMPLATE_NOT_READY = "La plantilla no está lista para usarse. Complétela
 const IN_PROGRESS = [PROCESS_OPEN, PROCESS_PAUSED]
 const EMPTY_COUNTS = ["sin_iniciar", "borrador", "en_revision", "correccion_solicitada", "aprobado"]
 
-export function defaultProcessDeps(): ProcessDeps {
-  return { bridge: defaultBridgeDeps(), processes: createProcessRepository(), templates: createTemplateStore(), today: institutionToday, now: () => Math.floor(Date.now() / 1000) }
+export function defaultProcessDeps(prisma: PrismaService): ProcessDeps {
+  return { bridge: defaultBridgeDeps(), processes: createProcessRepository(prisma), templates: createTemplateStore(prisma), today: institutionToday, now: () => Math.floor(Date.now() / 1000) }
 }
 
 
@@ -116,7 +117,7 @@ async function administrator(request: Request, deps: ProcessDeps): Promise<AppSe
   return hasRole(session, ROLE_ADMINISTRATOR) ? session : forbidden()
 }
 
-export async function syllabusProcesses(request: Request, deps: ProcessDeps = defaultProcessDeps()): Promise<Response> {
+export async function syllabusProcesses(request: Request, deps: ProcessDeps): Promise<Response> {
   const session = await administrator(request, deps)
   if (session instanceof Response) return session
   return processList(deps)
@@ -178,7 +179,7 @@ async function boundProcess(request: Request, id: string, deps: ProcessDeps): Pr
   return { session, process }
 }
 
-export async function processImpact(request: Request, id: string, deps: ProcessDeps = defaultProcessDeps()): Promise<Response> {
+export async function processImpact(request: Request, id: string, deps: ProcessDeps): Promise<Response> {
   const bound = await boundProcess(request, id, deps)
   if (bound instanceof Response) return bound
   if (!hasRole(bound.session, ROLE_ADMINISTRATOR)) return forbidden()
@@ -193,7 +194,7 @@ export async function processImpactOf(process: ProcessRow, deps: ProcessCoreDeps
 
 class StateChanged extends Error {}
 
-export async function pauseProcess(request: Request, id: string, deps: ProcessDeps = defaultProcessDeps()): Promise<Response> {
+export async function pauseProcess(request: Request, id: string, deps: ProcessDeps): Promise<Response> {
   const original = request.clone()
   const bound = await boundProcess(original, id, deps)
   if (bound instanceof Response) return bound
@@ -309,7 +310,7 @@ async function assertInstitutionReady(deps: ProcessCoreDeps): Promise<SyllabusTe
   return template
 }
 
-export async function createProcess(request: Request, deps: ProcessDeps = defaultProcessDeps()): Promise<Response> {
+export async function createProcess(request: Request, deps: ProcessDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   return createProcessFor(session, await requestInput(request), deps)

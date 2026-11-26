@@ -1,4 +1,4 @@
-import { requireSession, defaultBridgeDeps } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession, SessionRequirements } from "../auth/types"
 import { isPhpArray, phpQuery, type PhpArray, type PhpValue } from "../http/input"
 import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
@@ -7,7 +7,6 @@ import { jsonError, apiJson, validationError } from "../http/responses"
 import { validateSchema } from "../http/schemaValidation"
 import { libraryReviewFiltersSchema, REVIEW_OUTCOMES, REVIEW_STATES } from "@silabos/shared/schemas/library"
 import { LIBRARY_SORTS, listSortOf, type LibrarySort, type ListSort } from "@silabos/shared/schemas/listSort"
-import { createLibraryReviewRepository } from "./reviewQueries"
 
 export { REVIEW_OUTCOMES, REVIEW_STATES }
 
@@ -60,10 +59,6 @@ const UUID = /^[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
 class QueryFailed extends Error {}
-
-export function defaultLibraryReviewDeps(): LibraryReviewDeps {
-  return { bridge: defaultBridgeDeps(), reviews: createLibraryReviewRepository() }
-}
 
 export type FilterTable = "facultades" | "periodos_academicos"
 
@@ -153,13 +148,13 @@ export async function historyListing(reviews: LibraryReviewRepository, links: Li
   return { ...result, periods: await reviews.pastPeriods() }
 }
 
-export async function libraryReviews(request: Request, deps: LibraryReviewDeps = defaultLibraryReviewDeps()): Promise<Response> {
+export async function libraryReviews(request: Request, deps: LibraryReviewDeps): Promise<Response> {
   const authorized = await authorizeListing(request, deps)
   if (authorized instanceof Response) return authorized
   return apiJson(await reviewsListing(deps.reviews, listingLinks(request), authorized.input))
 }
 
-export async function libraryHistory(request: Request, deps: LibraryReviewDeps = defaultLibraryReviewDeps()): Promise<Response> {
+export async function libraryHistory(request: Request, deps: LibraryReviewDeps): Promise<Response> {
   const authorized = await authorizeListing(request, deps)
   if (authorized instanceof Response) return authorized
   return apiJson(await historyListing(deps.reviews, listingLinks(request), authorized.session, authorized.input))

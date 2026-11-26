@@ -9,7 +9,6 @@ import { validateSchema } from "../http/schemaValidation"
 import { phpBoolean } from "./accountRules"
 import { issueInvitation, revokeSessions, updateManagedUserProfile, updateTeacherFormation, type Accessibility, type Account } from "./accounts"
 import {
-  defaultIdentityWriteDeps,
   isAdministrator,
   passwordRecoveryThrottle,
   perform,
@@ -27,7 +26,7 @@ async function answerSession(deps: IdentityWriteDeps, session: AppSession, origi
   return apiJson(payload)
 }
 
-export async function updateProfile(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function updateProfile(request: Request, deps: IdentityWriteDeps): Promise<Response> {
   const original = request.clone()
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
@@ -42,7 +41,7 @@ export async function updateProfile(request: Request, deps: IdentityWriteDeps = 
   return answerSession(deps, session, original)
 }
 
-export async function updateAccessibility(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function updateAccessibility(request: Request, deps: IdentityWriteDeps): Promise<Response> {
   const original = request.clone()
   const session = await requireSession(request, { verified: true, activeRole: "optional" }, deps.bridge)
   if (session instanceof Response) return session
@@ -60,7 +59,7 @@ export async function updateAccessibility(request: Request, deps: IdentityWriteD
   return answerSession(deps, session, original, preferences)
 }
 
-export async function updateFormation(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function updateFormation(request: Request, deps: IdentityWriteDeps): Promise<Response> {
   const original = request.clone()
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
@@ -75,7 +74,7 @@ export async function updateFormation(request: Request, deps: IdentityWriteDeps 
 
 const RESEND_MESSAGE = "Si su cuenta aún no estaba activada, se envió un enlace de activación."
 
-export async function resendOwnActivation(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function resendOwnActivation(request: Request, deps: IdentityWriteDeps): Promise<Response> {
   const original = request.clone()
   let gate: Throttle | null = null
   const session = await requireSession(
@@ -100,7 +99,7 @@ export async function resendOwnActivation(request: Request, deps: IdentityWriteD
   return finish(apiJson({ message: RESEND_MESSAGE }, 202))
 }
 
-export async function destroySession(request: Request, id: string, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function destroySession(request: Request, id: string, deps: IdentityWriteDeps): Promise<Response> {
   const session = await requireSession(request, {}, deps.bridge)
   if (session instanceof Response) return session
   if (session.session.id === id) return jsonError(422, "La sesión actual se cierra desde la opción Cerrar sesión.")
@@ -131,7 +130,7 @@ const closedMessage = (closed: number) => ({
   closed_sessions: closed,
 })
 
-export async function destroyOtherSessions(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+export async function destroyOtherSessions(request: Request, deps: IdentityWriteDeps): Promise<Response> {
   const session = await requireSession(request, {}, deps.bridge)
   if (session instanceof Response) return session
   const errors = await confirmCurrentPassword(await requestInput(request), session.user, deps)

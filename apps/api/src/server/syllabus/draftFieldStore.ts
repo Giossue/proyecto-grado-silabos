@@ -1,113 +1,92 @@
-import { and, eq, exists, sql } from "drizzle-orm"
-import { db } from "@/db"
-import { fromEpoch, hasRows, jsonbValue, jsonText } from "@/db/expressions"
-import {
-  camposPlantilla,
-  convocatoriasCarreras,
-  convocatoriasUniversidad,
-  definicionesCampo,
-  docentesVigentesSilabo,
-  enviosBiblioteca,
-  paralelos,
-  revisionesSilabo,
-  silabos,
-  usuarios,
-  valoresCampo,
-} from "@/db/schema"
-import { institutionDateSql } from "../http/sql"
+import { Prisma } from "../../generated/prisma/client"
+import { inTransaction } from "../../prisma/db"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { fromEpoch, hasRows, institutionDateSql, jsonbValue, jsonText } from "../../prisma/sql"
 import { phpShape } from "../configuration/phpValues"
 import { phpJsonDecode } from "../configuration/phpValues"
-import { createTemplateStore } from "../configuration/templateStore"
+import { createTemplateStore } from "../shared/templateStore"
 import type { DraftFieldRecord, DraftFieldStore, DraftFieldTx, DraftSyllabus } from "./draftField"
 import type { IdentificationSource } from "./identificationCard"
 import { currentTeacherSql, SYLLABUS_EXISTS, writtenBySql } from "./syllabusSql"
-import type { Executor } from "./teacherSyllabusQueries"
+import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export async function syllabusFacts(executor: Executor, id: string, userId: string): Promise<DraftSyllabus | null> {
-  const [row] = await executor
-    .select({
-      id: silabos.silaboId,
-      state: silabos.estadoSilabo,
-      careerId: convocatoriasCarreras.carreraId,
-      convocationState: convocatoriasCarreras.estadoConvocatoriaCarrera,
-      processState: convocatoriasUniversidad.estadoConvocatoriaUniversidad,
-      dueOn: sql<string>`${institutionDateSql(sql`${convocatoriasUniversidad.fechaEntrega}`)}`,
-      currentTeacher: sql<boolean>`${currentTeacherSql(userId)}`,
-      writtenByUser: sql<boolean>`${writtenBySql(userId)}`,
-      hasLibrarySubmission: sql<boolean>`${exists(
-        executor
-          .select({ id: enviosBiblioteca.envioBibliotecaId })
-          .from(enviosBiblioteca)
-          .innerJoin(revisionesSilabo, eq(revisionesSilabo.revisionSilaboId, enviosBiblioteca.revisionSilaboId))
-          .where(eq(revisionesSilabo.silaboId, silabos.silaboId)),
-      )}`,
-      subjectId: paralelos.asignaturaId,
-    })
-    .from(silabos)
-    .innerJoin(convocatoriasCarreras, eq(convocatoriasCarreras.convocatoriaCarreraId, silabos.convocatoriaCarreraId))
-    .innerJoin(convocatoriasUniversidad, eq(convocatoriasUniversidad.convocatoriaUniversidadId, convocatoriasCarreras.convocatoriaUniversidadId))
-    .innerJoin(paralelos, eq(paralelos.paraleloId, silabos.paraleloId))
-    .where(eq(silabos.silaboId, id))
-    .limit(1)
+  const [row] = await rowsOf<DraftSyllabus>(
+    executor,
+    Prisma.sql`select silabos.silabo_id as id, silabos.estado_silabo as state, convocatorias_carreras.carrera_id as "careerId",
+        convocatorias_carreras.estado_convocatoria_carrera as "convocationState", convocatorias_universidad.estado_convocatoria_universidad as "processState",
+        ${institutionDateSql(Prisma.raw("convocatorias_universidad.fecha_entrega"))} as "dueOn",
+        ${currentTeacherSql(userId)} as "currentTeacher", ${writtenBySql(userId)} as "writtenByUser",
+        exists (select envios_biblioteca.envio_biblioteca_id from envios_biblioteca
+          inner join revisiones_silabo on revisiones_silabo.revision_silabo_id = envios_biblioteca.revision_silabo_id
+          where revisiones_silabo.silabo_id = silabos.silabo_id) as "hasLibrarySubmission",
+        paralelos.asignatura_id as "subjectId"
+      from silabos
+        inner join convocatorias_carreras on convocatorias_carreras.convocatoria_carrera_id = silabos.convocatoria_carrera_id
+        inner join convocatorias_universidad on convocatorias_universidad.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id
+        inner join paralelos on paralelos.paralelo_id = silabos.paralelo_id
+      where silabos.silabo_id = ${id}::uuid limit 1`,
+  )
   return row ?? null
 }
 
 export async function identificationSource(executor: Executor, syllabusId: string): Promise<IdentificationSource> {
-  const [syllabus] = await executor
-    .select({ context: jsonText(silabos.datosAcademicosSilabo), code: paralelos.codigoParalelo, shift: paralelos.jornadaParalelo })
-    .from(silabos)
-    .leftJoin(paralelos, eq(paralelos.paraleloId, silabos.paraleloId))
-    .where(eq(silabos.silaboId, syllabusId))
-    .limit(1)
-  const teachers = await executor
-    .select({ name: usuarios.nombreUsuario, email: usuarios.correoElectronico, formation: usuarios.formacionExperienciaUsuario })
-    .from(usuarios)
-    .innerJoin(docentesVigentesSilabo, eq(usuarios.usuarioId, docentesVigentesSilabo.usuarioId))
-    .where(eq(docentesVigentesSilabo.silaboId, syllabusId))
+  const [syllabus] = await rowsOf<{ context: string | null; code: string | null; shift: string | null }>(
+    executor,
+    Prisma.sql`select ${jsonText(Prisma.raw("silabos.datos_academicos_silabo"))} as context, paralelos.codigo_paralelo as code, paralelos.jornada_paralelo as shift
+      from silabos left join paralelos on paralelos.paralelo_id = silabos.paralelo_id
+      where silabos.silabo_id = ${syllabusId}::uuid limit 1`,
+  )
+  const teachers = await rowsOf<{ name: string; email: string; formation: string | null }>(
+    executor,
+    Prisma.sql`select usuarios.nombre_usuario as name, usuarios.correo_electronico as email, usuarios.formacion_experiencia_usuario as formation
+      from usuarios inner join docentes_vigentes_silabo on usuarios.usuario_id = docentes_vigentes_silabo.usuario_id
+      where docentes_vigentes_silabo.silabo_id = ${syllabusId}::uuid`,
+  )
   return { context: phpJsonDecode(syllabus?.context ?? "[]"), parallelCode: syllabus?.code ?? null, parallelShift: syllabus?.shift ?? null, teachers }
 }
 
-function syllabusValue(syllabusId: string, fieldId: string) {
-  return and(eq(valoresCampo.silaboId, syllabusId), eq(valoresCampo.definicionCampoId, fieldId))
+function syllabusValue(syllabusId: string, fieldId: string): Prisma.Sql {
+  return Prisma.sql`valores_campo.silabo_id = ${syllabusId}::uuid and valores_campo.definicion_campo_id = ${fieldId}::uuid`
 }
 
 function draftTx(executor: Executor): DraftFieldTx {
   return {
     async lockSyllabus(id) {
-      const [row] = await executor
-        .select({
-          id: silabos.silaboId,
-          state: silabos.estadoSilabo,
-          version: silabos.versionBorrador,
-          subjectId: sql<string>`(${executor.select({ id: paralelos.asignaturaId }).from(paralelos).where(eq(paralelos.paraleloId, silabos.paraleloId))})`,
-        })
-        .from(silabos)
-        .where(and(eq(silabos.silaboId, id), SYLLABUS_EXISTS))
-        .limit(1)
-        .for("update")
+      const [row] = await rowsOf<{ id: string; state: string; version: number; subjectId: string }>(
+        executor,
+        Prisma.sql`select silabos.silabo_id as id, silabos.estado_silabo as state, silabos.version_borrador as version,
+            (select paralelos.asignatura_id from paralelos where paralelos.paralelo_id = silabos.paralelo_id) as "subjectId"
+          from silabos where silabos.silabo_id = ${id}::uuid and ${SYLLABUS_EXISTS} limit 1 for update`,
+      )
       return row ? { id: row.id, state: row.state, version: Number(row.version), subjectId: row.subjectId } : null
     },
     templateStore: createTemplateStore(executor),
     async values(syllabusId) {
-      const rows = await executor
-        .select({ fieldId: valoresCampo.definicionCampoId, value: jsonText(valoresCampo.valorCampo) })
-        .from(valoresCampo)
-        .where(eq(valoresCampo.silaboId, syllabusId))
+      const rows = await rowsOf<{ fieldId: string; value: string | null }>(
+        executor,
+        Prisma.sql`select valores_campo.definicion_campo_id as "fieldId", ${jsonText(Prisma.raw("valores_campo.valor_campo"))} as value
+          from valores_campo where valores_campo.silabo_id = ${syllabusId}::uuid`,
+      )
       return new Map(rows.map((row) => [row.fieldId, phpJsonDecode(row.value)]))
     },
     valueExists: (syllabusId, fieldId) =>
-      hasRows(executor.select({ id: valoresCampo.valorCampoId }).from(valoresCampo).where(syllabusValue(syllabusId, fieldId)).limit(1)),
+      hasRows(rowsOf(executor, Prisma.sql`select valores_campo.valor_campo_id as id from valores_campo where ${syllabusValue(syllabusId, fieldId)} limit 1`)),
     async saveValue(syllabusId, fieldId, document, newId) {
       const value = jsonbValue(JSON.stringify(phpShape(document)))
-      const [existing] = await executor.select({ id: valoresCampo.valorCampoId }).from(valoresCampo).where(syllabusValue(syllabusId, fieldId)).limit(1)
+      const [existing] = await rowsOf<{ id: string }>(
+        executor,
+        Prisma.sql`select valores_campo.valor_campo_id as id from valores_campo where ${syllabusValue(syllabusId, fieldId)} limit 1`,
+      )
       if (existing) {
-        await executor.update(valoresCampo).set({ valorCampo: value }).where(eq(valoresCampo.valorCampoId, existing.id))
+        await executor.$executeRaw`update valores_campo set valor_campo = ${value} where valores_campo.valor_campo_id = ${existing.id}::uuid`
         return
       }
-      await executor.insert(valoresCampo).values({ silaboId: syllabusId, definicionCampoId: fieldId, valorCampo: value, valorCampoId: newId })
+      await executor.$executeRaw`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
+        values (${newId}::uuid, ${syllabusId}::uuid, ${fieldId}::uuid, ${value})`
     },
     async saveDraft(syllabusId, version, savedAt) {
-      await executor.update(silabos).set({ versionBorrador: version, guardadoEn: fromEpoch(savedAt) }).where(eq(silabos.silaboId, syllabusId))
+      await executor.$executeRaw`update silabos set version_borrador = ${version}, guardado_en = ${fromEpoch(savedAt)} where silabos.silabo_id = ${syllabusId}::uuid`
     },
   }
 }
@@ -116,34 +95,32 @@ export function draftFieldStoreOn(executor: Executor, transaction: <T>(work: (tx
   return {
     syllabus: (id, userId) => syllabusFacts(executor, id, userId),
     async field(id) {
-      const [row] = await executor
-        .select({
-          id: definicionesCampo.definicionCampoId,
-          templateId: definicionesCampo.plantillaId,
-          responsible: definicionesCampo.quienLlenaDefinicionCampo,
-          content: jsonText(definicionesCampo.contenidoDefinicionCampo),
-          key: sql<string>`coalesce(${camposPlantilla.claveCampoPlantilla}, '')`,
-          live: definicionesCampo.vigenteEnPlantilla,
-        })
-        .from(definicionesCampo)
-        .leftJoin(camposPlantilla, eq(camposPlantilla.campoPlantillaId, definicionesCampo.campoPlantillaId))
-        .where(eq(definicionesCampo.definicionCampoId, id))
-        .limit(1)
+      const [row] = await rowsOf<Omit<DraftFieldRecord, "content"> & { content: string | null }>(
+        executor,
+        Prisma.sql`select definiciones_campo.definicion_campo_id as id, definiciones_campo.plantilla_id as "templateId",
+            definiciones_campo.quien_llena_definicion_campo as responsible, ${jsonText(Prisma.raw("definiciones_campo.contenido_definicion_campo"))} as content,
+            coalesce(campos_plantilla.clave_campo_plantilla, '') as key, definiciones_campo.vigente_en_plantilla as live
+          from definiciones_campo left join campos_plantilla on campos_plantilla.campo_plantilla_id = definiciones_campo.campo_plantilla_id
+          where definiciones_campo.definicion_campo_id = ${id}::uuid limit 1`,
+      )
       if (!row) return null
       const record: DraftFieldRecord = { ...row, content: phpJsonDecode(row.content) }
       return record
     },
     transaction,
     async storedValue(syllabusId, fieldId) {
-      const [row] = await executor.select({ value: jsonText(valoresCampo.valorCampo) }).from(valoresCampo).where(syllabusValue(syllabusId, fieldId)).limit(1)
+      const [row] = await rowsOf<{ value: string | null }>(
+        executor,
+        Prisma.sql`select ${jsonText(Prisma.raw("valores_campo.valor_campo"))} as value from valores_campo where ${syllabusValue(syllabusId, fieldId)} limit 1`,
+      )
       return row ? phpJsonDecode(row.value) : null
     },
     identification: (syllabusId) => identificationSource(executor, syllabusId),
   }
 }
 
-export function createDraftFieldStore(): DraftFieldStore {
-  return draftFieldStoreOn(db, (work) => db.transaction((tx) => work(draftTx(tx))))
+export function createDraftFieldStore(prisma: PrismaService): DraftFieldStore {
+  return draftFieldStoreOn(prisma, (work) => inTransaction(prisma, (tx) => work(draftTx(tx))))
 }
 
 export { draftTx }

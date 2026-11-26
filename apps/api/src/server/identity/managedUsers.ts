@@ -1,4 +1,4 @@
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { phpQuery, type PhpValue } from "../http/input"
@@ -8,7 +8,6 @@ import { forbidden, apiJson, validationError } from "../http/responses"
 import { listSortOf, MANAGED_USER_SORTS, type ListSort, type ManagedUserSort } from "@silabos/shared/schemas/listSort"
 import { managedUserFiltersSchema } from "@silabos/shared/schemas/people"
 import { validateSchema } from "../http/schemaValidation"
-import { createManagedUserRepository } from "./managedUserQueries"
 
 export type ManagedUserFilters = { search: string | null; status: string | null; role: string | null; career: string | null }
 export type ManagedAssignment = { id: string; role: string; careerLabel: string | null; active: boolean }
@@ -30,10 +29,6 @@ export interface ManagedUserRepository {
 
 export type ManagedUserDeps = { bridge: BridgeDeps; users: ManagedUserRepository }
 
-export function defaultManagedUserDeps(): ManagedUserDeps {
-  return { bridge: defaultBridgeDeps(), users: createManagedUserRepository() }
-}
-
 export const ROLE_NAMES: [string, string][] = [
   ["administrador", "Administrador"],
   ["coordinador", "Coordinador"],
@@ -50,7 +45,7 @@ const roleName = (code: string) => ROLE_NAMES.find(([role]) => role === code)?.[
 const stringOrNull = (value: PhpValue | undefined) => (typeof value === "string" ? value : null)
 const falsy = (value: string | null) => value === null || value === "" || value === "0"
 
-export async function managedUsers(request: Request, deps: ManagedUserDeps = defaultManagedUserDeps()): Promise<Response> {
+export async function managedUsers(request: Request, deps: ManagedUserDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!session.user.active || session.activeRole?.role !== "administrador") return forbidden()

@@ -1,10 +1,9 @@
-import { requireSession, defaultBridgeDeps } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
 import { hasArrayParameter, queryParams, requestUrl } from "../http/request"
 import { jsonError, apiJson, validationError } from "../http/responses"
 import { contextLabel, resolveDestination, type DestinationLookups } from "./notificationDestination"
-import { createDestinationLookups, createNotificationRepository, createNotificationWriteRepository } from "./notificationQueries"
 
 export type { DestinationLookups } from "./notificationDestination"
 
@@ -56,11 +55,7 @@ const STATUSES = ["all", "unread"]
 const NOT_A_STRING = "El campo estado debe ser una cadena de texto."
 const NOT_ALLOWED = "El valor seleccionado en estado no es válido."
 
-export function defaultNotificationDeps(): NotificationDeps {
-  return { bridge: defaultBridgeDeps(), notifications: createNotificationRepository(), lookups: createDestinationLookups() }
-}
-
-export async function listNotifications(request: Request, deps: NotificationDeps = defaultNotificationDeps()): Promise<Response> {
+export async function listNotifications(request: Request, deps: NotificationDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "optional" }, deps.bridge)
   if (session instanceof Response) return session
 
@@ -100,11 +95,7 @@ const MODEL = "App\\Modules\\Operations\\Infrastructure\\Persistence\\Models\\In
 const FORBIDDEN = "No tiene permiso para hacer esto."
 const NO_SCREEN = "Este aviso ya no tiene una pantalla disponible para sus roles actuales."
 
-export function defaultNotificationWriteDeps(): NotificationWriteDeps {
-  return { bridge: defaultBridgeDeps(), notifications: createNotificationWriteRepository(), lookups: createDestinationLookups() }
-}
-
-export async function markAllNotificationsRead(request: Request, deps: NotificationWriteDeps = defaultNotificationWriteDeps()): Promise<Response> {
+export async function markAllNotificationsRead(request: Request, deps: NotificationWriteDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true }, deps.bridge)
   if (session instanceof Response) return session
   await deps.notifications.markAllRead(session.user.id, deps.bridge.now())
@@ -142,7 +133,7 @@ async function ownedNotification(
 export async function markNotificationRead(
   request: Request,
   id: string,
-  deps: NotificationWriteDeps = defaultNotificationWriteDeps(),
+  deps: NotificationWriteDeps,
 ): Promise<Response> {
   const owned = await ownedNotification(request, id, deps, undefined)
   if (owned instanceof Response) return owned
@@ -153,7 +144,7 @@ export async function markNotificationRead(
 export async function openNotification(
   request: Request,
   id: string,
-  deps: NotificationWriteDeps = defaultNotificationWriteDeps(),
+  deps: NotificationWriteDeps,
 ): Promise<Response> {
   let found: StoredNotification | null = null
   const requirements = notificationRequirements(id, deps, "optional", (value) => (found = value))

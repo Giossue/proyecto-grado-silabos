@@ -1,3 +1,4 @@
+import type { PrismaService } from "../../prisma/prisma.service"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
@@ -38,8 +39,8 @@ export type ConvocationWriteDeps = {
   transaction<T>(work: (tx: ConvocationWriteTx) => Promise<T>): Promise<T>
 }
 
-export function defaultConvocationWriteDeps(): ConvocationWriteDeps {
-  return { bridge: defaultBridgeDeps(), ...createConvocationWriteDeps() }
+export function defaultConvocationWriteDeps(prisma: PrismaService): ConvocationWriteDeps {
+  return { bridge: defaultBridgeDeps(), ...createConvocationWriteDeps(prisma) }
 }
 
 function reject(errors: Record<string, string[]>): never {
@@ -82,7 +83,7 @@ async function openConvocation(tx: ConvocationWriteTx, convocationId: string): P
   }
 }
 
-export async function createConvocation(request: Request, deps: ConvocationWriteDeps = defaultConvocationWriteDeps()): Promise<Response> {
+export async function createConvocation(request: Request, deps: ConvocationWriteDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   return createConvocationFor(request, session, deps)
@@ -137,7 +138,7 @@ export function resumableConvocationBinder(id: string, deps: Pick<ConvocationWri
   }
 }
 
-export async function resumeConvocation(request: Request, id: string, deps: ConvocationWriteDeps = defaultConvocationWriteDeps()): Promise<Response> {
+export async function resumeConvocation(request: Request, id: string, deps: ConvocationWriteDeps): Promise<Response> {
   const bound = await requireBound(request, resumableConvocationBinder(id, deps), deps.bridge)
   if (bound instanceof Response) return bound
   return resumeConvocationFor(request, bound.session, bound.bound, deps)

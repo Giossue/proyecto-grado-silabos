@@ -1,23 +1,25 @@
 // @vitest-environment node
-import { asc, sql, type SQL } from "drizzle-orm"
-import { PgDialect } from "drizzle-orm/pg-core"
 import { describe, expect, it } from "vitest"
-import { silabos } from "@/db/schema"
+import { Prisma } from "../../generated/prisma/client"
 import { historyOrder, reviewOrder } from "./coordinationReviewQueries"
 
-const dialect = new PgDialect()
-const render = (terms: SQL[]): string => dialect.sqlToQuery(sql.join(terms, sql`, `)).sql
+const render = (terms: Prisma.Sql[]): string => Prisma.join(terms, ", ").text
 
-const PERIOD_END = sql`(select pa.fecha_fin_periodo from convocatorias_carreras as cc
+const PERIOD_END = Prisma.sql`(select pa.fecha_fin_periodo from convocatorias_carreras as cc
                 inner join convocatorias_universidad as cu on cu.convocatoria_universidad_id = cc.convocatoria_universidad_id
                 inner join periodos_academicos as pa on pa.periodo_academico_id = cu.periodo_academico_id
                 where cc.convocatoria_carrera_id = silabos.convocatoria_carrera_id) desc`
 
 describe("coordination list order", () => {
   it("keeps today's ORDER BY when no column is chosen", () => {
-    expect(render(reviewOrder(null))).toBe(render([sql`${silabos.guardadoEn} desc nulls last`]))
+    expect(render(reviewOrder(null))).toBe(render([Prisma.sql`"silabos"."guardado_en" desc nulls last`]))
     expect(render(historyOrder(null))).toBe(
-      render([PERIOD_END, sql`${silabos.datosAcademicosSilabo}->'subject'->>'name'`, sql`${silabos.datosAcademicosSilabo}->'parallel'->>'code'`, asc(silabos.silaboId)]),
+      render([
+        PERIOD_END,
+        Prisma.sql`"silabos"."datos_academicos_silabo"->'subject'->>'name'`,
+        Prisma.sql`"silabos"."datos_academicos_silabo"->'parallel'->>'code'`,
+        Prisma.sql`"silabos"."silabo_id" asc`,
+      ]),
     )
   })
 

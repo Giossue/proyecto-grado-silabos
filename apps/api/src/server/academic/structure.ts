@@ -1,11 +1,10 @@
 import { aborted } from "../http/responses"
 import { fromController } from "../auth/controllerResponse"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { phpIsNumeric } from "@silabos/shared/schemas/php"
 import { CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES } from "@silabos/shared/schemas/academic"
 import { apiJson } from "../http/responses"
-import { createAcademicStructureRepository } from "./structureQueries"
 import { unmatchedRoute, routeAllows } from "../http/router"
 
 export const FORBIDDEN = "No tiene permiso para hacer esto."
@@ -81,10 +80,6 @@ export interface AcademicStructureRepository {
 }
 
 export type AcademicStructureDeps = { bridge: BridgeDeps; academic: AcademicStructureRepository }
-
-export function defaultAcademicStructureDeps(): AcademicStructureDeps {
-  return { bridge: defaultBridgeDeps(), academic: createAcademicStructureRepository() }
-}
 
 export function isUuid(value: string): boolean {
   return UUID.test(value)
@@ -188,7 +183,7 @@ export async function authorizedCareer(request: Request, deps: AcademicStructure
 export async function curriculumBuilder(
   request: Request,
   curriculumId: string,
-  deps: AcademicStructureDeps = defaultAcademicStructureDeps(),
+  deps: AcademicStructureDeps,
 ): Promise<Response> {
   if (!routeAllows(request)) return unmatchedRoute(request)
   const career = await authorizedCareer(request, deps)
@@ -247,7 +242,7 @@ function uniqueById<T extends { id: string }>(items: T[]): T[] {
   return items.filter((item) => (seen.has(item.id) ? false : (seen.add(item.id), true)))
 }
 
-export async function teacherAssignments(request: Request, deps: AcademicStructureDeps = defaultAcademicStructureDeps()): Promise<Response> {
+export async function teacherAssignments(request: Request, deps: AcademicStructureDeps): Promise<Response> {
   const career = await authorizedCareer(request, deps)
   if (career instanceof Response) return career
 

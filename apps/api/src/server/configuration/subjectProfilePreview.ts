@@ -1,15 +1,14 @@
 import { modelNotFoundResponse } from "../http/failures"
 import { fromController } from "../auth/controllerResponse"
 import { MODELS } from "../http/models"
-import { sql } from "drizzle-orm"
-import { db } from "@/db"
+import type { Db } from "../../prisma/db"
 import { requireSession } from "../auth/requireSession"
 import { CURRICULAR_UNITS } from "../academic/structure"
 import { jsonError, apiJson, validationError } from "../http/responses"
 import { buildIdentification, dataGet } from "../syllabus/identificationCard"
 import { phpCompareStrings } from "../syllabus/syllabusDetailQueries"
-import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
-import { createLogoStore, presentationLogos, type LogoStore } from "./institutionalLogos"
+import { createLogoStore, type LogoStore } from "../shared/logoStore"
+import { presentationLogos } from "./institutionalLogos"
 import { phpShape, type PhpRecord } from "./phpValues"
 import { profileTemplates } from "./subjectProfileFields"
 import { defaultSubjectProfileDeps, mayManageSubjectProfile, profileContext, type SubjectProfileDeps } from "./subjectProfile"
@@ -82,10 +81,8 @@ export function subjectAcademicContext(subject: SubjectContextRow, requirements:
   }
 }
 
-export async function loadSubjectContext(executor: Executor, subjectId: string): Promise<PhpRecord | null> {
-  const [subject] = await rowsOf<SubjectContextRow>(
-    executor,
-    sql`select asignatura.asignatura_id::text as id, asignatura.codigo_asignatura as code, asignatura.nombre_asignatura as name,
+export async function loadSubjectContext(db: Db, subjectId: string): Promise<PhpRecord | null> {
+  const [subject] = await db.$queryRaw<SubjectContextRow[]>`select asignatura.asignatura_id::text as id, asignatura.codigo_asignatura as code, asignatura.nombre_asignatura as name,
         asignatura.ciclo_asignatura as cycle, asignatura.orden_asignatura_en_ciclo as position, asignatura.unidad_curricular_asignatura as unit,
         to_char(asignatura.creditos_asignatura, 'FM999999990.00') as credits, asignatura.total_horas_asignatura as total_hours,
         to_char(asignatura.horas_docencia, 'FM999999990.00') as hours_ac, to_char(asignatura.horas_practicas, 'FM999999990.00') as hours_pae,
@@ -97,27 +94,23 @@ export async function loadSubjectContext(executor: Executor, subjectId: string):
         inner join carreras carrera on carrera.carrera_id = asignatura.carrera_id
         left join facultades facultad on facultad.facultad_id = carrera.facultad_id
         left join archivos archivo on archivo.archivo_id = facultad.logo_archivo_id
-      where asignatura.asignatura_id = ${subjectId}::uuid limit 1`,
-  )
+      where asignatura.asignatura_id = ${subjectId}::uuid limit 1`
   if (!subject) return null
-  const requirements = await rowsOf<SubjectRequirementRow>(
-    executor,
-    sql`select requisito.tipo_requisito_asignatura as type, previa.codigo_asignatura as code
+  const requirements = await db.$queryRaw<SubjectRequirementRow[]>`select requisito.tipo_requisito_asignatura as type, previa.codigo_asignatura as code
       from requisitos_asignatura requisito inner join asignaturas previa on previa.asignatura_id = requisito.requisito_id
-      where requisito.asignatura_id = ${subjectId}::uuid`,
-  )
+      where requisito.asignatura_id = ${subjectId}::uuid`
   return subjectAcademicContext({ ...subject, cycle_count: Number(subject.cycle_count) }, requirements)
 }
 
-export function defaultSubjectPreviewDeps(): SubjectPreviewDeps {
+export function defaultSubjectPreviewDeps(db: Db): SubjectPreviewDeps {
   return {
-    ...defaultSubjectProfileDeps(),
-    subjectContext: (subjectId) => loadSubjectContext(db as unknown as Executor, subjectId),
-    logos: createLogoStore(),
+    ...defaultSubjectProfileDeps(db),
+    subjectContext: (subjectId) => loadSubjectContext(db, subjectId),
+    logos: createLogoStore(db),
   }
 }
 
-export async function previewSubjectProfile(request: Request, subjectId: string, deps: SubjectPreviewDeps = defaultSubjectPreviewDeps()): Promise<Response> {
+export async function previewSubjectProfile(request: Request, subjectId: string, deps: SubjectPreviewDeps): Promise<Response> {
   if (!routeAllows(request)) return unmatchedRoute(request)
   let careerId: string | null = null
   const session = await requireSession(

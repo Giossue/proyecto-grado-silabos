@@ -1,3 +1,4 @@
+import type { PrismaService } from "../../prisma/prisma.service"
 import { convertFile, gotenbergEnabled, gotenbergSettings } from "../documents/gotenbergConverter"
 import { storageWriter } from "../http/storageWriter"
 import { uuid7 } from "../http/uuid7"
@@ -8,9 +9,9 @@ import { createSupportDocumentViewStore } from "./supportDocumentWriteStore"
 
 export type SupportDocumentViewData = { documentId: string }
 
-export function defaultSupportDocumentViewDeps(): SupportDocumentViewDeps {
+export function defaultSupportDocumentViewDeps(prisma: PrismaService): SupportDocumentViewDeps {
   return {
-    store: createSupportDocumentViewStore(),
+    store: createSupportDocumentViewStore(prisma),
     storage: storageWriter(),
     converterEnabled: () => gotenbergEnabled(gotenbergSettings()),
     convertFile: (content, filename) => convertFile(content, filename),
@@ -34,8 +35,14 @@ export function createSupportDocumentViewJob(deps: () => SupportDocumentViewDeps
   })
 }
 
-export const supportDocumentViewJob = createSupportDocumentViewJob(defaultSupportDocumentViewDeps)
+export function supportDocumentViewJobOn(prisma: PrismaService) {
+  return createSupportDocumentViewJob(() => defaultSupportDocumentViewDeps(prisma))
+}
+
+const dispatchedViewJob = createSupportDocumentViewJob(() => {
+  throw new Error("PrepareSupportDocumentViewJob runs only in the worker, built with supportDocumentViewJobOn.")
+})
 
 export function dispatchSupportDocumentView(documentId: string): Promise<string> {
-  return dispatch(supportDocumentViewJob, { documentId })
+  return dispatch(dispatchedViewJob, { documentId })
 }

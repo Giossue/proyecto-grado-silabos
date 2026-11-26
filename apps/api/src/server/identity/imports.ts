@@ -9,7 +9,6 @@ import type { PhpArray } from "../http/input"
 import { forbidden, apiJson } from "../http/responses"
 import { importedTeacherSchema, importedUserSchema, NAME_SUBJECTS, nameColumnMessages } from "@silabos/shared/schemas/people"
 import { validateSchema } from "../http/schemaValidation"
-import { systemNow } from "../shared/clock"
 import {
   collapseName,
   fullName,
@@ -19,8 +18,7 @@ import {
   ROLE_LABELS,
 } from "./accountRules"
 import { createCareerTeacher, createManagedUser, teacherBlockedReason } from "./accounts"
-import { careerExists, defaultIdentityWriteDeps, isAdministrator, perform, uniqueEmail, type IdentityWriteDeps } from "./accountWrites"
-import { createIdentityImportStore } from "./importsStore"
+import { careerExists, isAdministrator, perform, uniqueEmail, type IdentityWriteDeps } from "./accountWrites"
 
 const PERSON_COLUMNS = { nombres: "Nombres", apellidos: "Apellidos" }
 
@@ -55,10 +53,6 @@ export type IdentityImportStore = {
 }
 
 export type IdentityImportDeps = IdentityWriteDeps & { store: IdentityImportStore; now: () => number; maxPostSize?: number }
-
-export function defaultIdentityImportDeps(): IdentityImportDeps {
-  return { ...defaultIdentityWriteDeps(), store: createIdentityImportStore(), now: systemNow }
-}
 
 async function mayAddTeachers(session: AppSession, deps: IdentityImportDeps): Promise<boolean> {
   const role = session.activeRole
@@ -95,14 +89,14 @@ async function templateResponse(headers: string[], selects: TemplateSelect[], no
   return xlsxDownload(await importTemplate(headers, selects, notes, { now: deps.now() }), filename)
 }
 
-export async function teacherImportTemplate(request: Request, deps: IdentityImportDeps = defaultIdentityImportDeps()): Promise<Response> {
+export async function teacherImportTemplate(request: Request, deps: IdentityImportDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!(await mayAddTeachers(session, deps))) return forbidden()
   return templateResponse(Object.values(TEACHER_COLUMNS), [], TEACHER_NOTES, "plantilla-docentes.xlsx", deps)
 }
 
-export async function userImportTemplate(request: Request, deps: IdentityImportDeps = defaultIdentityImportDeps()): Promise<Response> {
+export async function userImportTemplate(request: Request, deps: IdentityImportDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!isAdministrator(session)) return forbidden()
@@ -184,7 +178,7 @@ async function checkUsers(rows: ImportRow[], deps: IdentityImportDeps): Promise<
   return { checked, payloads }
 }
 
-export async function importTeachers(request: Request, deps: IdentityImportDeps = defaultIdentityImportDeps()): Promise<Response> {
+export async function importTeachers(request: Request, deps: IdentityImportDeps): Promise<Response> {
   const ready = await importSession(request, deps, 10)
   if (ready instanceof Response) return ready
   const { session, original, finish } = ready
@@ -210,7 +204,7 @@ export async function importTeachers(request: Request, deps: IdentityImportDeps 
   return finish(apiJson({ rows: checked, valid, created: outcome.value } satisfies ImportResult))
 }
 
-export async function importUsers(request: Request, deps: IdentityImportDeps = defaultIdentityImportDeps()): Promise<Response> {
+export async function importUsers(request: Request, deps: IdentityImportDeps): Promise<Response> {
   const ready = await importSession(request, deps, 10)
   if (ready instanceof Response) return ready
   const { session, original, finish } = ready

@@ -1,170 +1,145 @@
-import { and, eq, exists, isNull, ne, sql, type SQL } from "drizzle-orm"
-import { alias } from "drizzle-orm/pg-core"
-import { db } from "@/db"
-import { byColumnName, hasRows, jsonText } from "@/db/expressions"
-import {
-  asignacionesParalelo,
-  asignacionesRol,
-  carreras,
-  convocatoriasCarreras,
-  convocatoriasUniversidad,
-  facultades,
-  invitacionesActivacion,
-  periodosAcademicos,
-} from "@/db/schema"
-import { sesionesUsuario } from "@/db/schema/auth"
+import { Prisma } from "../../generated/prisma/client"
+import { type Db, inTransactionAfterCommit } from "../../prisma/db"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { hasRows, jsonbValue } from "../../prisma/sql"
 import { uuid7 } from "../http/uuid7"
 import { systemNow } from "../shared/clock"
 import { notificationScope, type WriteOptions } from "../notifications/queries"
-import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
+import type { AfterCommit } from "../queue/afterCommit"
 import { FinalizedChangeNotice } from "../syllabus/finalizedChangeNotice"
 import { InProgressWork } from "../syllabus/inProgressWork"
-import { dbTransaction, type TransactionRunner } from "../syllabus/reviewDecisionStore"
-import type { Executor } from "../syllabus/teacherSyllabusQueries"
+import { CAREERS_TABLE, FACULTIES_TABLE, PERIODS_TABLE, updateColumns, type TableColumns } from "./columnSql"
 import type { GovernanceWriteDeps, GovernanceWriteTx } from "./governanceWrites"
 import { insertStoredObject } from "./supportDocumentWriteStore"
 
-const convocatoria = alias(convocatoriasCarreras, "convocatoria")
-const proceso = alias(convocatoriasUniversidad, "proceso")
-const TABLES = { facultad: [facultades, facultades.facultadId], carrera: [carreras, carreras.carreraId], periodo: [periodosAcademicos, periodosAcademicos.periodoAcademicoId] } as const
-const PERIOD = {
-  id: periodosAcademicos.periodoAcademicoId,
-  code: periodosAcademicos.codigoPeriodoAcademico,
-  startsOn: periodosAcademicos.fechaInicioPeriodo,
-  endsOn: periodosAcademicos.fechaFinPeriodo,
-  weeks: periodosAcademicos.cantidadSemanasLectivas,
+const TABLES: Record<"facultad" | "carrera" | "periodo", [TableColumns, Prisma.Sql]> = {
+  facultad: [FACULTIES_TABLE, Prisma.raw('"facultades"."facultad_id"')],
+  carrera: [CAREERS_TABLE, Prisma.raw('"carreras"."carrera_id"')],
+  periodo: [PERIODS_TABLE, Prisma.raw('"periodos_academicos"."periodo_academico_id"')],
 }
 
-function processWhere(executor: Executor, ...conditions: (SQL | undefined)[]): SQL {
-  return exists(
-    executor
-      .select({ id: proceso.convocatoriaUniversidadId })
-      .from(proceso)
-      .where(and(eq(proceso.convocatoriaUniversidadId, convocatoria.convocatoriaUniversidadId), ...conditions)),
+function processWhere(...conditions: Prisma.Sql[]): Prisma.Sql {
+  return Prisma.sql`exists (select proceso.convocatoria_universidad_id from convocatorias_universidad proceso
+    where ${Prisma.join([Prisma.sql`proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id`, ...conditions], " and ")})`
+}
+
+function convocationExists(db: Db, ...conditions: Prisma.Sql[]): Promise<boolean> {
+  return found(
+    db,
+    Prisma.sql`select convocatoria.convocatoria_carrera_id from convocatorias_carreras convocatoria
+      where ${Prisma.join([...conditions, processWhere()], " and ")} limit 1`,
   )
 }
 
-function convocationExists(executor: Executor, ...conditions: (SQL | undefined)[]): Promise<boolean> {
-  return hasRows(executor.select({ id: convocatoria.convocatoriaCarreraId }).from(convocatoria).where(and(...conditions, processWhere(executor))).limit(1))
+async function first<T>(db: Db, query: Prisma.Sql): Promise<T | null> {
+  return (await db.$queryRaw<T[]>(query))[0] ?? null
 }
 
-export function governanceWriteTx(executor: Executor, afterCommit: AfterCommit, now: number, options: WriteOptions = {}): GovernanceWriteTx {
-  const work = new InProgressWork(executor, afterCommit, notificationScope(executor, afterCommit, now, options.mail))
+function found(db: Db, query: Prisma.Sql): Promise<boolean> {
+  return hasRows(db.$queryRaw<unknown[]>(query))
+}
+
+export function governanceWriteTx(db: Db, afterCommit: AfterCommit, now: number, options: WriteOptions = {}): GovernanceWriteTx {
+  const work = new InProgressWork(db, afterCommit, notificationScope(db, afterCommit, now, options.mail))
   const notice = new FinalizedChangeNotice(work, now)
   return {
     async createCareer(data) {
       const id = uuid7()
-      await executor.insert(carreras).values({
-        carreraId: id,
-        facultadId: data.facultyId,
-        codigoCarrera: data.code,
-        nombreCarrera: data.name,
-        carreraActiva: true,
-        modalidadCarrera: data.modality as typeof carreras.$inferInsert.modalidadCarrera,
-        numeroCiclos: data.cycleCount,
-      })
+      await db.$executeRaw`insert into carreras (carrera_id, facultad_id, codigo_carrera, nombre_carrera, carrera_activa, modalidad_carrera, numero_ciclos)
+        values (${id}::uuid, ${data.facultyId}::uuid, ${data.code}, ${data.name}, true, ${data.modality}, ${data.cycleCount})`
       return id
     },
     async createFaculty(data) {
       const id = uuid7()
-      await executor
-        .insert(facultades)
-        .values({ facultadId: id, nombreFacultad: data.name, campusFacultad: data.campus, bibliotecasKohaFacultad: data.libraries, facultadActiva: true })
+      await db.$executeRaw`insert into facultades (facultad_id, nombre_facultad, campus_facultad, bibliotecas_koha_facultad, facultad_activa)
+        values (${id}::uuid, ${data.name}, ${data.campus}, ${jsonbValue(JSON.stringify(data.libraries))}, true)`
       return id
     },
-    insertObject: (row) => insertStoredObject(executor, row),
+    insertObject: (row) => insertStoredObject(db, row),
     async createPeriod(data) {
       const id = uuid7()
-      await executor.insert(periodosAcademicos).values({
-        periodoAcademicoId: id,
-        codigoPeriodoAcademico: data.code,
-        fechaInicioPeriodo: data.startsOn,
-        fechaFinPeriodo: data.endsOn,
-        cantidadSemanasLectivas: data.weeks,
-      })
+      await db.$executeRaw`insert into periodos_academicos (periodo_academico_id, codigo_periodo_academico, fecha_inicio_periodo, fecha_fin_periodo, cantidad_semanas_lectivas)
+        values (${id}::uuid, ${data.code}, ${data.startsOn}, ${data.endsOn}, ${data.weeks})`
       return id
     },
-    async lockFaculty(id) {
-      const [row] = await executor
-        .select({ id: facultades.facultadId, name: facultades.nombreFacultad, campus: facultades.campusFacultad, libraries: jsonText(facultades.bibliotecasKohaFacultad) })
-        .from(facultades)
-        .where(eq(facultades.facultadId, id))
-        .limit(1)
-        .for("update")
-      return row ?? null
-    },
-    async lockCareer(id) {
-      const [row] = await executor
-        .select({ id: carreras.carreraId, facultyId: carreras.facultadId, code: carreras.codigoCarrera, name: carreras.nombreCarrera, modality: carreras.modalidadCarrera })
-        .from(carreras)
-        .where(eq(carreras.carreraId, id))
-        .limit(1)
-        .for("update")
-      return row ?? null
-    },
+    lockFaculty: (id) =>
+      first(
+        db,
+        Prisma.sql`select facultades.facultad_id::text as id, facultades.nombre_facultad as name, facultades.campus_facultad as campus,
+            facultades.bibliotecas_koha_facultad::text as libraries
+          from facultades where facultades.facultad_id = ${id}::uuid limit 1 for update`,
+      ),
+    lockCareer: (id) =>
+      first(
+        db,
+        Prisma.sql`select carreras.carrera_id::text as id, carreras.facultad_id::text as "facultyId", carreras.codigo_carrera as code,
+            carreras.nombre_carrera as name, carreras.modalidad_carrera::text as modality
+          from carreras where carreras.carrera_id = ${id}::uuid limit 1 for update`,
+      ),
     async lockPeriod(id) {
-      const [row] = await executor.select(PERIOD).from(periodosAcademicos).where(eq(periodosAcademicos.periodoAcademicoId, id)).limit(1).for("update")
+      const row = await first<{ id: string; code: string; startsOn: string; endsOn: string; weeks: number | null }>(
+        db,
+        Prisma.sql`select periodos_academicos.periodo_academico_id::text as id, periodos_academicos.codigo_periodo_academico as code,
+            to_char(periodos_academicos.fecha_inicio_periodo, 'YYYY-MM-DD') as "startsOn", to_char(periodos_academicos.fecha_fin_periodo, 'YYYY-MM-DD') as "endsOn",
+            periodos_academicos.cantidad_semanas_lectivas as weeks
+          from periodos_academicos where periodos_academicos.periodo_academico_id = ${id}::uuid limit 1 for update`,
+      )
       return row ? { ...row, weeks: row.weeks === null ? null : Number(row.weeks) } : null
     },
     async lockActiveFaculty(id) {
-      const [row] = await executor.select({ active: facultades.facultadActiva }).from(facultades).where(eq(facultades.facultadId, id)).limit(1).for("update")
+      const row = await first<{ active: boolean }>(
+        db,
+        Prisma.sql`select facultades.facultad_activa as active from facultades where facultades.facultad_id = ${id}::uuid limit 1 for update`,
+      )
       return row?.active === true
     },
     async careersOfFaculty(facultyId) {
-      const rows = await executor.select({ id: carreras.carreraId }).from(carreras).where(eq(carreras.facultadId, facultyId))
+      const rows = await db.$queryRaw<{ id: string }[]>`select carreras.carrera_id::text as id from carreras where carreras.facultad_id = ${facultyId}::uuid`
       return rows.map((row) => row.id)
     },
     periodRunning: (periodId) =>
       convocationExists(
-        executor,
-        eq(convocatoria.estadoConvocatoriaCarrera, "abierta"),
-        processWhere(executor, eq(proceso.estadoConvocatoriaUniversidad, "abierto")),
-        processWhere(executor, eq(proceso.periodoAcademicoId, periodId)),
+        db,
+        Prisma.sql`convocatoria.estado_convocatoria_carrera = ${"abierta"}`,
+        processWhere(Prisma.sql`proceso.estado_convocatoria_universidad = ${"abierto"}`),
+        processWhere(Prisma.sql`proceso.periodo_academico_id = ${periodId}::uuid`),
       ),
     async updateColumns(entity, id, columns) {
       const [table, key] = TABLES[entity]
-      await executor.update(table).set(byColumnName(table, columns)).where(eq(key, id))
+      await db.$executeRaw(updateColumns(table, columns, Prisma.sql`${key} = ${id}::uuid`))
     },
     facultyHasActiveCareers: (id) =>
-      hasRows(executor.select({ id: carreras.carreraId }).from(carreras).where(and(eq(carreras.facultadId, id), eq(carreras.carreraActiva, true))).limit(1)),
+      found(db, Prisma.sql`select carreras.carrera_id from carreras where carreras.facultad_id = ${id}::uuid and carreras.carrera_activa = true limit 1`),
     careerInProgress: (id) =>
       convocationExists(
-        executor,
-        eq(convocatoria.carreraId, id),
-        ne(convocatoria.estadoConvocatoriaCarrera, "cerrada"),
-        processWhere(executor, ne(proceso.estadoConvocatoriaUniversidad, "cerrado")),
+        db,
+        Prisma.sql`convocatoria.carrera_id = ${id}::uuid`,
+        Prisma.sql`convocatoria.estado_convocatoria_carrera <> ${"cerrada"}`,
+        processWhere(Prisma.sql`proceso.estado_convocatoria_universidad <> ${"cerrado"}`),
       ),
     async retireCareerUsers(id) {
-      const assignments = await executor
-        .select({ id: asignacionesRol.asignacionRolId, userId: asignacionesRol.usuarioId })
-        .from(asignacionesRol)
-        .where(and(eq(asignacionesRol.carreraId, id), eq(asignacionesRol.asignacionRolActiva, true)))
-        .for("update")
+      const assignments = await db.$queryRaw<{ id: string; user_id: string }[]>`select asignaciones_rol.asignacion_rol_id::text as id, asignaciones_rol.usuario_id::text as user_id
+        from asignaciones_rol where asignaciones_rol.carrera_id = ${id}::uuid and asignaciones_rol.asignacion_rol_activa = true for update`
       for (const assignment of assignments) {
-        await executor
-          .delete(asignacionesParalelo)
-          .where(and(eq(asignacionesParalelo.asignacionRolId, assignment.id), eq(asignacionesParalelo.asignacionParaleloActiva, true)))
-        await executor.update(asignacionesRol).set({ asignacionRolActiva: false }).where(eq(asignacionesRol.asignacionRolId, assignment.id))
-        await executor.delete(sesionesUsuario).where(eq(sesionesUsuario.userId, assignment.userId))
-        const stillActive = await hasRows(
-          executor
-            .select({ id: asignacionesRol.asignacionRolId })
-            .from(asignacionesRol)
-            .where(and(eq(asignacionesRol.usuarioId, assignment.userId), eq(asignacionesRol.asignacionRolActiva, true)))
-            .limit(1),
+        await db.$executeRaw`delete from asignaciones_paralelo
+          where asignaciones_paralelo.asignacion_rol_id = ${assignment.id}::uuid and asignaciones_paralelo.asignacion_paralelo_activa = true`
+        await db.$executeRaw`update asignaciones_rol set asignacion_rol_activa = false where asignaciones_rol.asignacion_rol_id = ${assignment.id}::uuid`
+        await db.$executeRaw`delete from sesiones_usuario where sesiones_usuario.user_id = ${assignment.user_id}::uuid`
+        const stillActive = await found(
+          db,
+          Prisma.sql`select asignaciones_rol.asignacion_rol_id from asignaciones_rol
+            where asignaciones_rol.usuario_id = ${assignment.user_id}::uuid and asignaciones_rol.asignacion_rol_activa = true limit 1`,
         )
         if (!stillActive) {
-          await executor
-            .update(invitacionesActivacion)
-            .set({ invalidadaEn: sql`now()` })
-            .where(and(eq(invitacionesActivacion.usuarioId, assignment.userId), isNull(invitacionesActivacion.usadaEn), isNull(invitacionesActivacion.invalidadaEn)))
+          await db.$executeRaw`update invitaciones_activacion set invalidada_en = now()
+            where invitaciones_activacion.usuario_id = ${assignment.user_id}::uuid and invitaciones_activacion.usada_en is null and invitaciones_activacion.invalidada_en is null`
         }
       }
       return assignments.length
     },
     async setActive(entity, id, active) {
-      if (entity === "facultad") await executor.update(facultades).set({ facultadActiva: active }).where(eq(facultades.facultadId, id))
-      else await executor.update(carreras).set({ carreraActiva: active }).where(eq(carreras.carreraId, id))
+      if (entity === "facultad") await db.$executeRaw`update facultades set facultad_activa = ${active} where facultades.facultad_id = ${id}::uuid`
+      else await db.$executeRaw`update carreras set carrera_activa = ${active} where carreras.carrera_id = ${id}::uuid`
     },
     replace: (confirmed, change, periodId) => (periodId === null ? change() : work.replace(confirmed, change, { periodId })),
     guard: (confirmed, careerIds, change, periodId) => notice.guard(confirmed, careerIds, change, null, periodId),
@@ -174,25 +149,19 @@ export function governanceWriteTx(executor: Executor, afterCommit: AfterCommit, 
   }
 }
 
-export function governanceWriteDepsOn(executor: Executor, transaction: TransactionRunner, options: WriteOptions = {}): Omit<GovernanceWriteDeps, "bridge"> {
+export function createGovernanceWriteDeps(prisma: PrismaService, options: WriteOptions = {}): Omit<GovernanceWriteDeps, "bridge" | "deletions"> {
   const now = options.now ?? systemNow
   return {
     now,
     activeFacultyExists: (id) =>
-      hasRows(executor.select({ id: facultades.facultadId }).from(facultades).where(and(eq(facultades.facultadId, id), eq(facultades.facultadActiva, true))).limit(1)),
-    facultyExists: (id) => hasRows(executor.select({ id: facultades.facultadId }).from(facultades).where(eq(facultades.facultadId, id)).limit(1)),
+      found(prisma, Prisma.sql`select facultades.facultad_id from facultades where facultades.facultad_id = ${id}::uuid and facultades.facultad_activa = true limit 1`),
+    facultyExists: (id) => found(prisma, Prisma.sql`select facultades.facultad_id from facultades where facultades.facultad_id = ${id}::uuid limit 1`),
     careerCodeTaken: (code, except) =>
-      hasRows(
-        executor
-          .select({ id: carreras.carreraId })
-          .from(carreras)
-          .where(and(eq(carreras.codigoCarrera, code), except === null ? undefined : sql`${carreras.carreraId}::text <> ${except}`))
-          .limit(1),
+      found(
+        prisma,
+        Prisma.sql`select carreras.carrera_id from carreras where carreras.codigo_carrera = ${code}
+          ${except === null ? Prisma.empty : Prisma.sql`and carreras.carrera_id::text <> ${except}`} limit 1`,
       ),
-    transaction: (work) => withAfterCommit((afterCommit) => transaction((inner) => work(governanceWriteTx(inner, afterCommit, now(), options)))),
+    transaction: (work) => inTransactionAfterCommit(prisma, (tx, afterCommit) => work(governanceWriteTx(tx, afterCommit, now(), options))),
   }
-}
-
-export function createGovernanceWriteDeps(): Omit<GovernanceWriteDeps, "bridge"> {
-  return governanceWriteDepsOn(db as unknown as Executor, dbTransaction)
 }

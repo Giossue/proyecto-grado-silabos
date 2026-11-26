@@ -2,13 +2,10 @@ import { fromController } from "../auth/controllerResponse"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
 import { HttpFailure, Missing } from "../http/failures"
-import { randomUUID } from "node:crypto"
-import { defaultBridgeDeps } from "../auth/requireSession"
 import type { AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { aborted, apiJson, serverError, validationError } from "../http/responses"
-import { uuid7 } from "../http/uuid7"
 import { isBlank } from "@silabos/shared/schemas/rules"
 import { fieldOrderSchema, sectionOrderSchema, sectionSchema, templateFieldSchema } from "@silabos/shared/schemas/template"
 import { validateSchema } from "../http/schemaValidation"
@@ -17,8 +14,6 @@ import { contentForField, phpIntCast, toRuntime } from "./templateDraft"
 import { boundTemplate, FORBIDDEN, managesTemplates, type TemplateReadDeps } from "./templateReads"
 import { normalizeFieldDocument, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import type { SyllabusTemplate } from "./templatePresentation"
-import { createStructureStore } from "./templateStructureStore"
-import { createTemplateStore } from "./templateStore"
 
 export type DocumentBlock = { id: string; key: string; title: string; position: number }
 export type DocumentSection = { id: string; key: string; title: string; orientation: string; position: number; blocks: DocumentBlock[] }
@@ -43,16 +38,6 @@ export interface StructureStore {
 }
 
 export type StructureDeps = TemplateReadDeps & { structure: StructureStore; newId: () => string; newFieldId: () => string }
-
-export function defaultStructureDeps(): StructureDeps {
-  return {
-    bridge: defaultBridgeDeps(),
-    store: createTemplateStore(),
-    structure: createStructureStore(),
-    newId: randomUUID,
-    newFieldId: uuid7,
-  }
-}
 
 const INVALID_ORDER = "El nuevo orden no es válido. Recargue la página e intente otra vez."
 
@@ -155,7 +140,7 @@ function requestedPosition(input: PhpArray, count: number): number {
   return Math.min(Math.max(1, given), count + 1)
 }
 
-export async function storeSection(request: Request, templateId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+export async function storeSection(request: Request, templateId: string, deps: StructureDeps): Promise<Response> {
   const auth = await authorized(request, templateId, deps)
   if (auth instanceof Response) return auth
   return storeSectionOf(await rawInput(request), targetOf(auth), deps)
@@ -191,7 +176,7 @@ export async function storeSectionOf(raw: PhpArray, auth: StructureTarget, deps:
   })
 }
 
-export async function updateSection(request: Request, templateId: string, sectionId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+export async function updateSection(request: Request, templateId: string, sectionId: string, deps: StructureDeps): Promise<Response> {
   const auth = await authorized(request, templateId, deps)
   if (auth instanceof Response) return auth
   return updateSectionOf(await rawInput(request), targetOf(auth), deps, sectionId)
@@ -216,7 +201,7 @@ export async function updateSectionOf(raw: PhpArray, auth: StructureTarget, deps
   })
 }
 
-export async function reorderSections(request: Request, templateId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+export async function reorderSections(request: Request, templateId: string, deps: StructureDeps): Promise<Response> {
   const auth = await authorized(request, templateId, deps)
   if (auth instanceof Response) return auth
   return reorderSectionsOf(await rawInput(request), targetOf(auth), deps)
@@ -236,7 +221,7 @@ export async function reorderSectionsOf(raw: PhpArray, auth: StructureTarget, de
   })
 }
 
-export async function destroySection(request: Request, templateId: string, sectionId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+export async function destroySection(request: Request, templateId: string, sectionId: string, deps: StructureDeps): Promise<Response> {
   const auth = await authorized(request, templateId, deps)
   if (auth instanceof Response) return auth
   return destroySectionOf(targetOf(auth), deps, sectionId)
@@ -272,7 +257,7 @@ function fieldPayload(id: string, key: string, label: string, responsible: strin
   return { id, key, label, quien_llena: responsible, content: phpShape(content) }
 }
 
-export async function storeField(request: Request, templateId: string, sectionId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+export async function storeField(request: Request, templateId: string, sectionId: string, deps: StructureDeps): Promise<Response> {
   const auth = await authorized(request, templateId, deps)
   if (auth instanceof Response) return auth
   return storeFieldOf(await rawInput(request), targetOf(auth), deps, sectionId)
@@ -318,7 +303,7 @@ export async function storeFieldOf(raw: PhpArray, auth: StructureTarget, deps: S
   })
 }
 
-export async function updateField(request: Request, templateId: string, fieldId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+export async function updateField(request: Request, templateId: string, fieldId: string, deps: StructureDeps): Promise<Response> {
   const auth = await authorized(request, templateId, deps, fieldId)
   if (auth instanceof Response) return auth
   return updateFieldOf(await rawInput(request), targetOf(auth), deps)
@@ -352,7 +337,7 @@ export async function updateFieldOf(raw: PhpArray, auth: StructureTarget, deps: 
   })
 }
 
-export async function reorderFields(request: Request, templateId: string, sectionId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+export async function reorderFields(request: Request, templateId: string, sectionId: string, deps: StructureDeps): Promise<Response> {
   const auth = await authorized(request, templateId, deps)
   if (auth instanceof Response) return auth
   return reorderFieldsOf(await rawInput(request), targetOf(auth), deps, sectionId)
@@ -382,7 +367,7 @@ export async function reorderFieldsOf(raw: PhpArray, auth: StructureTarget, deps
   })
 }
 
-export async function destroyField(request: Request, templateId: string, fieldId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+export async function destroyField(request: Request, templateId: string, fieldId: string, deps: StructureDeps): Promise<Response> {
   const auth = await authorized(request, templateId, deps, fieldId)
   if (auth instanceof Response) return auth
   return destroyFieldOf(targetOf(auth), deps)

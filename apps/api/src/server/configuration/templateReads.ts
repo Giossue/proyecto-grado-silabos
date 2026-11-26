@@ -1,6 +1,6 @@
 import path from "node:path"
 import { fromController } from "../auth/controllerResponse"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession, SessionUser } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestRoot } from "../http/request"
@@ -9,7 +9,7 @@ import { list, phpCount, phpShape, record, type PhpRecord } from "./phpValues"
 import { documentLines } from "./documentHtml"
 import { fieldConditions, fieldLimits, limitAllowed, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import { IDENTIFICATION_SAMPLE, syllabusSectionPayload, type SyllabusTemplate } from "./templatePresentation"
-import { createTemplateStore, type TemplateStore } from "./templateStore"
+import type { TemplateStore } from "../shared/templateStore"
 import { binaryFileResponse } from "../files/binaryFileResponse"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
@@ -18,9 +18,6 @@ export const FORBIDDEN = "No tiene permiso para hacer esto."
 
 export type TemplateReadDeps = { bridge: BridgeDeps; store: TemplateStore }
 
-export function defaultTemplateReadDeps(): TemplateReadDeps {
-  return { bridge: defaultBridgeDeps(), store: createTemplateStore() }
-}
 
 export function managesTemplates(session: AppSession): boolean {
   return session.user.active && session.activeRole?.role === "administrador"
@@ -57,7 +54,7 @@ export async function boundTemplate(
   return { session, template }
 }
 
-export async function teacherPreview(request: Request, templateId: string, deps: TemplateReadDeps = defaultTemplateReadDeps()): Promise<Response> {
+export async function teacherPreview(request: Request, templateId: string, deps: TemplateReadDeps): Promise<Response> {
   const bound = await boundTemplate(request, templateId, deps)
   if (bound instanceof Response) return bound
   if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
@@ -102,7 +99,7 @@ function exportedBlock(block: PhpRecord): PhpRecord {
   }
 }
 
-export async function exportTemplateJson(request: Request, templateId: string, deps: TemplateReadDeps = defaultTemplateReadDeps()): Promise<Response> {
+export async function exportTemplateJson(request: Request, templateId: string, deps: TemplateReadDeps): Promise<Response> {
   const bound = await boundTemplate(request, templateId, deps)
   if (bound instanceof Response) return bound
   if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)

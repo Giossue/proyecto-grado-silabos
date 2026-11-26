@@ -1,12 +1,9 @@
 import { HttpFailure } from "../http/failures"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { apiJson } from "../http/responses"
-import { createTemplateStore, type TemplateStore } from "../configuration/templateStore"
-import { institutionToday } from "../shared/clock"
-import { createDashboardRepository } from "./dashboardQueries"
+import type { TemplateStore } from "../shared/templateStore"
 import { administratorMetrics, administratorSetup, coordinatorReadiness, coordinatorSetup, type SetupRepository } from "./setupChecklist"
-import { createSetupRepository } from "./setupQueries"
 
 export type ProcessRecord = {
   id: string
@@ -42,10 +39,6 @@ const PROCESS_OPEN = "abierto"
 const CONVOCATION_PAUSED = "pausada"
 const CONVOCATION_CLOSED = "cerrada"
 const CONVOCATION_PREPARATION = "preparacion"
-
-function defaultDeps(): DashboardDeps {
-  return { bridge: defaultBridgeDeps(), dashboard: createDashboardRepository(), today: institutionToday, setup: createSetupRepository(), templates: createTemplateStore() }
-}
 
 function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000)
@@ -125,7 +118,7 @@ async function libraryMetrics(deps: DashboardCoreDeps) {
   ]
 }
 
-export async function dashboardDeadline(request: Request, deps: DashboardDeps = defaultDeps()): Promise<Response> {
+export async function dashboardDeadline(request: Request, deps: DashboardDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   return dashboardDeadlineFor(session, deps)
@@ -188,7 +181,7 @@ async function coordinatorDashboard(careerId: string | null, deps: DashboardCore
   }
 }
 
-export async function dashboardIndex(request: Request, deps: DashboardDeps = defaultDeps()): Promise<Response> {
+export async function dashboardIndex(request: Request, deps: DashboardDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   return dashboardFor(session, deps)

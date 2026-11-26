@@ -1,8 +1,11 @@
-import { supportDocumentViewJob } from "../academic/supportDocumentViewJob"
-import { answerTemplateAssistantJob } from "../ai/answerJobDefinition"
-import { syllabusExportJob } from "../documents/syllabusExportJob"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { supportDocumentViewJobOn } from "../academic/supportDocumentViewJob"
+import { answerTemplateAssistantJobOn } from "../ai/answerJobDefinition"
+import { syllabusExportJobOn } from "../documents/syllabusExportJob"
 import { sendMailJob } from "../mail/sendMailJob"
 import type { AnyJobDefinition } from "./job"
-import { platformSmokeJob } from "./jobs/platformSmoke"
+import { platformSmokeJobOn } from "./jobs/platformSmoke"
 
-export const registeredJobs: readonly AnyJobDefinition[] = [platformSmokeJob, sendMailJob, syllabusExportJob, supportDocumentViewJob, answerTemplateAssistantJob] as unknown as AnyJobDefinition[]
+export function registeredJobsOn(prisma: PrismaService): readonly AnyJobDefinition[] {
+  return [platformSmokeJobOn(prisma), sendMailJob, syllabusExportJobOn(prisma), supportDocumentViewJobOn(prisma), answerTemplateAssistantJobOn(prisma)] as unknown as AnyJobDefinition[]
+}

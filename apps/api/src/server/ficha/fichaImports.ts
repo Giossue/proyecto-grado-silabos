@@ -1,5 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { AppSession } from "../auth/types"
 import { freeTextNormalize } from "../configuration/freeText"
 import { phpTrim, type PhpRecord } from "../configuration/phpValues"
@@ -8,19 +8,17 @@ import { profileFields } from "../configuration/subjectProfileFields"
 import { fieldResponseNormalize } from "../configuration/templateRehearsal"
 import { fieldSection, type TemplateField } from "../configuration/templatePresentation"
 import { careerResponse, isDocument, keepOwnOptions, plainText, responseIsEmpty, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
-import type { TemplateStore } from "../configuration/templateStore"
+import type { TemplateStore } from "../shared/templateStore"
 import { importSession, readUpload, type ImportDeps, type ImportFileRules } from "../excel/importRequest"
 import { xlsxDownload } from "../excel/workbook"
 import type { UploadedFile } from "../files/uploads"
 import { definitionHash } from "./definitionHash"
 import { jsonError, apiJson, validationError } from "../http/responses"
-import { sharedRateLimiter } from "../http/throttle"
 import { fichaApplySchema } from "@silabos/shared/schemas/imports"
 import type { PhpArray, PhpValue } from "../http/input"
 import { requestBoolean } from "../syllabus/inProgressWorkHelpers"
 import { Rejected, settle } from "../syllabus/reviewDecisions"
 import { fichaClean, fichaCoverage, fichaDocument, fichaSchema } from "./fichaFieldValues"
-import { createFichaImportDeps } from "./fichaImportStore"
 import { createFichaWorkbook, FICHA_FORMAT, fichaFingerprint, readFichaWorkbook, type FichaDefinition, type FichaEntry, type FichaField, type FichaSubject } from "./fichaWorkbook"
 
 export type FichaReader = {
@@ -49,10 +47,6 @@ export type FichaImportDeps = ImportDeps & {
   store: FichaImportStore
   now: () => number
   transaction<T>(work: (tx: FichaApplyTx) => Promise<T>): Promise<T>
-}
-
-export function defaultFichaImportDeps(): FichaImportDeps {
-  return { bridge: defaultBridgeDeps(), limiter: sharedRateLimiter(), ...createFichaImportDeps() }
 }
 
 const CAREER_MODEL = "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
@@ -119,7 +113,7 @@ function contextFailure(error: unknown, careerId: string): Response {
   throw error
 }
 
-export async function fichaTemplate(request: Request, deps: FichaImportDeps = defaultFichaImportDeps()): Promise<Response> {
+export async function fichaTemplate(request: Request, deps: FichaImportDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   const careerId = await careerContext(session, deps.store)
@@ -185,7 +179,7 @@ async function previewDetail(preview: Preview, deps: FichaImportDeps): Promise<P
   }
 }
 
-export async function previewFichaImport(request: Request, deps: FichaImportDeps = defaultFichaImportDeps()): Promise<Response> {
+export async function previewFichaImport(request: Request, deps: FichaImportDeps): Promise<Response> {
   const ready = await importSession(request, deps, 20)
   if (ready instanceof Response) return ready
   const { session, finish } = ready
@@ -282,7 +276,7 @@ function chosenFields(input: PhpArray): Map<string, string[]> | null {
   return chosen
 }
 
-export async function applyFichaImport(request: Request, deps: FichaImportDeps = defaultFichaImportDeps()): Promise<Response> {
+export async function applyFichaImport(request: Request, deps: FichaImportDeps): Promise<Response> {
   const ready = await importSession(request, deps, 20)
   if (ready instanceof Response) return ready
   const { session, original, finish } = ready

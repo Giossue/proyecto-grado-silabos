@@ -1,20 +1,14 @@
-import { sql, type SQL } from "drizzle-orm"
-import { db } from "@/db"
-import { bcryptVerify } from "../auth/bcrypt"
 import { fromController } from "../auth/controllerResponse"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { requireSession } from "../auth/requireSession"
 import type { AppSession, SessionUser } from "../auth/types"
 import { phpBoolean } from "../identity/accountRules"
 import { encrypt } from "../http/encrypter"
 import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { forbidden, apiJson, serverError, validationError } from "../http/responses"
-import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
+import { throttle, type RateLimiter, type Throttle } from "../http/throttle"
 import { PASSWORD_SECTIONS, systemSettingsSchema } from "@silabos/shared/schemas/operations"
 import { validateSchema } from "../http/schemaValidation"
-import { catalogSettings } from "../library/catalogHandlers"
-import { createCatalog } from "../library/catalog"
-import { kohaFetch } from "../library/kohaHttp"
-import { describeSettings, effectiveSettings, SECRET, storedSettings, type SystemSettingsDeps } from "./systemSettings"
+import { describeSettings, effectiveSettings, SECRET, type SystemSettingsDeps } from "./systemSettings"
 
 export type SettingRow = { field: string; value: unknown }
 
@@ -104,7 +98,7 @@ export function administratorDenial(session: AppSession): Response | null {
   return !session.user.active || session.activeRole?.role !== "administrador" ? fromController(forbidden()) : null
 }
 
-export async function updateSystemSettings(request: Request, section: string, deps: SystemSettingsWriteDeps = defaultSystemSettingsWriteDeps()): Promise<Response> {
+export async function updateSystemSettings(request: Request, section: string, deps: SystemSettingsWriteDeps): Promise<Response> {
   const authorized = await administrator(request, deps)
   if (authorized instanceof Response) return authorized
   return authorized.finish(await saveSystemSettings(authorized.session, section, await requestInput(request), deps))
@@ -160,7 +154,7 @@ async function libraryConnection(settings: Record<string, unknown>, deps: System
   return { ok: true, message: count === 1 ? "Conexión correcta: 1 biblioteca" : `Conexión correcta: ${count} bibliotecas` }
 }
 
-export async function testSystemSettings(request: Request, section: string, deps: SystemSettingsWriteDeps = defaultSystemSettingsWriteDeps()): Promise<Response> {
+export async function testSystemSettings(request: Request, section: string, deps: SystemSettingsWriteDeps): Promise<Response> {
   const authorized = await administrator(request, deps)
   if (authorized instanceof Response) return authorized
   return authorized.finish(await systemSettingsConnection(section, deps))
@@ -170,27 +164,4 @@ export async function systemSettingsConnection(section: string, deps: SystemSett
   const settings = effectiveSettings(await deps.stored(), deps.environment(), deps.bridge.config.key)
   const result = section === "ia" ? await aiConnection(settings, deps) : await libraryConnection(settings, deps)
   return apiJson(result)
-}
-
-export function saveSettingsOn(executor: { execute(query: SQL): Promise<unknown> }): SystemSettingsWriteDeps["save"] {
-  return async (rows, actorId, at) => {
-    for (const row of rows) {
-      await executor.execute(sql`insert into ajustes_sistema (clave_ajuste, valor_ajuste, modificado_por, modificado_en)
-        values (${row.field}, ${JSON.stringify(row.value)}::jsonb, ${actorId}::uuid, to_timestamp(${at}))
-        on conflict (clave_ajuste) do update set valor_ajuste = excluded.valor_ajuste, modificado_por = excluded.modificado_por, modificado_en = excluded.modificado_en`)
-    }
-  }
-}
-
-export function defaultSystemSettingsWriteDeps(): SystemSettingsWriteDeps {
-  return {
-    bridge: defaultBridgeDeps(),
-    stored: storedSettings,
-    environment: () => process.env,
-    limiter: sharedRateLimiter(),
-    verifyPassword: bcryptVerify,
-    save: (rows, actorId, at) => db.transaction((tx) => saveSettingsOn(tx)(rows, actorId, at)),
-    fetch: (url, init) => fetch(url, init),
-    libraries: async () => createCatalog(await catalogSettings(), kohaFetch).libraries(),
-  }
 }

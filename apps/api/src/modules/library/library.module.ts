@@ -1,9 +1,10 @@
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common"
 import { PhpInputMiddleware } from "../../common/middleware/php-input.middleware"
-import { createLogoStore } from "../../server/configuration/institutionalLogos"
+import { PrismaService } from "../../prisma/prisma.service"
 import { createLibraryDecisionDeps } from "../../server/library/reviewDecisionStore"
+import { createLogoStore } from "../../server/shared/logoStore"
 import { signatureSettings } from "../../server/signatures/cmsVerifier"
-import { createReviewDetailStore } from "../../server/syllabus/reviewDetailQueries"
+import { reviewDetailStoreOn } from "../../server/syllabus/reviewDetailQueries"
 import { LibraryCommentInterceptor } from "./library-comment.interceptor"
 import { LibraryFiltersInterceptor } from "./library-filters.interceptor"
 import { LibraryDecisionPreloader, LibraryRevisionPreloader } from "./library-revision.preloader"
@@ -16,9 +17,9 @@ import { LIBRARY_DECISIONS, LIBRARY_DETAIL_STORE, LIBRARY_LOGO_STORE } from "./l
   controllers: [LibraryController],
   providers: [
     LibraryReviewsRepository,
-    { provide: LIBRARY_DETAIL_STORE, useFactory: createReviewDetailStore },
-    { provide: LIBRARY_LOGO_STORE, useFactory: () => createLogoStore() },
-    { provide: LIBRARY_DECISIONS, useFactory: () => ({ settings: () => signatureSettings(), ...createLibraryDecisionDeps() }) },
+    { provide: LIBRARY_DETAIL_STORE, useFactory: (prisma: PrismaService) => reviewDetailStoreOn(prisma), inject: [PrismaService] },
+    { provide: LIBRARY_LOGO_STORE, useFactory: (prisma: PrismaService) => createLogoStore(prisma), inject: [PrismaService] },
+    { provide: LIBRARY_DECISIONS, useFactory: (prisma: PrismaService) => ({ settings: () => signatureSettings(), ...createLibraryDecisionDeps(prisma) }), inject: [PrismaService] },
     LibraryService,
     LibraryRevisionPreloader,
     LibraryDecisionPreloader,

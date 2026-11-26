@@ -1,10 +1,10 @@
-import { and, asc, desc, eq, inArray, isNull, lt, notInArray, sql, type SQL } from "drizzle-orm"
-import { db, type Executor } from "@/db"
-import { fromEpoch, hasRows, isoText, jsonbValue, jsonText } from "@/db/expressions"
-import { convocatoriasUniversidad, mensajesIaPlantilla, plantillaSilabo, propuestasIaPlantilla } from "@/db/schema"
+import { Prisma } from "../../generated/prisma/client"
+import { type Db, inTransaction } from "../../prisma/db"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { fromEpoch, hasRows, iso8601, jsonbValue, jsonText } from "../../prisma/sql"
 import { phpJsonDecode, phpShape, record, type PhpRecord } from "../configuration/phpValues"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
-import { loadTemplate } from "../configuration/templateStore"
+import { loadTemplate } from "../shared/templateStore"
 
 export type StoredMessage = { id: string; templateId: string; userId: string; content: PhpRecord; sentAt: string; hiddenAt: string | null }
 
@@ -67,28 +67,15 @@ export interface AssistantStore {
 
 export const OPEN_STATES = ["pendiente", "en_ejecucion"]
 
-const MESSAGE = {
-  id: mensajesIaPlantilla.mensajeIaPlantillaId,
-  templateId: mensajesIaPlantilla.plantillaId,
-  userId: mensajesIaPlantilla.usuarioId,
-  content: jsonText(mensajesIaPlantilla.contenidoMensaje),
-  sentAt: isoText(mensajesIaPlantilla.enviadoEn),
-  hiddenAt: isoText(mensajesIaPlantilla.ocultadoEn) as SQL<string | null>,
-}
+const MESSAGE = Prisma.sql`select m.mensaje_ia_plantilla_id::text as id, m.plantilla_id::text as "templateId", m.usuario_id::text as "userId",
+  ${jsonText(Prisma.raw("m.contenido_mensaje"))} as content, ${iso8601(Prisma.raw("m.enviado_en"))} as "sentAt", ${iso8601(Prisma.raw("m.ocultado_en"))} as "hiddenAt"
+  from mensajes_ia_plantilla m`
 
-const PROPOSAL = {
-  id: propuestasIaPlantilla.propuestaIaPlantillaId,
-  templateId: propuestasIaPlantilla.plantillaId,
-  messageId: propuestasIaPlantilla.mensajeIaPlantillaId,
-  requestedBy: propuestasIaPlantilla.solicitadaPor,
-  structure: jsonText(propuestasIaPlantilla.estructuraPropuesta),
-  changes: jsonText(propuestasIaPlantilla.cambiosPropuesta),
-  fingerprint: propuestasIaPlantilla.huellaPlantillaBase,
-  draftVersion: propuestasIaPlantilla.versionBorradorPropuesta,
-  state: propuestasIaPlantilla.estadoPropuesta,
-  decidedBy: propuestasIaPlantilla.decididaPor,
-  createdAt: isoText(propuestasIaPlantilla.creadaEn),
-}
+const PROPOSAL = Prisma.sql`select p.propuesta_ia_plantilla_id::text as id, p.plantilla_id::text as "templateId", p.mensaje_ia_plantilla_id::text as "messageId",
+  p.solicitada_por::text as "requestedBy", ${jsonText(Prisma.raw("p.estructura_propuesta"))} as structure, ${jsonText(Prisma.raw("p.cambios_propuesta"))} as changes,
+  p.huella_plantilla_base as fingerprint, p.version_borrador_propuesta as "draftVersion", p.estado_propuesta as state,
+  p.decidida_por::text as "decidedBy", ${iso8601(Prisma.raw("p.creada_en"))} as "createdAt"
+  from propuestas_ia_plantilla p`
 
 type MessageRow = { id: string; templateId: string; userId: string; content: string | null; sentAt: string; hiddenAt: string | null }
 
@@ -102,194 +89,131 @@ function proposalOf(row: ProposalRow): StoredProposal {
   return { ...row, structure: record(phpJsonDecode(row.structure)), changes: record(phpJsonDecode(row.changes)) }
 }
 
-export function jsonbOf(value: unknown): SQL {
+export function jsonbOf(value: unknown): Prisma.Sql {
   return jsonbValue(JSON.stringify(phpShape(value)))
 }
 
 const conversationOf = (templateId: string, userId: string) =>
-  and(eq(mensajesIaPlantilla.plantillaId, templateId), eq(mensajesIaPlantilla.usuarioId, userId), isNull(mensajesIaPlantilla.ocultadoEn))
+  Prisma.sql`m.plantilla_id = ${templateId}::uuid and m.usuario_id = ${userId}::uuid and m.ocultado_en is null`
 
-const content = (path: string[]) =>
-  sql`(${mensajesIaPlantilla.contenidoMensaje}${sql.raw(path.slice(0, -1).map((key) => ` -> '${key}'`).join(""))} ->> ${sql.raw(`'${path[path.length - 1]}'`)})`
+const content = (path: string[]) => Prisma.raw(`(m.contenido_mensaje${path.slice(0, -1).map((key) => ` -> '${key}'`).join("")} ->> '${path[path.length - 1]}')`)
 
-function busy(executor: Executor, templateId: string, userId: string): Promise<boolean> {
+function busy(db: Db, templateId: string, userId: string): Promise<boolean> {
   return hasRows(
-    executor
-      .select({ id: mensajesIaPlantilla.mensajeIaPlantillaId })
-      .from(mensajesIaPlantilla)
-      .where(and(conversationOf(templateId, userId), inArray(content(["estado"]), OPEN_STATES)))
-      .limit(1),
+    db.$queryRaw<{ id: string }[]>`select m.mensaje_ia_plantilla_id::text as id from mensajes_ia_plantilla m
+      where ${conversationOf(templateId, userId)} and ${content(["estado"])} = any(${OPEN_STATES}::text[])
+      limit 1`,
   )
 }
 
-const messages = (executor: Executor) => executor.select(MESSAGE).from(mensajesIaPlantilla)
-const proposals = (executor: Executor) => executor.select(PROPOSAL).from(propuestasIaPlantilla)
+async function oneMessage(db: Db, where: Prisma.Sql, lock = false): Promise<StoredMessage | null> {
+  const [row] = await db.$queryRaw<MessageRow[]>`${MESSAGE} where ${where} limit 1 ${lock ? Prisma.sql`for update` : Prisma.empty}`
+  return row ? messageOf(row) : null
+}
 
-export function assistantTx(executor: Executor): AssistantTx {
+async function oneProposal(db: Db, where: Prisma.Sql, lock = false): Promise<StoredProposal | null> {
+  const [row] = await db.$queryRaw<ProposalRow[]>`${PROPOSAL} where ${where} limit 1 ${lock ? Prisma.sql`for update` : Prisma.empty}`
+  return row ? proposalOf(row) : null
+}
+
+async function firstId(db: Db, where: Prisma.Sql): Promise<string | null> {
+  const [row] = await db.$queryRaw<{ id: string }[]>`select m.mensaje_ia_plantilla_id::text as id from mensajes_ia_plantilla m where ${where} limit 1`
+  return row?.id ?? null
+}
+
+async function processExists(db: Db, state: string): Promise<boolean> {
+  return hasRows(
+    db.$queryRaw<{ id: string }[]>`select convocatoria_universidad_id::text as id from convocatorias_universidad
+      where estado_convocatoria_universidad = ${state} limit 1`,
+  )
+}
+
+export function assistantTx(db: Db): AssistantTx {
   return {
     async lockTemplateId() {
-      const [row] = await executor.select({ id: plantillaSilabo.plantillaId }).from(plantillaSilabo).limit(1).for("update")
+      const [row] = await db.$queryRaw<{ id: string }[]>`select plantilla_id::text as id from plantilla_silabo limit 1 for update`
       return row?.id ?? null
     },
-    async questionByKey(templateId, userId, key) {
-      const [row] = await executor
-        .select({ id: mensajesIaPlantilla.mensajeIaPlantillaId })
-        .from(mensajesIaPlantilla)
-        .where(
-          and(
-            eq(mensajesIaPlantilla.plantillaId, templateId),
-            eq(mensajesIaPlantilla.usuarioId, userId),
-            eq(content(["rol"]), "usuario"),
-            eq(content(["entrada", "clave_idempotencia"]), key),
-          ),
-        )
-        .limit(1)
-      return row?.id ?? null
-    },
-    async answerTo(questionId) {
-      const [row] = await executor
-        .select({ id: mensajesIaPlantilla.mensajeIaPlantillaId })
-        .from(mensajesIaPlantilla)
-        .where(eq(content(["entrada", "respuesta_a_id"]), questionId))
-        .limit(1)
-      return row?.id ?? null
-    },
-    conversationBusy: (templateId, userId) => busy(executor, templateId, userId),
+    questionByKey: (templateId, userId, key) =>
+      firstId(
+        db,
+        Prisma.sql`m.plantilla_id = ${templateId}::uuid and m.usuario_id = ${userId}::uuid and ${content(["rol"])} = 'usuario' and ${content(["entrada", "clave_idempotencia"])} = ${key}`,
+      ),
+    answerTo: (questionId) => firstId(db, Prisma.sql`${content(["entrada", "respuesta_a_id"])} = ${questionId}`),
+    conversationBusy: (templateId, userId) => busy(db, templateId, userId),
     async insertMessage(message) {
-      await executor.insert(mensajesIaPlantilla).values({
-        mensajeIaPlantillaId: message.id,
-        plantillaId: message.templateId,
-        usuarioId: message.userId,
-        contenidoMensaje: jsonbOf(message.content),
-      })
+      await db.$executeRaw`insert into mensajes_ia_plantilla (mensaje_ia_plantilla_id, plantilla_id, usuario_id, contenido_mensaje)
+        values (${message.id}::uuid, ${message.templateId}::uuid, ${message.userId}::uuid, ${jsonbOf(message.content)})`
     },
-    async lockProposal(id) {
-      const [row] = await proposals(executor).where(eq(propuestasIaPlantilla.propuestaIaPlantillaId, id)).limit(1).for("update")
-      return row ? proposalOf(row) : null
-    },
+    lockProposal: (id) => oneProposal(db, Prisma.sql`p.propuesta_ia_plantilla_id = ${id}::uuid`, true),
     async decideProposal(id, state, actorId, at) {
-      await executor
-        .update(propuestasIaPlantilla)
-        .set({ estadoPropuesta: state, decididaPor: actorId, decididaEn: fromEpoch(at) })
-        .where(eq(propuestasIaPlantilla.propuestaIaPlantillaId, id))
+      await db.$executeRaw`update propuestas_ia_plantilla set estado_propuesta = ${state}, decidida_por = ${actorId}::uuid, decidida_en = ${fromEpoch(at)}
+        where propuesta_ia_plantilla_id = ${id}::uuid`
     },
-    async lockMessage(id) {
-      const [row] = await messages(executor).where(eq(mensajesIaPlantilla.mensajeIaPlantillaId, id)).limit(1).for("update")
-      return row ? messageOf(row) : null
-    },
+    lockMessage: (id) => oneMessage(db, Prisma.sql`m.mensaje_ia_plantilla_id = ${id}::uuid`, true),
     async updateMessage(id, value) {
-      await executor.update(mensajesIaPlantilla).set({ contenidoMensaje: jsonbOf(value) }).where(eq(mensajesIaPlantilla.mensajeIaPlantillaId, id))
+      await db.$executeRaw`update mensajes_ia_plantilla set contenido_mensaje = ${jsonbOf(value)} where mensaje_ia_plantilla_id = ${id}::uuid`
     },
     async replacePendingProposals(templateId, userId) {
-      await executor
-        .update(propuestasIaPlantilla)
-        .set({ estadoPropuesta: "reemplazada" })
-        .where(
-          and(
-            eq(propuestasIaPlantilla.plantillaId, templateId),
-            eq(propuestasIaPlantilla.solicitadaPor, userId),
-            eq(propuestasIaPlantilla.estadoPropuesta, "pendiente"),
-          ),
-        )
+      await db.$executeRaw`update propuestas_ia_plantilla set estado_propuesta = 'reemplazada'
+        where plantilla_id = ${templateId}::uuid and solicitada_por = ${userId}::uuid and estado_propuesta = 'pendiente'`
     },
     async insertProposal(proposal) {
-      await executor.insert(propuestasIaPlantilla).values({
-        propuestaIaPlantillaId: proposal.id,
-        plantillaId: proposal.templateId,
-        mensajeIaPlantillaId: proposal.messageId,
-        solicitadaPor: proposal.requestedBy,
-        estructuraPropuesta: jsonbOf(proposal.structure),
-        cambiosPropuesta: jsonbOf(proposal.changes),
-        huellaPlantillaBase: proposal.fingerprint,
-        versionBorradorPropuesta: proposal.draftVersion,
-        estadoPropuesta: "pendiente",
-      })
+      await db.$executeRaw`insert into propuestas_ia_plantilla (propuesta_ia_plantilla_id, plantilla_id, mensaje_ia_plantilla_id, solicitada_por,
+          estructura_propuesta, cambios_propuesta, huella_plantilla_base, version_borrador_propuesta, estado_propuesta)
+        values (${proposal.id}::uuid, ${proposal.templateId}::uuid, ${proposal.messageId}::uuid, ${proposal.requestedBy}::uuid,
+          ${jsonbOf(proposal.structure)}, ${jsonbOf(proposal.changes)}, ${proposal.fingerprint}, ${proposal.draftVersion}, 'pendiente')`
     },
   }
 }
 
-export function assistantStoreOn(executor: Executor, transaction: <T>(work: (tx: AssistantTx) => Promise<T>) => Promise<T>): AssistantStore {
+export function assistantStoreOn(db: Db, transaction: <T>(work: (tx: AssistantTx) => Promise<T>) => Promise<T>): AssistantStore {
   return {
-    template: () => loadTemplate(executor),
+    template: () => loadTemplate(db),
     async conversation(templateId, userId) {
-      const found = (await messages(executor).where(conversationOf(templateId, userId)).orderBy(asc(mensajesIaPlantilla.enviadoEn))).map(messageOf)
+      const found = (await db.$queryRaw<MessageRow[]>`${MESSAGE} where ${conversationOf(templateId, userId)} order by m.enviado_en asc`).map(messageOf)
       if (found.length === 0) return []
-      const offers = (
-        await proposals(executor).where(
-          inArray(
-            propuestasIaPlantilla.mensajeIaPlantillaId,
-            found.map((message) => message.id),
-          ),
-        )
-      ).map(proposalOf)
+      const ids = found.map((message) => message.id)
+      const offers = (await db.$queryRaw<ProposalRow[]>`${PROPOSAL} where p.mensaje_ia_plantilla_id = any(${ids}::uuid[])`).map(proposalOf)
       return found.map((message) => ({ ...message, proposal: offers.find((proposal) => proposal.messageId === message.id) ?? null }))
     },
-    conversationBusy: (templateId, userId) => busy(executor, templateId, userId),
+    conversationBusy: (templateId, userId) => busy(db, templateId, userId),
     async hideConversation(templateId, userId, at) {
-      await executor.update(mensajesIaPlantilla).set({ ocultadoEn: fromEpoch(at) }).where(conversationOf(templateId, userId))
+      await db.$executeRaw`update mensajes_ia_plantilla m set ocultado_en = ${fromEpoch(at)} where ${conversationOf(templateId, userId)}`
     },
-    openProcess: () =>
-      hasRows(
-        executor
-          .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
-          .from(convocatoriasUniversidad)
-          .where(eq(convocatoriasUniversidad.estadoConvocatoriaUniversidad, "abierto"))
-          .limit(1),
-      ),
+    openProcess: () => processExists(db, "abierto"),
     async processState() {
       for (const [state, name] of [
         ["abierto", "abierta"],
         ["pausado", "pausada"],
       ]) {
-        const found = await hasRows(
-          executor
-            .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
-            .from(convocatoriasUniversidad)
-            .where(eq(convocatoriasUniversidad.estadoConvocatoriaUniversidad, state))
-            .limit(1),
-        )
-        if (found) return name
+        if (await processExists(db, state)) return name
       }
       return "ninguna"
     },
-    async proposal(id) {
-      const [row] = await proposals(executor).where(eq(propuestasIaPlantilla.propuestaIaPlantillaId, id)).limit(1)
-      return row ? proposalOf(row) : null
-    },
-    async message(id) {
-      const [row] = await messages(executor).where(eq(mensajesIaPlantilla.mensajeIaPlantillaId, id)).limit(1)
-      return row ? messageOf(row) : null
-    },
+    proposal: (id) => oneProposal(db, Prisma.sql`p.propuesta_ia_plantilla_id = ${id}::uuid`),
+    message: (id) => oneMessage(db, Prisma.sql`m.mensaje_ia_plantilla_id = ${id}::uuid`),
     async history(message, questionId, limit) {
-      const question = executor
-        .select({ sentAt: mensajesIaPlantilla.enviadoEn })
-        .from(mensajesIaPlantilla)
-        .where(eq(mensajesIaPlantilla.mensajeIaPlantillaId, questionId))
-        .limit(1)
-      const found = await messages(executor)
-        .where(
-          and(
-            conversationOf(message.templateId, message.userId),
-            notInArray(mensajesIaPlantilla.mensajeIaPlantillaId, [message.id, questionId]),
-            lt(mensajesIaPlantilla.enviadoEn, sql`${question}`),
-            eq(content(["estado"]), "completado"),
-          ),
-        )
-        .orderBy(desc(mensajesIaPlantilla.enviadoEn))
-        .limit(limit)
+      const found = await db.$queryRaw<MessageRow[]>`${MESSAGE}
+        where ${conversationOf(message.templateId, message.userId)}
+          and m.mensaje_ia_plantilla_id not in (${message.id}::uuid, ${questionId}::uuid)
+          and m.enviado_en < (select q.enviado_en from mensajes_ia_plantilla q where q.mensaje_ia_plantilla_id = ${questionId}::uuid limit 1)
+          and ${content(["estado"])} = 'completado'
+        order by m.enviado_en desc
+        limit ${limit}`
       return found.map(messageOf)
     },
     async lastProposal(templateId, userId) {
-      const [row] = await proposals(executor)
-        .where(and(eq(propuestasIaPlantilla.plantillaId, templateId), eq(propuestasIaPlantilla.solicitadaPor, userId)))
-        .orderBy(desc(propuestasIaPlantilla.creadaEn))
-        .limit(1)
+      const [row] = await db.$queryRaw<ProposalRow[]>`${PROPOSAL}
+        where p.plantilla_id = ${templateId}::uuid and p.solicitada_por = ${userId}::uuid
+        order by p.creada_en desc
+        limit 1`
       return row ? proposalOf(row) : null
     },
     transaction,
   }
 }
 
-export function createAssistantStore(): AssistantStore {
-  return assistantStoreOn(db as unknown as Executor, (work) => db.transaction((tx) => work(assistantTx(tx as unknown as Executor))))
+export function createAssistantStore(prisma: PrismaService): AssistantStore {
+  return assistantStoreOn(prisma, (work) => inTransaction(prisma, (tx) => work(assistantTx(tx))))
 }

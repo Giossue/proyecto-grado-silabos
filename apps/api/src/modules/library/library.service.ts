@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common"
 import type { PageLinks } from "../../common/decorators/query-input.decorator"
 import type { AppSession, BridgeDeps } from "../../server/auth/types"
-import type { LogoStore } from "../../server/configuration/institutionalLogos"
+import type { LogoStore } from "../../server/shared/logoStore"
 import type { PhpArray } from "../../server/http/input"
 import { commentBoundRevision, verifyBoundRevision, type BoundRevision, type LibraryDecisionDeps } from "../../server/library/reviewDecisions"
 import { libraryReviewPayload } from "../../server/library/reviewDetail"

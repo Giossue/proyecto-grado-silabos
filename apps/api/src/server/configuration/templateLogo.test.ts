@@ -7,7 +7,7 @@ import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { decodePng } from "../files/png"
 import { createStorageWriter, type StorageWriter } from "../http/storageWriter"
-import type { TemplateStore } from "./templateStore"
+import type { TemplateStore } from "../shared/templateStore"
 import { uploadTemplateLogo } from "./templateLogo"
 
 const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })

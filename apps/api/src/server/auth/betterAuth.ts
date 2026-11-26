@@ -1,11 +1,10 @@
 import { betterAuth, type BetterAuthOptions } from "better-auth"
 import { APIError } from "better-auth/api"
-import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { generateRandomString } from "better-auth/crypto"
 import { twoFactor } from "better-auth/plugins"
-import { db } from "@/db"
-import { authTables } from "./authTables"
+import type { PrismaClient } from "../../generated/prisma/client"
 import { bcryptHash, bcryptVerify } from "./bcrypt"
+import { PRISMA_AUTH_SCHEMA, prismaAuthDatabase } from "./prismaAuthDatabase"
 
 export const INACTIVE_ACCOUNT = "La cuenta está desactivada."
 export const RECOVERY_CODE_COUNT = 8
@@ -55,11 +54,24 @@ export function authSettings(env: Environment = process.env): AuthSettings {
   }
 }
 
+type ModelMapping = { modelName?: string; fields?: Record<string, string> }
+
+export type AuthSchema = {
+  user?: { modelName?: string; fields?: Partial<Record<"name" | "email" | "emailVerified" | "image" | "createdAt" | "updatedAt", string>> }
+  userActive?: string
+  userTwoFactorEnabled?: string
+  session?: { modelName?: string; fields?: Partial<Record<"expiresAt" | "token" | "createdAt" | "updatedAt" | "ipAddress" | "userAgent" | "userId", string>> }
+  sessionActiveRoleAssignmentId?: string
+  account?: ModelMapping
+  verification?: ModelMapping
+  twoFactor?: ModelMapping
+}
+
 export function recoveryCodes(): string[] {
   return Array.from({ length: RECOVERY_CODE_COUNT }, () => `${generateRandomString(10, "a-z", "A-Z", "0-9")}-${generateRandomString(10, "a-z", "A-Z", "0-9")}`)
 }
 
-export function createAuth(database: BetterAuthOptions["database"], settings: AuthSettings) {
+export function createAuth(database: BetterAuthOptions["database"], settings: AuthSettings, schema: AuthSchema = {}) {
   return betterAuth({
     appName: settings.appName,
     secret: settings.secret,
@@ -80,18 +92,21 @@ export function createAuth(database: BetterAuthOptions["database"], settings: Au
       },
     },
     user: {
+      ...schema.user,
       additionalFields: {
-        active: { type: "boolean", required: false, input: false },
+        active: { type: "boolean", required: false, input: false, fieldName: schema.userActive },
       },
     },
     session: {
+      ...schema.session,
       expiresIn: settings.lifetimeMinutes * 60,
       updateAge: SESSION_REFRESH_SECONDS,
       additionalFields: {
-        activeRoleAssignmentId: { type: "string", required: false, input: false },
+        activeRoleAssignmentId: { type: "string", required: false, input: false, fieldName: schema.sessionActiveRoleAssignmentId },
       },
     },
-    account: { accountLinking: { enabled: false } },
+    account: { ...schema.account, accountLinking: { enabled: false } },
+    verification: { ...schema.verification },
     advanced: {
       cookiePrefix: settings.cookiePrefix,
       database: { validateSchema: false },
@@ -112,6 +127,7 @@ export function createAuth(database: BetterAuthOptions["database"], settings: Au
         twoFactorCookieMaxAge: TWO_FACTOR_CHALLENGE_SECONDS,
         totpOptions: { period: 30, digits: 6 },
         backupCodeOptions: { customBackupCodesGenerate: recoveryCodes },
+        schema: { user: { fields: { twoFactorEnabled: schema.userTwoFactorEnabled ?? "twoFactorEnabled" } }, twoFactor: schema.twoFactor ?? {} },
       }),
     ],
   })
@@ -119,9 +135,17 @@ export function createAuth(database: BetterAuthOptions["database"], settings: Au
 
 export type Auth = ReturnType<typeof createAuth>
 
-const globalForAuth = globalThis as unknown as { silabosAuth?: Auth }
+const globalForAuth = globalThis as unknown as { silabosAuth?: Auth; silabosAuthDatabase?: PrismaClient }
+
+export function bindAuthDatabase(prisma: PrismaClient): void {
+  if (globalForAuth.silabosAuthDatabase === prisma) return
+  globalForAuth.silabosAuthDatabase = prisma
+  globalForAuth.silabosAuth = undefined
+}
 
 export function sharedAuth(): Auth {
-  globalForAuth.silabosAuth ??= createAuth(drizzleAdapter(db, { provider: "pg", schema: authTables }), authSettings())
+  const prisma = globalForAuth.silabosAuthDatabase
+  if (prisma === undefined) throw new Error("The Better Auth database is not bound.")
+  globalForAuth.silabosAuth ??= createAuth(prismaAuthDatabase(prisma), authSettings(), PRISMA_AUTH_SCHEMA)
   return globalForAuth.silabosAuth
 }

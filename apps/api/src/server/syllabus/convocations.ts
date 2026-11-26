@@ -1,3 +1,4 @@
+import type { PrismaService } from "../../prisma/prisma.service"
 import { HttpFailure, Missing } from "../http/failures"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
@@ -52,8 +53,8 @@ const PER_PAGE = 20
 const CONVOCATION_STATES = ["sin_iniciar", "preparacion", "abierta", "pausada", "cerrada"]
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
-export function defaultConvocationDeps(): ConvocationDeps {
-  return { bridge: defaultBridgeDeps(), convocations: createConvocationRepository(), now: () => Math.floor(Date.now() / 1000) }
+export function defaultConvocationDeps(prisma: PrismaService): ConvocationDeps {
+  return { bridge: defaultBridgeDeps(), convocations: createConvocationRepository(prisma), now: () => Math.floor(Date.now() / 1000) }
 }
 
 function mayView(session: AppSession, convocation: ConvocationRecord): boolean {
@@ -69,7 +70,7 @@ function byteOrder(left: string, right: string): number {
   return Buffer.compare(Buffer.from(left), Buffer.from(right))
 }
 
-export async function convocations(request: Request, deps: ConvocationDeps = defaultConvocationDeps()): Promise<Response> {
+export async function convocations(request: Request, deps: ConvocationDeps): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   return convocationsFor(request, session, deps)
@@ -115,7 +116,7 @@ async function boundConvocation(request: Request, id: string, deps: ConvocationD
   return { session: bound.session, convocation: bound.bound }
 }
 
-export async function convocationDetail(request: Request, id: string, deps: ConvocationDeps = defaultConvocationDeps()): Promise<Response> {
+export async function convocationDetail(request: Request, id: string, deps: ConvocationDeps): Promise<Response> {
   const bound = await boundConvocation(request, id, deps)
   if (bound instanceof Response) return bound
   return convocationDetailFor(bound.session, bound.convocation, deps)
@@ -157,7 +158,7 @@ export async function convocationDetailFor(session: AppSession, convocation: Con
 
 class StateChanged extends Error {}
 
-export async function pauseConvocation(request: Request, id: string, deps: ConvocationDeps = defaultConvocationDeps()): Promise<Response> {
+export async function pauseConvocation(request: Request, id: string, deps: ConvocationDeps): Promise<Response> {
   const bound = await boundConvocation(request, id, deps)
   if (bound instanceof Response) return bound
   return pauseConvocationFor(bound.session, bound.convocation, deps)
