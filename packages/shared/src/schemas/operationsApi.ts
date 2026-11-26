@@ -8,10 +8,6 @@ export const processCreationBody = z.object({
   due_at: z.string().describe("Fecha límite (AAAA-MM-DD); posterior al inicio y dentro del período."),
 })
 
-export const processDeletionBody = z.object({
-  mensaje: z.string().max(1000).describe("Mensaje para docentes, coordinación y biblioteca."),
-})
-
 export const redoConfirmationBody = z.object({ confirmar_rehacer: confirmRedo })
 
 export const deadlineExtensionBody = z.object({

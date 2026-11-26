@@ -7,7 +7,7 @@ import { MessageDto, ValidationErrorDto } from "../../common/dtos/api-responses.
 import type { AppSession } from "../../server/auth/types"
 import type { PhpArray } from "../../server/http/input"
 import type { ProcessRow } from "../../server/syllabus/processes"
-import { DeadlineExtensionDto, ProcessCreationDto, ProcessDeletionDto, RedoConfirmationDto } from "./dto/process-bodies.dto"
+import { DeadlineExtensionDto, ProcessCreationDto, RedoConfirmationDto } from "./dto/process-bodies.dto"
 import { ProcessPreloader } from "./process.preloader"
 import { ProcessesService } from "./processes.service"
 import { WebRequest } from "./web-input.decorator"
@@ -47,12 +47,11 @@ export class ProcessesController {
   @Authenticated(BOUND)
   @Roles(ADMINISTRATOR)
   @ApiParam(PROCESS)
-  @ApiBody({ type: ProcessDeletionDto })
   @ApiOkResponse({ description: "Elimina el periodo académico abierto o en pausa con sus sílabos y avisa a docentes, coordinación y biblioteca.", type: MessageDto })
   @ApiNotFoundResponse(MISSING)
   @ApiUnprocessableEntityResponse(VALIDATION)
-  remove(@WebRequest() original: Request, @CurrentSession() session: AppSession, @Preloaded() process: ProcessRow, @Body() input: PhpArray) {
-    return this.processes.remove(original, session, process, input)
+  remove(@WebRequest() original: Request, @CurrentSession() session: AppSession, @Preloaded() process: ProcessRow) {
+    return this.processes.remove(original, session, process)
   }
 
   @Get(":process/impact")

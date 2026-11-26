@@ -4,7 +4,7 @@ import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { deadlineExtensionSchema, processDeletionSchema, redoConfirmationSchema } from "@silabos/shared/schemas/syllabus"
+import { deadlineExtensionSchema, redoConfirmationSchema } from "@silabos/shared/schemas/syllabus"
 import { validateSchema } from "../http/schemaValidation"
 import { notificationDate, storeInternalNotifications, type NotificationScope } from "../notifications/store"
 import { notifyConvocationResumed, timestampMs } from "./convocationWrites"
@@ -71,7 +71,6 @@ export function defaultProcessWriteDeps(prisma: PrismaService): ProcessWriteDeps
   return { bridge: defaultBridgeDeps(), ...createProcessWriteDeps(prisma) }
 }
 
-const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 const WRONG_STATE = "El proceso no está en un estado que admita esta acción."
 const PAUSE_TEMPLATE_CHANGED =
   "La plantilla cambió durante la pausa. Confirme para adaptar los sílabos del período: se conserva lo escrito y los enviados o aprobados vuelven a borrador."
@@ -107,14 +106,11 @@ export async function deleteProcess(request: Request, id: string, deps: ProcessW
   const original = request.clone()
   const bound = await bindProcess(request, id, deps)
   if (bound instanceof Response) return bound
-  return deleteBoundProcess(original, bound.session, bound.process, await requestInput(request), deps)
+  return deleteBoundProcess(original, bound.session, bound.process, deps)
 }
 
-export async function deleteBoundProcess(original: Request, session: AppSession, process: ProcessRow, input: PhpArray, deps: ProcessWriteDeps): Promise<Response> {
+export async function deleteBoundProcess(original: Request, session: AppSession, process: ProcessRow, deps: ProcessWriteDeps): Promise<Response> {
   if (!hasRole(session, ROLE_ADMINISTRATOR) || !["abierto", "pausado"].includes(process.state)) return forbidden()
-  const { errors } = await validateSchema(processDeletionSchema, input)
-  if (errors !== null) return validationError(errors)
-  const notice = (input.mensaje as string).replace(PHP_TRIM, "")
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {
       const locked = await tx.lockProcess(process.id)
@@ -131,7 +127,7 @@ export async function deleteBoundProcess(original: Request, session: AppSession,
         deduplicationKey: `proceso.eliminado:${locked.id}`,
         recipientIds: recipients,
         title: "Periodo académico eliminado",
-        message: `Se borraron todos los sílabos de ${locked.period}. Mensaje de Administración: ${notice}`,
+        message: `Administración eliminó el periodo académico ${locked.period} y todos sus sílabos.`,
         resourceType: "periodo_academico",
         resourceId: locked.periodId,
         periodId: locked.periodId,

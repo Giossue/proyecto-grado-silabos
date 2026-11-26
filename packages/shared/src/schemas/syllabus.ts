@@ -26,12 +26,8 @@ export function reviewHistorySchema(periodExists?: Exists) {
 
 export const JUSTIFICATION_MIN = 10
 export const JUSTIFICATION_MAX = 10000
-export const REASON_MIN = 5
-export const REASON_MAX = 500
 
 export const changeRequestSchema = z.object({ justification: requiredField("justificación", [is.string(), is.min(JUSTIFICATION_MIN), is.max(JUSTIFICATION_MAX)]) })
-
-export const restartSchema = z.object({ reason: requiredField("motivo", [is.string(), is.min(REASON_MIN), is.max(REASON_MAX)]) })
 
 export function convocationSchema(openProcessExists?: Exists) {
   return z.object({ process_id: requiredField("proceso", [is.uuid(), ...(openProcessExists ? [is.existing(openProcessExists)] : [])]) })
@@ -55,15 +51,6 @@ export const submissionSchema = z.object({
 export const idempotencySchema = z.object({ idempotency_key: requiredField("identificador de la solicitud", [is.uuid()]) })
 
 export const redoConfirmationSchema = z.object({ confirmar_rehacer: sometimesField("confirmación para rehacer los sílabos", [is.boolean()]) })
-
-export const PROCESS_NOTICE_MAX = 1000
-export const ASK_PROCESS_NOTICE = "Escriba el mensaje para docentes, coordinación y biblioteca."
-
-export const processDeletionSchema = z.object({
-  mensaje: requiredField("mensaje para docentes, coordinación y biblioteca", [is.string(ASK_PROCESS_NOTICE), is.max(PROCESS_NOTICE_MAX, "El mensaje no puede pasar de 1000 caracteres.")], {
-    requiredMessage: ASK_PROCESS_NOTICE,
-  }),
-})
 
 export const deadlineExtensionSchema = z.object({
   stage: prohibitedField("etapa", "La prórroga solo modifica la fecha límite de entrega."),

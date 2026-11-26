@@ -85,12 +85,11 @@ describe("storeInternalNotifications", () => {
         deduplicationKey: `silabo.eliminado:${SYLLABUS}`,
         recipientIds: [TEACHER],
         revisionNumber: null,
-        reason: "  Cambio de docente.  ",
       }),
     )
     expect(world.notifications[0]).toMatchObject({
       title: "Su sílabo volvió a empezar",
-      message: "Coordinación eliminó el sílabo aprobado de Cálculo I; elabórelo con la malla y la plantilla actuales. Motivo: Cambio de docente.",
+      message: "Coordinación eliminó el sílabo aprobado de Cálculo I; elabórelo con la malla y la plantilla actuales.",
       resourceType: "silabo",
       resourceId: SYLLABUS,
     })

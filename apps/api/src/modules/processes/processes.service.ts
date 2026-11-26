@@ -47,8 +47,8 @@ export class ProcessesService {
     return closeBoundProcess(session, process, input, this.closing)
   }
 
-  remove(original: Request, session: AppSession, process: ProcessRow, input: PhpArray): Promise<Response> {
-    return deleteBoundProcess(original, session, process, input, this.writeDeps())
+  remove(original: Request, session: AppSession, process: ProcessRow): Promise<Response> {
+    return deleteBoundProcess(original, session, process, this.writeDeps())
   }
 
   extendDeadline(original: Request, session: AppSession, process: ProcessRow, input: PhpArray): Promise<Response> {

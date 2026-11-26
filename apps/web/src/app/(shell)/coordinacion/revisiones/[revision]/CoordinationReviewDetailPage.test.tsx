@@ -107,8 +107,6 @@ const mountPage = async () => {
 
 const headerButton = (name: string): HTMLButtonElement | undefined =>
   [...document.querySelectorAll<HTMLButtonElement>("header button")].find((button) => button.textContent === name || button.getAttribute("aria-label") === name)
-const dialogButton = (name: string): HTMLButtonElement | undefined =>
-  [...document.body.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((item) => item.textContent?.includes(name))
 const type = (selector: string, value: string): void => {
   fireEvent.change(document.body.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)!, { target: { value } })
 }
@@ -260,7 +258,7 @@ describe("CoordinationReviewDetailPage", () => {
     await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/coordinacion/revisiones"))
   })
 
-  it("reinicia un sílabo aprobado desde «Más» solo con el motivo, sin escribir la materia, y vuelve a la cola", async () => {
+  it("reinicia un sílabo aprobado desde «Más» al primer clic, sin modal ni motivo, y vuelve a la cola", async () => {
     vi.mocked(getReview).mockResolvedValue({ ...detail(), reset: { allowed: true, erases_history: true, revisions: 2, signatures: 3, has_pdf: true } })
     vi.mocked(resetSyllabus).mockResolvedValue({ message: "Sílabo reiniciado" })
     await mountPage()
@@ -270,20 +268,9 @@ describe("CoordinationReviewDetailPage", () => {
     expect([...document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')].some((item) => item.textContent?.includes("Eliminar"))).toBe(false)
     await chooseRestart()
 
-    expect(document.body.textContent).toContain("3 firma(s)")
-    expect(document.body.textContent).toContain("2 revisión(es), la aprobación y el PDF")
-    const confirm = (): HTMLButtonElement => dialogButton("Reiniciar")!
-    expect(confirm().textContent?.trim()).toBe("Reiniciar")
-    expect(confirm().disabled).toBe(true)
-    type("#restart-reason", "Error en la ficha de la materia")
-    await flush()
-    expect(document.body.querySelector("#restart-name")).toBeNull()
-    expect(confirm().disabled).toBe(false)
-    fireEvent.click(confirm())
-    await flush()
-
-    expect(resetSyllabus).toHaveBeenCalledWith("syllabus-1", "Error en la ficha de la materia")
-    await waitFor(() => expect(navigation.replace).toHaveBeenCalled())
+    expect(document.body.querySelector("#restart-reason")).toBeNull()
+    expect(resetSyllabus).toHaveBeenCalledWith("syllabus-1")
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/coordinacion/revisiones"))
   })
 
   it("el historial lleva a su propia pantalla de versiones", async () => {
@@ -395,8 +382,7 @@ describe("CoordinationReviewDetailPage", () => {
     expect(navigation.replace).toHaveBeenCalledWith("/coordinacion/revisiones")
   })
 
-  it("al reiniciar sin borrar el historial, refresca la revisión cuando el diálogo terminó de cerrarse", async () => {
-    simulateExitAnimation()
+  it("al reiniciar sin borrar el historial, refresca la revisión sin salir de ella", async () => {
     vi.mocked(getReview)
       .mockResolvedValueOnce({ ...detail(), reset: { allowed: true, erases_history: false, revisions: 1, signatures: 0, has_pdf: false } })
       .mockResolvedValue({ ...detail(), reset: { allowed: false } })
@@ -404,18 +390,20 @@ describe("CoordinationReviewDetailPage", () => {
     await mountPage()
     await openMore()
     await chooseRestart()
-    type("#restart-reason", "Error en la ficha de la materia")
-    await flush()
 
-    fireEvent.click(dialogButton("Reiniciar")!)
-    await flush()
+    expect(resetSyllabus).toHaveBeenCalledWith("syllabus-1")
+    await waitFor(() => expect(getReview).toHaveBeenCalledTimes(2))
+    expect(navigation.replace).not.toHaveBeenCalled()
+  })
 
-    expect(resetSyllabus).toHaveBeenCalled()
-    expect(getReview).toHaveBeenCalledTimes(1)
-    const restart = (): HTMLElement | undefined => [...document.body.querySelectorAll<HTMLElement>('[role="dialog"]')].find((item) => item.textContent?.includes("Reiniciar «Arquitectura de Software»"))
-    expect(restart()?.dataset.state).toBe("closed")
-    await exit()
-    expect(getReview).toHaveBeenCalledTimes(2)
-    expect(restart()).toBeUndefined()
+  it("si el servidor rechaza el reinicio no sale de la revisión", async () => {
+    vi.mocked(getReview).mockResolvedValue({ ...detail(), reset: { allowed: true, erases_history: true, revisions: 1, signatures: 0, has_pdf: false } })
+    vi.mocked(resetSyllabus).mockRejectedValue(new ApiError("Datos inválidos.", 422, { syllabus: ["Solo se reinicia un sílabo aprobado."] }))
+    await mountPage()
+    await openMore()
+    await chooseRestart()
+
+    expect(resetSyllabus).toHaveBeenCalledWith("syllabus-1")
+    expect(navigation.replace).not.toHaveBeenCalled()
   })
 })

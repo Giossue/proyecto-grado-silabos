@@ -18,7 +18,6 @@ const TEACHER = "a0000000-0000-4000-8000-0000000000aa"
 const COORDINATOR = "a0000000-0000-4000-8000-0000000000cc"
 const LIBRARIAN = "a0000000-0000-4000-8000-0000000000dd"
 const SYLLABI = ["50000000-0000-4000-8000-000000000001", "50000000-0000-4000-8000-000000000002"]
-const NOTICE = "Se repite el periodo académico con la malla corregida."
 
 let world: FakeWorld
 let notices: NotificationWorld
@@ -136,7 +135,7 @@ const resume = (body?: unknown, id = PROCESS) => send((request) => resumeProcess
 
 describe("process binding", () => {
   it("answers Laravel's model 404 for an unknown or malformed process", async () => {
-    expect(await destroy({ mensaje: "x" }, "cd000000-0000-4000-8000-00000000ffff")).toMatchObject({ status: 404, text: modelNotFound("SyllabusProcess", "cd000000-0000-4000-8000-00000000ffff") })
+    expect(await destroy(undefined, "cd000000-0000-4000-8000-00000000ffff")).toMatchObject({ status: 404, text: modelNotFound("SyllabusProcess", "cd000000-0000-4000-8000-00000000ffff") })
     expect(await resume({}, "abc")).toMatchObject({ status: 404, text: modelNotFound("SyllabusProcess", "abc") })
   })
 })
@@ -171,10 +170,10 @@ beforeEach(() => {
 
 describe("DELETE /api/v1/admin/processes/{process}", () => {
   it("erases the process with all its work and tells everyone involved except the administrator", async () => {
-    const response = await destroy({ mensaje: `  ${NOTICE}  ` })
+    const response = await destroy()
     expect(response.text).toBe(JSON.stringify({ message: "Periodo académico eliminado." }))
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, "lock:convocations", "lock:syllabi", "purge:2", `delete:${PROCESS}:${CONVOCATION}`, "commit"])
-    const message = `Se borraron todos los sílabos de 2026-2. Mensaje de Administración: ${NOTICE}`
+    const message = "Administración eliminó el periodo académico 2026-2 y todos sus sílabos."
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType, item.resourceId, item.periodId])).toEqual([
       [TEACHER, `flujo:proceso.eliminado:${PROCESS}`, "Periodo académico eliminado", message, "periodo_academico", PERIOD, PERIOD],
       [COORDINATOR, `flujo:proceso.eliminado:${PROCESS}`, "Periodo académico eliminado", message, "periodo_academico", PERIOD, PERIOD],
@@ -183,26 +182,24 @@ describe("DELETE /api/v1/admin/processes/{process}", () => {
     expect(notices.mails).toHaveLength(3)
   })
 
-  it("asks for the message with its own wording", async () => {
-    const ask = "Escriba el mensaje para docentes, coordinación y biblioteca."
-    expect((await destroy({})).json).toEqual({ message: ask, errors: { mensaje: [ask] } })
-    expect((await destroy({ mensaje: ["x"] })).json?.errors).toEqual({ mensaje: [ask] })
-    expect((await destroy({ mensaje: "ñ".repeat(1001) })).json?.errors).toEqual({ mensaje: ["El mensaje no puede pasar de 1000 caracteres."] })
-    expect((await destroy({ mensaje: "ñ".repeat(1000) })).status).toBe(200)
+  it("needs no message and ignores one if sent", async () => {
+    expect((await destroy({})).status).toBe(200)
+    expect((await destroy({ mensaje: ["x"] })).status).toBe(200)
+    expect(notices.notifications.every((item) => item.message === "Administración eliminó el periodo académico 2026-2 y todos sus sílabos.")).toBe(true)
   })
 
   it("is forbidden for other roles and for closed processes", async () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: "c-1" })]
-    expect((await destroy({ mensaje: NOTICE })).text).toBe(FORBIDDEN)
+    expect((await destroy()).text).toBe(FORBIDDEN)
     world.assignments = [makeAssignment({ role: "administrador", careerId: null })]
     row = { ...(row as ProcessRow), state: "cerrado" }
-    expect((await destroy({ mensaje: NOTICE })).text).toBe(FORBIDDEN)
+    expect((await destroy()).text).toBe(FORBIDDEN)
     expect(log).toEqual([])
   })
 
   it("leaves a process closed under the lock untouched", async () => {
     locked = { ...(locked as LockedSyllabusProcess), state: "cerrado" }
-    expect((await destroy({ mensaje: NOTICE })).json?.errors).toEqual({ process: ["Un periodo académico cerrado no se elimina: queda como historial."] })
+    expect((await destroy()).json?.errors).toEqual({ process: ["Un periodo académico cerrado no se elimina: queda como historial."] })
     expect(log).not.toContain("purge:2")
     expect(notices.notifications).toEqual([])
   })

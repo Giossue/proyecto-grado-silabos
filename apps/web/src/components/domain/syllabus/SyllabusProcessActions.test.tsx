@@ -2,7 +2,7 @@ import { act, fireEvent, render } from "@testing-library/react"
 import { createRef, type ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ApiError } from "@/api/client"
-import { deleteProcess, getProcessImpact, transitionProcess, type SyllabusProcess } from "@/api/processes"
+import { deleteProcess, transitionProcess, type SyllabusProcess } from "@/api/processes"
 import { SyllabusProcessActions, type SyllabusProcessActionsHandle } from "@/components/domain/syllabus/SyllabusProcessActions"
 import { DIALOG_EXIT_MS } from "@/lib/dialogExit"
 import { toast } from "@/lib/toast"
@@ -11,14 +11,11 @@ import { flush } from "@/test/render"
 type ExtensionProps = { open?: boolean; process: SyllabusProcess; onSaved?: (message: string) => void }
 
 const stubs = vi.hoisted(() => ({
-  fading: false,
-  handlers: new WeakMap<Element, (open: boolean) => void>(),
   extension: null as ExtensionProps | null,
 }))
 
 vi.mock("@/api/processes", () => ({
   deleteProcess: vi.fn(),
-  getProcessImpact: vi.fn(),
   transitionProcess: vi.fn(),
 }))
 
@@ -36,34 +33,6 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   ),
   DropdownMenuSeparator: () => <div />,
 }))
-
-vi.mock("@/components/ui/dialog", () => {
-  const passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>
-  const Dialog = ({ open, onOpenChange, children }: { open?: boolean; onOpenChange?: (open: boolean) => void; children?: ReactNode }) => {
-    if (!stubs.fading) return open ? <div data-dialog>{children}</div> : null
-    return (
-      <div
-        data-modal
-        data-state={open ? "open" : "closed"}
-        ref={(element) => {
-          if (element && onOpenChange) stubs.handlers.set(element, onOpenChange)
-        }}
-      >
-        {children}
-      </div>
-    )
-  }
-
-  return {
-    Dialog,
-    DialogClose: passthrough,
-    DialogContent: passthrough,
-    DialogDescription: passthrough,
-    DialogFooter: passthrough,
-    DialogHeader: passthrough,
-    DialogTitle: passthrough,
-  }
-})
 
 vi.mock("@/components/domain/syllabus/DeadlineExtensionDialog", () => ({
   DeadlineExtensionDialog: (props: ExtensionProps) => {
@@ -93,8 +62,7 @@ const process = (): SyllabusProcess => ({
 const pausedProcess = () => ({ ...process(), state: "pausado" as const, deletable: true })
 const openProcess = () => ({ ...process(), state: "abierto" as const, deletable: true })
 
-const mountActions = (value = process(), fading = false) => {
-  stubs.fading = fading
+const mountActions = (value = process()) => {
   const onCompleted = vi.fn()
   const ref = createRef<SyllabusProcessActionsHandle>()
   const view = render(<SyllabusProcessActions ref={ref} process={value} onCompleted={onCompleted} />)
@@ -107,64 +75,38 @@ type Mounted = ReturnType<typeof mountActions>
 
 const menuItems = (view: Mounted) => [...view.container.querySelectorAll<HTMLButtonElement>(".menu-item")]
 const menuItem = (view: Mounted, label: string) => menuItems(view).find((item) => item.textContent?.includes(label))
-const buttonWith = (view: Mounted, label: string) => [...view.container.querySelectorAll<HTMLButtonElement>("button")].find((item) => item.textContent?.includes(label))
-const dialog = (view: Mounted) => view.container.querySelector("[data-dialog]")!
-const type = async (selector: string, value: string): Promise<void> => {
-  fireEvent.change(document.querySelector(selector)!, { target: { value } })
-  await flush()
-}
-const emitOpen = (modal: Element, open: boolean): void => act(() => stubs.handlers.get(modal)?.(open))
 
 describe("SyllabusProcessActions", () => {
   afterEach(() => {
     vi.useRealTimers()
-    stubs.fading = false
     stubs.extension = null
   })
 
   beforeEach(() => {
     vi.mocked(deleteProcess).mockReset().mockResolvedValue({ message: "Periodo académico eliminado." })
-    vi.mocked(getProcessImpact).mockReset().mockResolvedValue({
-      syllabi: { sin_iniciar: 12, borrador: 3, en_revision: 5, correccion_solicitada: 0, aprobado: 2 },
-      total: 22,
-    })
     vi.mocked(transitionProcess).mockReset()
   })
 
-  it("antes de eliminar muestra cuántos sílabos se borran y pide solo el mensaje", async () => {
-    vi.useFakeTimers()
+  it("elimina el periodo académico al primer clic, sin modal ni mensaje", async () => {
     const view = mountActions(openProcess())
 
-    const remove = menuItem(view, "Eliminar")
-    expect(remove).toBeDefined()
-    fireEvent.click(remove!)
-    await act(async () => {
-      await vi.runOnlyPendingTimersAsync()
-    })
+    fireEvent.click(menuItem(view, "Eliminar")!)
+    await flush()
 
-    expect(getProcessImpact).toHaveBeenCalledWith("process-1")
-    expect(dialog(view).textContent).toContain("incluso los enviados y aprobados")
-    expect([...dialog(view).querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual(["Sin iniciar12", "Borrador3", "En revisión5", "Corrección solicitada0", "Aprobado2", "Total22"])
-    expect(dialog(view).querySelector('label[for="process-delete-message"]')!.textContent).toContain("Mensaje para docentes, coordinación y biblioteca")
-
-    const confirm = (): HTMLButtonElement => buttonWith(view, "Eliminar periodo académico")!
-    expect(document.querySelector("#process-delete-confirm")).toBeNull()
-    expect(confirm().disabled).toBe(true)
-    fireEvent.change(document.querySelector("#process-delete-message")!, { target: { value: "   " } })
-    expect(confirm().disabled).toBe(true)
-    fireEvent.change(document.querySelector("#process-delete-message")!, { target: { value: "  Se abrirá otra con las fechas correctas.  " } })
-    expect(confirm().disabled).toBe(false)
-    fireEvent.click(confirm())
-    await act(async () => {
-      await Promise.resolve()
-    })
-
-    expect(deleteProcess).toHaveBeenCalledWith("process-1", { mensaje: "Se abrirá otra con las fechas correctas." })
-    expect(view.onCompleted).not.toHaveBeenCalled()
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(DIALOG_EXIT_MS)
-    })
+    expect(view.container.querySelector('[role="dialog"]')).toBeNull()
+    expect(deleteProcess).toHaveBeenCalledWith("process-1")
     expect(view.onCompleted.mock.calls).toEqual([["Periodo académico eliminado."]])
+  })
+
+  it("si el servidor rechaza eliminar lo avisa", async () => {
+    vi.mocked(deleteProcess).mockRejectedValueOnce(new ApiError("Datos inválidos.", 422, { process: ["Un periodo académico cerrado no se elimina: queda como historial."] }))
+    const view = mountActions(pausedProcess())
+
+    view.run("eliminar")
+    await flush()
+
+    expect(toast.error).toHaveBeenCalledWith("Un periodo académico cerrado no se elimina: queda como historial")
+    expect(view.onCompleted).not.toHaveBeenCalled()
   })
 
   it("pausar se aplica al primer clic, sin modal", async () => {
@@ -174,7 +116,7 @@ describe("SyllabusProcessActions", () => {
     fireEvent.click(menuItem(view, "Pausar")!)
     await flush()
 
-    expect(view.container.querySelector("[data-dialog]")).toBeNull()
+    expect(view.container.querySelector('[role="dialog"]')).toBeNull()
     expect(transitionProcess).toHaveBeenCalledWith("process-1", "pausar")
     expect(view.onCompleted.mock.calls).toEqual([["Proceso pausado."]])
   })
@@ -190,51 +132,6 @@ describe("SyllabusProcessActions", () => {
     expect(view.onCompleted).not.toHaveBeenCalled()
   })
 
-  it("el mensaje de eliminar se borra al volver a abrir, no al cerrar", async () => {
-    const view = mountActions(openProcess(), true)
-
-    view.run("eliminar")
-    await flush()
-    await type("#process-delete-message", "Fechas equivocadas")
-    const removal = view.container.querySelectorAll("[data-modal]")[0]!
-    emitOpen(removal, false)
-    await flush()
-
-    expect(removal.getAttribute("data-state")).toBe("closed")
-    expect(document.querySelector<HTMLTextAreaElement>("#process-delete-message")!.value).toBe("Fechas equivocadas")
-    expect(removal.querySelectorAll("tbody tr")).not.toHaveLength(0)
-
-    view.run("eliminar")
-    await flush()
-    expect(document.querySelector<HTMLTextAreaElement>("#process-delete-message")!.value).toBe("")
-  })
-
-  it("muestra el error del mensaje que devuelve el servidor", async () => {
-    vi.mocked(deleteProcess).mockRejectedValueOnce(new ApiError("Datos inválidos.", 422, { mensaje: ["El mensaje no puede pasar de 1000 caracteres."] }))
-    const view = mountActions(pausedProcess())
-
-    view.run("eliminar")
-    await flush()
-    await type("#process-delete-message", "Mensaje")
-    fireEvent.click(buttonWith(view, "Eliminar periodo académico")!)
-    await flush()
-
-    expect(dialog(view).textContent).toContain("El mensaje no puede pasar de 1000 caracteres")
-    expect(view.onCompleted).not.toHaveBeenCalled()
-  })
-
-  it("sin el conteo de sílabos lo avisa y deja eliminar con el mensaje", async () => {
-    vi.mocked(getProcessImpact).mockRejectedValueOnce(new ApiError("Sin conexión.", 500))
-    const view = mountActions(openProcess())
-
-    view.run("eliminar")
-    await flush()
-    await type("#process-delete-message", "Mensaje")
-
-    expect(dialog(view).textContent).toContain("No se pudo saber cuántos sílabos se borran")
-    expect(buttonWith(view, "Eliminar periodo académico")!.disabled).toBe(false)
-  })
-
   it("finaliza el periodo académico al primer clic, sin modal ni frase", async () => {
     vi.mocked(transitionProcess).mockResolvedValue({ message: "Periodo académico cerrado." })
     const view = mountActions(openProcess())
@@ -243,8 +140,7 @@ describe("SyllabusProcessActions", () => {
     fireEvent.click(menuItem(view, "Finalizar")!)
     await flush()
 
-    expect(view.container.querySelector("[data-dialog]")).toBeNull()
-    expect(getProcessImpact).not.toHaveBeenCalled()
+    expect(view.container.querySelector('[role="dialog"]')).toBeNull()
     expect(transitionProcess).toHaveBeenCalledWith("process-1", "cerrar")
     expect(view.onCompleted.mock.calls).toEqual([["Periodo académico cerrado."]])
   })
@@ -330,7 +226,7 @@ describe("SyllabusProcessActions", () => {
     view.run("reanudar")
     await flush()
 
-    expect(view.container.querySelector("[data-dialog]")).toBeNull()
+    expect(view.container.querySelector('[role="dialog"]')).toBeNull()
     expect(transitionProcess).toHaveBeenNthCalledWith(1, "process-1", "reanudar")
     expect(transitionProcess).toHaveBeenNthCalledWith(2, "process-1", "reanudar", { confirmar_rehacer: true })
     expect(view.onCompleted.mock.calls).toEqual([["Proceso reanudado. Los envíos vuelven a admitirse."]])

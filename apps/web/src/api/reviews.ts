@@ -142,8 +142,7 @@ export const approveReview = (revisionId: string, signature: SignaturePayload | 
     method: "POST",
     body: JSON.stringify({ signature }),
   });
-export const resetSyllabus = (syllabusId: string, reason: string) =>
-  api<{ message: string }>(`/coordination/syllabi/${syllabusId}/reset`, { method: "POST", body: JSON.stringify({ reason }) });
+export const resetSyllabus = (syllabusId: string) => api<{ message: string }>(`/coordination/syllabi/${syllabusId}/reset`, { method: "POST" });
 
 export type CoordinationHistoryItem = {
   id: string;

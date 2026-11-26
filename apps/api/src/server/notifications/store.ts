@@ -80,11 +80,10 @@ export type WorkflowNotice = {
   recipientIds: string[]
   revisionNumber: number | null
   artifactId?: string | null
-  reason?: string | null
 }
 
 export async function scheduleWorkflowNotification(scope: NotificationScope, notice: WorkflowNotice): Promise<void> {
-  const [title, message] = workflowMessage(notice.eventType, await scope.tx.subjectOf(notice.syllabusId), notice.revisionNumber, notice.reason ?? null)
+  const [title, message] = workflowMessage(notice.eventType, await scope.tx.subjectOf(notice.syllabusId), notice.revisionNumber)
   const artifactId = notice.artifactId ?? null
   await storeInternalNotifications(scope, {
     eventType: notice.eventType,

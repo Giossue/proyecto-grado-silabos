@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation"
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
 import { ApiError } from "@/api/client"
-import { approveReview, requestCorrection, reviewStageLabel, type ReviewDetail } from "@/api/reviews"
+import { approveReview, requestCorrection, resetSyllabus, reviewStageLabel, type ReviewDetail } from "@/api/reviews"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
@@ -18,7 +18,6 @@ import { ChangeMarks } from "@/components/domain/syllabus/ChangeMarks"
 import { ReviewCommentNotice } from "@/components/domain/syllabus/ReviewCommentNotice"
 import { SignatureDialog, type StatementSigner } from "@/components/domain/syllabus/SignatureDialog"
 import { SyllabusDocumentPreview, type PreviewSection } from "@/components/domain/syllabus/SyllabusDocumentPreview"
-import { SyllabusRestartDialog } from "@/components/domain/syllabus/SyllabusRestartDialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -67,7 +66,7 @@ export default function CoordinationReviewDetailPage() {
   const loadError = queryErrorMessage(query, "No se pudo cargar la revisión") ?? ""
   const [correctionOpen, setCorrectionOpen] = useState(false)
   const [signOpen, setSignOpen] = useState(false)
-  const [restartOpen, setRestartOpen] = useState(false)
+  const [restarting, setRestarting] = useState(false)
   const correctionForm = useSchemaForm(changeRequestSchema, { defaultValues: { justification: "" } })
   const correcting = correctionForm.formState.isSubmitting
   const correctionJustification = String(correctionForm.watch("justification") ?? "")
@@ -140,12 +139,20 @@ export default function CoordinationReviewDetailPage() {
     if (failure) toast.error(failure)
   }
 
-  const restarted = async (message: string): Promise<void> => {
-    const leaves = Boolean(data?.reset.erases_history)
-    toast.success(message)
-    await afterDialogExit()
-    if (leaves) router.replace(area.reviews)
-    else load()
+  const restart = async (): Promise<void> => {
+    if (!data || restarting) return
+    const leaves = Boolean(data.reset.erases_history)
+    setRestarting(true)
+    try {
+      const result = await resetSyllabus(data.syllabus.id)
+      toast.success(result.message)
+      if (leaves) router.replace(area.reviews)
+      else load()
+    } catch (failure) {
+      toast.error(failure instanceof ApiError ? (failure.errors.syllabus?.[0] ?? failure.message) : "No se pudo reiniciar el sílabo")
+    } finally {
+      setRestarting(false)
+    }
   }
 
   const openCorrection = (): void => {
@@ -285,8 +292,8 @@ export default function CoordinationReviewDetailPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuGroup>
-                        <DropdownMenuItem variant="destructive" onSelect={() => setRestartOpen(true)}>
-                          <RotateCcw data-icon="inline-start" aria-hidden="true" />
+                        <DropdownMenuItem variant="destructive" disabled={restarting} onSelect={() => void restart()}>
+                          {restarting ? <Spinner data-icon="inline-start" /> : <RotateCcw data-icon="inline-start" aria-hidden="true" />}
                           Reiniciar sílabo
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
@@ -343,17 +350,6 @@ export default function CoordinationReviewDetailPage() {
           ) : (
             <SyllabusDocumentPreview key="single" presentation={data.presentation} sections={previewSections} />
           )}
-
-          {canReset ? (
-            <SyllabusRestartDialog
-              open={restartOpen}
-              onOpenChange={setRestartOpen}
-              syllabusId={data.syllabus.id}
-              subject={data.syllabus.subject}
-              impact={data.reset}
-              onSaved={(message) => void restarted(message)}
-            />
-          ) : null}
 
           <Dialog open={correctionOpen} onOpenChange={setCorrectionOpen}>
             <DialogContent>

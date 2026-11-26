@@ -11,7 +11,7 @@ import { approveReviewFor, type ReviewApprovalDeps } from "../../server/syllabus
 import { requestCorrectionFor, resetSyllabusFor, type ReviewDecisionDeps } from "../../server/syllabus/reviewDecisions"
 import { coordinationReviewDetailFor, type ReviewDetailDeps, type ReviewRevision } from "../../server/syllabus/reviewDetails"
 import type { DetailSyllabus } from "../../server/syllabus/syllabusDetail"
-import { ChangeRequestDto, RestartDto, SignatureDto } from "./dto/syllabus.dto"
+import { ChangeRequestDto, SignatureDto } from "./dto/syllabus.dto"
 import { respond } from "./queued-response"
 import { ApprovalRevisionPreloader, ComparisonPreloader, DecisionRevisionPreloader, DecisionSyllabusPreloader, ReviewDetailPreloader } from "./syllabus.preloaders"
 import { COORDINATION_REVIEW_DEPS, REVIEW_APPROVAL_DEPS, REVIEW_DECISION_DEPS, REVIEW_DETAIL_DEPS } from "./syllabus.tokens"
@@ -104,7 +104,6 @@ export class CoordinationReviewsController {
   @Post("syllabi/:syllabus/reset")
   @Authenticated({ ...ACTIVE_ROLE, preload: DecisionSyllabusPreloader })
   @ApiParam({ name: "syllabus", format: "uuid" })
-  @ApiBody({ type: RestartDto })
   @ApiOkResponse({ description: "Reinicia un sílabo aprobado conservando su historial.", type: MessageDto })
   @ApiForbiddenResponse({ description: "Sin permiso o con la decisión bloqueada.", type: MessageDto })
   @ApiNotFoundResponse({ description: "El sílabo no existe.", type: MessageDto })

@@ -748,16 +748,16 @@ describe("the syllabus flow served by Nest answers exactly like the route handle
       expect(text(answers[1])).toContain("Solo puede aprobarse la revisión vigente.")
     })
 
-    it("resets an approved syllabus with the same validation and state answers", async () => {
+    it("resets an approved syllabus with the same state answers", async () => {
       scenario = () => ({ ...asCoordinator(), facts: facts({ state: "aprobado" }), lock: { state: "borrador", processState: "abierto", version: 4 } })
       const answers = await expectSame(
-        { method: "POST", path: `/api/v1/coordination/syllabi/${SYLLABUS}/reset`, body: { reason: "no" } },
-        { method: "POST", path: `/api/v1/coordination/syllabi/${SYLLABUS}/reset`, body: { reason: "  Cambió la malla  " } },
-        { method: "POST", path: `/api/v1/coordination/syllabi/${MISSING}/reset`, body: { reason: "Cambió la malla" } },
+        { method: "POST", path: `/api/v1/coordination/syllabi/${SYLLABUS}/reset`, body: {} },
+        { method: "POST", path: `/api/v1/coordination/syllabi/${SYLLABUS}/reset`, body: { reason: "Cambió la malla" } },
+        { method: "POST", path: `/api/v1/coordination/syllabi/${MISSING}/reset`, body: {} },
       )
       expect(statuses(answers)).toEqual([422, 422, 404])
       scenario = asCoordinator
-      expect(statuses(await expectSame({ method: "POST", path: `/api/v1/coordination/syllabi/${SYLLABUS}/reset`, body: { reason: "Cambió la malla" } }))).toEqual([403])
+      expect(statuses(await expectSame({ method: "POST", path: `/api/v1/coordination/syllabi/${SYLLABUS}/reset`, body: {} }))).toEqual([403])
     })
   })
 

@@ -52,15 +52,11 @@ export async function openTeacherSyllabus(page: Page, subject: string, parallel 
   await expect(page.getByRole("heading", { level: 1, name: subject })).toBeVisible()
 }
 
-export async function restartFromReview(page: Page, subject: string, reason: string): Promise<void> {
+export async function restartFromReview(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Más" }).click()
-  await page.getByRole("menuitem", { name: "Reiniciar sílabo" }).click()
-  const dialog = page.getByRole("dialog", { name: `Reiniciar «${subject}»` })
-  await dialog.locator("#restart-reason").fill(reason)
   const reset = page.waitForResponse((response) => /\/reset$/.test(response.url()) && response.request().method() === "POST")
-  await dialog.getByRole("button", { name: /Reiniciar/ }).last().click()
+  await page.getByRole("menuitem", { name: "Reiniciar sílabo" }).click()
   expect((await reset).status()).toBe(200)
-  await expect(dialog).toBeHidden()
 }
 
 export async function openCoordinationReview(page: Page, subject: string): Promise<void> {

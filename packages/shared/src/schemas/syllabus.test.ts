@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import { schemaErrors } from "./issues"
-import { changeRequestSchema, deadlineExtensionSchema, draftFieldSchema, listingFiltersSchema, processDeletionSchema, restartSchema, submissionSchema } from "./syllabus"
+import { changeRequestSchema, deadlineExtensionSchema, draftFieldSchema, listingFiltersSchema, submissionSchema } from "./syllabus"
 
 describe("syllabus schemas", () => {
   it("validate listing filters", async () => {
@@ -14,7 +14,6 @@ describe("syllabus schemas", () => {
 
   it("validate review decisions", async () => {
     expect(await schemaErrors(changeRequestSchema, { justification: "corto" })).toEqual({ justification: ["El campo justificación debe tener al menos 10 caracteres."] })
-    expect(await schemaErrors(restartSchema, {})).toEqual({ reason: ["El campo motivo es obligatorio."] })
   })
 
   it("validate drafts and submissions", async () => {
@@ -28,7 +27,6 @@ describe("syllabus schemas", () => {
   })
 
   it("validate process changes with their own messages", async () => {
-    expect(await schemaErrors(processDeletionSchema, { mensaje: 5 })).toEqual({ mensaje: ["Escriba el mensaje para docentes, coordinación y biblioteca."] })
     expect(await schemaErrors(deadlineExtensionSchema, { stage: "x", due_at: "mañana" })).toEqual({
       stage: ["La prórroga solo modifica la fecha límite de entrega."],
       due_at: ["El campo fecha límite debe ser una fecha válida."],

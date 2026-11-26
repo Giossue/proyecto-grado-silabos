@@ -18,7 +18,6 @@ const TEACHER = "a0000000-0000-4000-8000-0000000000aa"
 const PAUSED = "El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude."
 const CLOSED = "El periodo académico está cerrado: la revisión queda solo para consulta y no admite decisiones."
 const FRESH = "50000000-0000-4000-8000-0000000000ff"
-const REASON = "El docente cambió de materia y debe empezar otra vez."
 const JUSTIFICATION = "Se requiere precisión académica antes de aprobar la revisión."
 
 let world: FakeWorld
@@ -265,11 +264,11 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
   })
 
   it("restarts an approved syllabus with all its history and notifies the teacher", async () => {
-    const response = await reset({ reason: `  ${REASON}  ` })
+    const response = await reset({})
     expect(response.status).toBe(200)
     expect(response.text).toBe(JSON.stringify({ message: "Sílabo reiniciado con todo su historial. El docente empieza de cero con la malla y la plantilla actuales." }))
     expect(log).toEqual(["begin", `lock:syllabus:${SYLLABUS}`, `restart:${SYLLABUS}:${syllabus.convocationId}:d0000000-0000-4000-8000-000000000001`, "commit"])
-    const message = `Coordinación eliminó el sílabo aprobado de Biología; elabórelo con la malla y la plantilla actuales. Motivo: ${REASON}`
+    const message = "Coordinación eliminó el sílabo aprobado de Biología; elabórelo con la malla y la plantilla actuales."
     expect(notices.notifications).toMatchObject([
       { userId: TEACHER, key: `flujo:silabo.eliminado:${FRESH}`, type: "silabo.eliminado", title: "Su sílabo volvió a empezar", message, resourceType: "silabo", resourceId: FRESH },
     ])
@@ -278,43 +277,41 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
     ])
   })
 
-  it("validates the reason as «motivo»", async () => {
-    expect((await reset({})).json).toEqual({ message: "El campo motivo es obligatorio.", errors: { reason: ["El campo motivo es obligatorio."] } })
-    expect((await reset({ reason: "no" })).json?.errors).toEqual({ reason: ["El campo motivo debe tener al menos 5 caracteres."] })
-    expect((await reset({ reason: "x".repeat(501) })).json?.errors).toEqual({ reason: ["El campo motivo no debe tener más de 500 caracteres."] })
-    expect(log).toEqual([])
+  it("needs no reason and ignores one if sent", async () => {
+    expect((await reset({ reason: "no" })).status).toBe(200)
+    expect(notices.notifications[0]?.message).toBe("Coordinación eliminó el sílabo aprobado de Biología; elabórelo con la malla y la plantilla actuales.")
   })
 
   it("only lets the coordinator of the career reset an approved syllabus", async () => {
     world.assignments = [makeAssignment({ role: "docente", careerId: CAREER })]
-    expect((await reset({ reason: REASON })).text).toBe(FORBIDDEN)
+    expect((await reset({})).text).toBe(FORBIDDEN)
     world.assignments = [makeAssignment({ role: "coordinador", careerId: "c0000000-0000-4000-8000-000000000009" })]
-    expect((await reset({ reason: REASON })).text).toBe(FORBIDDEN)
+    expect((await reset({})).text).toBe(FORBIDDEN)
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
     syllabus = { ...syllabus, state: "en_revision" }
-    expect((await reset({ reason: "no" })).text).toBe(FORBIDDEN)
+    expect((await reset({})).text).toBe(FORBIDDEN)
     expect(log).toEqual([])
   })
 
   it("answers 403 with the block while paused or closed, before validating", async () => {
     syllabus = { ...syllabus, convocationState: "pausado" }
-    expect((await reset({ reason: "no" })).text).toBe(JSON.stringify({ message: PAUSED }))
+    expect((await reset({})).text).toBe(JSON.stringify({ message: PAUSED }))
     syllabus = { ...syllabus, convocationState: "cerrado" }
-    expect((await reset({ reason: REASON })).text).toBe(JSON.stringify({ message: CLOSED }))
+    expect((await reset({})).text).toBe(JSON.stringify({ message: CLOSED }))
     expect(log).toEqual([])
   })
 
   it("rejects inside the transaction when the syllabus stopped being approved or got blocked", async () => {
     locked = { ...(locked as DecisionSyllabus), state: "borrador" }
-    expect((await reset({ reason: REASON })).json).toEqual({ message: "Solo se reinicia un sílabo aprobado.", errors: { syllabus: ["Solo se reinicia un sílabo aprobado."] } })
+    expect((await reset({})).json).toEqual({ message: "Solo se reinicia un sílabo aprobado.", errors: { syllabus: ["Solo se reinicia un sílabo aprobado."] } })
     locked = { ...(locked as DecisionSyllabus), state: "aprobado" }
     freshBlock = PAUSED
-    expect((await reset({ reason: REASON })).json?.errors).toEqual({ syllabus: [PAUSED] })
+    expect((await reset({})).json?.errors).toEqual({ syllabus: [PAUSED] })
     expect(log.filter((entry) => entry.startsWith("restart"))).toEqual([])
     expect(notices.mails).toEqual([])
   })
 
   it("answers Laravel's model 404 for unknown or non-UUID syllabi", async () => {
-    expect(await reset({ reason: REASON }, "abc")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "abc") })
+    expect(await reset({}, "abc")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "abc") })
   })
 })

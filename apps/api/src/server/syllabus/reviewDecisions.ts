@@ -7,7 +7,7 @@ import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray } from "../http/input"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { changeRequestSchema, restartSchema } from "@silabos/shared/schemas/syllabus"
+import { changeRequestSchema } from "@silabos/shared/schemas/syllabus"
 import { validateSchema } from "../http/schemaValidation"
 import { scheduleWorkflowNotification, type NotificationScope } from "../notifications/store"
 import { decisionBlock, hasRole, mayReview, ROLE_COORDINATOR } from "./policy"
@@ -132,7 +132,6 @@ export async function requestCorrectionFor(request: Request, { session, revision
   })
 }
 
-const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
 export function decisionSyllabusBinder(syllabusId: string, deps: Pick<ReviewDecisionDeps, "store">): Binder<DetailSyllabus> {
   return async (user) => {
@@ -152,10 +151,6 @@ export async function resetSyllabusFor(request: Request, session: AppSession, sy
   if (syllabus.state !== "aprobado" || !hasRole(session, ROLE_COORDINATOR) || !mayReview(session, syllabus)) return forbidden()
   const block = decisionBlock(syllabus)
   if (block !== null) return blockedDecision(block)
-  const input: PhpArray = await requestInput(request)
-  const { errors } = await validateSchema(restartSchema, input)
-  if (errors !== null) return validationError(errors)
-  const reason = (input.reason as string).replace(PHP_TRIM, "")
   const reject = (message: string): never => {
     throw new Rejected(validationError({ syllabus: [message] }))
   }
@@ -174,7 +169,6 @@ export async function resetSyllabusFor(request: Request, session: AppSession, sy
         deduplicationKey: `silabo.eliminado:${fresh}`,
         recipientIds: teachers,
         revisionNumber: null,
-        reason,
       })
     })
     return apiJson({ message: "Sílabo reiniciado con todo su historial. El docente empieza de cero con la malla y la plantilla actuales." })

@@ -1,8 +1,6 @@
 export const TEMPLATE_REDONE = "proceso.plantilla_rehecho"
 
-const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
-
-export function workflowMessage(eventType: string, subject: string | null, revision: number | null, reason: string | null = null): [string, string] {
+export function workflowMessage(eventType: string, subject: string | null, revision: number | null): [string, string] {
   if (eventType === TEMPLATE_REDONE) {
     return [
       "Sus sílabos volvieron a borrador",
@@ -11,8 +9,6 @@ export function workflowMessage(eventType: string, subject: string | null, revis
   }
   if (subject === null) throw new Error("El aviso necesita un sílabo.")
   const revisionLabel = revision === null ? "" : `, revisión ${revision}`
-  const trimmed = reason === null ? "" : reason.replace(PHP_TRIM, "")
-  const reasonLabel = trimmed === "" ? "" : ` Motivo: ${trimmed}`
   switch (eventType) {
     case "silabo.enviado":
       return ["Sílabo enviado", `Revise la bibliografía del sílabo de ${subject}${revisionLabel}.`]
@@ -25,7 +21,7 @@ export function workflowMessage(eventType: string, subject: string | null, revis
     case "silabo.aprobado":
       return ["Sílabo aprobado", `Ya puede descargar el PDF firmado del sílabo de ${subject}${revisionLabel}.`]
     case "silabo.eliminado":
-      return ["Su sílabo volvió a empezar", `Coordinación eliminó el sílabo aprobado de ${subject}; elabórelo con la malla y la plantilla actuales.${reasonLabel}`]
+      return ["Su sílabo volvió a empezar", `Coordinación eliminó el sílabo aprobado de ${subject}; elabórelo con la malla y la plantilla actuales.`]
     case "silabo.devuelto_borrador":
       return [
         "Su sílabo volvió a borrador",

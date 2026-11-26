@@ -340,7 +340,7 @@ describe("institutional processes served by Nest answer exactly like the route h
   it("answers a guest, an unverified user, a user without role and a non administrator the same way", async () => {
     const answers = [...(await expectSame({ method: "GET", path: BASE, cookie: false }, { method: "POST", path: `${BASE}/${OPEN}/pausar`, body: {}, cookie: false }))]
     scenario = (current) => void (current.world.users = [makeUser({ emailVerifiedAt: null })])
-    answers.push(...(await expectSame({ method: "GET", path: BASE }, { method: "DELETE", path: `${BASE}/${OPEN}`, body: { mensaje: "x" } })))
+    answers.push(...(await expectSame({ method: "GET", path: BASE }, { method: "DELETE", path: `${BASE}/${OPEN}`, body: {} })))
     scenario = (current) => void (current.world.assignments = [])
     answers.push(...(await expectSame({ method: "GET", path: BASE }, { method: "POST", path: `${BASE}/${OPEN}/cerrar`, body: {} })))
     scenario = (current) => void (current.world = freshWorld("coordinador"))
@@ -417,7 +417,7 @@ describe("institutional processes served by Nest answer exactly like the route h
         { method: "POST", path: `${BASE}/${OPEN}/pausar`, body: {} },
         { method: "POST", path: `${BASE}/${OPEN}/cerrar`, body: {} },
         { method: "POST", path: `${BASE}/${PAUSED}/reanudar`, body: {} },
-        { method: "DELETE", path: `${BASE}/${OPEN}`, body: { mensaje: "x" } },
+        { method: "DELETE", path: `${BASE}/${OPEN}`, body: {} },
         { method: "POST", path: `${BASE}/${OPEN}/deadline`, body: { due_at: "2026-12-20" } },
       )),
     )
@@ -439,17 +439,16 @@ describe("institutional processes served by Nest answer exactly like the route h
     expect(statuses(answers)).toEqual([200, 200])
   })
 
-  it("deletes a process with the same purge order and notices, and rejects a closed or unconfirmed one the same way", async () => {
+  it("deletes a process with the same purge order and notices, and rejects a closed one the same way", async () => {
     const answers = await expectSame(
-      { method: "DELETE", path: `${BASE}/${OPEN}`, body: { mensaje: "  Se repite el periodo académico.  " } },
-      { method: "DELETE", path: `${BASE}/${PAUSED}`, body: {} },
-      { method: "DELETE", path: `${BASE}/${PAUSED}`, body: { mensaje: "x".repeat(1001) } },
-      { method: "DELETE", path: `${BASE}/${CLOSED}`, body: { mensaje: "x" } },
-      { method: "DELETE", path: `${BASE}/${MISSING}`, body: { mensaje: "x" } },
+      { method: "DELETE", path: `${BASE}/${OPEN}`, body: {} },
+      { method: "DELETE", path: `${BASE}/${PAUSED}`, body: { mensaje: "x" } },
+      { method: "DELETE", path: `${BASE}/${CLOSED}`, body: {} },
+      { method: "DELETE", path: `${BASE}/${MISSING}`, body: {} },
     )
-    expect(statuses(answers)).toEqual([200, 422, 422, 403, 404])
+    expect(statuses(answers)).toEqual([200, 200, 403, 404])
     scenario = (current) => void (current.lockedState = "cerrado")
-    const [raced] = await expectSame({ method: "DELETE", path: `${BASE}/${OPEN}`, body: { mensaje: "x" } })
+    const [raced] = await expectSame({ method: "DELETE", path: `${BASE}/${OPEN}`, body: {} })
     expect(raced.status).toBe(422)
   })
 
