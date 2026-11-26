@@ -46,8 +46,7 @@ const FILTERS: Record<string, ClientFilterDefinition<ConvocationRow>> = {
 }
 
 const SORT_COLUMNS = {
-  period: { label: "Período", value: (row: ConvocationRow) => row.code },
-  classes: { label: "Clases", type: "date", value: (row: ConvocationRow) => row.starts_on },
+  period: { label: "Periodo", type: "date", value: (row: ConvocationRow) => row.starts_on },
   drafting: { label: "Elaboración de sílabos", type: "date", value: (row: ConvocationRow) => row.process?.starts_at },
   state: { label: "Estado", value: stateLabel },
 } satisfies SortColumns<ConvocationRow>
@@ -138,7 +137,7 @@ export default function AdminProcessesPage() {
       {error ? (
         <LoadErrorState message={error} onRetry={() => void load()} />
       ) : loading && !loaded ? (
-        <LoadingSkeleton variant="table" metrics columns={4} filters={1} filterWidth="lg:w-44" actions={false} badges={[4]} />
+        <LoadingSkeleton variant="table" metrics columns={3} filters={1} filterWidth="lg:w-44" actions={false} badges={[3]} />
       ) : null}
       {loaded && summary?.metrics.length ? <MetricTiles metrics={summary.metrics} /> : null}
       {loaded ? (
@@ -147,7 +146,7 @@ export default function AdminProcessesPage() {
             filter={filter}
             inputId="processes-search"
             label="Buscar período"
-            placeholder="Buscar por período"
+            placeholder="Buscar por periodo"
             sort={sort}
             filters={
               <Field>
@@ -175,15 +174,14 @@ export default function AdminProcessesPage() {
           <Table label="Periodos académicos">
             <TableHeader>
               <TableRow>
-                <SortableHead sort={sort} column="period">Período</SortableHead>
-                <SortableHead sort={sort} column="classes">Clases</SortableHead>
+                <SortableHead sort={sort} column="period">Periodo</SortableHead>
                 <SortableHead sort={sort} column="drafting">Elaboración de sílabos</SortableHead>
                 <SortableHead sort={sort} column="state" className="text-center">Estado</SortableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {page.length === 0 ? (
-                <TableEmpty colSpan={4}>{filter.active ? "Ningún período coincide con los filtros" : "No hay periodos registrados. Cree el primero con «Nuevo periodo académico»"}</TableEmpty>
+                <TableEmpty colSpan={3}>{filter.active ? "Ningún período coincide con los filtros" : "No hay periodos registrados. Cree el primero con «Nuevo periodo académico»"}</TableEmpty>
               ) : (
                 page.map((row) => (
                   <TableRow
@@ -193,12 +191,12 @@ export default function AdminProcessesPage() {
                   >
                     <TableCell>
                       <button type="button" className={rowButtonClass} aria-haspopup="dialog" onClick={() => select(row)}>{row.code}</button>
+                      <div className="text-muted-foreground text-sm">
+                        <time dateTime={row.starts_on}>{formatDate(row.starts_on)}</time> → <time dateTime={row.ends_on}>{formatDate(row.ends_on)}</time>
+                      </div>
                       <TableCardLine>
                         <StatusBadge label={stateLabel(row)} tone={stateTone(row)} />
                       </TableCardLine>
-                    </TableCell>
-                    <TableCell>
-                      <time dateTime={row.starts_on}>{formatDate(row.starts_on)}</time> → <time dateTime={row.ends_on}>{formatDate(row.ends_on)}</time>
                     </TableCell>
                     {row.process ? (
                       <TableCell>

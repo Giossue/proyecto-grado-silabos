@@ -17,7 +17,7 @@ const EFFECTS: Record<string, string> = {
   reanudar: "Se vuelve a editar, enviar y revisar",
   prorrogar: "Mueve la fecha de entrega hacia adelante",
   cerrar: "Los sílabos quedan solo para consulta",
-  eliminar: "Borra el periodo académico y sus sílabos",
+  eliminar: "Borra todos los sílabos de este periodo",
 }
 
 const actionsFor = (row: ConvocationRow): DialogAction[] => {

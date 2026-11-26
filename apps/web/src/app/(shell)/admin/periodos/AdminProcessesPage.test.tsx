@@ -117,11 +117,12 @@ describe("AdminProcessesPage", () => {
     const codes = () => [...container.querySelectorAll("tbody tr td:first-child button")].map((cell) => cell.textContent)
 
     expect(codes()).toEqual(["Septiembre-Marzo 2026-2027", "Abril-Agosto 2026"])
-    fireEvent.click(getByRole("button", { name: "Período" }))
+    fireEvent.click(getByRole("button", { name: "Periodo" }))
 
     expect(codes()).toEqual(["Abril-Agosto 2026", "Septiembre-Marzo 2026-2027"])
-    expect(getByRole("columnheader", { name: "Período" }).getAttribute("aria-sort")).toBe("ascending")
-    expect(getByRole("columnheader", { name: "Clases" }).hasAttribute("aria-sort")).toBe(false)
+    expect(getByRole("columnheader", { name: "Periodo" }).getAttribute("aria-sort")).toBe("ascending")
+    expect(getByRole("columnheader", { name: "Elaboración de sílabos" }).hasAttribute("aria-sort")).toBe(false)
+    expect(container.querySelector("tbody tr td:first-child time")?.getAttribute("dateTime")).toBe("2026-04-01")
     unmount()
   })
 
