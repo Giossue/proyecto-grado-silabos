@@ -116,6 +116,37 @@ describe('createDocumentPaginator', () => {
         expect(root.querySelectorAll('tr')[1].hasAttribute('data-page-spacer')).toBe(true);
     });
 
+    it('parte por filas la tabla de un bloque que el editor envuelve en su vista de nodo', () => {
+        const root = document.createElement('div');
+        root.innerHTML = `
+            <div data-page-unit>
+                <div contenteditable="true">
+                    <div class="react-renderer node-documentBlock" contenteditable="false">
+                        <div data-node-view-wrapper>
+                            <div data-block>
+                                <table><tbody><tr><td>A</td></tr><tr><td>B</td></tr></tbody></table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        root.querySelectorAll('tr').forEach((row, index) => {
+            row.getBoundingClientRect = () =>
+                ({ top: 10 + index * 60, bottom: 70 + index * 60, left: 0, right: 100 }) as DOMRect;
+        });
+        root.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
+        document.body.append(root);
+        const host = root.querySelector<HTMLElement>('[contenteditable="true"]')!;
+        const requests: PageSpacerRequest[][] = [];
+        const unregister = registerPageEditor(host, { clear: () => undefined, apply: (next) => requests.push(next) });
+
+        createDocumentPaginator(root, () => PAGE).paginate();
+        unregister();
+
+        expect(requests).toHaveLength(0);
+        expect(root.querySelectorAll('[data-block] tr[data-page-spacer]')).toHaveLength(1);
+    });
+
     it('mide respecto de la hoja aunque el navegador desplace la vista al insertar un salto', () => {
         const root = document.createElement('div');
         root.innerHTML = `

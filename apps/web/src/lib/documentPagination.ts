@@ -60,8 +60,12 @@ function editorUnits(host: HTMLElement): Unit[] {
             return tableUnits(table);
         }
 
-        if (child.hasAttribute('data-block')) {
-            const tables = Array.from(child.querySelectorAll('table')).filter(
+        const block = child.hasAttribute('data-block')
+            ? child
+            : child.querySelector<HTMLElement>('[data-block]');
+
+        if (block && !block.parentElement?.closest('table')) {
+            const tables = Array.from(block.querySelectorAll('table')).filter(
                 (candidate) => !candidate.parentElement?.closest('table'),
             );
 
