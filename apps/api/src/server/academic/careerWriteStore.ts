@@ -139,9 +139,6 @@ export function careerWriteTx(db: Db, afterCommit: AfterCommit, now: number, opt
       await db.$executeRaw`insert into asignaciones_rol (asignacion_rol_id, usuario_id, carrera_id, rol, asignacion_rol_activa, asignado_en)
         values (${uuid7()}::uuid, ${userId}::uuid, ${careerId}::uuid, ${"docente"}, true, ${fromEpoch(now)})`
     },
-    async activateGrant(grantId) {
-      await db.$executeRaw`update asignaciones_rol set asignacion_rol_activa = true where asignaciones_rol.asignacion_rol_id = ${grantId}::uuid`
-    },
     async eligibleTeacherRole(userId, careerId) {
       const row = await first<{ id: string }>(
         db,

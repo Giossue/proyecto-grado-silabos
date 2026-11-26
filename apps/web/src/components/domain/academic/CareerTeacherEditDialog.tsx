@@ -1,6 +1,6 @@
 "use client"
 
-import { MailCheck, UserMinus } from "lucide-react"
+import { MailCheck, UserCheck, UserMinus } from "lucide-react"
 import { DialogActions, type DialogAction } from "@/components/domain/DialogActions"
 import { FormDialogActions } from "@/components/domain/FormDialogActions"
 import { FormModal } from "@/components/domain/FormModal"
@@ -8,7 +8,7 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input"
 import { NAME_PARTS, splitName } from "@/lib/personName"
 
-type CareerTeacher = { id: string; name: string; email: string; pending_activation: boolean; invitation_expired: boolean }
+type CareerTeacher = { id: string; name: string; email: string; pending_activation: boolean; invitation_expired: boolean; active: boolean }
 
 type CareerTeacherEditDialogProps = {
   teacher: CareerTeacher
@@ -16,21 +16,25 @@ type CareerTeacherEditDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onRemove: () => void
+  onReactivate: () => void
   onResend: () => void
 }
 
-export function CareerTeacherEditDialog({ teacher, removeDisabled, open, onOpenChange, onRemove, onResend }: CareerTeacherEditDialogProps) {
-  const actions: DialogAction[] = [
-    ...(teacher.pending_activation && teacher.invitation_expired ? [{ key: "resend", label: "Reenviar invitación", icon: MailCheck }] : []),
-    {
-      key: "remove",
-      label: "Quitar de la carrera",
-      icon: UserMinus,
-      destructive: true,
-      disabled: removeDisabled,
-      disabledReason: "No se puede quitar mientras el periodo académico esté en curso",
-    },
-  ]
+export function CareerTeacherEditDialog({ teacher, removeDisabled, open, onOpenChange, onRemove, onReactivate, onResend }: CareerTeacherEditDialogProps) {
+  const actions: DialogAction[] = teacher.active
+    ? [
+        ...(teacher.pending_activation && teacher.invitation_expired ? [{ key: "resend", label: "Reenviar invitación", icon: MailCheck }] : []),
+        {
+          key: "remove",
+          label: "Desactivar",
+          icon: UserMinus,
+          destructive: true,
+          disabled: removeDisabled,
+          disabledReason: "No se puede desactivar mientras el periodo académico esté en curso",
+        },
+      ]
+    : [{ key: "reactivate", label: "Reactivar", icon: UserCheck }]
+  const run: Record<string, () => void> = { resend: onResend, remove: onRemove, reactivate: onReactivate }
   const parts = splitName(teacher.name)
 
   return (
@@ -54,7 +58,7 @@ export function CareerTeacherEditDialog({ teacher, removeDisabled, open, onOpenC
             <FormDialogActions
               close={close}
               closeOnly
-              secondary={<DialogActions actions={actions} onSelect={(key) => (key === "resend" ? onResend() : onRemove())} />}
+              secondary={<DialogActions actions={actions} onSelect={(key) => run[key]?.()} />}
             />
           </FieldGroup>
         </form>

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import { destroyCareerTeacher, resendCareerTeacherActivation, storeCareerTeacher } from "./careerTeachers"
+import { destroyCareerTeacher, reactivateCareerTeacher, resendCareerTeacherActivation, storeCareerTeacher } from "./careerTeachers"
 import { account, ACTOR, CAREER, FORBIDDEN, grant, harness, jsonRequest, NOW, OTHER_CAREER } from "./testing"
 
 const TEACHER = "01a1c5bc-2222-7000-8000-000000000001"
@@ -130,13 +130,13 @@ describe("POST /api/v1/coordination/academic/teachers", () => {
 })
 
 describe("DELETE /api/v1/coordination/academic/teachers/{user}", () => {
-  it("removes the teacher from the career and its parallels lose their teacher", async () => {
+  it("deactivates the teacher in the career and its parallels lose their teacher", async () => {
     const test = coordination()
     test.identity.grants.push(grant({ id: "01a1c5bc-2222-7000-8000-0000000000c1", userId: TEACHER, role: "docente", careerId: OTHER_CAREER }))
     test.identity.parallels.push({ id: "p-1", grantId: TEACHER_ROLE, active: true }, { id: "p-2", grantId: TEACHER_ROLE, active: true })
     test.identity.sessions.push({ id: "teacher-session", userId: TEACHER })
     const response = await remove(test, TEACHER)
-    expect(await response.json()).toEqual({ message: "Docente retirado de su carrera; sus 2 paralelos quedaron sin docente." })
+    expect(await response.json()).toEqual({ message: "Docente desactivado en su carrera; sus 2 paralelos quedaron sin docente." })
     expect(test.identity.parallels).toEqual([])
     expect(test.identity.sessions.some((row) => row.userId === TEACHER)).toBe(true)
     expect(test.identity.grants.find((row) => row.id === TEACHER_ROLE)?.active).toBe(false)
@@ -146,7 +146,7 @@ describe("DELETE /api/v1/coordination/academic/teachers/{user}", () => {
     const test = coordination()
     test.identity.invitations.push({ userId: PENDING, hash: "h", expiresAt: NOW + 50, issuerId: ACTOR, createdAt: NOW - 9, usedAt: null, invalidatedAt: null })
     test.identity.sessions.push({ id: "pending-session", userId: PENDING })
-    expect(await (await remove(test, PENDING)).text()).toBe('{"message":"Docente retirado de su carrera."}')
+    expect(await (await remove(test, PENDING)).text()).toBe('{"message":"Docente desactivado en su carrera."}')
     expect(test.identity.invitations[0].invalidatedAt).toBe(NOW)
     expect(test.identity.sessions.some((row) => row.userId === PENDING)).toBe(false)
   })
@@ -157,6 +157,84 @@ describe("DELETE /api/v1/coordination/academic/teachers/{user}", () => {
     expect(await (await remove(test, TEACHER)).json()).toEqual({ message: "Periodo académico activo", errors: { process: ["Periodo académico activo"] } })
     expect(test.identity.grants.find((row) => row.id === TEACHER_ROLE)?.active).toBe(true)
     expect((await remove(test, FOREIGN)).status).toBe(403)
+  })
+})
+
+describe("POST /api/v1/coordination/academic/teachers/{user}/reactivate", () => {
+  const reactivate = (test: ReturnType<typeof harness>, id: string) =>
+    reactivateCareerTeacher(jsonRequest(`/api/v1/coordination/academic/teachers/${id}/reactivate`, "POST", undefined), id, test.deps)
+  const activeIn = (test: ReturnType<typeof harness>, id: string) => test.identity.grants.filter((row) => row.userId === id && row.active).map((row) => row.careerId)
+
+  it("gives a deactivated teacher the career back without restoring parallels, even during the convocation", async () => {
+    const test = coordination()
+    test.identity.parallels.push({ id: "p-1", grantId: TEACHER_ROLE, active: true })
+    await remove(test, TEACHER)
+    test.identity.careers[0].locked = true
+    const response = await reactivate(test, TEACHER)
+    expect(await response.json()).toEqual({ message: "Docente reactivado en su carrera." })
+    expect(activeIn(test, TEACHER)).toEqual([CAREER])
+    expect(test.identity.grants.filter((row) => row.userId === TEACHER)).toHaveLength(1)
+    expect(test.identity.parallels).toEqual([])
+    expect(test.identity.mails).toEqual([])
+  })
+
+  it("sends a new activation link to a pending teacher, whose invitation was cancelled on deactivation", async () => {
+    const test = coordination()
+    await remove(test, PENDING)
+    expect((await reactivate(test, PENDING)).status).toBe(200)
+    expect(test.identity.mails.map((mail) => mail.to)).toEqual(["pendiente@silabos.test"])
+  })
+
+  it("only reaches people who taught in this career and changes nothing otherwise", async () => {
+    const test = coordination()
+    expect((await reactivate(test, FOREIGN)).status).toBe(403)
+    expect(activeIn(test, FOREIGN)).toEqual([OTHER_CAREER])
+    test.identity.grants.find((row) => row.id === TEACHER_ROLE)!.active = false
+    test.identity.accounts.find((row) => row.id === TEACHER)!.active = false
+    expect((await reactivate(test, TEACHER)).status).toBe(403)
+    expect(activeIn(test, TEACHER)).toEqual([])
+    const librarian = harness({ role: "bibliotecario", careerId: null })
+    librarian.identity.accounts.push(account({ id: TEACHER, email: "docente@silabos.test" }))
+    librarian.identity.grants.push(grant({ id: TEACHER_ROLE, userId: TEACHER, role: "docente", careerId: CAREER, active: false }))
+    expect((await reactivate(librarian, TEACHER)).status).toBe(403)
+    expect(activeIn(librarian, TEACHER)).toEqual([])
+  })
+
+  it("changes nobody if the email stops being this teacher's before the write", async () => {
+    const test = coordination()
+    test.identity.grants.find((row) => row.id === TEACHER_ROLE)!.active = false
+    const run = test.deps.accounts.transaction.bind(test.deps.accounts)
+    test.deps.accounts.transaction = (work) => {
+      test.identity.accounts.find((row) => row.id === TEACHER)!.email = "nuevo.correo@silabos.test"
+      test.identity.accounts.find((row) => row.id === FOREIGN)!.email = "docente@silabos.test"
+      return run(work)
+    }
+    const grants = JSON.stringify(test.identity.grants)
+    expect((await reactivate(test, TEACHER)).status).toBe(404)
+    expect(JSON.stringify(test.identity.grants)).toBe(grants)
+    expect(test.identity.accounts).toHaveLength(4)
+    expect(test.identity.mails).toEqual([])
+  })
+
+  it("refuses a former teacher who now holds a role that cannot teach", async () => {
+    const test = coordination()
+    test.identity.grants.find((row) => row.id === TEACHER_ROLE)!.active = false
+    test.identity.grants.push(grant({ id: "01a1c5bc-2222-7000-8000-0000000000bc", userId: TEACHER, role: "bibliotecario", careerId: null }))
+    expect((await (await reactivate(test, TEACHER)).json()).errors).toEqual({ correo_electronico: ["No se puede incorporar como docente una cuenta con el rol Bibliotecario."] })
+    expect(test.identity.grants.find((row) => row.id === TEACHER_ROLE)?.active).toBe(false)
+  })
+
+  it("lets the administrator reactivate in the requested career, never a coordinator who sends one", async () => {
+    const path = `/api/v1/admin/careers/${CAREER}/academic/teachers/${TEACHER}/reactivate`
+    const test = harness()
+    test.identity.accounts.push(account({ id: TEACHER, email: "docente@silabos.test" }))
+    test.identity.grants.push(grant({ id: TEACHER_ROLE, userId: TEACHER, role: "docente", careerId: CAREER, active: false }))
+    expect((await reactivateCareerTeacher(jsonRequest(path, "POST", undefined), TEACHER, test.deps, CAREER)).status).toBe(200)
+    expect(activeIn(test, TEACHER)).toEqual([CAREER])
+    const other = coordination()
+    other.identity.grants.find((row) => row.id === TEACHER_ROLE)!.active = false
+    expect((await reactivateCareerTeacher(jsonRequest(path, "POST", undefined), TEACHER, other.deps, CAREER)).status).toBe(403)
+    expect(activeIn(other, TEACHER)).toEqual([])
   })
 })
 

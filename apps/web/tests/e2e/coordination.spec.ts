@@ -136,7 +136,7 @@ test.describe.serial("coordination", () => {
     issues.expectClean()
   })
 
-  test("coordinator creates a career teacher, resends the activation and removes them", async ({ page, issues }) => {
+  test("coordinator creates a career teacher, resends the activation and deactivates them", async ({ page, issues }) => {
     const surname = `DOCENTE ${lettersOnly(suffix)}`
     const email = `docente.e2e.${suffix.toLowerCase()}@ueb.edu.ec`
     await page.goto("/coordinacion/docentes")
@@ -159,19 +159,32 @@ test.describe.serial("coordination", () => {
     expect((await resent).status()).toBe(200)
     await expect(toast(page)).toBeVisible()
 
-    const testRows = rowNamed(page, /^PRUEBA ETOE DOCENTE /, "button")
+    // Deactivated teachers stay listed, so only the ones still active are left to deactivate.
+    const testRows = rowNamed(page, /^PRUEBA ETOE DOCENTE /, "button").filter({ hasNotText: "Inactivo" })
     while ((await testRows.count()) > 0) {
       const target = testRows.first()
       await target.getByRole("button", { name: /^PRUEBA ETOE DOCENTE / }).click()
       const dialog = page.getByRole("dialog", { name: "Docente" })
-      await dialog.getByRole("button", { name: "Quitar de la carrera" }).click()
+      await dialog.getByRole("button", { name: "Desactivar" }).click()
       const confirmation = page.getByRole("dialog").filter({ hasNot: page.getByRole("heading", { name: "Docente", exact: true }) }).last()
       const removed = page.waitForResponse((response) => response.request().method() === "DELETE" && /teachers/.test(response.url()))
-      await confirmation.getByRole("button", { name: /Quitar/ }).last().click()
+      await confirmation.getByRole("button", { name: "Desactivar" }).last().click()
       expect((await removed).status()).toBe(200)
       await expect(page.getByRole("dialog")).toHaveCount(0)
     }
-    await expect(row).toHaveCount(0)
+    await expect(row).toContainText("Inactivo")
+
+    await row.getByRole("button", { name: `PRUEBA ETOE ${surname}`, exact: true }).click()
+    const reactivated = page.waitForResponse((response) => /\/reactivate$/.test(response.url()))
+    await detail.getByRole("button", { name: "Reactivar" }).click()
+    expect((await reactivated).status()).toBe(200)
+    await expect(row).not.toContainText("Inactivo")
+
+    // Left deactivated, so the test teacher cannot be assigned to anything afterwards.
+    await row.getByRole("button", { name: `PRUEBA ETOE ${surname}`, exact: true }).click()
+    await detail.getByRole("button", { name: "Desactivar" }).click()
+    await page.getByRole("dialog").last().getByRole("button", { name: "Desactivar" }).click()
+    await expect(row).toContainText("Inactivo")
     issues.expectClean()
   })
 

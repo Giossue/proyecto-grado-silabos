@@ -146,7 +146,7 @@ export type TeacherAssignments = {
   canCreateTeacher: boolean;
   career: { id: string; name: string; lock_reason: string | null; lock?: LockDetail | null };
   pendingTeachers: Array<{ id: string; name: string; email: string }>;
-  careerTeachers: Array<{ id: string; name: string; email: string; pending_activation: boolean; invitation_expired: boolean }>;
+  careerTeachers: Array<{ id: string; name: string; email: string; pending_activation: boolean; invitation_expired: boolean; active: boolean }>;
   teacherAssignments: Array<{
     id: string;
     user_id: string;
@@ -318,6 +318,11 @@ export const resendCareerTeacherInvitation = (userId: string) =>
   api<{ message: string }>(careerAcademicPath(`/teachers/${userId}/resend-activation`), {
     method: "POST",
   });
+export const reactivateCareerTeacher = (userId: string) =>
+  api<{ message: string }>(careerAcademicPath(`/teachers/${userId}/reactivate`), {
+    method: "POST",
+  });
+/** Desactiva al docente en la carrera: la cuenta y sus otros roles no cambian. */
 export const removeCareerTeacher = (userId: string) =>
   api<{ message: string }>(careerAcademicPath(`/teachers/${userId}`), {
     method: "DELETE",

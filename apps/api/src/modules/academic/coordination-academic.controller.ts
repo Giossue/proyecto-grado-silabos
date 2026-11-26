@@ -10,7 +10,7 @@ import { scheduledSubjects } from "../../server/academic/scheduledSubjects"
 import { createMalla, listMallas, updateMalla } from "../../server/academic/mallas"
 import { curriculumBuilder, teacherAssignments } from "../../server/academic/structure"
 import { curriculumImportTemplate, importCurriculum } from "../../server/academic/structureImports"
-import { destroyCareerTeacher, resendCareerTeacherActivation, storeCareerTeacher } from "../../server/identity/careerTeachers"
+import { destroyCareerTeacher, reactivateCareerTeacher, resendCareerTeacherActivation, storeCareerTeacher } from "../../server/identity/careerTeachers"
 import { importTeachers, teacherImportTemplate } from "../../server/identity/imports"
 import { handled, SessionInHandler, unmatched, UnmatchedMethods } from "./academic-handler"
 import { AcademicDeps } from "./academic-deps"
@@ -246,7 +246,7 @@ export class CoordinationAcademicController {
   }
 
   @Delete("teachers/import")
-  @ApiOperation({ summary: "Quita de la carrera al docente con identificador «import»: responde como la ruta de eliminación." })
+  @ApiOperation({ summary: "Desactiva en la carrera al docente con identificador «import»: responde como la ruta de eliminación." })
   removeImportTeacher(@Req() request: ApiRequest): Promise<WebReply> {
     return handled(request, (web) => destroyCareerTeacher(web, "import", this.deps.careerTeachers()))
   }
@@ -264,7 +264,7 @@ export class CoordinationAcademicController {
   }
 
   @Delete("teachers/import-template")
-  @ApiOperation({ summary: "Quita de la carrera al docente con identificador «import-template»: responde como la ruta de eliminación." })
+  @ApiOperation({ summary: "Desactiva en la carrera al docente con identificador «import-template»: responde como la ruta de eliminación." })
   removeImportTemplateTeacher(@Req() request: ApiRequest): Promise<WebReply> {
     return handled(request, (web) => destroyCareerTeacher(web, "import-template", this.deps.careerTeachers()))
   }
@@ -281,8 +281,15 @@ export class CoordinationAcademicController {
     return handled(request, (web) => resendCareerTeacherActivation(web, user, this.deps.careerTeachers()))
   }
 
+  @Post("teachers/:user/reactivate")
+  @ApiOperation({ summary: "Reactiva a un docente desactivado en la carrera." })
+  @ApiParam({ name: "user", format: "uuid" })
+  reactivate(@Req() request: ApiRequest, @Param("user") user: string): Promise<WebReply> {
+    return handled(request, (web) => reactivateCareerTeacher(web, user, this.deps.careerTeachers()))
+  }
+
   @Delete("teachers/:user")
-  @ApiOperation({ summary: "Quita al docente de la carrera." })
+  @ApiOperation({ summary: "Desactiva al docente en la carrera." })
   @ApiParam({ name: "user", format: "uuid" })
   removeTeacher(@Req() request: ApiRequest, @Param("user") user: string): Promise<WebReply> {
     return handled(request, (web) => destroyCareerTeacher(web, user, this.deps.careerTeachers()))

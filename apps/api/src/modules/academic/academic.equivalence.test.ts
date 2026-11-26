@@ -28,7 +28,7 @@ import { showSubjectProfile } from "../../server/configuration/subjectProfile"
 import { previewSubjectProfile } from "../../server/configuration/subjectProfilePreview"
 import { updateSubjectProfile } from "../../server/configuration/subjectProfileWrites"
 import { applyFichaImport, fichaTemplate, previewFichaImport } from "../../server/ficha/fichaImports"
-import { destroyCareerTeacher, resendCareerTeacherActivation, storeCareerTeacher } from "../../server/identity/careerTeachers"
+import { destroyCareerTeacher, reactivateCareerTeacher, resendCareerTeacherActivation, storeCareerTeacher } from "../../server/identity/careerTeachers"
 import { importTeachers, teacherImportTemplate } from "../../server/identity/imports"
 import { catalogLibraries } from "../../server/library/catalogHandlers"
 import { configureApi } from "../../bootstrap"
@@ -123,7 +123,7 @@ const structureRepository = {
   ],
   requirements: async () => [],
   teacherAssignments: async () => [{ id: "as-1", userId: golden.userId, userName: "Ana", userEmail: "ana@ueb.edu.ec", parallelId: PARALLEL, parallelCode: "A", subjectName: "Programación", active: true }],
-  careerTeachers: async () => [{ id: golden.userId, name: "Ana", email: "ana@ueb.edu.ec", verified: true, hasActiveInvitation: false }],
+  careerTeachers: async () => [{ id: golden.userId, name: "Ana", email: "ana@ueb.edu.ec", verified: true, hasActiveInvitation: false, active: true }],
   pendingTeachers: async () => [],
   unassignedParallels: async () => [],
   teacherUsers: async () => [{ id: golden.userId, name: "Ana", email: "ana@ueb.edu.ec" }],
@@ -279,6 +279,7 @@ const ORACLE: Record<string, Oracle> = {
   "api/v1/coordination/academic/teachers/import-template:GET": (web) => teacherImportTemplate(web, academic.teacherImports()),
   "api/v1/coordination/academic/teachers/import-template:DELETE": (web) => destroyCareerTeacher(web, "import-template", academic.careerTeachers()),
   "api/v1/coordination/academic/teachers/[user]:DELETE": (web, params) => destroyCareerTeacher(web, p(params, "user"), academic.careerTeachers()),
+  "api/v1/coordination/academic/teachers/[user]/reactivate:POST": (web, params) => reactivateCareerTeacher(web, p(params, "user"), academic.careerTeachers()),
   "api/v1/coordination/academic/teachers/[user]/resend-activation:POST": (web, params) => resendCareerTeacherActivation(web, p(params, "user"), academic.careerTeachers()),
   "api/v1/coordination/ficha-imports/template:GET": (web) => fichaTemplate(web, ficha.imports()),
   "api/v1/coordination/ficha-imports/spreadsheet:POST": (web) => previewFichaImport(web, ficha.imports()),
@@ -319,6 +320,7 @@ const ORACLE: Record<string, Oracle> = {
   "api/v1/admin/careers/[career]/academic/teachers/import-template:DELETE": (web, params) =>
     destroyCareerTeacher(web, "import-template", academic.careerTeachers(), p(params, "career")),
   "api/v1/admin/careers/[career]/academic/teachers/[user]:DELETE": (web, params) => destroyCareerTeacher(web, p(params, "user"), academic.careerTeachers(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/teachers/[user]/reactivate:POST": (web, params) => reactivateCareerTeacher(web, p(params, "user"), academic.careerTeachers(), p(params, "career")),
   "api/v1/admin/careers/[career]/academic/teachers/[user]/resend-activation:POST": (web, params) =>
     resendCareerTeacherActivation(web, p(params, "user"), academic.careerTeachers(), p(params, "career")),
   "api/v1/admin/careers/[career]/ficha-imports/template:GET": (web, params) => fichaTemplate(web, ficha.imports(), p(params, "career")),

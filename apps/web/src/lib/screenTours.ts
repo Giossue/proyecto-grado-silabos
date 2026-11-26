@@ -85,7 +85,7 @@ export const screenTours: Record<string, TourStep[]> = {
   '/coordinacion/docentes': [
     step(ACTIONS, 'Crear docente', 'Cree un docente o suba varios con un Excel. Cada uno recibe un correo para entrar', 'left'),
     step(FILTERS, 'Buscar', 'Busque por nombre o correo, o filtre por estado', 'bottom'),
-    step(TABLE, 'Docentes', 'Pulse uno para ver sus datos, reenviarle la invitación o quitarlo de la carrera', 'top'),
+    step(TABLE, 'Docentes', 'Pulse uno para ver sus datos, reenviarle la invitación, desactivarlo o reactivarlo', 'top'),
   ],
   '/coordinacion/proyecto-carrera': [
     step(TABS, 'Materias y documentos', 'Cambie entre el proyecto de cada materia y los documentos de apoyo', 'bottom'),

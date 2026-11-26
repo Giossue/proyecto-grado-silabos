@@ -72,7 +72,7 @@ export type TeacherAssignmentRecord = {
   active: boolean
 }
 
-export type CareerTeacherRecord = { id: string; name: string; email: string; verified: boolean; hasActiveInvitation: boolean }
+export type CareerTeacherRecord = { id: string; name: string; email: string; verified: boolean; hasActiveInvitation: boolean; active: boolean }
 
 export type PersonRecord = { id: string; name: string; email: string }
 
@@ -280,6 +280,7 @@ export async function teacherAssignments(request: Request, deps: AcademicStructu
       email: teacher.email,
       pending_activation: !teacher.verified,
       invitation_expired: !teacher.verified && !teacher.hasActiveInvitation,
+      active: teacher.active,
     })),
     pendingTeachers: pending.map((teacher) => ({ id: teacher.id, name: teacher.name, email: teacher.email })),
     options: { ...baseOptions(), parallels, teacherUsers },

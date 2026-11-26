@@ -918,6 +918,16 @@
     "methods": [
       "POST"
     ],
+    "uri": "api/v1/coordination/academic/teachers/{user}/reactivate",
+    "wheres": {},
+    "bindings": {
+      "user": "App\\Models\\User"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
     "uri": "api/v1/coordination/academic/teachers/{user}/resend-activation",
     "wheres": {},
     "bindings": {
@@ -1235,6 +1245,19 @@
     },
     "bindings": {
       "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/teachers/{user}/reactivate",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career",
+      "user": "App\\Models\\User"
     }
   },
   {

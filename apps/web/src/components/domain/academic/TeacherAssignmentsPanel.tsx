@@ -1,8 +1,8 @@
 "use client"
 
-import { Trash2 } from "lucide-react"
+import { UserMinus } from "lucide-react"
 import { useRef, useState } from "react"
-import { removeCareerTeacher, resendCareerTeacherInvitation, type TeacherAssignments } from "@/api/career-academics"
+import { reactivateCareerTeacher, removeCareerTeacher, resendCareerTeacherInvitation, type TeacherAssignments } from "@/api/career-academics"
 import { ApiError } from "@/api/client"
 import { CareerTeacherEditDialog } from "@/components/domain/academic/CareerTeacherEditDialog"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
@@ -27,10 +27,15 @@ import { toast } from "@/lib/toast"
 type TeacherRow = TeacherAssignments["careerTeachers"][number]
 
 const searchable = (item: TeacherRow) => [item.name, item.email]
+const stateOf = (item: TeacherRow): "inactive" | "pending" | "active" => (!item.active ? "inactive" : item.pending_activation ? "pending" : "active")
+const stateTones = { inactive: "neutral", pending: "warning", active: "success" } as const
 const filters: Record<string, ClientFilterDefinition<TeacherRow>> = {
-  estado: { matches: (item, value) => (value === "pending" ? item.pending_activation : !item.pending_activation) },
+  estado: { matches: (item, value) => stateOf(item) === value },
 }
-const statusOf = (item: TeacherRow): string => (item.pending_activation ? (item.invitation_expired ? "Invitación vencida" : "Pendiente") : "Activa")
+const statusOf = (item: TeacherRow): string => {
+  if (!item.active) return "Inactivo"
+  return item.pending_activation ? (item.invitation_expired ? "Invitación vencida" : "Pendiente") : "Activo"
+}
 const sortColumns = {
   name: { label: "Docente", value: (item: TeacherRow) => item.name },
   email: { label: "Correo", value: (item: TeacherRow) => item.email },
@@ -69,14 +74,15 @@ export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssi
     setRemoveError(null)
   }
 
-  const resendInvitation = async (item: TeacherRow): Promise<void> => {
+  /** For actions that need no confirmation: close the sheet, run it and report once it has left. */
+  const runFromSheet = async (action: () => Promise<{ message: string }>, failure: string): Promise<void> => {
     changeSheet(false)
     try {
-      const result = await resendCareerTeacherInvitation(item.id)
+      const result = await action()
       await afterDialogExit()
       onChanged(result.message)
     } catch (reason) {
-      toast.error(reason instanceof ApiError ? reason.message : "No se pudo reenviar la invitación")
+      toast.error(reason instanceof ApiError ? reason.message : failure)
     }
   }
 
@@ -89,7 +95,7 @@ export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssi
       setRemoving(null)
       onChanged(result.message)
     } catch (reason) {
-      setRemoveError(reason instanceof ApiError ? reason.message : "No se pudo quitar al docente de la carrera")
+      setRemoveError(reason instanceof ApiError ? reason.message : "No se pudo desactivar al docente")
     } finally {
       setRemoveProcessing(false)
     }
@@ -115,8 +121,9 @@ export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssi
               <SelectContent>
                 <SelectGroup>
                   <SelectItem value="all">Todos los estados</SelectItem>
-                  <SelectItem value="active">Activas</SelectItem>
+                  <SelectItem value="active">Activo</SelectItem>
                   <SelectItem value="pending">Pendiente</SelectItem>
+                  <SelectItem value="inactive">Inactivo</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -145,12 +152,12 @@ export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssi
                   <button type="button" className={rowButtonClass} onClick={() => openEditor(item)}>{item.name}</button>
                   <TableCardLine>
                     {item.email}
-                    <StatusBadge label={statusOf(item)} tone={item.pending_activation ? "warning" : "success"} />
+                    <StatusBadge label={statusOf(item)} tone={stateTones[stateOf(item)]} />
                   </TableCardLine>
                 </TableCell>
                 <TableCell data-card-hide="true">{item.email}</TableCell>
                 <TableCell className="text-center" data-card-hide="true">
-                  <StatusBadge label={statusOf(item)} tone={item.pending_activation ? "warning" : "success"} />
+                  <StatusBadge label={statusOf(item)} tone={stateTones[stateOf(item)]} />
                 </TableCell>
               </TableRow>
             ))
@@ -166,7 +173,8 @@ export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssi
           onOpenChange={changeSheet}
           removeDisabled={Boolean(data.career.lock_reason)}
           onRemove={() => askRemoval(editing)}
-          onResend={() => void resendInvitation(editing)}
+          onReactivate={() => void runFromSheet(() => reactivateCareerTeacher(editing.id), "No se pudo reactivar al docente")}
+          onResend={() => void runFromSheet(() => resendCareerTeacherInvitation(editing.id), "No se pudo reenviar la invitación")}
         />
       ) : null}
       <TablePagination meta={pagination.meta} label="Paginación de docentes" onPageChange={pagination.setPage} />
@@ -178,9 +186,9 @@ export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssi
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Quitar a {removingShown?.name} de la carrera</DialogTitle>
+            <DialogTitle>Desactivar a {removingShown?.name}</DialogTitle>
             <DialogDescription>
-              Deja de ser docente de esta carrera y sus paralelos quedan sin docente. Los sílabos se conservan; quien se asigne después empieza desde cero. Su cuenta y sus otros roles no cambian
+              Queda como inactivo en esta carrera y sus paralelos quedan sin docente. Los sílabos se conservan; quien se asigne después empieza desde cero. Su cuenta y sus otros roles no cambian. Puede reactivarlo después
             </DialogDescription>
           </DialogHeader>
           {removeError ? <FeedbackAlert message={removeError} /> : null}
@@ -191,8 +199,8 @@ export function TeacherAssignmentsPanel({ data, onChanged }: { data: TeacherAssi
               </Button>
             </DialogClose>
             <Button type="button" variant="destructive" disabled={removeProcessing} onClick={() => void removeFromCareer()}>
-              {removeProcessing ? <Spinner data-icon="inline-start" /> : <Trash2 data-icon="inline-start" aria-hidden="true" />}
-              Quitar de la carrera
+              {removeProcessing ? <Spinner data-icon="inline-start" /> : <UserMinus data-icon="inline-start" aria-hidden="true" />}
+              Desactivar
             </Button>
           </DialogFooter>
         </DialogContent>

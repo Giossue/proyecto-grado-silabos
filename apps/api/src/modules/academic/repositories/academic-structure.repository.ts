@@ -97,9 +97,9 @@ export class AcademicStructurePrismaRepository implements AcademicStructureRepos
     return new Map(found.map((row) => [row.id, row]))
   }
 
-  private async careerRoleUsers(careerId: string, onlyUnverified: boolean): Promise<string[]> {
+  private async unverifiedTeacherIds(careerId: string): Promise<string[]> {
     const found = await this.prisma.asignaciones_rol.findMany({
-      where: { ...roleScope(careerId, ["docente"]), usuarios: { usuario_activo: true, ...(onlyUnverified ? { correo_verificado_en: null } : {}) } },
+      where: { ...roleScope(careerId, ["docente"]), usuarios: { usuario_activo: true, correo_verificado_en: null } },
       select: { usuario_id: true },
     })
     return found.map((row) => row.usuario_id)
@@ -191,16 +191,22 @@ export class AcademicStructurePrismaRepository implements AcademicStructureRepos
   }
 
   async careerTeachers(careerId: string): Promise<CareerTeacherRecord[]> {
-    const found = await this.careerRoleUsers(careerId, false)
+    // Deactivated teachers stay listed so they can be reactivated; any active grant makes the teacher active.
+    const grants = await this.prisma.asignaciones_rol.findMany({
+      where: { carrera_id: careerId, rol: "docente", usuarios: { usuario_activo: true } },
+      select: { usuario_id: true, asignacion_rol_activa: true },
+    })
+    const active = new Set(grants.filter((row) => row.asignacion_rol_activa).map((row) => row.usuario_id))
+    const found = [...new Set(grants.map((row) => row.usuario_id))]
     const users = await this.usersById(found)
     return found.flatMap((userId) => {
       const user = users.get(userId)
-      return user ? [{ id: user.id, name: user.name, email: user.email, verified: user.verified, hasActiveInvitation: user.invited }] : []
+      return user ? [{ id: user.id, name: user.name, email: user.email, verified: user.verified, hasActiveInvitation: user.invited, active: active.has(userId) }] : []
     })
   }
 
   async pendingTeachers(careerId: string): Promise<PersonRecord[]> {
-    const found = await this.careerRoleUsers(careerId, true)
+    const found = await this.unverifiedTeacherIds(careerId)
     const users = await this.usersById(found)
     return found.flatMap((userId) => {
       const user = users.get(userId)
@@ -226,7 +232,15 @@ export class AcademicStructurePrismaRepository implements AcademicStructureRepos
 
   async teacherUsers(careerId: string): Promise<PersonRecord[]> {
     const found = await this.prisma.usuarios.findMany({
-      where: { usuario_activo: true, correo_verificado_en: { not: null }, asignaciones_rol: { some: roleScope(careerId, ["docente", "coordinador"]) } },
+      where: {
+        usuario_activo: true,
+        correo_verificado_en: { not: null },
+        OR: [
+          { asignaciones_rol: { some: roleScope(careerId, ["docente"]) } },
+          // A coordinator may teach without the teacher role yet, unless it was deactivated here.
+          { AND: [{ asignaciones_rol: { some: roleScope(careerId, ["coordinador"]) } }, { asignaciones_rol: { none: { carrera_id: careerId, rol: "docente" } } }] },
+        ],
+      },
       select: { usuario_id: true, nombre_usuario: true, correo_electronico: true },
       orderBy: { nombre_usuario: "asc" },
     })

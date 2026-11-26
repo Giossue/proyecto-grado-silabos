@@ -233,10 +233,10 @@ describe("GET /api/v1/coordination/academic/teacher-assignments", () => {
       },
     ]
     teachers = [
-      { id: "u-3", name: "Nuevo docente", email: "nuevo@silabos.test", verified: false, hasActiveInvitation: true },
-      { id: "u-2", name: "Docente sin paralelo", email: "sin.paralelo@silabos.test", verified: true, hasActiveInvitation: false },
-      { id: "u-4", name: "Vencido", email: "vencido@silabos.test", verified: false, hasActiveInvitation: false },
-      { id: "u-2", name: "Docente sin paralelo", email: "sin.paralelo@silabos.test", verified: true, hasActiveInvitation: false },
+      { id: "u-3", name: "Nuevo docente", email: "nuevo@silabos.test", verified: false, hasActiveInvitation: true, active: true },
+      { id: "u-2", name: "Docente sin paralelo", email: "sin.paralelo@silabos.test", verified: true, hasActiveInvitation: false, active: true },
+      { id: "u-4", name: "Vencido", email: "vencido@silabos.test", verified: false, hasActiveInvitation: false, active: false },
+      { id: "u-2", name: "Docente sin paralelo", email: "sin.paralelo@silabos.test", verified: true, hasActiveInvitation: false, active: true },
     ]
     pending = [
       { id: "u-3", name: "Nuevo docente", email: "nuevo@silabos.test" },
@@ -248,9 +248,9 @@ describe("GET /api/v1/coordination/academic/teacher-assignments", () => {
       text:
         `{"career":{"id":"${CAREER}","name":"Software","lock_reason":"Periodo académico activo","lock":{"scope":"convocation","period":"2026-2027","institutional_pause":false,"delivery_on":"2026-12-10"}},` +
         '"teacherAssignments":[{"id":"a-1","user_id":"u-1","parallel_id":"p-1","user_name":"Ana","user_email":"ana@silabos.test","parallel_code":"A","subject_name":"Algoritmos","active":true,"editable":true}],' +
-        '"careerTeachers":[{"id":"u-2","name":"Docente sin paralelo","email":"sin.paralelo@silabos.test","pending_activation":false,"invitation_expired":false},' +
-        '{"id":"u-3","name":"Nuevo docente","email":"nuevo@silabos.test","pending_activation":true,"invitation_expired":false},' +
-        '{"id":"u-4","name":"Vencido","email":"vencido@silabos.test","pending_activation":true,"invitation_expired":true}],' +
+        '"careerTeachers":[{"id":"u-2","name":"Docente sin paralelo","email":"sin.paralelo@silabos.test","pending_activation":false,"invitation_expired":false,"active":true},' +
+        '{"id":"u-3","name":"Nuevo docente","email":"nuevo@silabos.test","pending_activation":true,"invitation_expired":false,"active":true},' +
+        '{"id":"u-4","name":"Vencido","email":"vencido@silabos.test","pending_activation":true,"invitation_expired":true,"active":false}],' +
         '"pendingTeachers":[{"id":"u-3","name":"Nuevo docente","email":"nuevo@silabos.test"}],' +
         `"options":{${BASE_OPTIONS},"parallels":[{"id":"p-2","label":"Algoritmos · Paralelo B"}],"teacherUsers":[{"id":"u-1","name":"Ana","email":"ana@silabos.test"}]},` +
         '"canCreateTeacher":true}',
@@ -259,10 +259,10 @@ describe("GET /api/v1/coordination/academic/teacher-assignments", () => {
 
   it("keeps the database order for equal names and sorts by bytes like PHP", async () => {
     teachers = [
-      { id: "u-b", name: "beta", email: "b@x", verified: true, hasActiveInvitation: false },
-      { id: "u-z", name: "Zeta", email: "z1@x", verified: true, hasActiveInvitation: false },
-      { id: "u-a", name: "Álvaro", email: "a@x", verified: true, hasActiveInvitation: false },
-      { id: "u-y", name: "Zeta", email: "z2@x", verified: true, hasActiveInvitation: false },
+      { id: "u-b", name: "beta", email: "b@x", verified: true, hasActiveInvitation: false, active: true },
+      { id: "u-z", name: "Zeta", email: "z1@x", verified: true, hasActiveInvitation: false, active: true },
+      { id: "u-a", name: "Álvaro", email: "a@x", verified: true, hasActiveInvitation: false, active: true },
+      { id: "u-y", name: "Zeta", email: "z2@x", verified: true, hasActiveInvitation: false, active: true },
     ]
     const body = JSON.parse(await (await teacherAssignments(get(path), deps())).text()) as { careerTeachers: { id: string }[] }
     expect(body.careerTeachers.map((teacher) => teacher.id)).toEqual(["u-z", "u-y", "u-b", "u-a"])

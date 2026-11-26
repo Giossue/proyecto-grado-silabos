@@ -33,7 +33,7 @@
     },
     "/admin/estructura-academica/carreras/:career/docentes": {
         "title": "Docentes de la carrera",
-        "content": "Aquí están los docentes de la carrera que eligió.\n\nCree uno o suba varios con un Excel; cada uno recibe un correo para entrar. Pulse un docente para reenviarle la invitación o quitarlo de la carrera."
+        "content": "Aquí están los docentes de la carrera que eligió.\n\nCree uno o suba varios con un Excel; cada uno recibe un correo para entrar. Pulse un docente para reenviarle la invitación, desactivarlo o reactivarlo. El desactivado sigue en la lista como «Inactivo»."
     },
     "/admin/estructura-academica/carreras/:career/proyecto-carrera": {
         "title": "Proyecto de la carrera",
@@ -97,7 +97,7 @@
     },
     "/coordinacion/docentes": {
         "title": "Docentes de la carrera",
-        "content": "Aquí están los docentes de su carrera.\n\nCree uno o suba varios con un Excel; cada uno recibe un correo para entrar. Si la persona ya tiene cuenta, solo se suma a su carrera; si no, recibe el enlace de registro. Pulse un docente para ver sus datos, reenviarle la invitación si venció sin aceptarla o quitarlo de la carrera; su cuenta (contraseña y datos) la gestiona Administración. Mientras haya un periodo académico en curso no se puede quitar a nadie."
+        "content": "Aquí están los docentes de su carrera.\n\nCree uno o suba varios con un Excel; cada uno recibe un correo para entrar. Si la persona ya tiene cuenta, solo se suma a su carrera; si no, recibe el enlace de registro. Pulse un docente para ver sus datos, reenviarle la invitación si venció sin aceptarla, desactivarlo o reactivarlo; el desactivado sigue en la lista como «Inactivo» y sus paralelos quedan sin docente. Su cuenta (contraseña y datos) la gestiona Administración. Mientras haya un periodo académico en curso no se puede desactivar a nadie."
     },
     "/coordinacion/historial": {
         "title": "Historial",

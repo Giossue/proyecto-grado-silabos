@@ -50,7 +50,6 @@ export interface CareerWriteTx {
   effectiveRoles(userId: string): Promise<string[]>
   teacherGrant(userId: string, careerId: string): Promise<{ id: string; active: boolean } | null>
   insertTeacherGrant(userId: string, careerId: string): Promise<void>
-  activateGrant(grantId: string): Promise<void>
   eligibleTeacherRole(userId: string, careerId: string): Promise<string | null>
   parallelHasActiveTeacher(parallelId: string): Promise<boolean>
   insertTeacherAssignment(roleId: string, parallelId: string): Promise<string>
@@ -204,7 +203,8 @@ async function teacherRole(tx: CareerWriteTx, userId: string, careerId: string):
   if (coordinator) {
     const grant = await tx.teacherGrant(userId, careerId)
     if (grant === null) await tx.insertTeacherGrant(userId, careerId)
-    else if (!grant.active) await tx.activateGrant(grant.id)
+    // Deactivated in Docentes: only «Reactivar» brings the teacher back, never an assignment.
+    else if (!grant.active) throw invalid("user_id", "El docente está inactivo en esta carrera. Reactívelo en Docentes antes de asignarle un paralelo.")
   }
   const roleId = await tx.eligibleTeacherRole(userId, careerId)
   if (roleId === null) throw invalid("user_id", "El docente debe verificar su correo antes de recibir una asignación.")

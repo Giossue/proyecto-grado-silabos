@@ -1,7 +1,9 @@
 import { activeCareerId, resolveCareerScope } from "../academic/careerScope"
 import { requireSession } from "../auth/requireSession"
 import type { AppSession } from "../auth/types"
+import { Missing } from "../http/failures"
 import { requestInput } from "../http/input"
+import { MODELS } from "../http/models"
 import { forbidden, apiJson, validationError } from "../http/responses"
 import { careerTeacherSchema } from "@silabos/shared/schemas/people"
 import { validateSchema } from "../http/schemaValidation"
@@ -62,11 +64,29 @@ export async function destroyCareerTeacher(request: Request, id: string, deps: I
   const count = outcome.value
   const message =
     count === 0
-      ? "Docente retirado de su carrera."
+      ? "Docente desactivado en su carrera."
       : count === 1
-        ? "Docente retirado de su carrera; su paralelo quedó sin docente."
-        : `Docente retirado de su carrera; sus ${count} paralelos quedaron sin docente.`
+        ? "Docente desactivado en su carrera; su paralelo quedó sin docente."
+        : `Docente desactivado en su carrera; sus ${count} paralelos quedaron sin docente.`
   return apiJson({ message })
+}
+
+/** Gives a deactivated teacher the career back; their parallels are assigned again by hand. */
+export async function reactivateCareerTeacher(request: Request, id: string, deps: IdentityWriteDeps, requestedCareerId: string | null = null): Promise<Response> {
+  const bound = await bindAccount(request, id, deps)
+  if (bound instanceof Response) return bound
+  const { session, target, original } = bound
+  const careerId = await teacherCareer(session, deps, requestedCareerId)
+  if (careerId instanceof Response) return careerId
+  // Only someone who already taught here: adding anybody else goes through the teacher form, by email.
+  if (!target.active || (await deps.accounts.direct((tx) => tx.findGrant(target.id, ROLE_TEACHER, careerId, true))) === null) return forbidden()
+  const outcome = await perform(deps, original, session, async (ctx) => {
+    // createCareerTeacher finds the account by email: lock it first, so the address cannot stop being this teacher's.
+    if ((await ctx.tx.lockAccountByEmail(target.email.toLowerCase()))?.id !== target.id) throw new Missing(MODELS.user, target.id)
+    return createCareerTeacher(ctx, { name: target.name, email: target.email }, careerId)
+  })
+  if (outcome instanceof Response) return outcome
+  return apiJson({ message: "Docente reactivado en su carrera." })
 }
 
 export async function resendCareerTeacherActivation(request: Request, id: string, deps: IdentityWriteDeps, requestedCareerId: string | null = null): Promise<Response> {

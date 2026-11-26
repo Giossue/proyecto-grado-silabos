@@ -140,11 +140,6 @@ function deps(): CareerWriteDeps {
             log.push(`grant:${userId}:${careerId}`)
             grants.push({ id: nextId(), userId, careerId, role: "docente", active: true, eligible: true })
           },
-          activateGrant: async (id) => {
-            log.push(`activate:${id}`)
-            const grant = grants.find((item) => item.id === id) as Grant
-            grant.active = true
-          },
           eligibleTeacherRole: async (userId, careerId) =>
             grants.find((grant) => grant.userId === userId && grant.careerId === careerId && grant.role === "docente" && grant.active && grant.eligible)?.id ?? null,
           parallelHasActiveTeacher: async (id) => assignments.some((assignment) => assignment.parallelId === id),
@@ -358,14 +353,16 @@ describe("POST /api/v1/coordination/academic/asignacion_docente", () => {
     })
   })
 
-  it("makes a coordinator of the career its teacher, reopening its previous teacher role", async () => {
+  it("makes a coordinator of the career its teacher, but never brings back one deactivated in Docentes", async () => {
     await create("asignacion_docente", { user_id: golden.userId, parallel_id: PARALLEL })
     expect(log).toContain(`grant:${golden.userId}:${CAREER}`)
     assignments = []
     grants = grants.map((grant) => (grant.userId === golden.userId && grant.role === "docente" ? { ...grant, active: false } : grant))
     log = []
-    await create("asignacion_docente", { user_id: golden.userId, parallel_id: PARALLEL })
-    expect(log).toContain("activate:01a2aaaa-0000-7000-8000-000000000001")
+    const refused = await create("asignacion_docente", { user_id: golden.userId, parallel_id: PARALLEL })
+    expect(refused.json?.errors).toEqual({ user_id: ["El docente está inactivo en esta carrera. Reactívelo en Docentes antes de asignarle un paralelo."] })
+    expect(assignments).toEqual([])
+    expect(grants.filter((grant) => grant.userId === golden.userId && grant.role === "docente").map((grant) => grant.active)).toEqual([false])
   })
 
   it("refuses a teacher without a verified role in the career and an institutional coordinator", async () => {
