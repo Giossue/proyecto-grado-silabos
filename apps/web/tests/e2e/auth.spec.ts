@@ -3,8 +3,6 @@ import { accounts, mailLogPaths, password, storageStateOf, type AccountKey } fro
 import { query } from "./support/db"
 import { expect, test, watchPage } from "./support/fixtures"
 import { chooseScope, fillLogin, loginAs, logout } from "./support/session"
-import { freshCode, secretFromQr, typeCode } from "./support/totp"
-import { toast } from "./support/ui"
 
 const disposable = accounts.teacher3
 const guestSessionProbe = /^http 401: GET .*\/api\/v1\/session$/
@@ -88,51 +86,15 @@ test.describe("route guards", () => {
 })
 
 test.describe.serial("account security", () => {
-  test("two-factor authentication: enable, confirm, challenge on login and disable", async ({ browser }, testInfo) => {
-    const used = new Set<string>()
+  test("the security screen offers the reset link and the open sessions only", async ({ browser }, testInfo) => {
     const owner = await browser.newContext({ baseURL: testInfo.project.use.baseURL, storageState: storageStateOf("teacher3") })
     const page = await owner.newPage()
     await page.goto("/docente/configuracion/seguridad")
-    await page.getByRole("button", { name: /^Verificación en dos pasos/ }).click()
-    await page.getByRole("button", { name: "Activar 2FA" }).click()
-    const confirmPassword = page.getByRole("dialog", { name: "Activar la verificación en dos pasos" })
-    await confirmPassword.locator("#confirm-current-password").fill(password())
-    await confirmPassword.getByRole("button", { name: "Continuar" }).click()
-    const setup = page.getByRole("dialog", { name: "Activar autenticación de dos factores" })
-    const secret = await secretFromQr(setup.getByRole("img", { name: "Código QR para su aplicación autenticadora" }))
-    let enabled = false
-    try {
-      await setup.getByRole("button", { name: "Continuar" }).click()
-      const verify = page.getByRole("dialog", { name: "Verificar código de autenticación" })
-      await typeCode(page, verify.locator("#otp"), await freshCode(secret, used))
-      await verify.getByRole("button", { name: "Confirmar" }).click()
-      await expect(verify).toBeHidden()
-      enabled = true
-      await expect(page.getByRole("button", { name: "Desactivar 2FA" })).toBeVisible()
-
-      const context = await browser.newContext({ baseURL: testInfo.project.use.baseURL })
-      const second = await context.newPage()
-      await fillLogin(second, disposable.email, password())
-      await expect(second).toHaveURL(/\/verificar-dos-factores$/)
-      await typeCode(second, second.locator("#otp"), await freshCode(secret, used))
-      const submit = second.locator('form button[type="submit"]')
-      await expect(submit).toBeEnabled()
-      await submit.click()
-      await expect(second).toHaveURL(/\/docente\/mis-silabos$/)
-      await context.close()
-    } finally {
-      if (enabled) {
-        await page.goto("/docente/configuracion/seguridad")
-        await page.getByRole("button", { name: /^Verificación en dos pasos/ }).click()
-        await page.getByRole("button", { name: "Desactivar 2FA" }).click()
-        const disable = page.getByRole("dialog", { name: "Desactivar la verificación en dos pasos" })
-        await disable.locator("#disable-current-password").fill(password())
-        await disable.locator("#disable-code").fill(await freshCode(secret, used))
-        await disable.getByRole("button").last().click()
-        await expect(page.getByRole("button", { name: "Activar 2FA" })).toBeVisible()
-      }
-      await owner.close()
-    }
+    await expect(page.getByRole("button", { name: "Enviar enlace" })).toBeVisible()
+    await expect(page.getByRole("button", { name: /^Sesiones abiertas/ })).toBeVisible()
+    await expect(page.getByRole("button", { name: /^Verificación en dos pasos/ })).toHaveCount(0)
+    await expect(page.getByRole("button", { name: "Actualizar contraseña" })).toHaveCount(0)
+    await owner.close()
   })
 
   test("password recovery sends a reset link by mail", async ({ page }) => {
@@ -159,27 +121,5 @@ test.describe.serial("account security", () => {
     await page.goto(`${target.pathname}${target.search}`)
     await expect(page.locator("#new-password")).toBeVisible()
     await expect(page.locator("#reset-email")).toHaveValue(disposable.email)
-  })
-
-  test("password change and change back", async ({ page }) => {
-    const temporary = `${password()}-E2e9`
-    await loginAs(page, disposable)
-    const change = async (current: string, next: string) => {
-      await page.goto("/docente/configuracion/seguridad")
-      await page.getByRole("button", { name: "Actualizar contraseña" }).click()
-      const dialog = page.getByRole("dialog", { name: "Actualizar contraseña" })
-      await dialog.locator("#current_password").fill(current)
-      await dialog.locator("#password").fill(next)
-      await dialog.locator("#password_confirmation").fill(next)
-      await dialog.getByRole("button", { name: "Guardar" }).click()
-      await expect(toast(page, "Contraseña actualizada")).toBeVisible()
-    }
-    await change(password(), temporary)
-    try {
-      await logout(page)
-      await loginAs(page, disposable, temporary)
-    } finally {
-      await change(temporary, password())
-    }
   })
 })

@@ -3,13 +3,12 @@ import type { PrismaClient } from "../../generated/prisma/client"
 import type { AuthSchema } from "./betterAuth"
 
 const USER_ID = "usuario_id"
-const MOMENT_FLAGS = new Set(["correo_verificado_en", "dos_factores_confirmado_en"])
+const MOMENT_FLAGS = new Set(["correo_verificado_en"])
 const USER_COLUMNS = new Set([USER_ID, "nombre_usuario", "correo_electronico", "usuario_activo", ...MOMENT_FLAGS])
 
 export const PRISMA_AUTH_SCHEMA: AuthSchema = {
   user: { modelName: "usuarios", fields: { name: "nombre_usuario", email: "correo_electronico", emailVerified: "correo_verificado_en" } },
   userActive: "usuario_activo",
-  userTwoFactorEnabled: "dos_factores_confirmado_en",
   session: {
     modelName: "sesiones_usuario",
     fields: { expiresAt: "expires_at", token: "token", createdAt: "created_at", updatedAt: "updated_at", ipAddress: "ip_address", userAgent: "user_agent", userId: "user_id" },
@@ -35,10 +34,6 @@ export const PRISMA_AUTH_SCHEMA: AuthSchema = {
   verification: {
     modelName: "verificaciones_usuario",
     fields: { identifier: "identifier", value: "value", expiresAt: "expires_at", createdAt: "created_at", updatedAt: "updated_at" },
-  },
-  twoFactor: {
-    modelName: "dos_factores_usuario",
-    fields: { secret: "secret", backupCodes: "backup_codes", userId: "user_id", verified: "verified", failedVerificationCount: "failed_verification_count", lockedUntil: "locked_until" },
   },
 }
 

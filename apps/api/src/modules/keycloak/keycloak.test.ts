@@ -90,12 +90,11 @@ function authenticationOf(world: AuthWorld): AuthenticationDeps {
         const row = world.db.user.find((candidate) => candidate.email === email && candidate.active === true)
         return row ? { id: String(row.id) } : null
       },
-      mirrorPassword: async () => undefined,
     },
     profiles: {
       async find(id) {
         const row = world.user(id)
-        return row ? { name: row.name, email: row.email, formation: null, accessibility: null, twoFactorSecret: false, twoFactorConfirmed: false } : null
+        return row ? { name: row.name, email: row.email, formation: null, accessibility: null } : null
       },
     },
     today: () => "2026-11-25",
@@ -104,7 +103,6 @@ function authenticationOf(world: AuthWorld): AuthenticationDeps {
     attempts: createMemoryAttemptLimiter(() => Math.floor(Date.now() / 1000)),
     verifyPassword: bcryptVerify,
     dummyHash: async () => "$2y$04$abcdefghijklmnopqrstuuJ0b0qz6bV1qz6bV1qz6bV1qz6bV1qz6",
-    production: () => false,
   }
 }
 
@@ -112,7 +110,7 @@ type Harness = { app: NestExpressApplication; world: AuthWorld; store: MemorySto
 
 async function harness(env: Record<string, string>): Promise<Harness> {
   const world = authWorld()
-  await world.addUser({ id: USER, email: EMAIL, twoFactorEnabled: true }, PASSWORD)
+  await world.addUser({ id: USER, email: EMAIL }, PASSWORD)
   await world.addUser({ id: OTHER, email: "otro@ueb.edu.ec" }, PASSWORD)
   await world.addUser({ id: INACTIVE, email: "inactivo@ueb.edu.ec", active: false }, PASSWORD)
   world.assignments.push({ id: ROLE, userId: USER, role: "docente", careerId: "c-1", careerLabel: "Software" } as (typeof world.assignments)[number])
@@ -203,7 +201,7 @@ describe("Keycloak login", () => {
     expect(cookieNamed(response, FLOW_COOKIE)).toContain("; Secure")
   })
 
-  it("links the Keycloak email to the active user and opens the same session as the password login, skipping the app 2FA", async () => {
+  it("links the Keycloak email to the active user and opens the same session as the password login", async () => {
     current = await harness(ENABLED)
     grantsIdentity({ email: "Docente@UEB.edu.ec", email_verified: true })
     const { flowCookie, state } = await begin(current.app)

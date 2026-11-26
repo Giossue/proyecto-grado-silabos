@@ -7,26 +7,24 @@ import { configureApi } from "../../bootstrap"
 import { WebResponseExpressAdapter } from "../../common/http/web-response.adapter"
 import { PrismaService } from "../../prisma/prisma.service"
 import { createMemoryAttemptLimiter, type AttemptLimiter } from "../../server/auth/attemptLimiter"
-import { authWorld, secretFromUri, totpCode, type AuthWorld } from "../../server/auth/betterAuthTesting"
+import { authWorld, type AuthWorld } from "../../server/auth/betterAuthTesting"
 import { bcryptHash, bcryptVerify } from "../../server/auth/bcrypt"
 import { runtimeOf } from "../../server/auth/runtime"
 import { NOW } from "../../server/auth/testing"
-import { memoryReplayGuard, type TotpReplayGuard } from "../../server/auth/totp"
 import type { BridgeDeps } from "../../server/auth/types"
 import { unmatchedRoute } from "../../server/http/router"
 import { createRateLimiter, type RateLimiter } from "../../server/http/throttle"
-import { leaveActiveRole, login, logout, selectActiveRole, updatePassword, type AuthenticationDeps, type CredentialStore } from "../../server/identity/authentication"
+import { leaveActiveRole, login, logout, selectActiveRole, type AuthenticationDeps, type CredentialStore } from "../../server/identity/authentication"
 import { activateAccount, resetPassword, sendResetLink, type Invitation, type RecoveryDeps, type RecoveryRepository, type RecoveryStore } from "../../server/identity/passwordRecovery"
-import { showSession, twoFactorStatus, type ProfileRepository, type SessionDeps } from "../../server/identity/session"
+import { showSession, type ProfileRepository, type SessionDeps } from "../../server/identity/session"
 import { activeSessions, type ActiveSessionDeps, type ActiveSessionStore } from "../../server/identity/sessions"
-import { confirmTwoFactor, disableTwoFactor, enableTwoFactor, regenerateRecoveryCodes, twoFactorChallenge, type TwoFactorDeps, type TwoFactorStore } from "../../server/identity/twoFactor"
 import type { QueuedMail } from "../../server/mail/mailables"
 import { FallbackModule } from "../fallback/fallback.module"
 import { AuthModule } from "./auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "./auth.tokens"
 import { contentHeaders, cookieHeader, jarWith, live, nestRaw, normalizedCookie, rawOf, served, webRequest, type Call, type Raw } from "./identity-equivalence.testing"
 import { IDENTITY_RUNTIME, type IdentityRuntime } from "./identity.runtime"
-import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY, TWO_FACTOR_STORE } from "./identity.tokens"
+import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY } from "./identity.tokens"
 
 const USER = "0193a3c2-1111-7000-8000-000000000001"
 const UNVERIFIED = "0193a3c2-1111-7000-8000-000000000002"
@@ -48,15 +46,11 @@ type State = {
   bridge: BridgeDeps
   limiter: RateLimiter
   attempts: AttemptLimiter
-  replay: TotpReplayGuard
   runtime: IdentityRuntime
   profiles: ProfileRepository
   activeSessions: ActiveSessionStore
   credentials: CredentialStore
-  twoFactor: TwoFactorStore
   recovery: RecoveryRepository
-  mirrored: string[]
-  cleared: string[]
   passwords: Record<string, string>
   resets: Map<string, { token: string; createdAt: number | null }>
   invitations: Invitation[]
@@ -82,21 +76,17 @@ async function freshState(): Promise<State> {
     bridge: { store: world.deps.store, sessions: world.deps.sessions, config: world.deps.config, now: () => NOW },
     limiter: createRateLimiter(),
     attempts: createMemoryAttemptLimiter(() => NOW),
-    replay: memoryReplayGuard(),
-    mirrored: [],
-    cleared: [],
     passwords: {},
     resets: new Map(),
     invitations: [{ id: "inv-1", userId: UNVERIFIED, hash: createHash("sha256").update(ACTIVATION_TOKEN).digest("hex"), expiresAt: NOW + 3600, usedAt: null, invalidatedAt: null }],
     mails: [],
   } as unknown as State
   const user = (id: string) => world.db.user.find((row) => row.id === id)
-  const hasSecret = (id: string) => world.db.twoFactor.some((row) => row.userId === id)
   state.profiles = {
     async find(id) {
       const row = user(id)
       if (!row) return null
-      return { name: String(row.name), email: String(row.email), formation: null, accessibility: null, twoFactorSecret: hasSecret(id), twoFactorConfirmed: hasSecret(id) && row.twoFactorEnabled === true }
+      return { name: String(row.name), email: String(row.email), formation: null, accessibility: null }
     },
   }
   state.activeSessions = {
@@ -110,14 +100,6 @@ async function freshState(): Promise<State> {
       const row = world.db.user.find((candidate) => candidate.email === email && candidate.active === true)
       return row ? { id: String(row.id) } : null
     },
-    mirrorPassword: async (id) => void state.mirrored.push(id),
-  }
-  state.twoFactor = {
-    account: async (id) => {
-      const row = user(id)
-      return row ? { id, email: String(row.email), pending: hasSecret(id), confirmed: hasSecret(id) && row.twoFactorEnabled === true } : null
-    },
-    clearLegacy: async (id) => void state.cleared.push(id),
   }
   const store: RecoveryStore = {
     userByEmail: async (email) => {
@@ -151,7 +133,6 @@ async function freshState(): Promise<State> {
   state.runtime = {
     auth: () => world.auth,
     attempts: state.attempts,
-    replay: state.replay,
     verifyPassword: bcryptVerify,
     hashPassword: (plain) => bcryptHash(plain, 4),
     dummyHash: async () => "$2y$04$abcdefghijklmnopqrstuuJ0b0qz6bV1qz6bV1qz6bV1qz6bV1qz6",
@@ -179,9 +160,7 @@ function legacyDeps(state: State) {
     attempts: state.attempts,
     verifyPassword: bcryptVerify,
     dummyHash: runtime.dummyHash,
-    production: runtime.production,
   }
-  const twoFactor: TwoFactorDeps = { bridge, auth: runtime.auth, store: state.twoFactor, replay: state.replay, throttles: state.limiter, attempts: state.attempts, verifyPassword: bcryptVerify }
   const session: SessionDeps = { bridge, profiles: state.profiles, today: runtime.today, timezone: runtime.timezone }
   const sessions: ActiveSessionDeps = { bridge, store: state.activeSessions }
   const recovery: RecoveryDeps = {
@@ -194,7 +173,7 @@ function legacyDeps(state: State) {
     production: runtime.production,
     sendMail: runtime.sendMail,
   }
-  return { authentication, twoFactor, session, sessions, recovery }
+  return { authentication, session, sessions, recovery }
 }
 
 const ROUTES: [string, string, (web: Request, deps: ReturnType<typeof legacyDeps>) => Promise<Response>][] = [
@@ -203,14 +182,7 @@ const ROUTES: [string, string, (web: Request, deps: ReturnType<typeof legacyDeps
   ["POST", "/api/v1/authentication/account-activation", (web, deps) => activateAccount(web, deps.recovery)],
   ["POST", "/api/v1/authentication/password-recovery", (web, deps) => sendResetLink(web, deps.recovery)],
   ["POST", "/api/v1/authentication/password-reset", (web, deps) => resetPassword(web, deps.recovery)],
-  ["PUT", "/api/v1/authentication/password", (web, deps) => updatePassword(web, deps.authentication)],
   ["GET", "/api/v1/authentication/sessions", (web, deps) => activeSessions(web, deps.sessions)],
-  ["GET", "/api/v1/authentication/two-factor", (web, deps) => twoFactorStatus(web, deps.session)],
-  ["POST", "/api/v1/authentication/two-factor", (web, deps) => enableTwoFactor(web, deps.twoFactor)],
-  ["DELETE", "/api/v1/authentication/two-factor", (web, deps) => disableTwoFactor(web, deps.twoFactor)],
-  ["POST", "/api/v1/authentication/two-factor/confirm", (web, deps) => confirmTwoFactor(web, deps.twoFactor)],
-  ["POST", "/api/v1/authentication/two-factor/recovery-codes", (web, deps) => regenerateRecoveryCodes(web, deps.twoFactor)],
-  ["POST", "/api/v1/authentication/two-factor/challenge", (web, deps) => twoFactorChallenge(web, deps.twoFactor)],
   ["GET", "/api/v1/session", (web, deps) => showSession(web, deps.session)],
   ["PUT", "/api/v1/active-role", (web, deps) => selectActiveRole(web, deps.authentication)],
   ["DELETE", "/api/v1/active-role", (web, deps) => leaveActiveRole(web, deps.authentication)],
@@ -262,8 +234,6 @@ class Client {
     let body = raw.body
     for (const [value, placeholder] of this.ids) body = body.split(value).join(placeholder)
     body = body
-      .replace(/"qr_code_svg":"(?:[^"\\]|\\.)*"/g, '"qr_code_svg":"<svg>"')
-      .replace(/[A-Za-z0-9]{10}-[A-Za-z0-9]{10}/g, "<recovery-code>")
       .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})/g, "<time>")
     const answer: Answer = {
       status: raw.status,
@@ -272,10 +242,7 @@ class Client {
       cookies: raw.cookies.map(normalizedCookie),
       writes: {
         sessions: this.state.world.db.session.length,
-        twoFactor: this.state.world.db.twoFactor.map((row) => row.userId),
-        users: this.state.world.db.user.map((row) => [row.id, row.emailVerified, row.twoFactorEnabled, row.active]),
-        mirrored: [...this.state.mirrored],
-        cleared: [...this.state.cleared],
+        users: this.state.world.db.user.map((row) => [row.id, row.emailVerified, row.active]),
         passwords: Object.keys(this.state.passwords),
         resets: [...this.state.resets.keys()],
         invitations: this.state.invitations.map((invitation) => [invitation.id, invitation.usedAt, invitation.invalidatedAt]),
@@ -284,11 +251,6 @@ class Client {
     }
     this.answers.push(answer)
     return answer
-  }
-
-  async secret(): Promise<string> {
-    const { totpURI } = await this.state.world.auth.api.getTOTPURI({ body: { password: PASSWORD }, headers: new Headers({ cookie: cookieHeader(this.jar), origin: ORIGIN }) })
-    return secretFromUri(totpURI)
   }
 
   mailedToken(): string {
@@ -332,8 +294,6 @@ beforeAll(async () => {
     .useValue(live(() => state.credentials))
     .overrideProvider(RECOVERY_REPOSITORY)
     .useValue(live(() => state.recovery))
-    .overrideProvider(TWO_FACTOR_STORE)
-    .useValue(live(() => state.twoFactor))
     .overrideProvider(ACCOUNT_REPOSITORY)
     .useValue({})
     .compile()
@@ -356,12 +316,11 @@ describe("identity routes served by Nest answer exactly like the route handlers 
       await client.send({ method: "PUT", path: "/api/v1/active-role", body: {} })
       await client.send({ method: "DELETE", path: "/api/v1/active-role" })
       await client.send({ method: "GET", path: "/api/v1/authentication/sessions" })
-      await client.send({ method: "GET", path: "/api/v1/authentication/two-factor" })
       await client.send({ method: "POST", path: "/api/v1/authentication/logout" })
       await client.send({ method: "GET", path: "/api/v1/session" })
       await client.send({ method: "POST", path: "/api/v1/authentication/logout" })
     })
-    expect(answers.map((answer) => answer.status)).toEqual([200, 200, 200, 404, 422, 200, 200, 200, 204, 401, 401])
+    expect(answers.map((answer) => answer.status)).toEqual([200, 200, 200, 404, 422, 200, 200, 204, 401, 401])
     expect(answers[0].cookies.some((cookie) => cookie.startsWith("silabos-ueb.session_token=<value>"))).toBe(true)
   })
 
@@ -402,63 +361,30 @@ describe("identity routes served by Nest answer exactly like the route handlers 
     expect(answers.map((answer) => answer.status)).toEqual([401, 401, 401, 200, 200, 403, 403, 401])
   })
 
-  it("changes the password with the same validation, cookies and session", async () => {
+  it("signs in a user who had confirmed two-factor authentication in one step, the same way", async () => {
     const answers = await expectSame(async (client) => {
+      Object.assign(client.state.world.user(USER)!, { twoFactorEnabled: true })
       await client.send(signIn())
-      await client.send({ method: "PUT", path: "/api/v1/authentication/password", body: { current_password: "incorrecta", password: NEW_PASSWORD, password_confirmation: NEW_PASSWORD } })
-      await client.send({ method: "PUT", path: "/api/v1/authentication/password", body: { current_password: PASSWORD, password: "corta", password_confirmation: "corta" } })
-      await client.send({ method: "PUT", path: "/api/v1/authentication/password", body: { current_password: [PASSWORD], password: NEW_PASSWORD, password_confirmation: NEW_PASSWORD } })
-      await client.send({ method: "PUT", path: "/api/v1/authentication/password", body: { current_password: PASSWORD, password: NEW_PASSWORD, password_confirmation: NEW_PASSWORD } })
       await client.send({ method: "GET", path: "/api/v1/session" })
-      await client.send({ method: "POST", path: "/api/v1/authentication/logout" })
-      await client.send(signIn(EMAIL, NEW_PASSWORD))
     })
-    expect(answers.map((answer) => answer.status)).toEqual([200, 422, 422, 500, 200, 200, 204, 200])
+    expect(answers.map((answer) => answer.status)).toEqual([200, 200])
+    expect(answers[0].cookies.some((cookie) => cookie.includes("two_factor"))).toBe(false)
   })
 
-  it("sets up two-factor, challenges the sign-in, refuses wrong and replayed codes and disables it the same way", async () => {
+  it.each([
+    ["PUT", "/api/v1/authentication/password"],
+    ["GET", "/api/v1/authentication/two-factor"],
+    ["POST", "/api/v1/authentication/two-factor"],
+    ["DELETE", "/api/v1/authentication/two-factor"],
+    ["POST", "/api/v1/authentication/two-factor/confirm"],
+    ["POST", "/api/v1/authentication/two-factor/recovery-codes"],
+    ["POST", "/api/v1/authentication/two-factor/challenge"],
+  ])("answers the removed %s %s with 404 like any unknown route", async (method, path) => {
     const answers = await expectSame(async (client) => {
       await client.send(signIn())
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor", body: {} })
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor", body: { current_password: PASSWORD } })
-      const secret = await client.secret()
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/recovery-codes", body: { current_password: PASSWORD } })
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/confirm", body: { code: "abc" } })
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/confirm", body: { code: totpCode(secret, 5) } })
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/confirm", body: { code: totpCode(secret) } })
-      await client.send({ method: "GET", path: "/api/v1/authentication/two-factor" })
-      const regenerated = await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/recovery-codes", body: { current_password: PASSWORD } })
-      const [recovery] = (JSON.parse(regenerated.body) as { recovery_codes: string[] }).recovery_codes
-      const codes = (await client.state.world.auth.api.viewBackupCodes({ body: { userId: USER } })).backupCodes
-      expect(recovery).toBe("<recovery-code>")
-      await client.send({ method: "POST", path: "/api/v1/authentication/logout" })
-      await client.send(signIn())
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/challenge", body: { code: totpCode(secret, 1) }, origin: null })
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/challenge", body: {} })
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/challenge", body: { code: totpCode(secret, 5) } })
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/challenge", body: { code: totpCode(secret, 1) } })
-      await client.send({ method: "GET", path: "/api/v1/session" })
-      await client.send({ method: "POST", path: "/api/v1/authentication/logout" })
-      await client.send(signIn())
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/challenge", body: { code: totpCode(secret, 1) } })
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/challenge", body: { recovery_code: codes[0] } })
-      await client.send(signIn())
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/challenge", body: { recovery_code: codes[0] } })
-      await client.send({ method: "DELETE", path: "/api/v1/authentication/two-factor", body: { current_password: "incorrecta", recovery_code: codes[1] } })
-      await client.send({ method: "DELETE", path: "/api/v1/authentication/two-factor", body: { current_password: PASSWORD, code: totpCode(secret, 5) } })
-      await client.send({ method: "DELETE", path: "/api/v1/authentication/two-factor", body: { current_password: PASSWORD, recovery_code: codes[1] } })
-      await client.send({ method: "GET", path: "/api/v1/authentication/two-factor" })
+      await client.send({ method, path, ...(method === "GET" ? {} : { body: { current_password: PASSWORD, password: NEW_PASSWORD, password_confirmation: NEW_PASSWORD, code: "123456" } }) })
     })
-    expect(answers.map((answer) => answer.status)).toEqual([200, 422, 200, 422, 422, 422, 200, 200, 200, 204, 202, 400, 422, 422, 200, 200, 204, 202, 422, 422, 202, 200, 422, 422, 200, 200])
-  })
-
-  it("answers a challenge without a pending sign-in the same way", async () => {
-    const answers = await expectSame(async (client) => {
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/challenge", body: { code: "123456" } })
-      await client.send({ method: "POST", path: "/api/v1/authentication/two-factor/confirm", body: { code: "123456" } })
-      await client.send({ method: "DELETE", path: "/api/v1/authentication/two-factor", body: { current_password: PASSWORD } })
-    })
-    expect(answers.map((answer) => answer.status)).toEqual([422, 401, 401])
+    expect(answers.map((answer) => answer.status)).toEqual([200, 404])
   })
 
   it("sends the reset link, resets the password, activates the account and throttles the same way", async () => {

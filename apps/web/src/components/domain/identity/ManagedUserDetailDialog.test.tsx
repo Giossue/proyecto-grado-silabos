@@ -16,7 +16,6 @@ const user = {
   correo_electronico: "ana@ueb.edu.ec",
   active: true,
   pending_activation: false,
-  two_factor_enabled: false,
   roles: [{ id: "r1", code: "docente", name: "Docente", career_name: "Software" }],
   careers: ["Software"],
   assignments: [{ id: "r1", role_name: "Docente", career_name: "Software", active: true }],

@@ -177,14 +177,6 @@ describe("LoadingSkeleton", () => {
     expect(all(container, '[data-skeleton="settings-email-option"]')).toHaveLength(2)
   })
 
-  it("seguridad incluye restablecer por correo entre la contraseña y la doble verificación", () => {
-    const sections = all(render(<LoadingSkeleton variant="settings" settingsSection="security" />).container, '[data-skeleton^="settings-"]')
-      .map((node) => node.getAttribute("data-skeleton"))
-      .filter((name) => ["settings-password-form", "settings-password-reset", "settings-two-factor"].includes(name ?? ""))
-
-    expect(sections).toEqual(["settings-password-form", "settings-password-reset", "settings-two-factor"])
-  })
-
   it("el perfil del docente incluye su formación", () => {
     expect(render(<LoadingSkeleton variant="settings" settingsSection="profile" formation />).container.querySelector('[data-skeleton="settings-formation"]')).not.toBeNull()
     expect(render(<LoadingSkeleton variant="settings" settingsSection="profile" />).container.querySelector('[data-skeleton="settings-formation"]')).toBeNull()

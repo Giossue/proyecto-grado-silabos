@@ -25,7 +25,6 @@ const user = (overrides: Partial<ManagedUserRow> = {}): ManagedUserRow => ({
   email: "ana@ueb.edu.ec",
   active: true,
   verified: true,
-  twoFactor: false,
   invitationActive: false,
   assignments: [
     { id: "a1", role: "docente", careerLabel: "Software", active: true },
@@ -63,7 +62,6 @@ describe("GET admin/users", () => {
         active: true,
         pending_activation: false,
         invitation_expired: false,
-        two_factor_enabled: false,
         roles: [{ id: "a1", code: "docente", name: "Docente", career_name: "Software" }],
         careers: ["Software"],
         assignments: [

@@ -33,14 +33,6 @@
   },
   {
     "methods": [
-      "POST"
-    ],
-    "uri": "api/v1/authentication/two-factor/challenge",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
       "GET",
       "HEAD"
     ],
@@ -58,58 +50,9 @@
   },
   {
     "methods": [
-      "PUT"
-    ],
-    "uri": "api/v1/authentication/password",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
       "POST"
     ],
     "uri": "api/v1/authentication/account-activation/resend",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "GET",
-      "HEAD"
-    ],
-    "uri": "api/v1/authentication/two-factor",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "POST"
-    ],
-    "uri": "api/v1/authentication/two-factor",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "POST"
-    ],
-    "uri": "api/v1/authentication/two-factor/confirm",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "POST"
-    ],
-    "uri": "api/v1/authentication/two-factor/recovery-codes",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "DELETE"
-    ],
-    "uri": "api/v1/authentication/two-factor",
     "wheres": {},
     "bindings": {}
   },

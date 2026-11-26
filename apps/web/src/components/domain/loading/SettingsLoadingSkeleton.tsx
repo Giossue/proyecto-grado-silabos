@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { range } from "./range"
 
-export type SettingsSection = "profile" | "security" | "system" | "email"
+export type SettingsSection = "profile" | "system" | "email"
 
 type SettingsLoadingSkeletonProps = {
   section?: SettingsSection
@@ -11,7 +11,7 @@ type SettingsLoadingSkeletonProps = {
   formation?: boolean
 }
 
-export function SettingsLoadingSkeleton({ section = "security", readonly = false, rows = 4, formation = false }: SettingsLoadingSkeletonProps) {
+export function SettingsLoadingSkeleton({ section = "profile", readonly = false, rows = 4, formation = false }: SettingsLoadingSkeletonProps) {
   if (section === "system") {
     return (
       <div className="-mt-2 flex min-w-0 flex-col" data-settings-section="system">
@@ -72,22 +72,19 @@ export function SettingsLoadingSkeleton({ section = "security", readonly = false
     )
   }
 
-  const security = section === "security"
-
   return (
     <div className="flex min-w-0 flex-col gap-12" data-settings-section={section}>
-      <div className="flex min-w-0 flex-col gap-6" data-skeleton={security ? "settings-password-form" : "settings-profile-form"}>
+      <div className="flex min-w-0 flex-col gap-6" data-skeleton="settings-profile-form">
         <div className="flex min-w-0 flex-col gap-0.5">
-          <Skeleton className={cn("h-6 max-w-full", security ? "w-44" : "w-16")} />
-          <Skeleton className={cn("h-5 max-w-full", security ? "w-96" : "w-72")} />
-          {security ? <Skeleton className="h-5 w-3/4 sm:hidden" /> : null}
+          <Skeleton className="h-6 w-16 max-w-full" />
+          <Skeleton className="h-5 w-72 max-w-full" />
         </div>
 
         <div className="flex min-w-0 flex-col gap-6">
-          {range(security ? 3 : 2).map((field) => (
+          {range(2).map((field) => (
             <div key={field} className="flex min-w-0 flex-col gap-2" data-skeleton="settings-field">
-              <Skeleton className={cn("h-3.5 max-w-full", field === 3 ? "w-40" : "w-36")} />
-              <Skeleton className={cn("h-9 w-full", (security || !readonly) && "mt-1")} />
+              <Skeleton className="h-3.5 w-36 max-w-full" />
+              <Skeleton className={cn("h-9 w-full", !readonly && "mt-1")} />
               {section === "profile" && !readonly && field === 2 ? <Skeleton className="h-5 w-96 max-w-full" /> : null}
             </div>
           ))}
@@ -99,7 +96,7 @@ export function SettingsLoadingSkeleton({ section = "security", readonly = false
             </div>
           ) : null}
 
-          {security || !readonly ? <Skeleton className="h-9 w-25 max-w-full" data-skeleton="settings-save" /> : null}
+          {!readonly ? <Skeleton className="h-9 w-25 max-w-full" data-skeleton="settings-save" /> : null}
         </div>
       </div>
 
@@ -112,34 +109,6 @@ export function SettingsLoadingSkeleton({ section = "security", readonly = false
             <Skeleton className="h-5 w-2/3" />
           </div>
           <Skeleton className="h-9 w-25" />
-        </div>
-      ) : null}
-
-      {security ? (
-        <div className="flex min-w-0 flex-col gap-4" data-skeleton="settings-password-reset">
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <Skeleton className="h-6 w-44 max-w-full" />
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-2/3" />
-          </div>
-          <Skeleton className="h-9 w-36" />
-        </div>
-      ) : null}
-
-      {security ? (
-        <div className="flex min-w-0 flex-col gap-6" data-skeleton="settings-two-factor">
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <Skeleton className="h-6 w-64 max-w-full" />
-            <Skeleton className="h-5 w-80 max-w-full" />
-          </div>
-          <div className="flex min-w-0 flex-col items-start gap-4">
-            <div className="flex w-full min-w-0 flex-col gap-1">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-4 w-4/5 sm:hidden" />
-            </div>
-            <Skeleton className="h-9 w-31 max-w-full" data-skeleton="settings-two-factor-action" />
-          </div>
         </div>
       ) : null}
     </div>

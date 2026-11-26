@@ -10,7 +10,6 @@ import type { RawExecutor } from "./raw-executor"
 import { recoveryRepositoryOn, recoveryStoreOn } from "./recovery.repository"
 import { sessionStoreOn } from "./session-store.repository"
 import { TRANSACTION_OPTIONS } from "./transactions"
-import { twoFactorStoreOn } from "./two-factor.repository"
 
 type Captured = { sql: string; params: unknown[] }
 type Oracle = Record<string, { queries: Captured[]; expected: unknown }>
@@ -49,8 +48,8 @@ describe("identity repositories on Prisma send the same SQL and map the rows lik
     expect(roles).toEqual([{ id: "r-1", userId: USER, role: "docente", careerId: "c-1", careerLabel: "Software · SW" }])
   })
 
-  it("reads the profile with its two-factor flags", async () => {
-    const row = { nombre_usuario: "ANA", correo_electronico: "ana@silabos.test", formacion_experiencia_usuario: null, preferencias_accesibilidad_usuario: { text_size: "130" }, two_factor_secret: true, two_factor_confirmed: false }
+  it("reads the profile", async () => {
+    const row = { nombre_usuario: "ANA", correo_electronico: "ana@silabos.test", formacion_experiencia_usuario: null, preferencias_accesibilidad_usuario: { text_size: "130" } }
     await same("profile", [row], (executor) => profileRepositoryOn(executor).find(USER))
     await same("profileMissing", [], (executor) => profileRepositoryOn(executor).find(USER))
   })
@@ -61,9 +60,8 @@ describe("identity repositories on Prisma send the same SQL and map the rows lik
     expect(sessions).toEqual([{ id: "s-1", ip: "203.0.113.5", agent: "Firefox/1", lastActivity: 1800000000 }])
   })
 
-  it("finds active credentials and mirrors the Better Auth password", async () => {
+  it("finds active credentials", async () => {
     await same("findActiveUserByEmail", [{ usuario_id: USER }], (executor) => credentialStoreOn(executor).findActiveUserByEmail("ana@silabos.test"))
-    await same("mirrorPassword", [], (executor) => credentialStoreOn(executor).mirrorPassword(USER))
   })
 
   it("reads and writes reset tokens, invitations, passwords and sessions like before", async () => {
@@ -94,11 +92,5 @@ describe("identity repositories on Prisma send the same SQL and map the rows lik
     expect(user).toEqual({ id: USER, active: true, verified: false })
     expect(calls).toEqual([TRANSACTION_OPTIONS])
     expect(tx.captured()[0].sql).toMatch(/for update$/)
-  })
-
-  it("reads the two-factor account and clears the legacy secret", async () => {
-    const row = { usuario_id: USER, correo_electronico: "ana@silabos.test", has_secret: true, confirmed: true }
-    await same("twoFactorAccount", [row], (executor) => twoFactorStoreOn(executor).account(USER))
-    await same("clearLegacy", [], (executor) => twoFactorStoreOn(executor).clearLegacy(USER))
   })
 })

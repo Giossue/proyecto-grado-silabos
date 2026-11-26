@@ -18,18 +18,18 @@ describe("Better Auth users on the usuarios table", () => {
     })
   })
 
-  it("stores the verified and two-factor flags as the moment they were set and drops columns the table lacks", () => {
-    expect(userData({ dos_factores_confirmado_en: true, updatedAt: AT, image: null, nombre_usuario: "ANA" }, () => AT)).toEqual({ dos_factores_confirmado_en: AT, nombre_usuario: "ANA" })
-    expect(userData({ correo_verificado_en: false, dos_factores_confirmado_en: null }, () => AT)).toEqual({ correo_verificado_en: null, dos_factores_confirmado_en: null })
+  it("stores the verified flag as the moment it was set and drops columns the table lacks", () => {
+    expect(userData({ correo_verificado_en: true, updatedAt: AT, image: null, nombre_usuario: "ANA", dos_factores_confirmado_en: true }, () => AT)).toEqual({ correo_verificado_en: AT, nombre_usuario: "ANA" })
+    expect(userData({ correo_verificado_en: false }, () => AT)).toEqual({ correo_verificado_en: null })
   })
 
   it("reads the moments back as flags and the usuario_id as the id", () => {
-    const row = { usuario_id: "u-1", nombre_usuario: "ANA", correo_verificado_en: AT, dos_factores_confirmado_en: null, usuario_activo: false }
-    expect(userResult(row)).toEqual({ id: "u-1", nombre_usuario: "ANA", correo_verificado_en: true, dos_factores_confirmado_en: false, usuario_activo: false })
+    const row = { usuario_id: "u-1", nombre_usuario: "ANA", correo_verificado_en: AT, usuario_activo: false }
+    expect(userResult(row)).toEqual({ id: "u-1", nombre_usuario: "ANA", correo_verificado_en: true, usuario_activo: false })
     expect(userResult([row])).toEqual([userResult(row)])
     expect(userResult(null)).toBeNull()
     expect(userResult(3)).toBe(3)
     expect(userResult({ count: 2 })).toEqual({ count: 2 })
-    expect(userResult({ dos_factores_confirmado_en: new Date("2026-01-01T00:00:00Z") })).toEqual({ dos_factores_confirmado_en: true })
+    expect(userResult({ correo_verificado_en: new Date("2026-01-01T00:00:00Z") })).toEqual({ correo_verificado_en: true })
   })
 })

@@ -8,8 +8,6 @@ export type UserProfile = {
   email: string
   formation: string | null
   accessibility: unknown
-  twoFactorSecret: boolean
-  twoFactorConfirmed: boolean
 }
 
 export interface ProfileRepository {
@@ -52,15 +50,4 @@ export async function showSession(request: Request, deps: SessionDeps): Promise<
   const profile = await deps.profiles.find(session.user.id)
   if (profile === null) return unauthenticated()
   return apiJson(sessionPayload(session, profile, deps))
-}
-
-export async function twoFactorStatus(request: Request, deps: SessionDeps): Promise<Response> {
-  const session = await requireSession(request, {}, deps.bridge)
-  if (session instanceof Response) return session
-  const profile = await deps.profiles.find(session.user.id)
-  if (profile === null) return unauthenticated()
-  return apiJson({
-    enabled: profile.twoFactorSecret && profile.twoFactorConfirmed,
-    confirmation_required: profile.twoFactorSecret && !profile.twoFactorConfirmed,
-  })
 }

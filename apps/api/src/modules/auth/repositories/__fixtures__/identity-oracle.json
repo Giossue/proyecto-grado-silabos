@@ -51,7 +51,7 @@
  "profile": {
   "queries": [
    {
-    "sql": "select u.nombre_usuario, u.correo_electronico, u.formacion_experiencia_usuario, u.preferencias_accesibilidad_usuario, d.id is not null as two_factor_secret, d.id is not null and u.dos_factores_confirmado_en is not null as two_factor_confirmed from usuarios u left join dos_factores_usuario d on d.user_id = u.usuario_id where u.usuario_id = $1::uuid",
+    "sql": "select u.nombre_usuario, u.correo_electronico, u.formacion_experiencia_usuario, u.preferencias_accesibilidad_usuario from usuarios u where u.usuario_id = $1::uuid",
     "params": [
      "0193a3c2-1111-7000-8000-000000000001"
     ]
@@ -63,15 +63,13 @@
    "formation": null,
    "accessibility": {
     "text_size": "130"
-   },
-   "twoFactorSecret": true,
-   "twoFactorConfirmed": false
+   }
   }
  },
  "profileMissing": {
   "queries": [
    {
-    "sql": "select u.nombre_usuario, u.correo_electronico, u.formacion_experiencia_usuario, u.preferencias_accesibilidad_usuario, d.id is not null as two_factor_secret, d.id is not null and u.dos_factores_confirmado_en is not null as two_factor_confirmed from usuarios u left join dos_factores_usuario d on d.user_id = u.usuario_id where u.usuario_id = $1::uuid",
+    "sql": "select u.nombre_usuario, u.correo_electronico, u.formacion_experiencia_usuario, u.preferencias_accesibilidad_usuario from usuarios u where u.usuario_id = $1::uuid",
     "params": [
      "0193a3c2-1111-7000-8000-000000000001"
     ]
@@ -109,18 +107,6 @@
   "expected": {
    "id": "0193a3c2-1111-7000-8000-000000000001"
   }
- },
- "mirrorPassword": {
-  "queries": [
-   {
-    "sql": "update usuarios set contrasena = c.password from cuentas_usuario c where usuarios.usuario_id = $1::uuid and c.user_id = usuarios.usuario_id and c.provider_id = $2 and c.password is not null",
-    "params": [
-     "0193a3c2-1111-7000-8000-000000000001",
-     "credential"
-    ]
-   }
-  ],
-  "expected": "__undefined__"
  },
  "resetToken": {
   "queries": [
@@ -289,33 +275,6 @@
      1800000000,
      "0193a3c2-1111-7000-8000-000000000001",
      "i-1"
-    ]
-   }
-  ],
-  "expected": "__undefined__"
- },
- "twoFactorAccount": {
-  "queries": [
-   {
-    "sql": "select u.usuario_id, u.correo_electronico, d.id is not null as has_secret, u.dos_factores_confirmado_en is not null as confirmed from usuarios u left join dos_factores_usuario d on d.user_id = u.usuario_id where u.usuario_id = $1::uuid limit 1",
-    "params": [
-     "0193a3c2-1111-7000-8000-000000000001"
-    ]
-   }
-  ],
-  "expected": {
-   "id": "0193a3c2-1111-7000-8000-000000000001",
-   "email": "ana@silabos.test",
-   "pending": true,
-   "confirmed": true
-  }
- },
- "clearLegacy": {
-  "queries": [
-   {
-    "sql": "update usuarios set secreto_dos_factores = null, codigos_recuperacion_dos_factores = null where usuario_id = $1::uuid and (secreto_dos_factores is not null or codigos_recuperacion_dos_factores is not null)",
-    "params": [
-     "0193a3c2-1111-7000-8000-000000000001"
     ]
    }
   ],

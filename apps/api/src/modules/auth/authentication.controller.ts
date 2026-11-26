@@ -19,25 +19,19 @@ import { SESSION_COOKIE } from "../../common/decorators/authenticated.decorator"
 import { MessageDto, ValidationErrorDto } from "../../common/dtos/api-responses.dto"
 import type { ApiRequest } from "../../common/http/web-request"
 import type { WebReply } from "../../common/http/web-reply"
-import { login, logout, updatePassword } from "../../server/identity/authentication"
+import { login, logout } from "../../server/identity/authentication"
 import { activateAccount, resetPassword, sendResetLink } from "../../server/identity/passwordRecovery"
 import { destroyOtherSessions, destroySession, resendOwnActivation, updateAccessibility, updateFormation, updateProfile } from "../../server/identity/selfService"
-import { twoFactorStatus } from "../../server/identity/session"
 import { activeSessions } from "../../server/identity/sessions"
-import { confirmTwoFactor, disableTwoFactor, enableTwoFactor, regenerateRecoveryCodes, twoFactorChallenge } from "../../server/identity/twoFactor"
 import {
   AccessibilityDto,
   AccountActivationDto,
   LoginDto,
   PasswordConfirmationDto,
   PasswordResetDto,
-  PasswordUpdateDto,
   ProfileDto,
   RecoveryLinkDto,
   TeacherFormationDto,
-  TwoFactorChallengeDto,
-  TwoFactorConfirmationDto,
-  TwoFactorDisableDto,
 } from "./dto/authentication.dto"
 import { KeycloakService } from "../keycloak/keycloak.service"
 import { IdentityDeps } from "./identity.deps"
@@ -61,7 +55,6 @@ export class AuthenticationController {
   @ApiOperation({ summary: "Inicia sesión con correo y contraseña; deja la cookie de sesión de Better Auth." })
   @ApiBody({ type: LoginDto })
   @ApiOkResponse({ description: "Sesión iniciada: usuario, rol activo, roles disponibles y datos de la institución." })
-  @ApiAcceptedResponse({ description: "Falta el segundo paso: { two_factor_required: true }." })
   @ApiBadRequestResponse(OUTSIDE_WEB_APP)
   @ApiUnprocessableEntityResponse({ description: "Credenciales no válidas o errores por campo.", type: ValidationErrorDto })
   @ApiTooManyRequestsResponse(THROTTLED)
@@ -123,17 +116,6 @@ export class AuthenticationController {
   @ApiTooManyRequestsResponse(THROTTLED)
   resetPassword(@Req() request: ApiRequest): Promise<WebReply> {
     return identityReply(request, (web) => resetPassword(web, this.deps.set.recovery))
-  }
-
-  @Put("password")
-  @ApiCookieAuth(SESSION_COOKIE)
-  @ApiOperation({ summary: "Cambia la contraseña y cierra las demás sesiones." })
-  @ApiBody({ type: PasswordUpdateDto })
-  @ApiOkResponse({ description: "Sesión con la nueva cookie." })
-  @ApiUnauthorizedResponse(GUEST)
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  updatePassword(@Req() request: ApiRequest): Promise<WebReply> {
-    return identityReply(request, (web) => updatePassword(web, this.deps.set.authentication))
   }
 
   @Put("profile")
@@ -201,74 +183,5 @@ export class AuthenticationController {
   @ApiUnprocessableEntityResponse({ description: "La sesión actual se cierra desde «Cerrar sesión».", type: MessageDto })
   destroySession(@Req() request: ApiRequest, @Param("session") session: string): Promise<WebReply> {
     return identityReply(request, (web) => destroySession(web, session, this.deps.set.writes))
-  }
-
-  @Get("two-factor")
-  @ApiCookieAuth(SESSION_COOKIE)
-  @ApiOperation({ summary: "Estado de la verificación en dos pasos." })
-  @ApiOkResponse({ description: "{ enabled, confirmation_required }" })
-  @ApiUnauthorizedResponse(GUEST)
-  twoFactorStatus(@Req() request: ApiRequest): Promise<WebReply> {
-    return identityReply(request, (web) => twoFactorStatus(web, this.deps.set.session))
-  }
-
-  @Post("two-factor")
-  @HttpCode(200)
-  @ApiCookieAuth(SESSION_COOKIE)
-  @ApiOperation({ summary: "Genera el secreto TOTP (QR y clave) tras confirmar la contraseña." })
-  @ApiBody({ type: PasswordConfirmationDto })
-  @ApiOkResponse({ description: "Código QR, clave y códigos de recuperación." })
-  @ApiUnauthorizedResponse(GUEST)
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  enableTwoFactor(@Req() request: ApiRequest): Promise<WebReply> {
-    return identityReply(request, (web) => enableTwoFactor(web, this.deps.set.twoFactor))
-  }
-
-  @Delete("two-factor")
-  @ApiCookieAuth(SESSION_COOKIE)
-  @ApiOperation({ summary: "Desactiva la verificación en dos pasos." })
-  @ApiBody({ type: TwoFactorDisableDto })
-  @ApiOkResponse({ description: "Estado actualizado." })
-  @ApiUnauthorizedResponse(GUEST)
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  @ApiTooManyRequestsResponse(THROTTLED)
-  disableTwoFactor(@Req() request: ApiRequest): Promise<WebReply> {
-    return identityReply(request, (web) => disableTwoFactor(web, this.deps.set.twoFactor))
-  }
-
-  @Post("two-factor/confirm")
-  @HttpCode(200)
-  @ApiCookieAuth(SESSION_COOKIE)
-  @ApiOperation({ summary: "Confirma el secreto TOTP con un código de la aplicación." })
-  @ApiBody({ type: TwoFactorConfirmationDto })
-  @ApiOkResponse({ description: "Estado actualizado." })
-  @ApiUnauthorizedResponse(GUEST)
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  confirmTwoFactor(@Req() request: ApiRequest): Promise<WebReply> {
-    return identityReply(request, (web) => confirmTwoFactor(web, this.deps.set.twoFactor))
-  }
-
-  @Post("two-factor/recovery-codes")
-  @HttpCode(200)
-  @ApiCookieAuth(SESSION_COOKIE)
-  @ApiOperation({ summary: "Genera códigos de recuperación nuevos tras confirmar la contraseña." })
-  @ApiBody({ type: PasswordConfirmationDto })
-  @ApiOkResponse({ description: "Códigos de recuperación." })
-  @ApiUnauthorizedResponse(GUEST)
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  regenerateRecoveryCodes(@Req() request: ApiRequest): Promise<WebReply> {
-    return identityReply(request, (web) => regenerateRecoveryCodes(web, this.deps.set.twoFactor))
-  }
-
-  @Post("two-factor/challenge")
-  @HttpCode(200)
-  @ApiOperation({ summary: "Completa el ingreso con el código TOTP o un código de recuperación; un código TOTP no se acepta dos veces." })
-  @ApiBody({ type: TwoFactorChallengeDto })
-  @ApiOkResponse({ description: "Sesión iniciada." })
-  @ApiBadRequestResponse(OUTSIDE_WEB_APP)
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  @ApiTooManyRequestsResponse(THROTTLED)
-  twoFactorChallenge(@Req() request: ApiRequest): Promise<WebReply> {
-    return identityReply(request, (web) => twoFactorChallenge(web, this.deps.set.twoFactor))
   }
 }

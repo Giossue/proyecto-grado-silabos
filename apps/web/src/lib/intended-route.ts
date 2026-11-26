@@ -6,7 +6,6 @@ const publicPaths: Set<string> = new Set([
   paths.login,
   paths.passwordRecovery,
   paths.passwordReset,
-  paths.twoFactorChallenge,
 ]);
 
 const isInternalPath = (value: string): boolean =>

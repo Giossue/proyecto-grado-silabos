@@ -31,7 +31,6 @@ export const routeTable: readonly RouteRecord[] = [
   { path: '/restablecer-contrasena', meta: {} },
   { path: '/activar-cuenta', meta: { shell: false } },
   { path: '/verificar-correo', meta: { requiresAuth: true, shell: false } },
-  { path: '/verificar-dos-factores', meta: { guest: true } },
   { path: '/', meta: {}, redirect: '/ingresar' },
   { path: '/rol', meta: { requiresAuth: true, layout: 'workspace', title: 'Seleccionar ámbito de trabajo' } },
 

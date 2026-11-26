@@ -1,8 +1,8 @@
-import { fireEvent, screen } from "@testing-library/react"
+import { fireEvent } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ApiError } from "@/api/client"
-import { getTwoFactorStatus, requestPasswordRecovery, updatePassword, type Session } from "@/api/session"
+import { requestPasswordRecovery, type Session } from "@/api/session"
 import SecurityPage from "./SecurityPage"
 import { toast } from "@/lib/toast"
 import { sessionState } from "@/state/session"
@@ -10,13 +10,7 @@ import { flush, renderWithProviders } from "@/test/render"
 
 vi.mock("next/navigation", () => import("@/test/nextNavigation"))
 vi.mock("@/api/session", () => ({
-  getTwoFactorStatus: vi.fn(),
-  updatePassword: vi.fn(),
   requestPasswordRecovery: vi.fn(),
-  confirmTwoFactor: vi.fn(),
-  disableTwoFactor: vi.fn(),
-  enableTwoFactor: vi.fn(),
-  regenerateRecoveryCodes: vi.fn(),
   getDeviceSessions: vi.fn(),
   closeOtherDeviceSessions: vi.fn(),
 }))
@@ -43,7 +37,6 @@ describe("Seguridad: restablecer la contraseña por correo", () => {
   beforeEach(() => {
     vi.resetAllMocks()
     sessionState.replace(session)
-    vi.mocked(getTwoFactorStatus).mockResolvedValue({ enabled: false, confirmation_required: false })
   })
   afterEach(() => sessionState.clear())
 
@@ -103,51 +96,12 @@ describe("Seguridad: restablecer la contraseña por correo", () => {
     expect(dialog()?.textContent).toContain("Servicio de correo no disponible")
   })
 
-  it("«Actualizar contraseña» abre un diálogo con los campos; al guardar se cierra y avisa", async () => {
-    vi.mocked(updatePassword).mockResolvedValue(session)
+  it("ya no ofrece cambiar la contraseña ni la verificación en dos pasos", async () => {
     await renderPage()
 
     expect(document.body.querySelector("#current_password")).toBeNull()
-    fireEvent.click(screen.getByRole("button", { name: "Actualizar contraseña" }))
-    await flush()
-    const fill = async (id: string, value: string): Promise<void> => {
-      fireEvent.change(document.body.querySelector<HTMLInputElement>(`[role="dialog"] #${id}`)!, { target: { value } })
-      await flush()
-    }
-    await fill("current_password", "Actual-2026!")
-    await fill("password", "Nueva-clave-2026!")
-    await fill("password_confirmation", "Nueva-clave-2026!")
-    fireEvent.submit(document.body.querySelector<HTMLFormElement>('[role="dialog"] form')!)
-    await flush()
-
-    expect(updatePassword).toHaveBeenCalledWith("Nueva-clave-2026!", "Nueva-clave-2026!", "Actual-2026!")
-    expect(toast.success).toHaveBeenCalledWith("Contraseña actualizada")
-    expect(dialog()?.getAttribute("data-state") ?? "closed").toBe("closed")
-  })
-
-  it("si la contraseña actual es incorrecta, el error sale dentro del diálogo y no se cierra", async () => {
-    vi.mocked(updatePassword).mockRejectedValue(new ApiError("Datos inválidos", 422, { current_password: ["La contraseña actual no es correcta."] }))
-    await renderPage()
-    fireEvent.click(screen.getByRole("button", { name: "Actualizar contraseña" }))
-    await flush()
-    for (const id of ["current_password", "password", "password_confirmation"]) fireEvent.change(document.getElementById(id)!, { target: { value: "Clave-2026" } })
-    fireEvent.submit(document.body.querySelector<HTMLFormElement>('[role="dialog"] form')!)
-    await flush()
-
-    expect(dialog()?.getAttribute("data-state")).toBe("open")
-    expect(dialog()?.textContent).toContain("La contraseña actual no es correcta")
-    expect(toast.success).not.toHaveBeenCalled()
-  })
-
-  it("valida en el navegador con el mismo esquema que el servidor y no envía un formulario incompleto", async () => {
-    await renderPage()
-    fireEvent.click(screen.getByRole("button", { name: "Actualizar contraseña" }))
-    await flush()
-    fireEvent.submit(document.body.querySelector<HTMLFormElement>('[role="dialog"] form')!)
-    await flush()
-
-    expect(updatePassword).not.toHaveBeenCalled()
-    expect(dialog()?.textContent).toContain("El campo contraseña actual es obligatorio")
-    expect(dialog()?.textContent).not.toContain("El campo contraseña actual es obligatorio.")
+    expect(document.body.textContent).not.toContain("Actualizar contraseña")
+    expect(document.body.textContent).not.toContain("Verificación en dos pasos")
+    expect(document.body.textContent).toContain("Sesiones abiertas")
   })
 })

@@ -1,5 +1,4 @@
 import { memoryAdapter } from "better-auth/adapters/memory"
-import { Secret, TOTP } from "otpauth"
 import { bcryptHash } from "./bcrypt"
 import { createAuth, type Auth, type AuthSettings } from "./betterAuth"
 import { betterAuthSessions } from "./sessionGateway"
@@ -9,7 +8,7 @@ import type { BridgeDeps, RoleAssignmentRecord, SessionStore } from "./types"
 export const ORIGIN = "http://localhost:3000"
 export const TEST_SECRET = "m5-test-secret-0123456789abcdefghijklmnopqrstuvwxyz"
 
-export type MemoryUser = { id: string; name: string; email: string; emailVerified: boolean | null; twoFactorEnabled: boolean | null; active: boolean }
+export type MemoryUser = { id: string; name: string; email: string; emailVerified: boolean | null; active: boolean }
 
 export type AuthWorld = {
   auth: Auth
@@ -35,7 +34,7 @@ export function testSettings(overrides: Partial<AuthSettings> = {}): AuthSetting
 }
 
 export function authWorld(overrides: Partial<AuthSettings> = {}): AuthWorld {
-  const db: Record<string, Record<string, unknown>[]> = { user: [], session: [], account: [], verification: [], twoFactor: [] }
+  const db: Record<string, Record<string, unknown>[]> = { user: [], session: [], account: [], verification: [] }
   const auth = createAuth(memoryAdapter(db), testSettings(overrides))
   const assignments: RoleAssignmentRecord[] = []
   const cookies: string[] = []
@@ -69,7 +68,7 @@ export function authWorld(overrides: Partial<AuthSettings> = {}): AuthWorld {
     deps,
     async addUser(user, password) {
       const now = new Date()
-      db.user.push({ name: "DOCENTE DEMO", emailVerified: true, twoFactorEnabled: false, active: true, createdAt: now, updatedAt: now, ...user })
+      db.user.push({ name: "DOCENTE DEMO", emailVerified: true, active: true, createdAt: now, updatedAt: now, ...user })
       db.account.push({ id: `account-${user.id}`, accountId: user.id, providerId: "credential", userId: user.id, password: await bcryptHash(password, 4), createdAt: now, updatedAt: now })
     },
     user: (id) => db.user.find((row) => row.id === id) as MemoryUser | undefined,
@@ -106,14 +105,4 @@ export function browserRequest(path: string, init: { method?: string; cookie?: s
     },
     ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
   })
-}
-
-export function secretFromUri(uri: string): string {
-  const secret = new URL(uri).searchParams.get("secret")
-  if (!secret) throw new Error("The otpauth URI has no secret.")
-  return secret
-}
-
-export function totpCode(base32Secret: string, offsetSteps = 0): string {
-  return new TOTP({ secret: Secret.fromBase32(base32Secret), digits: 6, period: 30 }).generate({ timestamp: Date.now() + offsetSteps * 30_000 })
 }

@@ -50,10 +50,6 @@ export default function LoginPage() {
   const submit = async ({ email, password }: LoginValues): Promise<void> => {
     try {
       const result = await login(email, password)
-      if ("two_factor_required" in result) {
-        router.replace(paths.twoFactorChallenge)
-        return
-      }
       sessionState.replace(result)
       router.replace(consumeIntendedRoute() ?? roleEntry(result.active_role?.code))
     } catch (reason) {

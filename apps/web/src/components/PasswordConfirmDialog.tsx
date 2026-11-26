@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { useSchemaForm } from "@/lib/forms"
-import { passwordConfirmationSchema, type PasswordConfirmationValues } from "@silabos/shared/schemas/twoFactor"
+import { passwordConfirmationSchema, type PasswordConfirmationValues } from "@silabos/shared/schemas/auth"
 
 const schema = passwordConfirmationSchema()
 

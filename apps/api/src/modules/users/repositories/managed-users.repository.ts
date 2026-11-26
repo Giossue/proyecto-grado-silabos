@@ -75,7 +75,7 @@ export function managedUserRepositoryOn(executor: RawExecutor): ManagedUserRepos
       const offset = (page - 1) * perPage
       const users = await rowsOf<UserRow>(
         executor,
-        Prisma.sql`select "usuario_id" as "id", "nombre_usuario" as "name", "correo_electronico" as "email", "usuario_activo" as "active", "correo_verificado_en" is not null as "verified", "dos_factores_confirmado_en" is not null as "twoFactor", ${INVITATION_ACTIVE} as "invitationActive" from "usuarios"${where} order by ${managedUserOrder(sort)} limit ${perPage}${offset > 0 ? Prisma.sql` offset ${offset}` : Prisma.empty}`,
+        Prisma.sql`select "usuario_id" as "id", "nombre_usuario" as "name", "correo_electronico" as "email", "usuario_activo" as "active", "correo_verificado_en" is not null as "verified", ${INVITATION_ACTIVE} as "invitationActive" from "usuarios"${where} order by ${managedUserOrder(sort)} limit ${perPage}${offset > 0 ? Prisma.sql` offset ${offset}` : Prisma.empty}`,
       )
       const assignments =
         users.length === 0

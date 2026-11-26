@@ -20,7 +20,6 @@ const user: ManagedUser = {
   active: true,
   pending_activation: false,
   invitation_expired: false,
-  two_factor_enabled: false,
   roles: [{ id: "r1", code: "docente", name: "Docente", career_name: "Software" }],
   careers: ["Software"],
   assignments: [],

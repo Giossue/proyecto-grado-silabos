@@ -22,9 +22,3 @@ export type ActiveRole = {
     career_id: string | null;
     career_name: string | null;
 };
-
-export type TwoFactorConfigContent = {
-    title: string;
-    description: string;
-    buttonText: string;
-};

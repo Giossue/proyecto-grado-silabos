@@ -4,7 +4,7 @@ import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/
 import { forbidden, jsonError, apiJson, serverError, unauthenticated, validationError } from "../http/responses"
 import type { Throttle } from "../http/throttle"
 import { accessibilitySchema, profileSchema, teacherFormationSchema } from "@silabos/shared/schemas/account"
-import { passwordConfirmationSchema } from "@silabos/shared/schemas/twoFactor"
+import { passwordConfirmationSchema } from "@silabos/shared/schemas/auth"
 import { validateSchema } from "../http/schemaValidation"
 import { phpBoolean } from "./accountRules"
 import { issueInvitation, revokeSessions, updateManagedUserProfile, updateTeacherFormation, type Accessibility, type Account } from "./accounts"

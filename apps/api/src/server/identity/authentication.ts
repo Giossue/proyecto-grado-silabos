@@ -1,6 +1,5 @@
-import { activeRoleSchema, loginSchema, passwordUpdateSchema } from "@silabos/shared/schemas/auth"
+import { activeRoleSchema, loginSchema } from "@silabos/shared/schemas/auth"
 import { filterEmailShape } from "@silabos/shared/schemas/email"
-import { passwordStrength } from "./passwordPolicy"
 import { isAPIError } from "better-auth/api"
 import type { Auth } from "../auth/betterAuth"
 import { establish, requireSession } from "../auth/requireSession"
@@ -20,7 +19,6 @@ export type Credential = { id: string }
 
 export interface CredentialStore {
   findActiveUserByEmail(email: string): Promise<Credential | null>
-  mirrorPassword(userId: string): Promise<void>
 }
 
 export type AuthenticationDeps = {
@@ -34,8 +32,6 @@ export type AuthenticationDeps = {
   attempts: AttemptLimiter
   verifyPassword: (plain: string, hash: string) => Promise<boolean | null>
   dummyHash: () => Promise<string>
-  production: () => boolean
-  pwned?: (prefix: string) => Promise<string>
 }
 
 export const TOO_MANY = "Demasiados intentos. Intente nuevamente en unos minutos."
@@ -112,9 +108,6 @@ export async function login(request: Request, deps: AuthenticationDeps): Promise
   }
   await deps.attempts.clear(throttleKey)
   const cookies = signedIn.headers.getSetCookie()
-  if ("twoFactorRedirect" in signedIn.response && signedIn.response.twoFactorRedirect) {
-    return withSetCookies(gate.decorate(controllerJson({ two_factor_required: true, message: "Ingrese el código de su aplicación de autenticación." }, 202)), cookies)
-  }
   const resolved = "token" in signedIn.response && typeof signedIn.response.token === "string" ? await deps.bridge.sessions.find(signedIn.response.token) : null
   if (resolved === null) throw new Error("The new session was not stored.")
   return withSetCookies(gate.decorate(await answerFor(resolved, deps)), cookies)
@@ -149,31 +142,4 @@ export async function leaveActiveRole(request: Request, deps: AuthenticationDeps
   if (session instanceof Response) return session
   if (session.activeRole !== null) await deps.bridge.sessions.setActiveRole(session.session, null)
   return sessionAnswer(await establish(session.session, session.user, deps.bridge), deps)
-}
-
-export async function updatePassword(request: Request, deps: AuthenticationDeps): Promise<Response> {
-  const session = await requireSession(request, {}, deps.bridge)
-  if (session instanceof Response) return session
-  const { user } = session
-  const input = await requestInput(request)
-  const current = input.current_password
-  if (isPhpArray(current ?? null)) return serverError()
-  const matches = current === undefined || current === null ? false : await deps.verifyPassword(stringInput(current), user.passwordHash)
-  if (matches === null) return serverError()
-  const strength = passwordStrength("contraseña", { production: deps.production(), pwned: deps.pwned })
-  const { errors } = await validateSchema(passwordUpdateSchema({ strength, currentMatches: matches }), input)
-  if (errors !== null) return fromController(validationError(errors))
-  const changed = await deps.auth().api.changePassword({
-    body: { currentPassword: stringInput(current), newPassword: stringInput(input.password), revokeOtherSessions: true },
-    headers: request.headers,
-    returnHeaders: true,
-  })
-  await deps.credentials.mirrorPassword(user.id)
-  const token = changed.response.token
-  const resolved = token === null ? null : await deps.bridge.sessions.find(token)
-  if (resolved === null) throw new Error("The password change did not keep a session.")
-  if (session.session.activeRoleAssignmentId !== null) await deps.bridge.sessions.setActiveRole(resolved, session.session.activeRoleAssignmentId)
-  const refreshed = await deps.bridge.store.findUser(user.id)
-  if (refreshed === null) return unauthenticated()
-  return withSetCookies(await sessionAnswer(await establish(resolved, refreshed, deps.bridge), deps), changed.headers.getSetCookie())
 }

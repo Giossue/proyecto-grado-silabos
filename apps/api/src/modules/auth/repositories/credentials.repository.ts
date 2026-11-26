@@ -11,13 +11,6 @@ export async function storeCredentialPassword(executor: RawExecutor, userId: str
   await executor.$executeRaw(Prisma.sql`update usuarios set contrasena = ${hash} where usuario_id = ${userId}::uuid`)
 }
 
-export async function mirrorCredentialPassword(executor: RawExecutor, userId: string): Promise<void> {
-  await executor.$executeRaw(Prisma.sql`update usuarios set contrasena = c.password
-    from cuentas_usuario c
-    where usuarios.usuario_id = ${userId}::uuid and c.user_id = usuarios.usuario_id
-      and c.provider_id = ${CREDENTIAL_PROVIDER} and c.password is not null`)
-}
-
 export function deleteUserSessions(executor: RawExecutor, userId: string, exceptId: string | null = null): Promise<number> {
   return executor.$executeRaw(
     exceptId === null
@@ -32,6 +25,5 @@ export function credentialStoreOn(executor: RawExecutor): CredentialStore {
       const [row] = await rowsOf<{ usuario_id: string }>(executor, Prisma.sql`select usuario_id from usuarios where correo_electronico = ${email} and usuario_activo = true limit 1`)
       return row ? { id: String(row.usuario_id) } : null
     },
-    mirrorPassword: (userId) => mirrorCredentialPassword(executor, userId),
   }
 }

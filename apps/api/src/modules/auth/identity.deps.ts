@@ -8,17 +8,15 @@ import type { AuthenticationDeps, CredentialStore } from "../../server/identity/
 import type { RecoveryDeps, RecoveryRepository } from "../../server/identity/passwordRecovery"
 import type { ProfileRepository, SessionDeps } from "../../server/identity/session"
 import type { ActiveSessionDeps, ActiveSessionStore } from "../../server/identity/sessions"
-import type { TwoFactorDeps, TwoFactorStore } from "../../server/identity/twoFactor"
 import { AUTH_BRIDGE, RATE_LIMITER } from "./auth.tokens"
 import { IDENTITY_RUNTIME, type IdentityRuntime } from "./identity.runtime"
-import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY, TWO_FACTOR_STORE } from "./identity.tokens"
+import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY } from "./identity.tokens"
 
 export type IdentityStores = {
   profiles: ProfileRepository
   activeSessions: ActiveSessionStore
   credentials: CredentialStore
   recovery: RecoveryRepository
-  twoFactor: TwoFactorStore
   accounts: AccountRepository
 }
 
@@ -26,7 +24,6 @@ export type IdentityDepsSet = {
   session: SessionDeps
   activeSessions: ActiveSessionDeps
   authentication: AuthenticationDeps
-  twoFactor: TwoFactorDeps
   recovery: RecoveryDeps
   writes: IdentityWriteDeps
 }
@@ -46,17 +43,6 @@ export function identityDepsOf(bridge: BridgeDeps, limiter: RateLimiter, runtime
       attempts: runtime.attempts,
       verifyPassword: runtime.verifyPassword,
       dummyHash: runtime.dummyHash,
-      production: runtime.production,
-      pwned: runtime.pwned,
-    },
-    twoFactor: {
-      bridge,
-      auth: runtime.auth,
-      store: stores.twoFactor,
-      replay: runtime.replay,
-      throttles: limiter,
-      attempts: runtime.attempts,
-      verifyPassword: runtime.verifyPassword,
     },
     recovery: {
       runtime: runtimeOf(bridge),
@@ -92,9 +78,8 @@ export class IdentityDeps {
     @Inject(ACTIVE_SESSION_STORE) activeSessions: ActiveSessionStore,
     @Inject(CREDENTIAL_STORE) credentials: CredentialStore,
     @Inject(RECOVERY_REPOSITORY) recovery: RecoveryRepository,
-    @Inject(TWO_FACTOR_STORE) twoFactor: TwoFactorStore,
     @Inject(ACCOUNT_REPOSITORY) accounts: AccountRepository,
   ) {
-    this.set = identityDepsOf(bridge, limiter, runtime, { profiles, activeSessions, credentials, recovery, twoFactor, accounts })
+    this.set = identityDepsOf(bridge, limiter, runtime, { profiles, activeSessions, credentials, recovery, accounts })
   }
 }

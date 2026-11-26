@@ -6,7 +6,7 @@
     "params": []
    },
    {
-    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" order by \"usuarios\".\"nombre_usuario\" asc limit $1",
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" order by \"usuarios\".\"nombre_usuario\" asc limit $1",
     "params": [
      20
     ]
@@ -28,7 +28,6 @@
      "email": "ana@ueb.edu.ec",
      "active": true,
      "verified": true,
-     "twoFactor": false,
      "invitationActive": false,
      "assignments": [
       {
@@ -45,7 +44,6 @@
      "email": "luis@ueb.edu.ec",
      "active": true,
      "verified": false,
-     "twoFactor": false,
      "invitationActive": true,
      "assignments": [
       {
@@ -74,7 +72,7 @@
     ]
    },
    {
-    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where ((translate(\"usuarios\".\"nombre_usuario\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $1 or translate(\"usuarios\".\"correo_electronico\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $2) and \"usuarios\".\"usuario_activo\" = $3 and \"usuarios\".\"correo_verificado_en\" is null and \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $4 and \"asignaciones_rol\".\"rol\" = $5)) and \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $6 and \"asignaciones_rol\".\"carrera_id\" = $7))) order by case when \"usuarios\".\"usuario_activo\" = false then $8::text when \"usuarios\".\"correo_verificado_en\" is null then case when exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) then $9::text else $10::text end else $11::text end desc nulls last, \"usuarios\".\"nombre_usuario\" asc, \"usuarios\".\"usuario_id\" asc limit $12 offset $13",
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where ((translate(\"usuarios\".\"nombre_usuario\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $1 or translate(\"usuarios\".\"correo_electronico\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $2) and \"usuarios\".\"usuario_activo\" = $3 and \"usuarios\".\"correo_verificado_en\" is null and \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $4 and \"asignaciones_rol\".\"rol\" = $5)) and \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $6 and \"asignaciones_rol\".\"carrera_id\" = $7))) order by case when \"usuarios\".\"usuario_activo\" = false then $8::text when \"usuarios\".\"correo_verificado_en\" is null then case when exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) then $9::text else $10::text end else $11::text end desc nulls last, \"usuarios\".\"nombre_usuario\" asc, \"usuarios\".\"usuario_id\" asc limit $12 offset $13",
     "params": [
      "%Jo\\%se\\_\\\\%",
      "%Jo\\%se\\_\\\\%",
@@ -108,7 +106,6 @@
      "email": "ana@ueb.edu.ec",
      "active": true,
      "verified": true,
-     "twoFactor": false,
      "invitationActive": false,
      "assignments": [
       {
@@ -125,7 +122,6 @@
      "email": "luis@ueb.edu.ec",
      "active": true,
      "verified": false,
-     "twoFactor": false,
      "invitationActive": true,
      "assignments": [
       {
@@ -148,7 +144,7 @@
     ]
    },
    {
-    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where (\"usuarios\".\"usuario_activo\" = $1 and \"usuarios\".\"correo_verificado_en\" is not null) order by \"usuarios\".\"nombre_usuario\" asc nulls last, \"usuarios\".\"nombre_usuario\" asc, \"usuarios\".\"usuario_id\" asc limit $2",
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where (\"usuarios\".\"usuario_activo\" = $1 and \"usuarios\".\"correo_verificado_en\" is not null) order by \"usuarios\".\"nombre_usuario\" asc nulls last, \"usuarios\".\"nombre_usuario\" asc, \"usuarios\".\"usuario_id\" asc limit $2",
     "params": [
      true,
      20
@@ -171,7 +167,6 @@
      "email": "ana@ueb.edu.ec",
      "active": true,
      "verified": true,
-     "twoFactor": false,
      "invitationActive": false,
      "assignments": [
       {
@@ -188,7 +183,6 @@
      "email": "luis@ueb.edu.ec",
      "active": true,
      "verified": false,
-     "twoFactor": false,
      "invitationActive": true,
      "assignments": [
       {
@@ -211,7 +205,7 @@
     ]
    },
    {
-    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where \"usuarios\".\"usuario_activo\" = $1 order by \"usuarios\".\"nombre_usuario\" asc limit $2",
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where \"usuarios\".\"usuario_activo\" = $1 order by \"usuarios\".\"nombre_usuario\" asc limit $2",
     "params": [
      false,
      20
@@ -234,7 +228,6 @@
      "email": "ana@ueb.edu.ec",
      "active": true,
      "verified": true,
-     "twoFactor": false,
      "invitationActive": false,
      "assignments": [
       {
@@ -251,7 +244,6 @@
      "email": "luis@ueb.edu.ec",
      "active": true,
      "verified": false,
-     "twoFactor": false,
      "invitationActive": true,
      "assignments": [
       {
@@ -275,7 +267,7 @@
     ]
    },
    {
-    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where (translate(\"usuarios\".\"nombre_usuario\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $1 or translate(\"usuarios\".\"correo_electronico\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $2) order by \"usuarios\".\"nombre_usuario\" asc limit $3",
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where (translate(\"usuarios\".\"nombre_usuario\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $1 or translate(\"usuarios\".\"correo_electronico\", 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN') ILIKE $2) order by \"usuarios\".\"nombre_usuario\" asc limit $3",
     "params": [
      "%Nandu%",
      "%Nandu%",
@@ -299,7 +291,6 @@
      "email": "ana@ueb.edu.ec",
      "active": true,
      "verified": true,
-     "twoFactor": false,
      "invitationActive": false,
      "assignments": [
       {
@@ -316,7 +307,6 @@
      "email": "luis@ueb.edu.ec",
      "active": true,
      "verified": false,
-     "twoFactor": false,
      "invitationActive": true,
      "assignments": [
       {
@@ -340,7 +330,7 @@
     ]
    },
    {
-    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $1 and \"asignaciones_rol\".\"rol\" = $2)) order by \"usuarios\".\"nombre_usuario\" asc limit $3",
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $1 and \"asignaciones_rol\".\"rol\" = $2)) order by \"usuarios\".\"nombre_usuario\" asc limit $3",
     "params": [
      true,
      "administrador",
@@ -364,7 +354,6 @@
      "email": "ana@ueb.edu.ec",
      "active": true,
      "verified": true,
-     "twoFactor": false,
      "invitationActive": false,
      "assignments": [
       {
@@ -381,7 +370,6 @@
      "email": "luis@ueb.edu.ec",
      "active": true,
      "verified": false,
-     "twoFactor": false,
      "invitationActive": true,
      "assignments": [
       {
@@ -405,7 +393,7 @@
     ]
    },
    {
-    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, \"dos_factores_confirmado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $1 and \"asignaciones_rol\".\"carrera_id\" = $2)) order by case when \"usuarios\".\"usuario_activo\" = false then $3::text when \"usuarios\".\"correo_verificado_en\" is null then case when exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) then $4::text else $5::text end else $6::text end asc nulls last, \"usuarios\".\"nombre_usuario\" asc, \"usuarios\".\"usuario_id\" asc limit $7 offset $8",
+    "sql": "select \"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"usuario_activo\", \"correo_verificado_en\" is not null, exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) from \"usuarios\" where \"usuarios\".\"usuario_id\" in (select \"usuario_id\" from \"asignaciones_rol\" where (\"asignaciones_rol\".\"asignacion_rol_activa\" = $1 and \"asignaciones_rol\".\"carrera_id\" = $2)) order by case when \"usuarios\".\"usuario_activo\" = false then $3::text when \"usuarios\".\"correo_verificado_en\" is null then case when exists (select \"invitacion_activacion_id\" from \"invitaciones_activacion\" where (\"invitaciones_activacion\".\"usuario_id\" = \"usuarios\".\"usuario_id\" and \"invitaciones_activacion\".\"usada_en\" is null and \"invitaciones_activacion\".\"invalidada_en\" is null and \"invitaciones_activacion\".\"expira_en\" > now())) then $4::text else $5::text end else $6::text end asc nulls last, \"usuarios\".\"nombre_usuario\" asc, \"usuarios\".\"usuario_id\" asc limit $7 offset $8",
     "params": [
      true,
      "c2",
@@ -434,7 +422,6 @@
      "email": "ana@ueb.edu.ec",
      "active": true,
      "verified": true,
-     "twoFactor": false,
      "invitationActive": false,
      "assignments": [
       {
@@ -451,7 +438,6 @@
      "email": "luis@ueb.edu.ec",
      "active": true,
      "verified": false,
-     "twoFactor": false,
      "invitationActive": true,
      "assignments": [
       {

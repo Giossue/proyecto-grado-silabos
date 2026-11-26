@@ -5,7 +5,7 @@
     },
     "/admin/configuracion/seguridad": {
         "title": "Seguridad",
-        "content": "Aquí cambia su contraseña. Si no la recuerda, puede pedir un enlace por correo para crear otra.\n\nTambién puede activar la doble verificación: al entrar le pedirá un código del celular. Guarde los códigos de respaldo en un lugar seguro; sirven si pierde el celular.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y cambie la contraseña."
+        "content": "Si no recuerda su contraseña, pida un enlace por correo para crear otra.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y restablezca la contraseña."
     },
     "/admin/configuracion/sistema": {
         "title": "Sistema",
@@ -45,7 +45,7 @@
     },
     "/biblioteca/configuracion/seguridad": {
         "title": "Seguridad",
-        "content": "Aquí cambia su contraseña. Si no la recuerda, puede pedir un enlace por correo para crear otra.\n\nTambién puede activar la doble verificación: al entrar le pedirá un código del celular. Guarde los códigos de respaldo en un lugar seguro; sirven si pierde el celular.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y cambie la contraseña."
+        "content": "Si no recuerda su contraseña, pida un enlace por correo para crear otra.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y restablezca la contraseña."
     },
     "/biblioteca/historial": {
         "title": "Historial de biblioteca",
@@ -73,7 +73,7 @@
     },
     "/coordinacion/configuracion/seguridad": {
         "title": "Seguridad",
-        "content": "Aquí cambia su contraseña. Si no la recuerda, puede pedir un enlace por correo para crear otra.\n\nTambién puede activar la doble verificación: al entrar le pedirá un código del celular. Guarde los códigos de respaldo en un lugar seguro; sirven si pierde el celular.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y cambie la contraseña."
+        "content": "Si no recuerda su contraseña, pida un enlace por correo para crear otra.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y restablezca la contraseña."
     },
     "/coordinacion/docentes": {
         "title": "Docentes de la carrera",
@@ -129,7 +129,7 @@
     },
     "/docente/configuracion/seguridad": {
         "title": "Seguridad",
-        "content": "Aquí cambia su contraseña. Si no la recuerda, puede pedir un enlace por correo para crear otra.\n\nTambién puede activar la doble verificación: al entrar le pedirá un código del celular. Guarde los códigos de respaldo en un lugar seguro; sirven si pierde el celular.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y cambie la contraseña."
+        "content": "Si no recuerda su contraseña, pida un enlace por correo para crear otra.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y restablezca la contraseña."
     },
     "/docente/documentos-apoyo": {
         "title": "Documentos de apoyo",

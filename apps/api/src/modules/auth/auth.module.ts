@@ -12,13 +12,12 @@ import { AUTH_BRIDGE, RATE_LIMITER } from "./auth.tokens"
 import { AuthenticationController } from "./authentication.controller"
 import { IdentityDeps } from "./identity.deps"
 import { defaultIdentityRuntime, IDENTITY_RUNTIME } from "./identity.runtime"
-import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY, SESSION_STORE, TWO_FACTOR_STORE } from "./identity.tokens"
+import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY, SESSION_STORE } from "./identity.tokens"
 import { activeSessionStoreOn } from "./repositories/active-sessions.repository"
 import { credentialStoreOn } from "./repositories/credentials.repository"
 import { profileRepositoryOn } from "./repositories/profile.repository"
 import { recoveryRepositoryOn } from "./repositories/recovery.repository"
 import { sessionStoreOn } from "./repositories/session-store.repository"
-import { twoFactorStoreOn } from "./repositories/two-factor.repository"
 import { SessionController } from "./session.controller"
 
 const prismaBacked = <T>(token: symbol, build: (prisma: PrismaService) => T) => ({ provide: token, useFactory: build, inject: [PrismaService] })
@@ -39,7 +38,6 @@ function authBridge(store: SessionStore, prisma: PrismaService) {
     prismaBacked(ACTIVE_SESSION_STORE, activeSessionStoreOn),
     prismaBacked(CREDENTIAL_STORE, credentialStoreOn),
     prismaBacked(RECOVERY_REPOSITORY, recoveryRepositoryOn),
-    prismaBacked(TWO_FACTOR_STORE, twoFactorStoreOn),
     prismaBacked(ACCOUNT_REPOSITORY, createAccountRepository),
     { provide: AUTH_BRIDGE, useFactory: authBridge, inject: [SESSION_STORE, PrismaService] },
     { provide: RATE_LIMITER, useFactory: sharedRateLimiter },

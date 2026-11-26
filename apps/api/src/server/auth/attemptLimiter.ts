@@ -75,3 +75,12 @@ export function sharedAttemptLimiter(): AttemptLimiter {
   globalForAttempts.sharedAttempts ??= createRedisAttemptLimiter(sharedRedis(), `${redisPrefix()}limiter:`, () => Math.floor(Date.now() / 1000))
   return globalForAttempts.sharedAttempts
 }
+
+export function lazyAttemptLimiter(): AttemptLimiter {
+  return {
+    tooManyAttempts: (key, maxAttempts) => sharedAttemptLimiter().tooManyAttempts(key, maxAttempts),
+    hit: (key, decaySeconds) => sharedAttemptLimiter().hit(key, decaySeconds),
+    clear: (key) => sharedAttemptLimiter().clear(key),
+    availableIn: (key) => sharedAttemptLimiter().availableIn(key),
+  }
+}

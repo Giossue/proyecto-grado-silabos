@@ -17,7 +17,7 @@ import { AuthModule } from "../auth/auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
 import { contentHeaders, live, nestRaw, rawOf, served, webRequest, type Call, type Raw } from "../auth/identity-equivalence.testing"
 import { IDENTITY_RUNTIME, type IdentityRuntime } from "../auth/identity.runtime"
-import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY, TWO_FACTOR_STORE } from "../auth/identity.tokens"
+import { ACCOUNT_REPOSITORY, ACTIVE_SESSION_STORE, CREDENTIAL_STORE, PROFILE_REPOSITORY, RECOVERY_REPOSITORY } from "../auth/identity.tokens"
 import { FallbackModule } from "../fallback/fallback.module"
 import { UsersModule } from "./users.module"
 import { IDENTITY_IMPORT_STORE, MANAGED_USER_REPOSITORY } from "./users.deps"
@@ -50,7 +50,6 @@ function freshState(test: Harness): State {
         email: row.email,
         active: row.active,
         verified: row.verified,
-        twoFactor: false,
         invitationActive: identity.invitations.some((invitation) => invitation.userId === row.id && invitation.expiresAt > NOW),
         assignments: identity.grants.filter((item) => item.userId === row.id).map((item) => ({ id: item.id, role: item.role, careerLabel: item.careerId, active: item.active })),
       }))
@@ -68,7 +67,6 @@ function freshState(test: Harness): State {
   const runtime: IdentityRuntime = {
     auth: unused as never,
     attempts: {} as never,
-    replay: {} as never,
     verifyPassword: deps.verifyPassword,
     hashPassword: unused,
     dummyHash: unused,
@@ -202,8 +200,6 @@ beforeAll(async () => {
     .overrideProvider(CREDENTIAL_STORE)
     .useValue({})
     .overrideProvider(RECOVERY_REPOSITORY)
-    .useValue({})
-    .overrideProvider(TWO_FACTOR_STORE)
     .useValue({})
     .compile()
   app = moduleRef.createNestApplication<NestExpressApplication>(new WebResponseExpressAdapter(), { bodyParser: false })

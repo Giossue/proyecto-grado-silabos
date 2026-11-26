@@ -248,7 +248,7 @@ export function harness(role: { id?: string; role: string; careerId: string | nu
         find: async (userId) => {
           const row = identity.accounts.find((candidate) => candidate.id === userId)
           return row
-            ? { name: row.name, email: row.email, formation: row.formation, accessibility: row.accessibility, twoFactorSecret: false, twoFactorConfirmed: false }
+            ? { name: row.name, email: row.email, formation: row.formation, accessibility: row.accessibility }
             : null
         },
       },

@@ -44,19 +44,12 @@ describe("OpenAPI document of the identity routes", () => {
         "POST /api/v1/authentication/account-activation/resend",
         "POST /api/v1/authentication/password-recovery",
         "POST /api/v1/authentication/password-reset",
-        "PUT /api/v1/authentication/password",
         "PUT /api/v1/authentication/profile",
         "PUT /api/v1/authentication/formation",
         "PUT /api/v1/authentication/accessibility",
         "GET /api/v1/authentication/sessions",
         "DELETE /api/v1/authentication/sessions/others",
         "DELETE /api/v1/authentication/sessions/{session}",
-        "GET /api/v1/authentication/two-factor",
-        "POST /api/v1/authentication/two-factor",
-        "DELETE /api/v1/authentication/two-factor",
-        "POST /api/v1/authentication/two-factor/confirm",
-        "POST /api/v1/authentication/two-factor/recovery-codes",
-        "POST /api/v1/authentication/two-factor/challenge",
         "GET /api/v1/session",
         "PUT /api/v1/active-role",
         "DELETE /api/v1/active-role",
@@ -71,9 +64,9 @@ describe("OpenAPI document of the identity routes", () => {
       ].toSorted(),
     )
     const login = document.paths["/api/v1/authentication/login"].post
-    expect(Object.keys(login?.responses ?? {}).toSorted()).toEqual(["200", "202", "400", "422", "429"])
+    expect(Object.keys(login?.responses ?? {}).toSorted()).toEqual(["200", "400", "422", "429"])
     expect(JSON.stringify(login?.requestBody)).toContain("LoginDto")
     expect(Object.keys(document.paths["/api/v1/admin/users/{user}"].patch?.responses ?? {})).toEqual(expect.arrayContaining(["401", "403", "404", "409", "422"]))
-    expect(Object.keys(document.components?.schemas ?? {})).toEqual(expect.arrayContaining(["LoginDto", "ProfileDto", "NewManagedUserDto", "TwoFactorChallengeDto"]))
+    expect(Object.keys(document.components?.schemas ?? {})).toEqual(expect.arrayContaining(["LoginDto", "ProfileDto", "NewManagedUserDto", "PasswordConfirmationDto"]))
   })
 })

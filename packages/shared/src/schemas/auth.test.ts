@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import { accountActivationSchema, activeRoleSchema, loginSchema, passwordResetSchema, passwordUpdateSchema, recoveryLinkSchema } from "./auth"
+import { accountActivationSchema, activeRoleSchema, loginSchema, passwordConfirmationSchema, passwordResetSchema, recoveryLinkSchema } from "./auth"
 import { schemaErrors } from "./issues"
 
 const errorsOf = schemaErrors
@@ -51,14 +51,8 @@ describe("password schemas", () => {
     })
   })
 
-  it("rejects a wrong current password and a new password equal to it", async () => {
-    expect(await errorsOf(passwordUpdateSchema({ currentMatches: false }), { current_password: "igual", password: "igual", password_confirmation: "igual" })).toEqual({
-      current_password: ["La contraseña es incorrecta."],
-      password: ["La contraseña nueva debe ser distinta de la actual."],
-    })
-    expect(await errorsOf(passwordUpdateSchema(), { password: "nueva", password_confirmation: "nueva" })).toEqual({
-      current_password: ["El campo contraseña actual es obligatorio."],
-      password: ["La contraseña nueva debe ser distinta de la actual."],
-    })
+  it("asks for the current password and rejects a wrong one", async () => {
+    expect(await errorsOf(passwordConfirmationSchema(false), { current_password: "mala" })).toEqual({ current_password: ["La contraseña actual no es correcta."] })
+    expect(await errorsOf(passwordConfirmationSchema(), {})).toEqual({ current_password: ["El campo contraseña actual es obligatorio."] })
   })
 })

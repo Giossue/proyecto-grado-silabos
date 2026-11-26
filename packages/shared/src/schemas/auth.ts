@@ -2,7 +2,7 @@ import { z } from "zod"
 import { filterEmailShape } from "./email"
 import { messages } from "./messages"
 import { confirmedPassword, passwordConfirmation, passwordField, type PasswordStrength } from "./password"
-import { codePointLength, isBlank, requiredText, requiredUuid, requiredValue } from "./rules"
+import { codePointLength, requiredText, requiredUuid, requiredValue } from "./rules"
 
 const INVALID_EMAIL = "El campo correo electrónico debe ser un correo electrónico válido."
 
@@ -59,27 +59,6 @@ export function accountActivationSchema(strength?: PasswordStrength) {
 
 export type AccountActivationValues = z.input<ReturnType<typeof accountActivationSchema>>
 
-export function passwordUpdateSchema(options: { strength?: PasswordStrength; currentMatches?: boolean } = {}) {
-  return confirmedPassword(
-    z.object({
-      current_password: requiredText(messages.required("contraseña actual"), messages.string("contraseña actual")).refine(() => options.currentMatches ?? true, {
-        message: "La contraseña es incorrecta.",
-      }),
-      password: passwordField("contraseña", options.strength),
-      password_confirmation: passwordConfirmation,
-    }),
-  ).refine((data) => data.current_password !== undefined && data.current_password !== data.password, {
-    path: ["password"],
-    message: "La contraseña nueva debe ser distinta de la actual.",
-    when: (payload) => {
-      const value = payload.value as { password?: unknown } | undefined
-      return typeof value === "object" && value !== null && !isBlank(value.password)
-    },
-  })
-}
-
-export type PasswordUpdateValues = z.input<ReturnType<typeof passwordUpdateSchema>>
-
 export const newPasswordFormSchema = z.object({
   password: passwordField("contraseña"),
   password_confirmation: z.string(),
@@ -87,10 +66,14 @@ export const newPasswordFormSchema = z.object({
 
 export type NewPasswordFormValues = z.input<typeof newPasswordFormSchema>
 
-export const passwordChangeFormSchema = z.object({
-  current_password: requiredText(messages.required("contraseña actual"), messages.string("contraseña actual")),
-  password: passwordField("contraseña"),
-  password_confirmation: z.string(),
-})
+export const WRONG_PASSWORD = "La contraseña actual no es correcta."
 
-export type PasswordChangeFormValues = z.input<typeof passwordChangeFormSchema>
+export function currentPasswordField(matches = true) {
+  return requiredText(messages.required("contraseña actual"), messages.string("contraseña actual")).refine(() => matches, { message: WRONG_PASSWORD })
+}
+
+export function passwordConfirmationSchema(matches?: boolean) {
+  return z.object({ current_password: currentPasswordField(matches) })
+}
+
+export type PasswordConfirmationValues = z.input<ReturnType<typeof passwordConfirmationSchema>>

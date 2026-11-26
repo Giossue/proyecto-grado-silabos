@@ -10,7 +10,6 @@ export type ManagedUser = {
   pending_activation: boolean;
   /** Pendiente y sin invitación vigente: se puede reenviar. */
   invitation_expired: boolean;
-  two_factor_enabled: boolean;
   roles: Array<{ id: string; code: RoleCode; name: string; career_name: string | null }>;
   careers: Array<string | null>;
   assignments: Array<{ id: string; role_name: string; career_name: string | null; active: boolean }>;

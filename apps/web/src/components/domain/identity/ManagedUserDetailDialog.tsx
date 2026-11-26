@@ -27,7 +27,6 @@ export type ManagedUserRow = {
   active: boolean
   pending_activation: boolean
   invitation_expired: boolean
-  two_factor_enabled: boolean
   roles: { name: string; career_name: string | null }[]
   careers: (string | null)[]
   assignments: ManagedUserRoleAssignment[]
@@ -107,10 +106,6 @@ export function ManagedUserDetailDialog({ user, roles, careers, canEdit, open, o
               <div className="flex flex-col gap-1">
                 <dt className="font-semibold">Correo institucional</dt>
                 <dd>{user.correo_electronico}</dd>
-              </div>
-              <div className="flex flex-col gap-1">
-                <dt className="font-semibold">Acceso en dos pasos</dt>
-                <dd>{user.two_factor_enabled ? "Configurado por su titular" : "Sin configurar"}</dd>
               </div>
             </dl>
 

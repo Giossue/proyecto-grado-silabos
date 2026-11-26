@@ -161,9 +161,7 @@ const sharedScreens: Record<string, TourStep[]> = {
     step('[data-tour="profile-readonly"]', 'Sus datos', 'Si su nombre o correo están mal, pida el cambio a Administración', 'top'),
   ],
   'configuracion/seguridad': [
-    step('[data-tour="security-password"]', 'Contraseña', 'Escriba la actual y la nueva para cambiarla', 'top'),
     step('[data-tour="security-reset"]', 'Por correo', 'Si no recuerda su contraseña, le enviamos un enlace para crear otra', 'top'),
-    step('[data-tour="security-2fa"]', 'Doble verificación', 'Al entrar le pide también un código del celular. Guarde los códigos de respaldo por si lo pierde', 'top'),
   ],
   'configuracion/notificaciones': [
     step('[data-tour="email-notices"]', 'Avisos por correo', 'Elija qué avisos le llegan también al correo. En el sistema los verá siempre', 'top'),

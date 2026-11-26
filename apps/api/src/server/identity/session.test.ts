@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, storedJson, type FakeWorld } from "../auth/testing"
-import { showSession, twoFactorStatus, type UserProfile } from "./session"
+import { showSession, type UserProfile } from "./session"
 
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
@@ -32,8 +32,6 @@ beforeEach(() => {
     email: "ana@ueb.edu.ec",
     formation: null,
     accessibility: {},
-    twoFactorSecret: false,
-    twoFactorConfirmed: false,
   }
 })
 
@@ -74,20 +72,5 @@ describe("session", () => {
     expect(status).toBe(200)
     expect(JSON.parse(text).active_role.id).toBe(golden.roleId)
     expect(JSON.parse(storedJson(world, SESSION_ID) ?? "{}").active_role_assignment_id).toBe(golden.roleId)
-  })
-})
-
-describe("two-factor status", () => {
-  it("reports whether the second factor is on or waiting for confirmation", async () => {
-    expect(await call(twoFactorStatus, "/api/v1/authentication/two-factor")).toEqual({ status: 200, text: '{"enabled":false,"confirmation_required":false}' })
-    profile = { ...profile, twoFactorSecret: true }
-    expect((await call(twoFactorStatus, "/api/v1/authentication/two-factor")).text).toBe('{"enabled":false,"confirmation_required":true}')
-    profile = { ...profile, twoFactorConfirmed: true }
-    expect((await call(twoFactorStatus, "/api/v1/authentication/two-factor")).text).toBe('{"enabled":true,"confirmation_required":false}')
-  })
-
-  it("answers 401 without a session", async () => {
-    world.sessions.clear()
-    expect(await call(twoFactorStatus, "/api/v1/authentication/two-factor")).toEqual({ status: 401, text: '{"message":"Unauthenticated."}' })
   })
 })

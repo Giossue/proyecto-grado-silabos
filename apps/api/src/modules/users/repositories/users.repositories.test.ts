@@ -37,14 +37,14 @@ function prismaWorld(answers: Answers, columns: { users: string[]; assignments: 
   return { executor, queries }
 }
 
-const USER_COLUMNS = ["id", "name", "email", "active", "verified", "twoFactor", "invitationActive"]
+const USER_COLUMNS = ["id", "name", "email", "active", "verified", "invitationActive"]
 const ASSIGNMENT_COLUMNS = ["userId", "id", "role", "careerLabel", "active"]
 
 const answers: Answers = {
   count: 2,
   users: [
-    [USER, "Ana Pérez", "ana@ueb.edu.ec", true, true, false, false],
-    [OTHER, "Luis Mora", "luis@ueb.edu.ec", true, false, false, true],
+    [USER, "Ana Pérez", "ana@ueb.edu.ec", true, true, false],
+    [OTHER, "Luis Mora", "luis@ueb.edu.ec", true, false, true],
   ],
   assignments: [
     [USER, "a1", "docente", "Software", true],

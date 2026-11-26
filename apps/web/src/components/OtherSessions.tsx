@@ -21,7 +21,7 @@ import { applyApiErrors, fieldMessage, serverMessage, useSchemaForm } from "@/li
 import { queryErrorMessage } from "@/lib/queryClient"
 import { toast } from "@/lib/toast"
 import { accountKeys, deviceSessionsQuery } from "@/queries/account"
-import { passwordConfirmationSchema, type PasswordConfirmationValues } from "@silabos/shared/schemas/twoFactor"
+import { passwordConfirmationSchema, type PasswordConfirmationValues } from "@silabos/shared/schemas/auth"
 
 const schema = passwordConfirmationSchema()
 
@@ -56,7 +56,7 @@ export function OtherSessions() {
 
   return (
     <div data-tour="security-sessions" className="flex flex-col gap-4">
-      <p className="text-sm text-muted-foreground">Si no reconoce algún dispositivo, cierre las otras sesiones y cambie su contraseña</p>
+      <p className="text-sm text-muted-foreground">Si no reconoce algún dispositivo, cierre las otras sesiones y restablezca su contraseña</p>
       {loadError ? (
         <FeedbackAlert message={loadError} />
       ) : sessions === null ? (

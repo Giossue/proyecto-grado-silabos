@@ -1,15 +1,11 @@
 import { betterAuth, type BetterAuthOptions } from "better-auth"
 import { APIError } from "better-auth/api"
-import { generateRandomString } from "better-auth/crypto"
-import { twoFactor } from "better-auth/plugins"
 import type { PrismaClient } from "../../generated/prisma/client"
 import { bcryptHash, bcryptVerify } from "./bcrypt"
 import { PRISMA_AUTH_SCHEMA, prismaAuthDatabase } from "./prismaAuthDatabase"
 
 export const INACTIVE_ACCOUNT = "La cuenta está desactivada."
-export const RECOVERY_CODE_COUNT = 8
 export const SESSION_REFRESH_SECONDS = 60
-const TWO_FACTOR_CHALLENGE_SECONDS = 600
 
 export type Environment = Record<string, string | undefined>
 
@@ -59,16 +55,10 @@ type ModelMapping = { modelName?: string; fields?: Record<string, string> }
 export type AuthSchema = {
   user?: { modelName?: string; fields?: Partial<Record<"name" | "email" | "emailVerified" | "image" | "createdAt" | "updatedAt", string>> }
   userActive?: string
-  userTwoFactorEnabled?: string
   session?: { modelName?: string; fields?: Partial<Record<"expiresAt" | "token" | "createdAt" | "updatedAt" | "ipAddress" | "userAgent" | "userId", string>> }
   sessionActiveRoleAssignmentId?: string
   account?: ModelMapping
   verification?: ModelMapping
-  twoFactor?: ModelMapping
-}
-
-export function recoveryCodes(): string[] {
-  return Array.from({ length: RECOVERY_CODE_COUNT }, () => `${generateRandomString(10, "a-z", "A-Z", "0-9")}-${generateRandomString(10, "a-z", "A-Z", "0-9")}`)
 }
 
 export function createAuth(database: BetterAuthOptions["database"], settings: AuthSettings, schema: AuthSchema = {}) {
@@ -121,15 +111,6 @@ export function createAuth(database: BetterAuthOptions["database"], settings: Au
         },
       },
     },
-    plugins: [
-      twoFactor({
-        issuer: settings.appName,
-        twoFactorCookieMaxAge: TWO_FACTOR_CHALLENGE_SECONDS,
-        totpOptions: { period: 30, digits: 6 },
-        backupCodeOptions: { customBackupCodesGenerate: recoveryCodes },
-        schema: { user: { fields: { twoFactorEnabled: schema.userTwoFactorEnabled ?? "twoFactorEnabled" } }, twoFactor: schema.twoFactor ?? {} },
-      }),
-    ],
   })
 }
 

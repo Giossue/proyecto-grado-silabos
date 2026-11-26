@@ -2,8 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import LoginPage from "@/app/(auth)/ingresar/page"
-import TwoFactorChallengePage from "@/app/(auth)/verificar-dos-factores/page"
-import { completeTwoFactorLogin, getAuthProviders, getSession, login } from "@/api/session"
+import { getAuthProviders, getSession, login } from "@/api/session"
 import { clearIntendedRoute, rememberIntendedRoute } from "@/lib/intended-route"
 import { sessionState } from "@/state/session"
 import { navigation } from "@/test/nextNavigation"
@@ -11,7 +10,6 @@ import { navigation } from "@/test/nextNavigation"
 vi.mock("next/navigation", () => import("@/test/nextNavigation"))
 vi.mock("@/api/session", () => ({
   login: vi.fn(),
-  completeTwoFactorLogin: vi.fn(),
   getSession: vi.fn(),
   getAuthProviders: vi.fn(),
 }))
@@ -32,7 +30,6 @@ describe("authentication pages", () => {
   beforeEach(() => {
     navigation.reset("/ingresar")
     vi.mocked(login).mockReset()
-    vi.mocked(completeTwoFactorLogin).mockReset()
     vi.mocked(getSession).mockReset()
     vi.mocked(getAuthProviders).mockReset().mockResolvedValue({ keycloak: false })
     sessionState.clear()
@@ -87,19 +84,6 @@ describe("authentication pages", () => {
     await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/docente/historial"))
   })
 
-  it("asks for the second factor when the account requires it", async () => {
-    vi.mocked(login).mockResolvedValue({ two_factor_required: true, message: "Se requiere el segundo factor" })
-    const user = userEvent.setup()
-    const { container } = render(<LoginPage />)
-
-    await user.type(container.querySelector<HTMLInputElement>('input[type="email"]')!, "docente@example.test")
-    await user.type(container.querySelector<HTMLInputElement>('input[type="password"]')!, "secret")
-    await user.click(screen.getByRole("button", { name: "Ingresar" }))
-
-    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/verificar-dos-factores"))
-    expect(sessionState.current.value).toBeNull()
-  })
-
   it("shows the server message when the credentials are rejected", async () => {
     const { ApiError } = await vi.importActual<typeof import("@/api/client")>("@/api/client")
     vi.mocked(login).mockRejectedValue(new ApiError("Las credenciales no son válidas.", 422))
@@ -140,21 +124,6 @@ describe("authentication pages", () => {
 
     expect(await screen.findByText("Ingrese un correo electrónico válido")).toBeInTheDocument()
     expect(login).not.toHaveBeenCalled()
-  })
-
-  it("reloads the authenticated session after completing the second factor", async () => {
-    vi.mocked(completeTwoFactorLogin).mockResolvedValue({ message: "ok" })
-    vi.mocked(getSession).mockResolvedValue(authenticatedSession)
-    const user = userEvent.setup()
-    const { container } = render(<TwoFactorChallengePage />)
-
-    await user.type(container.querySelector<HTMLInputElement>('input[inputmode="numeric"]')!, "123456")
-    await user.click(screen.getByRole("button", { name: "Continuar" }))
-
-    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/docente/mis-silabos"))
-    expect(completeTwoFactorLogin).toHaveBeenCalledWith("123456", "")
-    expect(getSession).toHaveBeenCalledOnce()
-    expect(sessionState.current.value).toEqual(authenticatedSession)
   })
 
   it("shows «Ingresar con cuenta institucional» only when the API offers Keycloak", async () => {

@@ -17,7 +17,6 @@ export type ManagedUserRow = {
   email: string
   active: boolean
   verified: boolean
-  twoFactor: boolean
   invitationActive: boolean
   assignments: ManagedAssignment[]
 }
@@ -71,7 +70,6 @@ export async function managedUsers(request: Request, deps: ManagedUserDeps): Pro
       active: user.active,
       pending_activation: !user.verified,
       invitation_expired: !user.verified && !user.invitationActive,
-      two_factor_enabled: user.twoFactor,
       roles: effective.map((assignment) => ({ id: assignment.id, code: assignment.role, name: roleName(assignment.role), career_name: assignment.careerLabel })),
       careers: effective.map((assignment) => assignment.careerLabel),
       assignments: user.assignments.map((assignment) => ({ id: assignment.id, role_name: roleName(assignment.role), career_name: assignment.careerLabel, active: assignment.active })),

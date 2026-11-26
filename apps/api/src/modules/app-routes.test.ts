@@ -160,22 +160,29 @@ describe("authentication on the registered routes", () => {
     "/api/v1/coordination/academic/teacher-assignments",
     "/api/v1/coordination/support-documents",
     "/api/v1/teacher/support-documents",
-    "/api/v1/authentication/two-factor",
   ])("answers GET %s with 401 without a session", async (path) => {
     expect(await nestShape("GET", path, { accept: "application/json" })).toMatchObject({ status: 401, body: '{"message":"Unauthenticated."}' })
   })
 
-  it.each(["/api/v1/coordination/academic/parallels", "/api/v1/authentication/two-factor/confirm", "/api/v1/authentication/two-factor/recovery-codes"])(
-    "answers POST %s with 401 without a session",
-    async (path) => {
-      expect(await nestShape("POST", path, { accept: "application/json", "content-type": "application/json" })).toMatchObject({ status: 401, body: '{"message":"Unauthenticated."}' })
-    },
-  )
+  it("answers POST /api/v1/coordination/academic/parallels with 401 without a session", async () => {
+    expect(await nestShape("POST", "/api/v1/coordination/academic/parallels", { accept: "application/json", "content-type": "application/json" })).toMatchObject({
+      status: 401,
+      body: '{"message":"Unauthenticated."}',
+    })
+  })
 
-  it("answers the two-factor challenge with 400 outside the web app", async () => {
-    expect(await nestShape("POST", "/api/v1/authentication/two-factor/challenge", { accept: "application/json" })).toMatchObject({
-      status: 400,
-      body: '{"message":"Inicie sesión desde la aplicación web."}',
+  it.each([
+    ["PUT", "authentication/password"],
+    ["GET", "authentication/two-factor"],
+    ["POST", "authentication/two-factor"],
+    ["DELETE", "authentication/two-factor"],
+    ["POST", "authentication/two-factor/confirm"],
+    ["POST", "authentication/two-factor/recovery-codes"],
+    ["POST", "authentication/two-factor/challenge"],
+  ])("answers the removed %s /api/v1/%s with the JSON 404", async (method, path) => {
+    expect(await nestShape(method, `/api/v1/${path}`, { accept: "application/json", "content-type": "application/json" })).toMatchObject({
+      status: 404,
+      body: `{"message":"The route api/v1/${path} could not be found."}`,
     })
   })
 })

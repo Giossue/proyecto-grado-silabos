@@ -16,13 +16,11 @@ describe("esqueletos de paneles, ajustes y estructura académica", () => {
   it.each([
     ["profile", true, 2, false],
     ["profile", false, 2, true],
-    ["security", false, 3, true],
   ] as const)("dibuja el ajuste %s (solo lectura: %s) con %i campos y guardar: %s", (settingsSection, readonly, fields, save) => {
     const { container } = render(<LoadingSkeleton variant="settings" settingsSection={settingsSection} readonly={readonly} />)
 
     expect(container.querySelectorAll('[data-skeleton="settings-field"]')).toHaveLength(fields)
     expect(container.querySelector('[data-skeleton="settings-save"]') !== null).toBe(save)
-    expect(container.querySelector('[data-skeleton="settings-two-factor"]') !== null).toBe(settingsSection === "security")
   })
 
   it("dibuja la malla por niveles con sus materias, sin controles enfocables", () => {

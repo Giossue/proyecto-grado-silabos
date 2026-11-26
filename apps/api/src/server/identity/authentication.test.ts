@@ -5,7 +5,7 @@ import { createMemoryAttemptLimiter } from "../auth/attemptLimiter"
 import { authWorld, browserRequest, cookieHeaderFrom, type AuthWorld } from "../auth/betterAuthTesting"
 import { bcryptVerify } from "../auth/bcrypt"
 import { createRateLimiter } from "../http/throttle"
-import { filterEmailShape, leaveActiveRole, login, logout, selectActiveRole, updatePassword, type AuthenticationDeps } from "./authentication"
+import { filterEmailShape, leaveActiveRole, login, logout, selectActiveRole, type AuthenticationDeps } from "./authentication"
 import type { UserProfile } from "./session"
 
 const USER = "0193a3c2-1111-7000-8000-000000000001"
@@ -15,9 +15,8 @@ const PASSWORD = "Demo-2026!"
 const EMAIL = "docente@silabos.test"
 
 let world: AuthWorld
-let mirrored: string[]
 
-const profile: UserProfile = { name: "DOCENTE DEMO", email: EMAIL, formation: null, accessibility: null, twoFactorSecret: false, twoFactorConfirmed: false }
+const profile: UserProfile = { name: "DOCENTE DEMO", email: EMAIL, formation: null, accessibility: null }
 
 function deps(overrides: Partial<AuthenticationDeps> = {}): AuthenticationDeps {
   return {
@@ -28,7 +27,6 @@ function deps(overrides: Partial<AuthenticationDeps> = {}): AuthenticationDeps {
         const user = world.db.user.find((row) => row.email === email && row.active === true)
         return user ? { id: String(user.id) } : null
       },
-      mirrorPassword: async (id) => void mirrored.push(id),
     },
     profiles: { find: async (id) => (id === USER ? profile : null) },
     today: () => "2026-10-21",
@@ -37,7 +35,6 @@ function deps(overrides: Partial<AuthenticationDeps> = {}): AuthenticationDeps {
     attempts: createMemoryAttemptLimiter(() => Math.floor(Date.now() / 1000)),
     verifyPassword: bcryptVerify,
     dummyHash: async () => "$2y$04$abcdefghijklmnopqrstuuJ0b0qz6bV1qz6bV1qz6bV1qz6bV1qz6",
-    production: () => false,
     ...overrides,
   }
 }
@@ -52,7 +49,6 @@ async function signedIn(shared = deps()): Promise<string> {
 
 beforeEach(async () => {
   world = authWorld()
-  mirrored = []
   await world.addUser({ id: USER, email: EMAIL }, PASSWORD)
   world.assignments.push({ id: ROLE, userId: USER, role: "docente", careerId: "c-1", careerLabel: "Software" })
 })
@@ -132,14 +128,15 @@ describe("POST /api/v1/authentication/login", () => {
     expect(response.headers.get("retry-after")).toBe("3600")
   })
 
-  it("hands off to the second factor without keeping a session", async () => {
-    world.user(USER)!.twoFactorEnabled = true
-    world.db.twoFactor.push({ id: "tf-1", userId: USER, secret: "x", backupCodes: "x", verified: true, failedVerificationCount: 0, lockedUntil: null })
+  it("signs in a user who had confirmed two-factor authentication in one step", async () => {
+    Object.assign(world.user(USER)!, { twoFactorEnabled: true })
     const response = await login(post("/api/v1/authentication/login", { email: EMAIL, password: PASSWORD }), deps())
-    expect(response.status).toBe(202)
-    expect(await response.text()).toBe('{"two_factor_required":true,"message":"Ingrese el código de su aplicación de autenticación."}')
-    expect(world.db.session).toHaveLength(0)
-    expect(response.headers.getSetCookie().some((header) => header.startsWith("silabos-ueb.two_factor="))).toBe(true)
+    expect(response.status).toBe(200)
+    expect((await response.json()).user.id).toBe(USER)
+    expect(world.db.session).toHaveLength(1)
+    const cookies = response.headers.getSetCookie()
+    expect(cookies.some((header) => header.startsWith("silabos-ueb.session_token="))).toBe(true)
+    expect(cookies.some((header) => header.startsWith("silabos-ueb.two_factor="))).toBe(false)
   })
 
   it("rejects itself the emails PHP's filter rejects", async () => {
@@ -201,59 +198,6 @@ describe("PUT and DELETE /api/v1/active-role", () => {
     const cookie = await signedIn()
     const response = await selectActiveRole(browserRequest("/api/v1/active-role", { method: "PUT", cookie, body: { role_assignment_id: OTHER_ROLE } }), deps())
     expect(response.status).toBe(403)
-  })
-})
-
-describe("PUT /api/v1/authentication/password", () => {
-  const change = (cookie: string | undefined, body: unknown, shared = deps()) => updatePassword(browserRequest("/api/v1/authentication/password", { method: "PUT", cookie, body }), shared)
-
-  it("validates the current password, the length, the confirmation and that it changes", async () => {
-    const cookie = await signedIn()
-    expect(JSON.parse(await (await change(cookie, { current_password: "mala", password: "corta", password_confirmation: "otra" })).text())).toEqual({
-      message: "La contraseña es incorrecta. (y 2 errores más)",
-      errors: {
-        current_password: ["La contraseña es incorrecta."],
-        password: ["El campo contraseña debe tener al menos 8 caracteres.", "La confirmación de contraseña no coincide."],
-      },
-    })
-    expect(JSON.parse(await (await change(cookie, { current_password: PASSWORD, password: PASSWORD, password_confirmation: PASSWORD })).text()).errors).toEqual({
-      password: ["La contraseña nueva debe ser distinta de la actual."],
-    })
-    expect(await bcryptVerify(PASSWORD, String(world.db.account[0].password))).toBe(true)
-  })
-
-  it("changes the password, revokes the other sessions and keeps this browser signed in with its role", async () => {
-    world.assignments.push({ id: OTHER_ROLE, userId: USER, role: "coordinador", careerId: "c-2", careerLabel: "Redes" })
-    const shared = deps()
-    const cookie = await signedIn(shared)
-    const other = await signedIn(shared)
-    await selectActiveRole(browserRequest("/api/v1/active-role", { method: "PUT", cookie, body: { role_assignment_id: OTHER_ROLE } }), shared)
-    const response = await change(cookie, { current_password: PASSWORD, password: "Nueva-Clave-2026", password_confirmation: "Nueva-Clave-2026" }, shared)
-    expect(response.status).toBe(200)
-    expect((await response.json()).active_role.id).toBe(OTHER_ROLE)
-    const stored = String(world.db.account[0].password)
-    expect(stored.startsWith("$2y$04$")).toBe(true)
-    expect(await bcryptVerify("Nueva-Clave-2026", stored)).toBe(true)
-    expect(mirrored).toEqual([USER])
-    expect(world.db.session).toHaveLength(1)
-    expect(world.db.session[0].activeRoleAssignmentId).toBe(OTHER_ROLE)
-    const renewed = cookieHeaderFrom(response.headers.getSetCookie(), cookie)
-    expect((await leaveActiveRole(browserRequest("/api/v1/active-role", { method: "DELETE", cookie: renewed }), shared)).status).toBe(200)
-    expect((await leaveActiveRole(browserRequest("/api/v1/active-role", { method: "DELETE", cookie: other }), shared)).status).toBe(401)
-    expect((await leaveActiveRole(browserRequest("/api/v1/active-role", { method: "DELETE", cookie }), shared)).status).toBe(401)
-  })
-
-  it("answers 401 to a guest and applies the production password rule", async () => {
-    expect((await change(undefined, {})).status).toBe(401)
-    const cookie = await signedIn()
-    const response = await change(cookie, { current_password: "secreto", password: "corta", password_confirmation: "corta" }, deps({ production: () => true }))
-    expect(response.status).toBe(422)
-    expect((JSON.parse(await response.text()) as { errors: Record<string, string[]> }).errors.password).toEqual([
-      "El campo contraseña debe tener al menos 12 caracteres.",
-      "El campo contraseña debe contener al menos una letra mayúscula y una minúscula",
-      "El campo contraseña debe contener al menos un símbolo",
-      "El campo contraseña debe contener al menos un número",
-    ])
   })
 })
 

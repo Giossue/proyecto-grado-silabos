@@ -40,7 +40,7 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 | Archivos | Disco local o almacenamiento S3 (MinIO), según `STORAGE_DRIVER`; cliente `@aws-sdk/client-s3` | 3 |
 | ORM y migraciones | Prisma ORM y Prisma Migrate (única capa de datos de la API) | 7.10 |
 | Colas, límites y bloqueos | Redis + BullMQ (ioredis) | 7 / 6.7 |
-| Autenticación | Better Auth (usuario y contraseña, 2FA TOTP) | 1.7 |
+| Autenticación | Better Auth (usuario y contraseña) | 1.7 |
 | Correos | Nodemailer + React Email | 10.6 |
 | Word del sílabo | Generador propio en TypeScript + JSZip | — |
 | PDF | Gotenberg (LibreOffice) | 8 |
@@ -122,7 +122,7 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 | IA | `mensajes_ia_plantilla`, `propuestas_ia_plantilla` |
 | Sistema | `notificaciones`, `ajustes_sistema` |
 
-- **Migraciones con Prisma:** el esquema está en `apps/api/prisma/schema.prisma` (sacado de la base con `prisma db pull`) y la migración base `0_baseline` reproduce el esquema completo, con funciones, triggers y la vista. `pnpm db:migrate` (`prisma migrate deploy`) crea una base desde cero y `pnpm db:seed` (`apps/api/scripts/seed.ts`, con Prisma) crea el administrador inicial con su cuenta de credenciales y la plantilla oficial; se puede repetir sin cambiar nada. La migración única de credenciales y 2FA del sistema anterior a Better Auth (`db:migrate-auth`) ya se aplicó a `silabos_ueb` y se eliminó. En una base existente la migración base se marca como aplicada con `pnpm db:baseline`.
+- **Migraciones con Prisma:** el esquema está en `apps/api/prisma/schema.prisma` (sacado de la base con `prisma db pull`) y la migración base `0_baseline` reproduce el esquema completo, con funciones, triggers y la vista. `pnpm db:migrate` (`prisma migrate deploy`) crea una base desde cero y `pnpm db:seed` (`apps/api/scripts/seed.ts`, con Prisma) crea el administrador inicial con su cuenta de credenciales y la plantilla oficial; se puede repetir sin cambiar nada. La migración única de credenciales del sistema anterior a Better Auth (`db:migrate-auth`) ya se aplicó a `silabos_ueb` y se eliminó. En una base existente la migración base se marca como aplicada con `pnpm db:baseline`.
 - **Integridad en la base:**
   - claves foráneas;
   - restricciones `CHECK` (estados, jornadas, rangos);
@@ -140,11 +140,11 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 - **Límites de intentos:** guardados en Redis, con las cabeceras `X-RateLimit-*`.
 - **Documentación:** Swagger UI en `/api/docs` y el documento OpenAPI en `/api/docs-json` (puerto de la API). Muestra todas las rutas de la API.
 
-**130 endpoints** en total.
+**125 endpoints** en total.
 
 | Área | Endpoints | Qué cubre |
 |---|---|---|
-| `authentication` | 17 | Ingreso y salida, activación de cuenta, recuperar y restablecer contraseña, 2FA (activar, confirmar, códigos de recuperación, desafío), perfil, formación, accesibilidad, sesiones abiertas |
+| `authentication` | 12 | Ingreso y salida, activación de cuenta, recuperar y restablecer contraseña por correo, perfil, formación, accesibilidad, sesiones abiertas |
 | `session`, `active-role` | 2 | Sesión actual y cambio de rol o carrera activa |
 | `admin` | 43 | Facultades, carreras y períodos (con importación desde Excel), usuarios y roles (con importación), procesos del período (abrir, pausar, reanudar, prórroga, impacto, finalizar), ajustes del sistema (correo, IA, catálogo, firmas), plantilla (estructura, campos, bloques, formato, logo, vista previa del docente, JSON) y asistente de IA |
 | `coordination` | 35 | Malla (asignaturas, requisitos, disposición, configuración, importación), materias programadas, paralelos y asignación docente, docentes (con importación), convocatoria de la carrera, proyecto de carrera (ficha en Excel), revisiones (comparar versiones, pedir corrección, aprobar con firma), historial y documentos de apoyo |
@@ -168,24 +168,24 @@ Rutas públicas fuera de la API: `/logos/institucion`, `/logos/facultad/:id`, `/
   - se guardan con bcrypt;
   - en producción piden al menos 12 caracteres, con mayúsculas, minúsculas, números y símbolos;
   - se rechazan las que aparecen en filtraciones conocidas. La consulta a *Have I Been Pwned* es anónima: solo se envían los 5 primeros caracteres del hash.
-- **Verificación en dos pasos (TOTP):** con aplicación autenticadora y códigos de recuperación de un solo uso.
+- **Sin verificación en dos pasos ni cambio de contraseña en Configuración:** el ingreso es con correo y contraseña (o la cuenta institucional). Quien olvida la contraseña la restablece con un enlace por correo.
 - **Sesiones:**
   - en la base de datos, con cookie `HttpOnly`;
   - duración configurable (`SESSION_LIFETIME`; hoy 240 minutos, previsto bajar a 30);
   - sin «mantener sesión iniciada»;
-  - se cierran todas al cambiar o restablecer la contraseña.
+  - se cierran todas al restablecer la contraseña.
 - **CSRF y orígenes:** solo se aceptan peticiones desde los dominios configurados (`STATEFUL_DOMAINS`).
 - **Permisos:**
   - por rol y por carrera, verificados en el servidor en cada endpoint;
   - un rol activo por sesión.
-- **Límites de intentos** en el ingreso, la recuperación, el 2FA y las acciones sensibles, guardados en Redis.
+- **Límites de intentos** en el ingreso, la recuperación y las acciones sensibles, guardados en Redis.
 - **Validación:** todas las entradas pasan por esquemas Zod en el servidor.
 - **Firma digital:**
   - las aprobaciones se firman con el certificado **.p12** de cada persona;
   - el servidor verifica la firma (CMS), la vigencia y que el titular del certificado sea quien firma;
   - se puede exigir una lista de entidades certificadoras de confianza (`SIGNATURE_TRUSTED_CA_BUNDLE`).
 - **Integridad:** cada versión enviada del sílabo guarda su **huella SHA-256**, y los documentos aprobados no se modifican.
-- **Datos sensibles:** la clave de la IA y los secretos de 2FA se guardan cifrados (`APP_KEY`).
+- **Datos sensibles:** la clave de la IA se guarda cifrada (`APP_KEY`).
 - **Datos personales (LOPDP):**
   - solo se guarda lo necesario: nombre, correo institucional, roles y formación declarada por el docente;
   - los datos institucionales se leerán en modo de solo lectura.
@@ -306,7 +306,7 @@ Lee `STORAGE_PATH` (carpetas `private` y `public`) y usa las variables `S3_*`; e
 ## 11. Calidad
 
 - **Pruebas unitarias e integración (Vitest):** unas 2 870 pruebas en los tres paquetes, sobre la lógica del servidor, la API, los componentes y las pantallas. Las rutas portadas a Nest tienen una prueba de equivalencia que compara, para los mismos datos, la respuesta del route handler anterior con la del controlador (estado, cuerpo, cabeceras y escrituras).
-- **Pruebas de extremo a extremo (Playwright):** 87 pruebas que recorren el sistema en un navegador real con los cuatro roles. Cubren el ingreso y el 2FA, el ciclo completo del sílabo con firmas y el PDF, la plantilla, la malla y los correos.
+- **Pruebas de extremo a extremo (Playwright):** 86 pruebas que recorren el sistema en un navegador real con los cuatro roles. Cubren el ingreso y la recuperación de contraseña, el ciclo completo del sílabo con firmas y el PDF, la plantilla, la malla y los correos.
 - **Revisión de tipos (TypeScript estricto) y lint (ESLint)** en cada cambio.
 - **Accesibilidad y web moderna:**
   - guías *Modern Web Guidance* de Google Chrome, con objetivo Baseline 2024;

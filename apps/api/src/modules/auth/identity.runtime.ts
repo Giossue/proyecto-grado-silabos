@@ -1,26 +1,22 @@
-import type { AttemptLimiter } from "../../server/auth/attemptLimiter"
+import { lazyAttemptLimiter, type AttemptLimiter } from "../../server/auth/attemptLimiter"
 import { bcryptHash, bcryptVerify } from "../../server/auth/bcrypt"
 import type { PrismaService } from "../../prisma/prisma.service"
 import { bindAuthDatabase, sharedAuth, type Auth } from "../../server/auth/betterAuth"
 import { sessionRandom } from "../../server/auth/runtime"
-import { redisReplayGuard, type TotpReplayGuard } from "../../server/auth/totp"
 import { institutionToday } from "../../server/shared/clock"
 import type { AccountServices } from "../../server/identity/accounts"
 import { randomString } from "../../server/identity/accountRules"
 import { timebox, type Timebox } from "../../server/identity/passwordRecovery"
-import { lazyAttemptLimiter } from "../../server/identity/twoFactor"
 import { frontendUrl } from "../../server/mail/config"
 import type { QueuedMail } from "../../server/mail/mailables"
 import { sharedMailer } from "../../server/mail/mailer"
 import { queueMail } from "../../server/mail/sendMailJob"
-import { sharedRedis } from "../../server/redis/connection"
 
 export const IDENTITY_RUNTIME = Symbol("IDENTITY_RUNTIME")
 
 export type IdentityRuntime = {
   auth: () => Auth
   attempts: AttemptLimiter
-  replay: TotpReplayGuard
   verifyPassword: (plain: string, hash: string) => Promise<boolean | null>
   hashPassword: (plain: string) => Promise<string>
   dummyHash: () => Promise<string>
@@ -44,7 +40,6 @@ export function defaultIdentityRuntime(prisma: PrismaService): IdentityRuntime {
   return {
     auth: sharedAuth,
     attempts: lazyAttemptLimiter(),
-    replay: redisReplayGuard(sharedRedis),
     verifyPassword: bcryptVerify,
     hashPassword,
     dummyHash: () => (dummy ??= bcryptHash(sessionRandom(40), bcryptCost())),
