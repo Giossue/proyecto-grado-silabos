@@ -185,7 +185,7 @@ export default function TeacherSyllabusDetailPage() {
           ? `Faltan ${emptyParts} campos por completar`
           : ""
   const copySources = canEdit && (syllabus?.state === "borrador" || syllabus?.state === "sin_iniciar") ? (syllabus.copy_sources ?? []) : []
-  const visibleSections = (syllabus?.sections ?? []).filter((section) => section.fields.some(isTeacherField))
+  const visibleSections = (syllabus?.sections ?? []).filter((section) => section.fields.length > 0)
   const activeSectionId = visibleSections.find((section) => section.id === chosenSectionId)?.id ?? visibleSections[0]?.id ?? ""
   const previewSections = useMemo(() => {
     const sections = (syllabus?.sections ?? []).map((section) => ({ ...section, fields: section.fields.filter(drawnInDocument) }))
@@ -394,7 +394,7 @@ export default function TeacherSyllabusDetailPage() {
     if (fieldId) {
       flushSync(() => setCollapsedFields((current) => (current.has(fieldId) ? new Set([...current].filter((id) => id !== fieldId)) : current)))
     }
-    const sections = (syllabusRef.current?.sections ?? []).filter((section) => section.fields.some(isTeacherField))
+    const sections = syllabusRef.current?.sections ?? []
     const owner = fieldId ? sections.find((section) => section.fields.some((field) => field.id === fieldId)) : null
     if (owner && canEditNow()) flushSync(() => setChosenSectionId(owner.id))
     const target = fieldId ? document.getElementById(`field-${fieldId}`) : null

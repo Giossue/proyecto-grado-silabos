@@ -527,6 +527,12 @@ describe("TeacherSyllabusDetailPage", () => {
     expect(page.container.textContent).not.toContain("Resultados de validación")
     expect(page.container.textContent).toContain("está vacío")
     expect([...page.container.querySelectorAll("button")].some((button) => button.textContent === "Validar sílabo")).toBe(false)
+
+    const reviewTab = [...page.container.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent === "Revisión y aprobación")!
+    await act(async () => {
+      fireEvent.mouseDown(reviewTab, { button: 0 })
+    })
+    expect(page.container.querySelector('[data-locked-field="review-field"]')!.textContent).toContain("Firma del coordinador")
     page.unmount()
   })
 
