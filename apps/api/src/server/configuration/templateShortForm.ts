@@ -2,7 +2,7 @@ import { canonicalJson } from "../documents/canonicalJson"
 import { BLOCK_KEYS, CATALOG_FIELDS, defineBlock, given, isInt, MULTIPLES } from "./blockDefinition"
 import { documentLines } from "./documentHtml"
 import { legacyUnitsBlock } from "./legacyUnits"
-import officialJson from "./officialTemplate.json"
+import ruleCatalog from "./ruleCatalog.json"
 import { isList, isPhpArray, isRecord, list, phpCount, phpString, record, type PhpRecord } from "./phpValues"
 import { TemplateValidationError } from "./templateRuntime"
 import { definitionError } from "./templateStyle"
@@ -65,11 +65,7 @@ const NAMES: Record<string, string> = {
 type RouteKind = "plain" | "full" | "leaf" | "list" | "object"
 type Route = [internal: string, short: string, kind: RouteKind]
 
-export const RULE_CATALOG: Record<string, PhpRecord> = Object.fromEntries(
-  Object.values(officialJson.blocks as Record<string, unknown>)
-    .flatMap((block) => list(given(block, "rules") ?? []))
-    .map((rule) => [phpString(given(rule, "code")), record(rule)]),
-)
+export const RULE_CATALOG: Record<string, PhpRecord> = Object.fromEntries((ruleCatalog as unknown[]).map((rule) => [phpString(given(rule, "code")), record(rule)]))
 
 function has(value: unknown, key: string): boolean {
   return given(value, key) !== null

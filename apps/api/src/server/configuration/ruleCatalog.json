@@ -1,0 +1,110 @@
+[
+    {
+        "code": "semanas_maximas",
+        "on": "save",
+        "message": "Las unidades suman más semanas que el período.",
+        "checks": [
+            {
+                "count": "unidades.*.semanas",
+                "max": {
+                    "variable": "semanas_periodo"
+                }
+            }
+        ]
+    },
+    {
+        "code": "unidades_sin_nombre",
+        "on": "submit",
+        "message": "Escriba el nombre y el resultado de aprendizaje de cada unidad: {detail}.",
+        "hint": "Cada unidad necesita su nombre y su resultado de aprendizaje para poder enviar",
+        "checks": [
+            {
+                "label": "Nombres",
+                "filled": "unidades.*.nombre",
+                "equals": {
+                    "count": "unidades"
+                }
+            },
+            {
+                "label": "Resultados",
+                "filled": "unidades.*.resultado",
+                "equals": {
+                    "count": "unidades"
+                }
+            }
+        ]
+    },
+    {
+        "code": "unidades_sin_semanas",
+        "on": "submit",
+        "message": "Cada unidad necesita al menos una semana: {detail}.",
+        "hint": "Cada unidad necesita al menos una semana para poder enviar",
+        "checks": [
+            {
+                "label": "Unidades con semanas",
+                "filled": "unidades.*.semanas",
+                "equals": {
+                    "count": "unidades"
+                }
+            }
+        ]
+    },
+    {
+        "code": "semanas_unidades_incompletas",
+        "on": "submit",
+        "message": "Las unidades deben repartir las {expected} semanas del período: tienen {actual}.",
+        "checks": [
+            {
+                "label": "Semanas",
+                "count": "unidades.*.semanas",
+                "equals": {
+                    "variable": "semanas_periodo"
+                }
+            }
+        ]
+    },
+    {
+        "code": "horas_unidades_no_coinciden",
+        "on": "submit",
+        "message": "Las horas de las unidades deben sumar las de la asignatura: {detail}.",
+        "hint": "Las horas deben coincidir con las de la asignatura para poder enviar",
+        "checks": [
+            {
+                "label": "ACD",
+                "sum": "unidades.*.semanas.*.acd_h",
+                "equals": {
+                    "variable": "horas_docencia"
+                }
+            },
+            {
+                "label": "APE",
+                "sum": "unidades.*.semanas.*.ape_h",
+                "equals": {
+                    "variable": "horas_practicas"
+                }
+            },
+            {
+                "label": "AA",
+                "sum": "unidades.*.semanas.*.aa_h",
+                "equals": {
+                    "variable": "horas_autonomas"
+                }
+            }
+        ]
+    },
+    {
+        "code": "libros_sin_titulo",
+        "on": "submit",
+        "message": "Escriba el título de cada libro: {detail}.",
+        "hint": "Cada libro necesita su título para poder enviar",
+        "checks": [
+            {
+                "label": "Títulos",
+                "filled": "libros.*.titulo",
+                "equals": {
+                    "count": "libros"
+                }
+            }
+        ]
+    }
+]

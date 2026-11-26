@@ -96,7 +96,7 @@ beforeEach(() => {
 describe("official template", () => {
   it("reads the twelve official sections with their contents as documents", () => {
     const sections = officialSections()
-    expect(sections.map((section) => section.key)).toEqual(officialJson.sections.map((section) => section.key))
+    expect(sections.map((section) => section.key)).toEqual(officialJson.secciones.map((section) => section.clave))
     expect(sections.every((section) => section.fields.every((field) => typeof field.content === "object" && !Array.isArray(field.content)))).toBe(true)
     expect(Object.keys(officialDefinition())).toEqual(["response_policy", "document", "variables", "blocks", "required_sections", "library_sections", "presets", "teacher_fields"])
   })
@@ -117,8 +117,8 @@ describe("POST /api/v1/admin/template", () => {
     expect((await read(await createTemplate(send("POST", "/api/v1/admin/template", { official: true }), deps()))).text).toBe(
       '{"message":"Plantilla creada con el formato oficial.","template_id":"01a2bbbb-0000-7000-8000-000000000001"}',
     )
-    expect(documents.at(-1)?.map((section) => section.key)).toEqual(officialJson.sections.map((section) => section.key))
-    expect(fields).toHaveLength(officialJson.sections.reduce((sum, section) => sum + section.fields.length, 0))
+    expect(documents.at(-1)?.map((section) => section.key)).toEqual(officialJson.secciones.map((section) => section.clave))
+    expect(fields).toHaveLength(officialJson.secciones.reduce((sum, section) => sum + section.campos.length, 0))
   })
 
   it("refuses a second template, an open process and other roles", async () => {
