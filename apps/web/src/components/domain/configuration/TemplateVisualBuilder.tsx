@@ -17,6 +17,7 @@ import { TemplateImpactDialog } from "@/components/domain/configuration/Template
 import { TemplateInlineText } from "@/components/domain/configuration/TemplateInlineText"
 import { TemplateInsertPoint } from "@/components/domain/configuration/TemplateInsertPoint"
 import { TemplateJsonDialog } from "@/components/domain/configuration/TemplateJsonDialog"
+import { useAfterMenuClose } from "@/components/domain/configuration/useAfterMenuClose"
 import { TemplateResponseTool } from "@/components/domain/configuration/TemplateResponseTool"
 import { TemplateRibbonDivider, TemplateRibbonGroup } from "@/components/domain/configuration/TemplateRibbonGroup"
 import { TemplatePresetTool, TemplateResponsibleMenu, TemplateSelectionTools, type TemplateSectionTarget, type TemplateSelection } from "@/components/domain/configuration/TemplateSelectionTools"
@@ -170,6 +171,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const [dropMark, setDropMark] = useState<DropMark | null>(null)
   const [seenTemplate, setSeenTemplate] = useState(template)
   const removalShown = useShownWhileClosing(removal)
+  const moreMenu = useAfterMenuClose()
 
   const root = useRef<HTMLDivElement | null>(null)
   const sheetArea = useRef<HTMLDivElement | null>(null)
@@ -613,7 +615,9 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     const field = selectedTemplateField
     if (created && field) {
       const node: DocumentNode = { type: "documentBlock", attrs: { kind: table.kind, props: {}, value: table.initial } }
-      patchSelectedField({ content: { ...field.content, content: isBlank(field.content) ? [node] : [...(field.content.content ?? []), node] } })
+      const content: DocumentNode = { ...field.content, content: isBlank(field.content) ? [node] : [...(field.content.content ?? []), node] }
+      if (activeEditor && !activeEditor.isDestroyed && activeEditor.view.dom.closest("[data-field-editor]")?.getAttribute("data-field-editor") === field.id) activeEditor.commands.setContent(content, { emitUpdate: false })
+      patchSelectedField({ content })
     } else {
       updateDraft((current) => current.map((section) => ({ ...section, fields: section.fields.map((item) => ({ ...item, content: withTableValues(item.content, table.kind, table) })) })))
     }
@@ -902,14 +906,14 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                 <span className="sr-only" aria-live="polite">{changed ? "Sin guardar" : null}</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="ghost" size="sm" disabled={busy || locked} data-more-menu>
+                    <Button type="button" variant="ghost" size="sm" disabled={busy || locked} data-more-menu data-tour="template-more">
                       <Ellipsis data-icon="inline-start" aria-hidden="true" />
                       Más
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" onCloseAutoFocus={moreMenu.onCloseAutoFocus}>
                     <DropdownMenuGroup>
-                      <DropdownMenuItem disabled={locked} onSelect={() => setJsonOpen(true)}>
+                      <DropdownMenuItem disabled={locked} onSelect={moreMenu.afterClose(() => setJsonOpen(true))}>
                         <Braces aria-hidden="true" />
                         Editar JSON
                       </DropdownMenuItem>
@@ -1170,10 +1174,10 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                     })}
                   </ol>
                   {fields.length === 0 && !readOnly ? (
-                    <p className={cn("relative rounded-sm py-1 text-sm text-muted-foreground", fieldMarked(section.id, 0) && "outline outline-2 outline-dashed outline-primary")}>
+                    <div className={cn("relative rounded-sm py-1 text-sm text-muted-foreground", fieldMarked(section.id, 0) && "outline outline-2 outline-dashed outline-primary")} data-empty-section>
                       Sección sin campos.
                       {!locked ? <TemplateInsertPoint disabled={busy} actions={[{ key: "field", label: "Agregar campo" }]} position="inline" gap="field" onInsert={() => addField(section.id)} /> : null}
-                    </p>
+                    </div>
                   ) : null}
                 </section>
               ))}
@@ -1230,7 +1234,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
         takenKinds={takenKinds}
         onApplied={applyTable}
       />
-      <TemplateJsonDialog open={jsonOpen} onOpenChange={setJsonOpen} templateId={template.id} locked={locked} onImported={reloadAfterJson} />
+      <TemplateJsonDialog open={jsonOpen} onOpenChange={setJsonOpen} templateId={template.id} locked={locked} unsaved={changed} onImported={reloadAfterJson} />
 
 
       <Dialog open={removal !== null} onOpenChange={(value) => { if (!value) setRemoval(null) }}>

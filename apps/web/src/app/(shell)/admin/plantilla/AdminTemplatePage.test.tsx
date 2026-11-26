@@ -117,7 +117,7 @@ describe("AdminTemplatePage", () => {
   })
 
   it("pasa al editor qué tablas repetibles se pueden abrir en el diseñador", async () => {
-    const blockDesigns = { unidades: { design: null, reason: "Tiene listas o grupos dentro de cada fila. Para cambiarla use Opciones avanzadas → Editar JSON." } }
+    const blockDesigns = { unidades: { design: null, reason: "Tiene listas o grupos dentro de cada fila. Para cambiarla use Más → Editar JSON." } }
     vi.mocked(getTemplate).mockResolvedValue({ ...payload, blockDesigns })
     await mountPage()
 

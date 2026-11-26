@@ -17,6 +17,12 @@ describe('screenTours', () => {
     expect(steps.at(-1)?.selector).toBe('[data-tour="syllabus-submit"]');
   });
 
+  it('la guía de la plantilla señala el menú «Más» del editor, no «Opciones avanzadas»', () => {
+    const steps = screenTours['/admin/plantilla'] ?? [];
+    expect(steps.map((item) => item.selector)).not.toContain('[aria-label="Opciones avanzadas"]');
+    expect(steps.find((item) => item.selector === '[data-tour="template-more"]')).toMatchObject({ title: 'Más', description: 'Editar JSON: descargue la plantilla o reemplácela con un archivo' });
+  });
+
   it('«Mis sílabos» resalta la lista de tarjetas, no una tabla que no existe', () => {
     const selectors = (screenTours['/docente/mis-silabos'] ?? []).map((item) => item.selector);
     expect(selectors).toContain('ul[aria-label="Mis sílabos"]');

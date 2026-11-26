@@ -148,9 +148,41 @@ describe("TemplateVisualBuilder: cinta con pestañas, panel lateral y menú «M�
     expect([...actions.querySelectorAll("button")].map((button) => button.textContent!.trim())).toEqual(["Más", "Vista previa", "Guardar"])
     expect(byText("button", "Editar JSON")).toBeUndefined()
     expect(byLabel("Opciones avanzadas")).toBeNull()
+    expect(byText("button", "Más")!.getAttribute("data-tour")).toBe("template-more")
 
     await press(byText("button", "Más"))
     expect(menuItems().map((item) => item.textContent!.trim())).toEqual(["Editar JSON"])
+  })
+
+  it("la sección vacía no pone el punto para agregar un campo dentro de un párrafo", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    await mountBuilder({ template, presets })
+
+    const empty = body().querySelector<HTMLElement>("[data-empty-section]")!
+    expect(empty.textContent).toContain("Sección sin campos.")
+    expect(empty.tagName).not.toBe("P")
+    expect(body().querySelector("p [data-insert-point]")).toBeNull()
+    expect(errors.mock.calls.map((call) => String(call[0])).filter((message) => message.includes("descendant of <p>"))).toEqual([])
+  })
+
+  it("al abrir «Editar JSON» desde «Más» el foco queda en el diálogo y no en un elemento oculto", async () => {
+    vi.mocked(templateApi.getTemplateJson).mockResolvedValue({ version: 1, sections: [] })
+    await mountBuilder({ template, presets })
+    const blocked: string[] = []
+    const setAttribute = Element.prototype.setAttribute
+    vi.spyOn(Element.prototype, "setAttribute").mockImplementation(function (this: Element, name: string, value: string) {
+      if (name === "aria-hidden" && value === "true" && document.activeElement && this.contains(document.activeElement)) blocked.push(document.activeElement.textContent?.trim() ?? "")
+      setAttribute.call(this, name, value)
+    })
+
+    await press(byText("button", "Más"))
+    await chooseMenuItem("Editar JSON")
+
+    expect(blocked).toEqual([])
+    const focused = document.activeElement!
+    expect(focused.closest('[role="dialog"]')).not.toBeNull()
+    expect(focused.closest('[aria-hidden="true"]')).toBeNull()
+    expect(byText("button", "Más")!.closest('[aria-hidden="true"]')).not.toBeNull()
   })
 
   it("«Contenido predefinido» de Insertar aplica el contenido como antes", async () => {

@@ -5,7 +5,7 @@ import { definitionError } from "./templateStyle"
 
 export { COLUMN_TYPES } from "@silabos/shared/schemas/template"
 const LEGACY_HEADER_STYLE = "background:#C3D4EA;font-weight:bold"
-const JSON_POINTER = "Para cambiarla use Opciones avanzadas → Editar JSON."
+const JSON_POINTER = "Para cambiarla use Más → Editar JSON."
 const KEY = /^[a-z][a-z0-9_]{0,40}$/
 const UNSUPPORTED_PIECES = "El diseño usa piezas que este editor no maneja (celdas combinadas, totales, contadores, condiciones o filas extra). "
 

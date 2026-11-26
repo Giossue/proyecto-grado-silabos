@@ -12,7 +12,7 @@ const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
-const POINTER = "Para cambiarla use Opciones avanzadas → Editar JSON."
+const POINTER = "Para cambiarla use Más → Editar JSON."
 
 let world: FakeWorld
 let templates: FakeTemplateWorld

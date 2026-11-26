@@ -4,7 +4,7 @@ exports[`version-1 drafts without document styles > builds the same definition a
 
 exports[`version-1 drafts without document styles > builds the same definition as before for the «block_changes_list» draft 1`] = `"error: {"definition":["blocks.0: el nombre del bloque usa minúsculas, números y _."]}"`;
 
-exports[`version-1 drafts without document styles > builds the same definition as before for the «block_changes_locked» draft 1`] = `"error: {"definition":["La tabla «Identificación institucional» no se puede cambiar desde el editor. Para cambiarla use Opciones avanzadas → Editar JSON."]}"`;
+exports[`version-1 drafts without document styles > builds the same definition as before for the «block_changes_locked» draft 1`] = `"error: {"definition":["La tabla «Identificación institucional» no se puede cambiar desde el editor. Para cambiarla use Más → Editar JSON."]}"`;
 
 exports[`version-1 drafts without document styles > builds the same definition as before for the «block_changes» draft 1`] = `"6022fa910d1dd46610f9ae926dc676591730175f0329fa96d21c5ca9677cabd9"`;
 

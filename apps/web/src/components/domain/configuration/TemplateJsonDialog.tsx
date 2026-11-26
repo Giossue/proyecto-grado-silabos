@@ -1,13 +1,15 @@
 "use client"
 
-import { Download, FileUp, Save } from "lucide-react"
+import { Download, FileUp, Save, TriangleAlert } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState, type ChangeEvent } from "react"
 import { ApiError } from "@/api/client"
 import { importTemplateJson } from "@/api/template"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Spinner } from "@/components/ui/spinner"
@@ -19,25 +21,28 @@ import { templateJsonQuery } from "@/queries/template"
 type TemplateJsonDialogProps = {
   templateId: string
   locked: boolean
+  unsaved?: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
   onImported?: () => void
 }
 
-export function TemplateJsonDialog({ templateId, locked, open, onOpenChange, onImported }: TemplateJsonDialogProps) {
+export function TemplateJsonDialog({ templateId, locked, unsaved = false, open, onOpenChange, onImported }: TemplateJsonDialogProps) {
   const [text, setText] = useState("")
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [problems, setProblems] = useState<string[]>([])
   const [failure, setFailure] = useState<string | null>(null)
+  const [discarding, setDiscarding] = useState(false)
   const queryClient = useQueryClient()
   const fileInput = useRef<HTMLInputElement | null>(null)
-  const canApply = !locked && !loading && !saving && text.trim() !== ""
+  const canApply = !locked && !loading && !saving && text.trim() !== "" && (!unsaved || discarding)
 
   useOpened(open, () => {
     setLoading(true)
     setFailure(null)
     setProblems([])
+    setDiscarding(false)
   }, true)
 
   useEffect(() => {
@@ -60,6 +65,7 @@ export function TemplateJsonDialog({ templateId, locked, open, onOpenChange, onI
   }, [open, queryClient, templateId])
 
   const apply = async (): Promise<void> => {
+    if (!canApply) return
     setFailure(null)
     setProblems([])
     let parsed: unknown
@@ -102,8 +108,20 @@ export function TemplateJsonDialog({ templateId, locked, open, onOpenChange, onI
       <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Plantilla como JSON</DialogTitle>
-          <DialogDescription>Descargue la plantilla o cargue una desde un archivo</DialogDescription>
+          <DialogDescription>Muestra la plantilla guardada. Descárguela o cargue una desde un archivo</DialogDescription>
         </DialogHeader>
+        {unsaved && !locked ? (
+          <Alert data-unsaved-warning>
+            <TriangleAlert aria-hidden="true" />
+            <AlertDescription className="flex flex-col gap-2">
+              <span>Tiene cambios sin guardar en el editor: al aplicar el JSON se descartan.</span>
+              <Field orientation="horizontal">
+                <Checkbox id="template-json-discard" checked={discarding} disabled={saving} data-discard-unsaved onCheckedChange={(checked) => setDiscarding(checked === true)} />
+                <FieldLabel htmlFor="template-json-discard" className="font-normal">Descartar los cambios sin guardar del editor</FieldLabel>
+              </Field>
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" size="sm" disabled={loading || text.trim() === ""} onClick={() => downloadJson(text, "plantilla-silabo.json")}>
             <Download data-icon="inline-start" aria-hidden="true" />

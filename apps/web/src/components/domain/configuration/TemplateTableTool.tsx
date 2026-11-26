@@ -4,12 +4,14 @@ import { Sheet } from "lucide-react"
 import { MenuTooltip } from "@/components/domain/MenuTooltip"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useAfterMenuClose } from "@/components/domain/configuration/useAfterMenuClose"
 
 export type FieldTable = { kind: string; label: string; editable: boolean }
 
 type TemplateTableToolProps = { allowed: boolean; disabled?: boolean; text?: string; tables: FieldTable[]; onCreate: () => void; onEdit: (kind: string) => void }
 
 export function TemplateTableTool({ allowed, disabled = false, text, tables, onCreate, onEdit }: TemplateTableToolProps) {
+  const { afterClose, onCloseAutoFocus } = useAfterMenuClose()
   const tooltip = allowed ? "Tabla repetible" : "Tabla repetible: no va en campos Institucionales"
 
   return (
@@ -21,9 +23,9 @@ export function TemplateTableTool({ allowed, disabled = false, text, tables, onC
             {text}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
+        <DropdownMenuContent align="start" onCloseAutoFocus={onCloseAutoFocus}>
           <DropdownMenuGroup>
-            <DropdownMenuItem data-table-create onSelect={onCreate}>Nueva tabla repetible</DropdownMenuItem>
+            <DropdownMenuItem data-table-create onSelect={afterClose(onCreate)}>Nueva tabla repetible</DropdownMenuItem>
           </DropdownMenuGroup>
           {tables.length ? (
             <>
@@ -31,7 +33,7 @@ export function TemplateTableTool({ allowed, disabled = false, text, tables, onC
               <DropdownMenuLabel>En este campo</DropdownMenuLabel>
               <DropdownMenuGroup>
                 {tables.map((table) => (
-                  <DropdownMenuItem key={table.kind} data-table-edit={table.kind} onSelect={() => onEdit(table.kind)}>
+                  <DropdownMenuItem key={table.kind} data-table-edit={table.kind} onSelect={afterClose(() => onEdit(table.kind))}>
                     {table.editable ? `Editar «${table.label}»` : `Ver «${table.label}»`}
                   </DropdownMenuItem>
                 ))}

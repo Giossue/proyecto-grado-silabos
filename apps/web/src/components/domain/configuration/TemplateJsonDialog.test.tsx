@@ -12,10 +12,10 @@ vi.mock("@/api/template", async (importOriginal) => ({
 }))
 
 const sample = { version: 1, sections: [{ key: "uno", title: "Uno", fields: [] }] }
-const mountDialog = async (locked = false) => {
+const mountDialog = async (locked = false, unsaved = false) => {
   const onOpenChange = vi.fn()
   const onImported = vi.fn()
-  renderWithProviders(<TemplateJsonDialog templateId="t1" locked={locked} open onOpenChange={onOpenChange} onImported={onImported} />)
+  renderWithProviders(<TemplateJsonDialog templateId="t1" locked={locked} unsaved={unsaved} open onOpenChange={onOpenChange} onImported={onImported} />)
   await flush()
   return { onOpenChange, onImported }
 }
@@ -24,6 +24,7 @@ const setText = async (value: string) => {
   fireEvent.change(area(), { target: { value } })
   await flush()
 }
+const discard = () => document.body.querySelector<HTMLElement>("[data-discard-unsaved]")
 const apply = () => [...document.body.querySelectorAll("button")].find((button) => button.textContent?.includes("Aplicar y reemplazar"))!
 
 describe("TemplateJsonDialog", () => {
@@ -68,6 +69,32 @@ describe("TemplateJsonDialog", () => {
     expect(document.body.textContent).toContain("sections.2.orientation: No válida")
     expect(document.body.textContent).toContain("no se cambió nada")
     expect(onImported).not.toHaveBeenCalled()
+  })
+
+  it("dice que muestra la plantilla guardada y, sin cambios en el editor, no pide confirmar", async () => {
+    await mountDialog()
+    expect(document.body.textContent).toContain("Muestra la plantilla guardada")
+    expect(document.body.textContent).not.toContain("Tiene cambios sin guardar en el editor")
+    expect(discard()).toBeNull()
+    expect(apply().disabled).toBe(false)
+  })
+
+  it("con cambios sin guardar en el editor avisa que se descartan y no aplica hasta confirmarlo", async () => {
+    const { onImported } = await mountDialog(false, true)
+    expect(document.body.textContent).toContain("Tiene cambios sin guardar en el editor: al aplicar el JSON se descartan.")
+    expect(apply().disabled).toBe(true)
+    fireEvent.click(apply())
+    await flush()
+    expect(templateApi.importTemplateJson).not.toHaveBeenCalled()
+
+    fireEvent.click(discard()!)
+    await flush()
+    expect(discard()!.getAttribute("aria-checked")).toBe("true")
+    expect(apply().disabled).toBe(false)
+    fireEvent.click(apply())
+    await flush()
+    expect(templateApi.importTemplateJson).toHaveBeenCalledWith("t1", sample)
+    expect(onImported).toHaveBeenCalledTimes(1)
   })
 
   it("bloquea la edición con un proceso abierto", async () => {

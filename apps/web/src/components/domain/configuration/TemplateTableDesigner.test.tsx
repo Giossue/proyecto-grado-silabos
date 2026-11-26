@@ -102,9 +102,9 @@ describe("TemplateTableDesigner: tabla repetible sin JSON", () => {
   })
 
   it("una tabla que no puede representar se abre solo para ver, con el motivo", async () => {
-    await mountDesigner({ design: null, name: "Unidades", reason: "Tiene listas o grupos dentro de cada fila. Para cambiarla use Opciones avanzadas → Editar JSON." })
+    await mountDesigner({ design: null, name: "Unidades", reason: "Tiene listas o grupos dentro de cada fila. Para cambiarla use Más → Editar JSON." })
 
-    expect(dialog()!.querySelector("[data-table-designer-readonly]")!.textContent).toContain("Tiene listas o grupos dentro de cada fila. Para cambiarla use Opciones avanzadas → Editar JSON.")
+    expect(dialog()!.querySelector("[data-table-designer-readonly]")!.textContent).toContain("Tiene listas o grupos dentro de cada fila. Para cambiarla use Más → Editar JSON.")
     expect(dialog()!.querySelector("form")).toBeNull()
     expect(dialog()!.querySelector("[data-table-apply]")).toBeNull()
     expect(dialog()!.textContent).toContain("Tabla repetible: Unidades")
@@ -178,6 +178,40 @@ describe("TemplateVisualBuilder: tabla repetible desde la cinta", () => {
     const sent = vi.mocked(templateApi.importTemplateJson).mock.calls[0]![1] as templateApi.TemplateDraftPayload
     expect(sent.block_changes).toEqual({ tabla_practicas: table.definition })
     expect(sent.sections[0]!.fields[0]!.content).toEqual({ type: "doc", content: [{ type: "documentBlock", attrs: { kind: "tabla_practicas", props: {}, value: table.initial } }] })
+  })
+
+  it("crear una tabla repetible no llama a flushSync dentro de un efecto", async () => {
+    await mountEditing()
+    await selectField("f1")
+    vi.mocked(templateApi.designRepeatableTable).mockResolvedValue(designed("tabla_practicas", { ...books, kind: "tabla_practicas", label: "Prácticas", list: "filas" }))
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined)
+
+    await press(byLabel("Tabla repetible"))
+    await chooseMenuItem("Nueva tabla repetible")
+    await input("[data-table-label]", "Prácticas")
+    await click(dialog()!.querySelector("[data-table-apply]"))
+
+    expect(errors.mock.calls.map((call) => String(call[0])).filter((message) => message.includes("flushSync"))).toEqual([])
+    expect(document.body.querySelector('[data-field-editor="f1"] [data-block-kind="tabla_practicas"], [data-field-editor="f1"] .react-renderer')).not.toBeNull()
+    errors.mockRestore()
+  })
+
+  it("al abrir el diseñador desde el menú, ningún elemento con el foco queda oculto", async () => {
+    await mountEditing()
+    await selectField("f2")
+    const blocked: string[] = []
+    const setAttribute = Element.prototype.setAttribute
+    vi.spyOn(Element.prototype, "setAttribute").mockImplementation(function (this: Element, name: string, value: string) {
+      if (name === "aria-hidden" && value === "true" && document.activeElement && this.contains(document.activeElement)) blocked.push(document.activeElement.textContent?.trim() ?? "")
+      setAttribute.call(this, name, value)
+    })
+
+    await press(byLabel("Tabla repetible"))
+    await chooseMenuItem("Editar «Bibliografía»")
+
+    expect(blocked).toEqual([])
+    expect(dialog()!.contains(document.activeElement)).toBe(true)
+    vi.mocked(Element.prototype.setAttribute).mockRestore()
   })
 
   it("la cinta ofrece editar las tablas del campo y guardar sin tocarlas no manda cambios de bloque", async () => {
