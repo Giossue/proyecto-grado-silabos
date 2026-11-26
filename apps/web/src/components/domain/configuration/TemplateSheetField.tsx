@@ -1,9 +1,9 @@
 "use client"
 
 import type { Editor } from "@tiptap/core"
-import { useEffect, useRef, useState } from "react"
+import { memo, useRef, useState } from "react"
 import type { TemplateField } from "@/api/template"
-import { TemplateInlineText, type TemplateInlineTextHandle } from "@/components/domain/configuration/TemplateInlineText"
+import { TemplateInlineText } from "@/components/domain/configuration/TemplateInlineText"
 import { FreeTextEditor, type FreeTextEditorHandle } from "@/components/domain/syllabus/FreeTextEditor"
 import type { DocumentNode, TemplateVariable } from "@silabos/shared/lib/templateDocument"
 
@@ -13,18 +13,15 @@ type TemplateSheetFieldProps = {
   block?: boolean
   locked: boolean
   focusOnCreate?: boolean
-  naming?: boolean
   variables?: TemplateVariable[]
-  onSelect?: (editor: Editor | null) => void
-  onNamed?: () => void
+  onSelect?: (editor: Editor | null, fieldId: string) => void
 }
 
-export function TemplateSheetField({ field, onFieldChange, block = false, locked, focusOnCreate = false, naming = false, variables, onSelect, onNamed }: TemplateSheetFieldProps) {
+export const TemplateSheetField = memo(function TemplateSheetField({ field, onFieldChange, block = false, locked, focusOnCreate = false, variables, onSelect }: TemplateSheetFieldProps) {
   const editorHandle = useRef<FreeTextEditorHandle | null>(null)
   const focused = useRef(false)
-  const labelInput = useRef<TemplateInlineTextHandle | null>(null)
   const [labelFocused, setLabelFocused] = useState(false)
-  const showsLabel = field.label.trim() !== "" || naming || labelFocused
+  const showsLabel = field.label.trim() !== "" || labelFocused
   const name = field.label.trim() || "Campo sin nombre"
 
   const patch = (changes: Partial<TemplateField>): void => onFieldChange({ ...field, ...changes })
@@ -34,22 +31,13 @@ export function TemplateSheetField({ field, onFieldChange, block = false, locked
     focused.current = true
     handle.editor.commands.focus("end")
   }
-  const select = (): void => onSelect?.(editorHandle.current?.editor ?? null)
-  const leaveLabel = (): void => {
-    setLabelFocused(false)
-    onNamed?.()
-  }
-
-  useEffect(() => {
-    if (naming) labelInput.current?.focus()
-  }, [naming])
+  const select = (): void => onSelect?.(editorHandle.current?.editor ?? null, field.id)
 
   return (
     <div data-field-editor={field.id} className="flex min-w-0 flex-col gap-1" onFocus={select} onPointerDown={select}>
       {showsLabel ? (
         <div data-field-label className="flex min-w-0 font-bold">
           <TemplateInlineText
-            ref={labelInput}
             value={field.label}
             maxLength={180}
             placeholder="Nombre del campo"
@@ -57,7 +45,7 @@ export function TemplateSheetField({ field, onFieldChange, block = false, locked
             disabled={locked || block}
             onValueChange={(label) => patch({ label })}
             onFocus={() => setLabelFocused(true)}
-            onBlur={leaveLabel}
+            onBlur={() => setLabelFocused(false)}
           />
         </div>
       ) : null}
@@ -78,4 +66,4 @@ export function TemplateSheetField({ field, onFieldChange, block = false, locked
       </div>
     </div>
   )
-}
+})

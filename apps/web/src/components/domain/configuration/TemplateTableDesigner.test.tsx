@@ -226,14 +226,14 @@ describe("TemplateVisualBuilder: tabla repetible desde la cinta", () => {
     expect(vi.mocked(templateApi.importTemplateJson).mock.calls[0]![1]).not.toHaveProperty("block_changes")
   })
 
-  it("al pulsar un campo con tabla, el panel lateral ofrece editarla y abre el diseñador", async () => {
+  it("al pulsar un campo con tabla, la pestaña Campo ofrece editarla y abre el diseñador, sin panel lateral", async () => {
     await mountEditing()
-    expect(document.body.querySelector("[data-template-panel]")).toBeNull()
     await selectField("f2")
 
-    const panel = document.body.querySelector<HTMLElement>("[data-template-panel]")!
-    expect(panel.getAttribute("aria-label")).toBe("Opciones del campo")
-    const edit = panel.querySelector<HTMLButtonElement>('[data-panel-table="bibliografia"]')!
+    expect(document.body.querySelector("[data-template-panel]")).toBeNull()
+    const campo = document.body.querySelector<HTMLElement>('[data-template-ribbon] [role="tabpanel"][data-state="active"]')!
+    expect(campo.querySelector('[data-ribbon-group="Tablas repetibles"]')).not.toBeNull()
+    const edit = campo.querySelector<HTMLButtonElement>('[data-field-table="bibliografia"]')!
     expect(edit.textContent?.trim()).toBe("Editar «Bibliografía»")
     await click(edit)
 

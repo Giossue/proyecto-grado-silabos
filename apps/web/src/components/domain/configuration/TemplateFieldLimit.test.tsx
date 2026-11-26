@@ -1,7 +1,7 @@
 import { fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { TemplatePayload } from "@/api/template"
-import { body, byLabel, chooseMenuItem, click, mountBuilder, press, selectField, settle } from "@/components/domain/configuration/templateBuilderTesting"
+import { body, chooseEditability, click, mountBuilder, selectField, settle } from "@/components/domain/configuration/templateBuilderTesting"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 
 vi.mock("@/api/template")
@@ -22,9 +22,8 @@ const type = async (value: string) => {
   fireEvent.change(body().querySelector<HTMLInputElement>("[data-field-limit-input]")!, { target: { value } })
   await settle()
 }
-const responsible = async (choice: string) => {
-  await press(byLabel("Si se puede editar el campo Descripción"))
-  await chooseMenuItem(choice)
+const responsible = async (choice: "Editable" | "No editable") => {
+  await chooseEditability(choice)
 }
 
 describe("Límite de caracteres en el editor de la plantilla", () => {
@@ -55,7 +54,7 @@ describe("Límite de caracteres en el editor de la plantilla", () => {
     const { payload } = await mountBuilder({ template: template(800) })
     expect(body().querySelector('[data-field-limit="f1"]')!.textContent).toBe("Hasta 800 caracteres")
     await selectField("f2")
-    expect(tool().disabled).toBe(true)
+    expect(body().querySelector("[data-field-limit-tool]")).toBeNull()
 
     await selectField("f1")
     await click(tool())

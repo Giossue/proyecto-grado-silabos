@@ -25,7 +25,18 @@ const openDesign = async (): Promise<void> => {
 }
 const panel = (): HTMLElement => ribbon().querySelector<HTMLElement>('[role="tabpanel"][data-state="active"]')!
 const sheet = (): HTMLElement => body().querySelector<HTMLElement>("[data-sheet]")!
-const control = <T extends HTMLElement = HTMLInputElement>(id: string): T => panel().querySelector<T>(`#template-style-${id}`)!
+const MENUS: Array<[RegExp, string]> = [[/^(paper|orientation)$/, "Página"], [/^font_family$/, "Fuente"], [/^(line_height|paragraph_spacing_pt|body-alignment|empty_text)$/, "Párrafo"], [/^colors-/, "Colores"], [/^(title|section_title)-/, "Títulos"]]
+const openMenu = (label: string): void => {
+  const trigger = [...panel().querySelectorAll<HTMLButtonElement>("button[aria-haspopup='dialog']")].find((button) => button.textContent?.trim() === label)!
+  if (trigger.getAttribute("aria-expanded") === "true") return
+  fireEvent.keyDown(document.activeElement ?? body(), { key: "Escape" })
+  fireEvent.click(trigger)
+}
+const control = <T extends HTMLElement = HTMLInputElement>(id: string): T => {
+  const menu = MENUS.find(([pattern]) => pattern.test(id))
+  if (menu) openMenu(menu[1])
+  return panel().querySelector<T>(`#template-style-${id}`)!
+}
 const choose = async (id: string, label: string): Promise<void> => {
   await press(control(id))
   await press([...body().querySelectorAll('[role="option"]')].find((option) => option.textContent?.trim() === label))
@@ -69,7 +80,9 @@ describe("TemplateVisualBuilder: pestaña Diseño", () => {
     expect(control("empty_text").maxLength).toBe(120)
     expect(control("title-text").maxLength).toBe(180)
     for (const key of ["text", "title", "table_header_background", "table_header_text", "table_border", "empty_text"]) expect(control(`colors-${key}`).type).toBe("color")
+    openMenu("Página")
     expect(panel().querySelector("#template-layout-margin_cm")).not.toBeNull()
+    openMenu("Fuente")
     expect(panel().querySelector("#template-layout-title_font_size")).not.toBeNull()
   })
 
@@ -83,6 +96,7 @@ describe("TemplateVisualBuilder: pestaña Diseño", () => {
     await type("line_height", "1.5")
     await type("paragraph_spacing_pt", "12")
     await type("colors-title", "#aa0000")
+    openMenu("Títulos")
     await click(panel().querySelector('button[aria-label="Cursiva del título"]'))
     await click(panel().querySelector('button[aria-label="Negrita de los títulos de sección"]'))
     await choose("section_title-alignment", "Centrada")
@@ -117,6 +131,7 @@ describe("TemplateVisualBuilder: pestaña Diseño", () => {
 
     await choose("orientation", "Horizontal")
     await type("colors-text", "#112233")
+    openMenu("Colores")
     await click(panel().querySelector('button[aria-label="Sin color: Texto del encabezado"]'))
     await type("empty_text", "Sin información")
     await type("title-text", "SÍLABO NUEVO")

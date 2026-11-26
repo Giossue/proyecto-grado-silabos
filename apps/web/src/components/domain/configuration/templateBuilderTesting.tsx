@@ -41,6 +41,9 @@ export const selectSection = async (title: string): Promise<void> => {
   fireEvent.focusIn(body().querySelector(`[aria-label="Sección ${title}"]`)!)
   await settle()
 }
+export const chooseEditability = async (choice: "Editable" | "No editable"): Promise<void> => {
+  await click([...body().querySelectorAll<HTMLElement>("[data-field-editability] [data-editability]")].find((item) => item.textContent?.trim() === choice))
+}
 export const menuItems = (): HTMLElement[] => [...body().querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]')]
 export const chooseMenuItem = async (text: string): Promise<void> => {
   await click(menuItems().find((item) => item.textContent?.trim() === text))

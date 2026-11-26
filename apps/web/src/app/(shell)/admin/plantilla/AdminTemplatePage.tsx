@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Bot, FileText, Pencil, RotateCcw, UserPen, X } from "lucide-react"
+import { Bot, FileText, Pencil, RotateCcw, UserPen, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -8,7 +8,6 @@ import { ApiError } from "@/api/client"
 import type { SyllabusDetail, SyllabusField } from "@/api/syllabi"
 import { getTemplate, getTemplateTeacherPreview, previewTemplateDraft } from "@/api/template"
 import { applyTemplateAssistantProposal, discardTemplateAssistantProposal, getTemplateAssistantProposal } from "@/api/templateAssistant"
-import { AppearanceToggle } from "@/components/AppearanceToggle"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
@@ -162,28 +161,63 @@ export default function AdminTemplatePage() {
     <Button
       type="button"
       variant="outline"
-      className={editing ? "max-sm:size-9 max-sm:has-[>svg]:px-0" : undefined}
+      size={editing ? "sm" : "default"}
       data-draft-teacher-view={editing || undefined}
       onClick={() => void toggleTeacherView()}
     >
       <TeacherToggleIcon data-icon="inline-start" aria-hidden="true" />
-      <span className={editing ? "max-sm:sr-only" : undefined}>{!teacherView ? "Ver como docente" : editing ? "Volver a editar" : "Volver a la plantilla"}</span>
+      <span>{!teacherView ? "Ver como docente" : editing ? "Volver a editar" : "Volver a la plantilla"}</span>
     </Button>
   )
 
+  const banner =
+    payload?.templateChangedDuringPause || payload?.processLock ? (
+      <>
+        {payload?.templateChangedDuringPause ? (
+          <ProcessLockAlert
+            banner
+            icon={RotateCcw}
+            title="Plantilla modificada durante la pausa"
+            message="Al reanudar el proceso, los sílabos de este período se adaptan a la plantilla: se conserva lo escrito y los enviados o aprobados vuelven a borrador"
+            hideAction
+          />
+        ) : null}
+        {payload?.processLock ? <ProcessLockAlert banner lock={payload.processLockDetail} /> : null}
+      </>
+    ) : undefined
+
+  const teacherContent = teacherView ? (
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+      {teacherError ? (
+        <Alert variant="destructive">
+          <AlertDescription>{teacherError}</AlertDescription>
+        </Alert>
+      ) : !teacherSections ? (
+        <LoadingSkeleton variant="syllabus" />
+      ) : (
+        <>
+          <Alert>
+            <AlertDescription>
+              {editing
+                ? "Vista de prueba del borrador sin guardar: así verá el formulario el docente. Lo que escriba aquí no se guarda"
+                : "Vista de prueba: así verá el formulario el docente. Lo que escriba aquí no se guarda"}
+            </AlertDescription>
+          </Alert>
+          <SyllabusTeacherForm
+            sections={teacherSections}
+            active={teacherSection}
+            onActiveChange={setTeacherSection}
+            collapsed={teacherCollapsed}
+            onCollapsedChange={setTeacherCollapsed}
+            onValueChange={tryValue}
+          />
+        </>
+      )}
+    </div>
+  ) : null
+
   return (
     <>
-      {editing ? (
-        <header className="sticky top-0 z-30 flex min-h-14 items-center gap-3 border-b bg-background/95 px-3 backdrop-blur sm:px-5" aria-label="Herramientas de la plantilla">
-          <Button type="button" variant="link" size="sm" className="h-auto px-0" data-tour="template-back" onClick={() => builder.current?.leave()}>
-            <ArrowLeft aria-hidden="true" />
-            Volver a la vista
-          </Button>
-          <span className="flex-1" />
-          {teacherToggle}
-          <AppearanceToggle />
-        </header>
-      ) : null}
       {loading ? (
         <PageFrame title="Plantilla de sílabo" description="El formato del sílabo: secciones y campos" size="wide" headerWidth={SHEET_WIDTH} loading actionsSkeleton={["w-44", "w-22"]}>
           <LoadingSkeleton variant="template" />
@@ -198,22 +232,9 @@ export default function AdminTemplatePage() {
           description="El formato del sílabo: secciones y campos"
           size="wide"
           headerWidth={SHEET_WIDTH}
-          banner={
-            payload?.templateChangedDuringPause || payload?.processLock ? (
-              <>
-                {payload?.templateChangedDuringPause ? (
-                  <ProcessLockAlert
-                    banner
-                    icon={RotateCcw}
-                    title="Plantilla modificada durante la pausa"
-                    message="Al reanudar el proceso, los sílabos de este período se adaptan a la plantilla: se conserva lo escrito y los enviados o aprobados vuelven a borrador"
-                    hideAction
-                  />
-                ) : null}
-                {payload?.processLock ? <ProcessLockAlert banner lock={payload.processLockDetail} /> : null}
-              </>
-            ) : undefined
-          }
+          headerClass={editing ? "hidden" : undefined}
+          className={editing ? "max-w-none" : undefined}
+          banner={editing ? undefined : banner}
           actions={
             !editing ? (
               <>
@@ -236,36 +257,8 @@ export default function AdminTemplatePage() {
             ) : null}
           </div>
 
-          {teacherView ? (
-            <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-              {teacherError ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{teacherError}</AlertDescription>
-                </Alert>
-              ) : !teacherSections ? (
-                <LoadingSkeleton variant="syllabus" />
-              ) : (
-                <>
-                  <Alert>
-                    <AlertDescription>
-                      {editing
-                        ? "Vista de prueba del borrador sin guardar: así verá el formulario el docente. Lo que escriba aquí no se guarda"
-                        : "Vista de prueba: así verá el formulario el docente. Lo que escriba aquí no se guarda"}
-                    </AlertDescription>
-                  </Alert>
-                  <SyllabusTeacherForm
-                    sections={teacherSections}
-                    active={teacherSection}
-                    onActiveChange={setTeacherSection}
-                    collapsed={teacherCollapsed}
-                    onCollapsedChange={setTeacherCollapsed}
-                    onValueChange={tryValue}
-                  />
-                </>
-              )}
-            </div>
-          ) : null}
-          <div className="contents" style={teacherView ? { display: "none" } : undefined}>
+          {editing ? null : teacherContent}
+          <div className="contents" style={teacherView && !editing ? { display: "none" } : undefined}>
             <TemplateVisualBuilder
               ref={builder}
               template={template}
@@ -278,6 +271,9 @@ export default function AdminTemplatePage() {
               onDirty={setUnsaved}
               onEditing={changeEditing}
               onDraftVersionChange={setDraftVersion}
+              teacherAction={editing ? teacherToggle : undefined}
+              notice={editing ? banner : undefined}
+              replacement={editing ? teacherContent : undefined}
             />
           </div>
           {editing ? (

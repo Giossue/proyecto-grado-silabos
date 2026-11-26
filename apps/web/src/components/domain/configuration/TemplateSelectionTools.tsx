@@ -1,14 +1,15 @@
 "use client"
 
-import { useRef, type ReactNode } from "react"
-import { ArrowDown, ArrowUp, ChevronDown, Copy, FileStack, FolderInput, RectangleHorizontal, RectangleVertical, Trash2 } from "lucide-react"
+import type { ReactNode } from "react"
+import { ArrowDown, ArrowUp, Copy, FileStack, FolderInput, RectangleHorizontal, RectangleVertical, Trash2 } from "lucide-react"
 import type { TemplateField, TemplatePreset, TemplateSectionPayload } from "@/api/template"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { MenuTooltip } from "@/components/domain/MenuTooltip"
 import { TemplateRibbonDivider, TemplateRibbonGroup } from "@/components/domain/configuration/TemplateRibbonGroup"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { FIELD_EDITABILITY, editabilityLabel, type FieldResponsible } from "@/types/configuration"
+import { TemplateEditabilityToggle, TemplateFieldNameInput } from "@/components/domain/configuration/TemplateFieldControls"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import type { FieldResponsible } from "@/types/configuration"
 
 export type TemplateSelection =
   | { kind: "field"; field: TemplateField; canMoveUp: boolean; canMoveDown: boolean }
@@ -23,19 +24,12 @@ type TemplateSelectionToolsProps = {
   targets?: TemplateSectionTarget[]
   children?: ReactNode
   onResponsible: (value: FieldResponsible) => void
-  onName: () => void
+  onName: (label: string) => void
   onMove: (direction: -1 | 1) => void
   onRemove: () => void
   onOrientation: () => void
   onDuplicate: () => void
   onMoveTo: (sectionId: string) => void
-}
-
-type TemplateResponsibleMenuProps = {
-  field: TemplateField
-  locked: boolean
-  onResponsible: (value: FieldResponsible) => void
-  onName: () => void
 }
 
 type TemplatePresetToolProps = {
@@ -46,46 +40,6 @@ type TemplatePresetToolProps = {
 }
 
 const nameOf = (field: TemplateField): string => field.label.trim() || "Campo sin nombre"
-
-export function TemplateResponsibleMenu({ field, locked, onResponsible, onName }: TemplateResponsibleMenuProps) {
-  const naming = useRef(false)
-  const startNaming = (): void => {
-    naming.current = true
-  }
-  const nameAfterClosing = (event: Event): void => {
-    if (!naming.current) return
-    naming.current = false
-    event.preventDefault()
-    onName()
-  }
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm" disabled={locked} aria-label={`Si se puede editar el campo ${nameOf(field)}`} data-field-responsible>
-          {editabilityLabel(field.quien_llena)}
-          <ChevronDown data-icon="inline-end" aria-hidden="true" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" onCloseAutoFocus={nameAfterClosing}>
-        <DropdownMenuLabel>¿Se puede editar?</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={field.quien_llena} onValueChange={(value) => onResponsible(value as FieldResponsible)}>
-          {FIELD_EDITABILITY.map((item) => (
-            <DropdownMenuRadioItem key={item.value} value={item.value}>{item.label}</DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-        {!field.label.trim() ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onSelect={startNaming}>Ponerle nombre</DropdownMenuItem>
-            </DropdownMenuGroup>
-          </>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
 
 export function TemplatePresetTool({ presets, allowed, disabled = false, onPreset }: TemplatePresetToolProps) {
   if (!presets?.length) return null
@@ -118,8 +72,12 @@ export function TemplateSelectionTools({ selection, locked, busy, targets, child
     const fieldName = nameOf(selection.field)
     return (
       <div data-tour="template-selection" className="flex shrink-0 items-stretch" role="group" aria-label="Campo seleccionado">
+        <TemplateRibbonGroup label="Nombre">
+          <TemplateFieldNameInput field={selection.field} disabled={locked} className="w-44" onName={onName} />
+        </TemplateRibbonGroup>
+        <TemplateRibbonDivider />
         <TemplateRibbonGroup label="Quién lo llena">
-          <TemplateResponsibleMenu field={selection.field} locked={locked} onResponsible={onResponsible} onName={onName} />
+          <TemplateEditabilityToggle field={selection.field} disabled={locked} onResponsible={onResponsible} />
         </TemplateRibbonGroup>
         {children ? (
           <>

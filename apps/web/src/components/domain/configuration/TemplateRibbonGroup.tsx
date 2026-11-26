@@ -6,17 +6,20 @@ import { cn } from "@/lib/utils"
 
 type TemplateRibbonGroupProps = {
   label: string
+  caption?: boolean
   className?: string
   children: ReactNode
 }
 
-export function TemplateRibbonGroup({ label, className, children }: TemplateRibbonGroupProps) {
+export function TemplateRibbonGroup({ label, caption = true, className, children }: TemplateRibbonGroupProps) {
   return (
     <div role="group" aria-label={label} data-ribbon-group={label} className={cn("flex shrink-0 flex-col items-center justify-between gap-1 px-1", className)}>
       <div className="flex min-h-8 items-center gap-0.5">{children}</div>
-      <span className="text-xs leading-none text-muted-foreground" aria-hidden="true" data-ribbon-caption>
-        {label}
-      </span>
+      {caption ? (
+        <span className="text-xs leading-none text-muted-foreground" aria-hidden="true" data-ribbon-caption>
+          {label}
+        </span>
+      ) : null}
     </div>
   )
 }

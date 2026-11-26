@@ -2,7 +2,7 @@ import { fireEvent } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import * as templateApi from "@/api/template"
 import type { TemplatePayload } from "@/api/template"
-import { body, byLabel, byText, chooseMenuItem, click, menuItems, mountBuilder, press, selectField, selectSection, settle } from "@/components/domain/configuration/templateBuilderTesting"
+import { body, byLabel, byText, chooseEditability, chooseMenuItem, click, menuItems, mountBuilder, press, selectField, selectSection, settle } from "@/components/domain/configuration/templateBuilderTesting"
 import { emptyDocument, type FieldResponsible } from "@/types/configuration"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 
@@ -37,7 +37,7 @@ const captions = (element: HTMLElement): string[] => [...element.querySelectorAl
 const panel = (): HTMLElement | null => body().querySelector<HTMLElement>("[data-template-panel]")
 const saved = () => vi.mocked(templateApi.importTemplateJson).mock.calls[0]![1] as templateApi.TemplateDraftPayload
 
-describe("TemplateVisualBuilder: cinta con pestañas, panel lateral y menú «Más»", () => {
+describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más»", () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.useFakeTimers()
@@ -67,24 +67,32 @@ describe("TemplateVisualBuilder: cinta con pestañas, panel lateral y menú «M�
 
     await openTab("Diseño")
     expect(groups(activePanel())).toEqual(["Página", "Fuente"])
+    expect([...activePanel().querySelectorAll("button")].map((button) => button.textContent!.trim())).toEqual(["Página", "Fuente"])
+    expect(activePanel().querySelector("#template-layout-margin_cm")).toBeNull()
+    fireEvent.click(byText("button", "Página")!)
+    await settle()
     expect(activePanel().querySelector("#template-layout-margin_cm")).not.toBeNull()
-    expect(activePanel().querySelector("#template-layout-body_font_size")).not.toBeNull()
   })
 
-  it("la pestaña Campo solo aparece con un campo elegido y reúne quién lo llena, límite, condición y acciones", async () => {
+  it("la pestaña Campo se abre sola al elegir un campo y reúne nombre, quién lo llena, reglas y acciones", async () => {
     await mountBuilder({ template, presets })
     expect(tabs()).not.toContain("Campo")
-    expect(ribbon().textContent).toContain("Seleccione un campo")
+    expect(ribbon().querySelector("[data-contextual-slot]")!.textContent).toBe("Seleccione un campo")
 
     await selectField("f1")
     expect(tabs()).toEqual(["Inicio", "Insertar", "Diseño", "Campo"])
-    await openTab("Campo")
-    expect(groups(activePanel())).toEqual(["Quién lo llena", "Reglas", "Organizar"])
+    expect(tab("Campo")!.getAttribute("aria-selected")).toBe("true")
+    expect(groups(activePanel())).toEqual(["Nombre", "Quién lo llena", "Reglas", "Organizar"])
+    expect(activePanel().querySelector<HTMLInputElement>("[data-field-name-input]")!.value).toBe("Primero")
+    expect([...activePanel().querySelectorAll("[data-field-editability] [data-editability]")].map((item) => item.textContent!.trim())).toEqual(["No editable", "Editable"])
+    expect(activePanel().querySelector('[data-editability="carrera"]')!.getAttribute("data-state")).toBe("on")
     expect(activePanel().querySelector("[data-field-limit-tool]")!.textContent).toBe("Límite de caracteres")
     expect(activePanel().querySelector("[data-field-condition-tool]")!.textContent).toBe("Mostrar solo si…")
-    for (const label of ["Si se puede editar el campo Primero", "Subir el campo Primero", "Bajar el campo Primero", "Duplicar el campo Primero", "Mover el campo Primero a otra sección", "Eliminar el campo Primero"]) {
+    for (const label of ["Subir el campo Primero", "Bajar el campo Primero", "Duplicar el campo Primero", "Mover el campo Primero a otra sección", "Eliminar el campo Primero"]) {
       expect(activePanel().querySelector(`button[aria-label="${label}"]`)).not.toBeNull()
     }
+    expect(ribbon().textContent).not.toContain("¿Se puede editar?")
+    expect(ribbon().textContent).not.toContain("Ponerle nombre")
 
     await selectSection("Uno")
     expect(tabs()).toEqual(["Inicio", "Insertar", "Diseño", "Sección"])
@@ -96,6 +104,29 @@ describe("TemplateVisualBuilder: cinta con pestañas, panel lateral y menú «M�
     expect(tab("Inicio")!.getAttribute("aria-selected")).toBe("true")
   })
 
+  it("un campo No editable no muestra el límite, y sin tablas repetibles no hay grupo de tablas", async () => {
+    await mountBuilder({ template, presets })
+    await selectField("f2")
+    expect(groups(activePanel())).toEqual(["Nombre", "Quién lo llena", "Reglas", "Organizar"])
+    expect(activePanel().querySelector('[data-editability="institucional"]')!.getAttribute("data-state")).toBe("on")
+    expect(activePanel().querySelector("[data-field-limit-tool]")).toBeNull()
+    expect(activePanel().querySelector("[data-field-condition-tool]")).not.toBeNull()
+    expect(ribbon().textContent).not.toContain("Tablas repetibles")
+    expect(body().textContent).not.toContain("Este campo no tiene tablas repetibles")
+  })
+
+  it("la pestaña elegida se mantiene al seguir en el mismo campo y el hueco de la pestaña contextual está reservado", async () => {
+    await mountBuilder({ template, presets })
+    const slot = ribbon().querySelector("[data-contextual-slot]")!
+    await selectField("f1")
+    expect(ribbon().querySelector("[data-contextual-slot]")).toBe(slot)
+    await openTab("Insertar")
+    await selectField("f1")
+    expect(tab("Insertar")!.getAttribute("aria-selected")).toBe("true")
+    await selectField("f2")
+    expect(tab("Campo")!.getAttribute("aria-selected")).toBe("true")
+  })
+
   it("las pestañas se recorren con el teclado", async () => {
     await mountBuilder({ template, presets })
     tab("Inicio")!.focus()
@@ -105,53 +136,47 @@ describe("TemplateVisualBuilder: cinta con pestañas, panel lateral y menú «M�
     expect(tab("Insertar")!.getAttribute("aria-selected")).toBe("true")
   })
 
-  it("al pulsar un campo se abre el panel lateral con sus opciones, y se puede cerrar", async () => {
+  it("no hay panel lateral: las opciones del campo solo están en la cinta, que es una banda fija arriba", async () => {
     await mountBuilder({ template, presets })
-    expect(panel()).toBeNull()
-
     await selectField("f1")
-    expect(panel()!.getAttribute("aria-label")).toBe("Opciones del campo")
-    expect(panel()!.querySelector("[data-panel-field]")!.textContent).toBe("Primero")
-    expect(panel()!.querySelector('[aria-label="Si se puede editar el campo Primero"]')!.textContent).toContain("Editable")
-    expect(panel()!.querySelector("[data-panel-limit]")!.textContent).toBe("Sin límite")
-    expect(panel()!.querySelector("[data-panel-condition]")!.textContent).toBe("Siempre se muestra")
-    expect(panel()!.querySelector("[data-panel-table-create]")).not.toBeNull()
-
-    await click(panel()!.querySelector('button[aria-label="Cerrar el panel"]'))
     expect(panel()).toBeNull()
-    await selectField("f2")
-    expect(panel()!.querySelector("[data-panel-field]")!.textContent).toBe("Segundo")
-    expect(panel()!.querySelector("[data-panel-limit]")!.textContent).toBe("Solo en campos editables")
-    expect(panel()!.querySelector("[data-panel-table-create]")).toBeNull()
+    expect(body().querySelector('[aria-label="Opciones del campo"]')).toBeNull()
+    expect(body().querySelectorAll("[data-field-editability]")).toHaveLength(1)
+    expect(ribbon().className).toContain("sticky")
+    expect(ribbon().className).toContain("top-0")
+    expect(ribbon().className).not.toContain("shadow")
+    expect(ribbon().className).not.toContain("rounded")
   })
 
-  it("el panel lateral cambia quién lo llena y el límite con los mismos controles, y se guarda igual", async () => {
+  it("la pestaña Campo cambia nombre, quién lo llena y el límite, y se guarda igual que antes", async () => {
     await mountBuilder({ template, presets })
     await selectField("f1")
 
-    await click(panel()!.querySelector("[data-field-limit-tool]"))
+    await click(activePanel().querySelector("[data-field-limit-tool]"))
     fireEvent.change(body().querySelector<HTMLInputElement>("[data-field-limit-input]")!, { target: { value: "300" } })
     await settle()
     await click(body().querySelector("[data-field-limit-apply]"))
-    expect(panel()!.querySelector("[data-panel-limit]")!.textContent).toBe("Hasta 300 caracteres")
+    expect(body().querySelector('[data-field-limit="f1"]')!.textContent).toBe("Hasta 300 caracteres")
 
-    await press(panel()!.querySelector('[aria-label="Si se puede editar el campo Primero"]'))
-    await chooseMenuItem("No editable")
+    fireEvent.change(activePanel().querySelector<HTMLInputElement>("[data-field-name-input]")!, { target: { value: "Primero bis" } })
+    await settle()
+    await chooseEditability("No editable")
     await click(byText("button", "Guardar"))
-    expect(saved().sections[0]!.fields[0]).toMatchObject({ key: "f1", quien_llena: "institucional" })
-    expect(saved().sections[0]!.fields[0]).not.toHaveProperty("max_length")
+    expect(saved().sections[0]!.fields[0]).toEqual({ key: "f1", label: "Primero bis", quien_llena: "institucional", content: emptyDocument() })
+    expect(saved().sections[0]!.fields[1]).toEqual({ key: "f2", label: "Segundo", quien_llena: "institucional", content: emptyDocument() })
   })
 
   it("arriba quedan Vista previa y Guardar; «Editar JSON» y lo técnico van en «Más»", async () => {
     await mountBuilder({ template, presets })
     const actions = ribbon().querySelector<HTMLElement>('[role="group"][aria-label="Acciones de la plantilla"]')!
     expect([...actions.querySelectorAll("button")].map((button) => button.textContent!.trim())).toEqual(["Más", "Vista previa", "Guardar"])
+    expect(ribbon().querySelector('button[aria-label="Volver a la vista"]')!.getAttribute("data-tour")).toBe("template-back")
     expect(byText("button", "Editar JSON")).toBeUndefined()
     expect(byLabel("Opciones avanzadas")).toBeNull()
     expect(byText("button", "Más")!.getAttribute("data-tour")).toBe("template-more")
 
     await press(byText("button", "Más"))
-    expect(menuItems().map((item) => item.textContent!.trim())).toEqual(["Editar JSON"])
+    expect(menuItems().map((item) => item.textContent!.trim())).toEqual(["Editar JSON", "Tema oscuro"])
   })
 
   it("la sección vacía no pone el punto para agregar un campo dentro de un párrafo", async () => {

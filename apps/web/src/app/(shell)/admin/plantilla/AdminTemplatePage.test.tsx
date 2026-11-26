@@ -283,13 +283,31 @@ describe("AdminTemplatePage", () => {
     expect(body().querySelector("[data-sheet], .template-sheet")).not.toBeNull()
   })
 
-  it("al editar muestra el encabezado con «Volver a la vista» y al volver lo quita", async () => {
+  it("al editar no hay título ni barra de encabezado: la cinta lleva volver, «Ver como docente» y el tema en «Más»", async () => {
     await mountPage()
-    expect(body().querySelector('header[aria-label="Herramientas de la plantilla"]')).toBeNull()
+    expect(one('[data-tour="page-header"]').className).not.toContain("hidden")
+    expect(one("h1").textContent).toBe("Plantilla de sílabo")
     await startEditing()
 
-    await click(buttonWithText("Volver a la vista", one('header[aria-label="Herramientas de la plantilla"]')))
+    expect(one('[data-tour="page-header"]').className).toContain("hidden")
     expect(body().querySelector('header[aria-label="Herramientas de la plantilla"]')).toBeNull()
+    const ribbon = one("[data-template-ribbon]")
+    expect(ribbon.className).toContain("top-0")
+    expect(ribbon.querySelector('button[aria-label="Volver a la vista"]')).not.toBeNull()
+    const actions = one('[data-template-ribbon] [role="group"][aria-label="Acciones de la plantilla"]')
+    expect(buttons(actions).map((button) => button.textContent?.trim())).toEqual(["Más", "Vista previa", "Ver como docente", "Guardar"])
+    expect(buttons(body()).filter((button) => button.textContent?.trim() === "Ver como docente")).toHaveLength(1)
+    expect(body().querySelector('button[aria-label^="Tema visual"]')).toBeNull()
+
+    fireEvent.keyDown(buttonWithText("Más", actions)!, { key: "Enter" })
+    await settle()
+    expect([...body().querySelectorAll('[role="menuitem"]')].map((item) => item.textContent?.trim())).toEqual(["Editar JSON", "Tema oscuro"])
+    fireEvent.keyDown(body().querySelector('[role="menu"]')!, { key: "Escape" })
+    await settle()
+
+    await click(ribbon.querySelector('button[aria-label="Volver a la vista"]'))
+    expect(body().querySelector("[data-template-ribbon]")).toBeNull()
+    expect(one('[data-tour="page-header"]').className).not.toContain("hidden")
   })
 
   it("no tiene pestañas ni «Personalizar plantilla» y conserva los logos fijos", async () => {

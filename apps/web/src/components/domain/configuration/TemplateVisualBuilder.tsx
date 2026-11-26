@@ -1,8 +1,8 @@
 "use client"
 
 import type { Editor } from "@tiptap/core"
-import { Braces, CircleAlert, Ellipsis, Eye, EyeOff, GripVertical, ImageUp, Plus, Save, Trash2 } from "lucide-react"
-import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type Ref } from "react"
+import { ArrowLeft, Braces, CircleAlert, Ellipsis, Eye, EyeOff, ImageUp, Moon, Plus, Save, Sun, Trash2 } from "lucide-react"
+import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type ReactNode, type Ref } from "react"
 import { ApiError } from "@/api/client"
 import { checkTemplateDraft, getTemplateDraftImpact, importTemplateJson, previewTemplateDraft, uploadTemplateLogo } from "@/api/template"
 import type { DesignedTable, RepeatableTableDesign, TemplateDraftImpact, TemplateDraftPayload, TemplateField, TemplatePayload, TemplatePreset, TemplateSectionPayload } from "@/api/template"
@@ -11,22 +11,22 @@ import { TemplateFieldConditionTool } from "@/components/domain/configuration/Te
 import { TemplateDesignTools } from "@/components/domain/configuration/TemplateDesignTools"
 import { TemplateFieldContent } from "@/components/domain/configuration/TemplateFieldContent"
 import { TemplateFieldLimitTool } from "@/components/domain/configuration/TemplateFieldLimitTool"
-import { TemplateFieldPanel } from "@/components/domain/configuration/TemplateFieldPanel"
 import { TemplateFormatTools, TemplateTextTableTool, TemplateVariableTool } from "@/components/domain/configuration/TemplateFormatTools"
 import { TemplateImpactDialog } from "@/components/domain/configuration/TemplateImpactDialog"
 import { TemplateInlineText } from "@/components/domain/configuration/TemplateInlineText"
-import { TemplateInsertPoint } from "@/components/domain/configuration/TemplateInsertPoint"
+import { TemplateDragHandle, TemplateSectionTitle, TemplateSheetInsertPoint, type InsertPlace, type SheetItemKind } from "@/components/domain/configuration/TemplateSheetControls"
 import { TemplateJsonDialog } from "@/components/domain/configuration/TemplateJsonDialog"
 import { useAfterMenuClose } from "@/components/domain/configuration/useAfterMenuClose"
 import { TemplateResponseTool } from "@/components/domain/configuration/TemplateResponseTool"
 import { TemplateRibbonDivider, TemplateRibbonGroup } from "@/components/domain/configuration/TemplateRibbonGroup"
-import { TemplatePresetTool, TemplateResponsibleMenu, TemplateSelectionTools, type TemplateSectionTarget, type TemplateSelection } from "@/components/domain/configuration/TemplateSelectionTools"
+import { TemplatePresetTool, TemplateSelectionTools, type TemplateSectionTarget, type TemplateSelection } from "@/components/domain/configuration/TemplateSelectionTools"
 import { TemplateSheetField } from "@/components/domain/configuration/TemplateSheetField"
 import { TemplateTableDesigner } from "@/components/domain/configuration/TemplateTableDesigner"
 import { TemplateTableTool, type FieldTable } from "@/components/domain/configuration/TemplateTableTool"
 import { draftProblemsByTarget, locateDraftProblems, problemCount, type DraftProblem } from "@/components/domain/configuration/templateDraftProblems"
 import { paginateSheet } from "@/components/domain/configuration/templatePagination"
 import { apiMessage, uniqueKey } from "@/components/domain/configuration/templateStructure"
+import { useStableCallback } from "@/components/domain/configuration/useStableCallback"
 import { useStructureHistory } from "@/components/domain/configuration/useStructureHistory"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { UnsavedChangesDialog } from "@/components/domain/UnsavedChangesDialog"
@@ -49,6 +49,7 @@ import { cn } from "@/lib/utils"
 import { templateEditorState } from "@/state/templateEditor"
 import { emptyDocument, type FieldResponsible } from "@/types/configuration"
 import { scrollBehavior } from "@/lib/motion"
+import { useAppearance } from "@/composables/useAppearance"
 
 type Template = NonNullable<TemplatePayload["template"]>
 type Sections = TemplateSectionPayload[]
@@ -64,7 +65,9 @@ type Sheet = { landscape: boolean; items: SheetEntry[] }
 type Selected = { section: TemplateSectionPayload; sectionIndex: number; fieldIndex: number }
 type RibbonTab = "inicio" | "insertar" | "diseno" | "seleccion"
 const PARAGRAPH_SPACING = "[&_.free-text-content>p]:mb-(--document-paragraph-spacing)! [&_.ProseMirror>p]:mb-(--document-paragraph-spacing)!"
-const RIBBON_PANEL = "data-[state=inactive]:hidden flex min-h-16 items-stretch overflow-x-auto px-1 py-1.5"
+const SECTION_HANDLE = "top-1/2 -left-8 -translate-y-1/2 font-normal group-hover/heading:opacity-100"
+const FIELD_HANDLE = "top-0 -left-8 z-10 group-hover:opacity-100"
+const RIBBON_PANEL = "data-[state=inactive]:hidden flex h-20 flex-none items-stretch overflow-x-auto overflow-y-hidden px-1 py-1.5"
 
 export type TemplateVisualBuilderHandle = {
   askEdit: () => void
@@ -86,12 +89,15 @@ type TemplateVisualBuilderProps = {
   onDirty?: (value: boolean) => void
   onEditing?: (value: boolean) => void
   onDraftVersionChange?: (version: string) => void
+  teacherAction?: ReactNode
+  notice?: ReactNode
+  replacement?: ReactNode
   ref?: Ref<TemplateVisualBuilderHandle>
 }
 
 const NO_MARKS: Marks = { sections: [], fields: [] }
 const NO_TABLES: Tables = {}
-const SELECTION_KEEPERS = '[data-field], [data-section-heading], [data-insert-point], [data-template-ribbon], [data-template-panel], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-slot="popover-content"]'
+const SELECTION_KEEPERS = '[data-field], [data-section-heading], [data-insert-point], [data-template-ribbon], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-slot="popover-content"]'
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 const moved = <T,>(items: T[], index: number, direction: -1 | 1): T[] => {
   const next = [...items]
@@ -132,14 +138,13 @@ const temporaryId = (): string => {
   return `nuevo-${temporary}`
 }
 
-export function TemplateVisualBuilder({ template, processLock = null, logos, variables, presets, blockDesigns, onChanged, onDirty, onEditing, onDraftVersionChange, ref }: TemplateVisualBuilderProps) {
+export function TemplateVisualBuilder({ template, processLock = null, logos, variables, presets, blockDesigns, onChanged, onDirty, onEditing, onDraftVersionChange, teacherAction, notice, replacement, ref }: TemplateVisualBuilderProps) {
   const locked = Boolean(processLock)
   const [preview, setPreview] = useState(true)
   const [leaveOpen, setLeaveOpen] = useState(false)
   const [selectedField, setSelectedField] = useState<string | null>(null)
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
   const [activeEditor, setActiveEditor] = useState<Editor | null>(null)
-  const [naming, setNaming] = useState<string | null>(null)
   const [focusId, setFocusId] = useState<string | null>(null)
   const [available, setAvailable] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -159,7 +164,6 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const [styleDraft, setStyleDraft] = useState<DocumentStyleDraft | null>(() => styleDraftOf(templateRuntime().definition?.document))
   const [tables, setTables] = useState<Tables>(NO_TABLES)
   const [ribbonTab, setRibbonTab] = useState<RibbonTab>("inicio")
-  const [panelClosed, setPanelClosed] = useState(false)
   const [logoOverride, setLogoOverride] = useState<string | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [impact, setImpact] = useState<TemplateDraftImpact | null>(null)
@@ -172,6 +176,8 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const [seenTemplate, setSeenTemplate] = useState(template)
   const removalShown = useShownWhileClosing(removal)
   const moreMenu = useAfterMenuClose()
+  const { appearance, updateAppearance } = useAppearance()
+  const dark = appearance === "dark"
 
   const root = useRef<HTMLDivElement | null>(null)
   const sheetArea = useRef<HTMLDivElement | null>(null)
@@ -244,12 +250,13 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   }
 
   const selectField = (id: string, editor: Editor | null): void => {
+    if (id !== selectedField) setRibbonTab("seleccion")
     setSelectedField(id)
-    setPanelClosed(false)
     setSelectedSection(null)
     setActiveEditor(editor)
   }
   const selectSection = (id: string): void => {
+    if (id !== selectedSection) setRibbonTab("seleccion")
     setSelectedSection(id)
     setSelectedField(null)
     setActiveEditor(null)
@@ -573,6 +580,25 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     touched()
   }
 
+  const selectFromSheet = useStableCallback((editor: Editor | null, fieldId: string): void => selectField(fieldId, editor))
+  const changeFromSheet = useStableCallback((value: TemplateField): void => {
+    const section = draft.find((item) => item.fields.some((field) => field.id === value.id))
+    if (section) setField(section.id, value.id, value)
+  })
+
+  const selectFromHandle = useStableCallback((kind: SheetItemKind, id: string): void => (kind === "field" ? selectField(id, null) : selectSection(id)))
+  const insertFromSheet = useStableCallback((key: string, place: InsertPlace, sectionId: string, sectionIndex: number, fieldIndex: number): void => {
+    if (place === "section-top") addSection(sectionIndex)
+    else if (place === "field-top") addField(sectionId, fieldIndex)
+    else if (place === "after-last") insertAfterLastField(key, sectionId, sectionIndex)
+    else addField(sectionId)
+  })
+  const titleFromSheet = useStableCallback((section: TemplateSectionPayload, title: string): void => setTitle(section, title))
+  const clearFocusId = useStableCallback((): void => setFocusId(null))
+  const designLayout = useStableCallback((key: keyof DocumentLayout, value: string): void => setLayout(key, value))
+  const designStyle = useStableCallback((style: DocumentStyleDraft, group: string): void => setStyle(style, group))
+  const designTitle = useStableCallback((value: string): void => setDocumentTitle(value))
+
   const selected = ((): Selected | null => {
     for (const [sectionIndex, section] of draft.entries()) {
       if (selectedSection === section.id) return { section, sectionIndex, fieldIndex: -1 }
@@ -681,6 +707,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const setSelectedResponsible = (responsible: FieldResponsible): void => {
     patchSelectedField(responsible === "institucional" ? { quien_llena: responsible, max_length: null } : { quien_llena: responsible })
   }
+  const setSelectedName = (label: string): void => patchSelectedField({ label })
   const duplicateSelected = (): void => {
     if (!selected || locked || busy) return
     record()
@@ -750,6 +777,9 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     setDragging(null)
     setDropMark(null)
   }
+  const dragFromHandle = useStableCallback((event: DragEvent, item: DragItem): void => startDrag(event, item))
+  const endDragFromHandle = useStableCallback((): void => endDrag())
+
   const markFor = (event: DragEvent): DropMark | null => {
     const element = event.target instanceof Element ? event.target.closest("[data-section]") : null
     const sectionIndex = element ? draft.findIndex((entry) => entry.id === element.getAttribute("data-section")) : -1
@@ -870,7 +900,6 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
 
   const editingDisabled = locked || busy || previewing
   const shownTab: RibbonTab = ribbonTab === "seleccion" && !selection ? "inicio" : ribbonTab
-  const panelOpen = !readOnly && !panelClosed && selection?.kind === "field"
   const limitTool = <TemplateFieldLimitTool selected={selection?.kind === "field"} editable={editableField} disabled={editingDisabled} text="Límite de caracteres" limit={selectedTemplateField?.max_length ?? null} onApply={setSelectedLimit} />
   const conditionTool = <TemplateFieldConditionTool allowed={selection?.kind === "field"} disabled={editingDisabled} text="Mostrar solo si…" condition={selectedTemplateField?.show_if ?? null} sources={sourcesBefore(selectedField)} onApply={setSelectedCondition} />
   const removalTitle = removalShown?.kind === "section" ? "Eliminar sección" : "Eliminar campo"
@@ -885,16 +914,26 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
       ) : null}
 
       {!preview ? (
-        <div data-template-ribbon role="region" aria-label="Cinta de edición de la plantilla" className="sticky top-14 z-20 flex w-full flex-col rounded-md bg-card shadow-menu ring-1 ring-surface-ring">
+        <div data-template-ribbon role="region" aria-label="Cinta de edición de la plantilla" className="sticky top-0 z-30 -mx-4 -mt-4 flex flex-col border-b bg-card sm:-mx-6 sm:-mt-6">
           <Tabs value={shownTab} onValueChange={(value) => setRibbonTab(value as RibbonTab)} className="gap-0">
-            <div className="flex flex-wrap items-center gap-x-2 border-b px-2">
-              <TabsList aria-label="Pestañas de la cinta" className="h-10">
+            <div className="flex min-w-0 items-center gap-x-2 border-b px-2">
+              <IconTooltip label="Volver a la vista">
+                <Button type="button" variant="ghost" size="icon-sm" aria-label="Volver a la vista" data-tour="template-back" onClick={leave}>
+                  <ArrowLeft aria-hidden="true" />
+                </Button>
+              </IconTooltip>
+              <TabsList aria-label="Pestañas de la cinta" className="h-10 shrink-0">
                 <TabsTrigger value="inicio">Inicio</TabsTrigger>
                 <TabsTrigger value="insertar">Insertar</TabsTrigger>
                 <TabsTrigger value="diseno">Diseño</TabsTrigger>
-                {selection ? <TabsTrigger value="seleccion" data-contextual-tab>{selection.kind === "field" ? "Campo" : "Sección"}</TabsTrigger> : null}
+                <span data-contextual-slot className="flex h-full w-36 items-stretch">
+                  {selection ? (
+                    <TabsTrigger value="seleccion" data-contextual-tab className="flex-none motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150">{selection.kind === "field" ? "Campo" : "Sección"}</TabsTrigger>
+                  ) : (
+                    <span className="flex items-center truncate px-2 text-xs text-muted-foreground">Seleccione un campo</span>
+                  )}
+                </span>
               </TabsList>
-              {!selection ? <span className="truncate text-xs text-muted-foreground">Seleccione un campo</span> : null}
               <span className="flex-1" />
               <div className="flex shrink-0 items-center gap-1 py-1" role="group" aria-label="Acciones de la plantilla">
                 {problems.length ? (
@@ -906,7 +945,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                 <span className="sr-only" aria-live="polite">{changed ? "Sin guardar" : null}</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="ghost" size="sm" disabled={busy || locked} data-more-menu data-tour="template-more">
+                    <Button type="button" variant="ghost" size="sm" disabled={busy} data-more-menu data-tour="template-more">
                       <Ellipsis data-icon="inline-start" aria-hidden="true" />
                       Más
                     </Button>
@@ -917,6 +956,10 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                         <Braces aria-hidden="true" />
                         Editar JSON
                       </DropdownMenuItem>
+                      <DropdownMenuItem data-theme-toggle onSelect={() => updateAppearance(dark ? "light" : "dark")}>
+                        {dark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+                        {dark ? "Tema claro" : "Tema oscuro"}
+                      </DropdownMenuItem>
                     </DropdownMenuGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -924,6 +967,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                   {previewLoading ? <Spinner data-icon="inline-start" /> : previewing ? <EyeOff data-icon="inline-start" aria-hidden="true" /> : <Eye data-icon="inline-start" aria-hidden="true" />}
                   {previewing ? "Volver a editar" : "Vista previa"}
                 </Button>
+                {teacherAction}
                 <Button type="button" size="sm" className="relative" data-tour="template-save" disabled={busy || !changed} onClick={() => void save()}>
                   {busy ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" aria-hidden="true" />}
                   Guardar
@@ -954,7 +998,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
               ) : null}
             </TabsContent>
             <TabsContent forceMount value="diseno" className={RIBBON_PANEL}>
-              <TemplateDesignTools options={template.layoutOptions} layout={layoutDraft} style={styleDraft} title={titleDraft} disabled={editingDisabled} onLayout={setLayout} onStyle={setStyle} onTitle={setDocumentTitle} />
+              <TemplateDesignTools options={template.layoutOptions} layout={layoutDraft} style={styleDraft} title={titleDraft} disabled={editingDisabled} onLayout={designLayout} onStyle={designStyle} onTitle={designTitle} />
             </TabsContent>
             {selection ? (
               <TabsContent forceMount value="seleccion" className={RIBBON_PANEL}>
@@ -966,16 +1010,28 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                   onDuplicate={duplicateSelected}
                   onMoveTo={moveSelectedTo}
                   onResponsible={setSelectedResponsible}
-                  onName={() => setNaming(selectedField)}
+                  onName={setSelectedName}
                   onMove={moveSelected}
                   onRemove={removeSelected}
                   onOrientation={toggleOrientation}
                 >
                   {selection.kind === "field" ? (
                     <TemplateRibbonGroup label="Reglas">
-                      {limitTool}
+                      {editableField ? limitTool : null}
                       {conditionTool}
                     </TemplateRibbonGroup>
+                  ) : null}
+                  {selection.kind === "field" && fieldTables.length ? (
+                    <>
+                      <TemplateRibbonDivider />
+                      <TemplateRibbonGroup label="Tablas repetibles">
+                        {fieldTables.map((table) => (
+                          <Button key={table.kind} type="button" variant="ghost" size="sm" disabled={editingDisabled} data-field-table={table.kind} onClick={() => openDesigner(table.kind)}>
+                            {table.editable ? `Editar «${table.label}»` : `Ver «${table.label}»`}
+                          </Button>
+                        ))}
+                      </TemplateRibbonGroup>
+                    </>
                   ) : null}
                 </TemplateSelectionTools>
               </TabsContent>
@@ -983,9 +1039,9 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
           </Tabs>
         </div>
       ) : null}
+      {!preview ? notice : null}
 
-      <div className="flex min-w-0 items-start gap-4">
-      <div ref={sheetArea} className="flex min-w-0 flex-1 flex-col gap-4">
+      <div ref={sheetArea} className="flex min-w-0 flex-col gap-4" style={replacement ? { display: "none" } : undefined}>
       {sheets.map((sheet, sheetIndex) => (
         <div key={sheetIndex} className="min-w-0 overflow-x-auto" tabIndex={0} role="region" aria-label={`Hoja ${sheetIndex + 1} de la plantilla con desplazamiento horizontal`}>
           <article
@@ -1044,7 +1100,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                   {sectionMarked(sectionIndex) ? <span data-drop-mark className="pointer-events-none absolute inset-x-0 -top-3 z-10 h-0.5 rounded-full bg-primary" aria-hidden="true" /> : null}
                   {sectionIndex === sections.length - 1 && sectionMarked(sections.length) ? <span data-drop-mark className="pointer-events-none absolute inset-x-0 -bottom-3 z-10 h-0.5 rounded-full bg-primary" aria-hidden="true" /> : null}
                   {!readOnly && !locked && (sectionIndex === 0 || (sections[sectionIndex - 1]?.fields.length ?? 0) === 0) ? (
-                    <TemplateInsertPoint disabled={locked || busy} actions={[{ key: "section", label: "Nueva sección" }]} position="top" gap="section" onInsert={() => addSection(sectionIndex)} />
+                    <TemplateSheetInsertPoint place="section-top" sectionId={section.id} sectionIndex={sectionIndex} fieldIndex={-1} disabled={locked || busy} onInsert={insertFromSheet} />
                   ) : null}
                   {readOnly ? (
                     <h3 className="font-bold" style={textStyles.section} data-section-title>{section.title}</h3>
@@ -1058,33 +1114,18 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                       onFocus={() => selectSection(section.id)}
                     >
                       {proposedSection(section) ? <span className="absolute -top-2.5 right-2 z-10 rounded-full bg-warning px-2 py-0.5 font-sans text-xs font-medium text-warning-foreground" data-change-mark>Cambió</span> : null}
-                      <IconTooltip label={`Arrastrar la sección ${section.title}`}>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          data-drag-handle
-                          draggable={!locked && !busy}
-                          disabled={locked || busy}
-                          aria-label={`Arrastrar la sección ${section.title}`}
-                          className={cn("absolute top-1/2 -left-8 -translate-y-1/2 cursor-grab font-normal text-muted-foreground opacity-0 group-hover/heading:opacity-100 focus-visible:opacity-100", selectedSection === section.id && "opacity-100")}
-                          onClick={() => selectSection(section.id)}
-                          onDragStart={(event) => startDrag(event, { kind: "section", id: section.id })}
-                          onDragEnd={endDrag}
-                        >
-                          <GripVertical aria-hidden="true" />
-                        </Button>
-                      </IconTooltip>
-                      <TemplateInlineText
-                        value={section.title}
-                        maxLength={180}
-                        disabled={locked}
-                        label={`Sección ${section.title}`}
-                        className="[text-align:inherit]"
-                        autoFocus={focusId === section.id}
-                        onAutoFocused={() => setFocusId(null)}
-                        onValueChange={(title) => setTitle(section, title)}
+                      <TemplateDragHandle
+                        kind="section"
+                        id={section.id}
+                        label={`Arrastrar la sección ${section.title}`}
+                        disabled={locked || busy}
+                        selected={selectedSection === section.id}
+                        className={SECTION_HANDLE}
+                        onSelect={selectFromHandle}
+                        onDragStart={dragFromHandle}
+                        onDragEnd={endDragFromHandle}
                       />
+                      <TemplateSectionTitle section={section} disabled={locked} autoFocus={focusId === section.id} onTitle={titleFromSheet} onAutoFocused={clearFocusId} />
                     </div>
                   )}
                   {!preview && problemsByTarget.sections[section.id]?.length ? (
@@ -1121,27 +1162,21 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                           {!readOnly && fieldMarked(section.id, fieldIndex) ? <span data-drop-mark className="pointer-events-none absolute inset-x-0 -top-2 z-10 h-0.5 rounded-full bg-primary" aria-hidden="true" /> : null}
                           {!readOnly && lastShown && fieldMarked(section.id, section.fields.length) ? <span data-drop-mark className="pointer-events-none absolute inset-x-0 -bottom-2 z-10 h-0.5 rounded-full bg-primary" aria-hidden="true" /> : null}
                           {!readOnly ? (
-                            <IconTooltip label={`Arrastrar el campo ${fieldName(field)}`}>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                data-drag-handle
-                                draggable={!locked && !busy}
-                                disabled={locked || busy}
-                                aria-label={`Arrastrar el campo ${fieldName(field)}`}
-                                className={cn("absolute top-0 -left-8 z-10 cursor-grab text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100", selectedField === field.id && "opacity-100")}
-                                onClick={() => selectField(field.id, null)}
-                                onDragStart={(event) => startDrag(event, { kind: "field", id: field.id })}
-                                onDragEnd={endDrag}
-                              >
-                                <GripVertical aria-hidden="true" />
-                              </Button>
-                            </IconTooltip>
+                            <TemplateDragHandle
+                              kind="field"
+                              id={field.id}
+                              label={`Arrastrar el campo ${fieldName(field)}`}
+                              disabled={locked || busy}
+                              selected={selectedField === field.id}
+                              className={FIELD_HANDLE}
+                              onSelect={selectFromHandle}
+                              onDragStart={dragFromHandle}
+                              onDragEnd={endDragFromHandle}
+                            />
                           ) : null}
-                          {!readOnly && !locked ? <TemplateInsertPoint disabled={busy} actions={[{ key: "field", label: "Agregar campo" }]} position="top" gap="field" onInsert={() => addField(section.id, fieldIndex)} /> : null}
+                          {!readOnly && !locked ? <TemplateSheetInsertPoint place="field-top" sectionId={section.id} sectionIndex={sectionIndex} fieldIndex={fieldIndex} disabled={busy} onInsert={insertFromSheet} /> : null}
                           {!readOnly && !locked && lastShown ? (
-                            <TemplateInsertPoint disabled={busy} actions={[{ key: "section", label: "Nueva sección" }, { key: "field", label: "Agregar campo" }]} position="bottom" gap="field" onInsert={(key) => insertAfterLastField(key, section.id, sectionIndex)} />
+                            <TemplateSheetInsertPoint place="after-last" sectionId={section.id} sectionIndex={sectionIndex} fieldIndex={-1} disabled={busy} onInsert={insertFromSheet} />
                           ) : null}
                           {readOnly ? (
                             <TemplateFieldContent field={field} variables={variables} preview />
@@ -1150,11 +1185,9 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                               field={field}
                               locked={locked}
                               focusOnCreate={focusId === field.id}
-                              naming={naming === field.id}
                               variables={variables}
-                              onSelect={(editor) => selectField(field.id, editor)}
-                              onNamed={() => setNaming(null)}
-                              onFieldChange={(value) => setField(section.id, field.id, value)}
+                              onSelect={selectFromSheet}
+                              onFieldChange={changeFromSheet}
                             />
                           )}
                           {!readOnly && field.show_if ? <p className="mt-1 font-sans text-xs text-muted-foreground" data-field-condition={field.id}>{conditionLabel(field.show_if, allSources)}</p> : null}
@@ -1176,7 +1209,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                   {fields.length === 0 && !readOnly ? (
                     <div className={cn("relative rounded-sm py-1 text-sm text-muted-foreground", fieldMarked(section.id, 0) && "outline outline-2 outline-dashed outline-primary")} data-empty-section>
                       Sección sin campos.
-                      {!locked ? <TemplateInsertPoint disabled={busy} actions={[{ key: "field", label: "Agregar campo" }]} position="inline" gap="field" onInsert={() => addField(section.id)} /> : null}
+                      {!locked ? <TemplateSheetInsertPoint place="empty" sectionId={section.id} sectionIndex={sectionIndex} fieldIndex={-1} disabled={busy} onInsert={insertFromSheet} /> : null}
                     </div>
                   ) : null}
                 </section>
@@ -1195,23 +1228,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
         </div>
       ))}
       </div>
-      {panelOpen && selectedTemplateField ? (
-        <TemplateFieldPanel
-          name={fieldName(selectedTemplateField)}
-          responsible={<TemplateResponsibleMenu field={selectedTemplateField} locked={locked || previewing} onResponsible={setSelectedResponsible} onName={() => setNaming(selectedField)} />}
-          limit={limitTool}
-          limitText={!editableField ? "Solo en campos editables" : selectedTemplateField.max_length ? limitLabel(selectedTemplateField.max_length) : "Sin límite"}
-          condition={conditionTool}
-          conditionText={selectedTemplateField.show_if ? conditionLabel(selectedTemplateField.show_if, allSources) : "Siempre se muestra"}
-          tables={fieldTables}
-          tablesAllowed={editableField}
-          disabled={editingDisabled}
-          onCreateTable={() => openDesigner(null)}
-          onEditTable={openDesigner}
-          onClose={() => setPanelClosed(true)}
-        />
-      ) : null}
-      </div>
+      {replacement}
 
       <TemplateImpactDialog impact={impact} onConfirm={confirmImpact} onCancel={() => setImpact(null)} />
       <UnsavedChangesDialog

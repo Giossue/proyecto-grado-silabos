@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import * as templateApi from "@/api/template"
 import { ApiError } from "@/api/client"
 import type { TemplatePayload } from "@/api/template"
-import { body, byLabel, byText, chooseMenuItem, click, menuItems, mountBuilder, press, selectField, selectSection, settle, startEditing, typeInto } from "@/components/domain/configuration/templateBuilderTesting"
+import { body, byLabel, byText, chooseEditability, chooseMenuItem, click, menuItems, mountBuilder, press, selectField, selectSection, settle, startEditing, typeInto } from "@/components/domain/configuration/templateBuilderTesting"
 import { emptyDocument, type FieldResponsible } from "@/types/configuration"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { setTemplateRuntime } from "@/lib/blocks/runtime"
@@ -37,9 +37,9 @@ const openTab = async (name: string): Promise<void> => {
   fireEvent.mouseDown(tab!)
   await settle()
 }
-const responsibleMenu = async (label: string, choice: string): Promise<void> => {
-  await press(byLabel(`Si se puede editar el campo ${label}`))
-  await chooseMenuItem(choice)
+const responsibleMenu = async (label: string, choice: "Editable" | "No editable"): Promise<void> => {
+  expect(body().querySelector(`[aria-label="Si se puede editar el campo ${label}"]`)).not.toBeNull()
+  await chooseEditability(choice)
 }
 
 const keepClosingDialogs = (): void => {
@@ -101,8 +101,19 @@ describe("TemplateVisualBuilder", () => {
     await settle()
     await openTab("Diseño")
     expect(body().querySelector('[role="dialog"]')).toBeNull()
+    const menu = async (label: string) => {
+      const trigger = byText("button", label)!
+      fireEvent.click(trigger)
+      await settle()
+      if (trigger.getAttribute("aria-expanded") !== "true") {
+        fireEvent.click(trigger)
+        await settle()
+      }
+    }
+    await menu("Página")
     expect(body().querySelector('[role="tabpanel"][data-state="active"] #template-layout-margin_cm')).toBeTruthy()
     const choose = async (id: string, label: string) => {
+      if (!body().querySelector(`#${id}`)) await menu("Fuente")
       await press(body().querySelector(`#${id}`))
       await press([...body().querySelectorAll('[role="option"]')].find((option) => option.textContent?.trim() === label))
     }
@@ -315,9 +326,7 @@ describe("TemplateVisualBuilder", () => {
     expect(body().querySelector('[data-field="a"] table')?.textContent).toContain("FACULTAD: CIENCIAS")
     expect(body().querySelector('[aria-label="Nombre del campo Campo sin nombre"]')).toBeNull()
     await selectField("a")
-    await press(byLabel("Si se puede editar el campo Campo sin nombre"))
-    await chooseMenuItem("Ponerle nombre")
-    expect(body().querySelector<HTMLTextAreaElement>('[aria-label="Nombre del campo Campo sin nombre"]')!.value).toBe("")
+    expect(body().querySelector<HTMLInputElement>("[data-field-name-input]")!.value).toBe("")
   })
 
   it("al importar un JSON deja el borrador y muestra la plantilla importada", async () => {
@@ -341,14 +350,17 @@ describe("TemplateVisualBuilder", () => {
     expect(body().querySelector("[data-section-title]")?.textContent).toBe("Importada")
   })
 
-  it("«Ponerle nombre» deja el cursor en el nombre del campo", async () => {
+  it("el nombre del campo se escribe directo en la pestaña Campo, sin menú", async () => {
     const official: Template = { ...template, sections: [{ id: "s1", key: "datos", title: "Datos", orientation: "portrait", fields: [field("a", "", "carrera")] }] }
-    await mountBuilder({ template: official })
+    const { payload } = await mountBuilder({ template: official })
     await selectField("a")
-    await press(byLabel("Si se puede editar el campo Campo sin nombre"))
-    await chooseMenuItem("Ponerle nombre")
+    const name = body().querySelector<HTMLInputElement>('[role="tabpanel"][data-state="active"] [data-field-name-input]')!
+    expect(name.getAttribute("aria-label")).toBe("Nombre del campo")
+    fireEvent.change(name, { target: { value: "Objetivo" } })
     await settle()
-    expect(document.activeElement).toBe(body().querySelector('[aria-label="Nombre del campo Campo sin nombre"]'))
+    expect(payload().sections[0]!.fields[0]!.label).toBe("Objetivo")
+    expect(body().querySelector('[aria-label="Nombre del campo Objetivo"]')).not.toBeNull()
+    expect(menuItems().map((item) => item.textContent?.trim())).not.toContain("Ponerle nombre")
   })
 
   it("en la vista muestra el título y los logos sin controles de edición", async () => {

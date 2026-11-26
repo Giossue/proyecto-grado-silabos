@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
-import { Ban, Bold, Italic } from "lucide-react"
-import { TemplateRibbonDivider, TemplateRibbonGroup } from "@/components/domain/configuration/TemplateRibbonGroup"
+import { memo, useState, type ComponentType, type ReactNode } from "react"
+import { Popover as PopoverPrimitive } from "radix-ui"
+import { Ban, Bold, ChevronDown, FileText, Heading, Italic, Palette, Pilcrow, Type } from "lucide-react"
+import { TemplateRibbonGroup } from "@/components/domain/configuration/TemplateRibbonGroup"
+import { Button } from "@/components/ui/button"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -60,10 +62,34 @@ const sizeControls = (options: TemplateLayoutOptions): LayoutControl[] => [
 
 function Labelled({ id, label, children }: { id: string; label: string; children: ReactNode }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <label htmlFor={id} className="text-xs whitespace-nowrap text-muted-foreground">{label}</label>
+    <div className="grid grid-cols-[8.5rem_minmax(0,1fr)] items-center gap-2">
+      <label htmlFor={id} className="text-sm text-muted-foreground">{label}</label>
       {children}
     </div>
+  )
+}
+
+function DesignMenu({ label, icon: Icon, disabled, children }: { label: string; icon: ComponentType<{ "aria-hidden"?: boolean | "true" }>; disabled: boolean; children: ReactNode }) {
+  return (
+    <TemplateRibbonGroup label={label} caption={false}>
+      <PopoverPrimitive.Root>
+        <PopoverPrimitive.Trigger asChild>
+          <Button type="button" variant="ghost" size="sm" disabled={disabled} className="h-9 gap-1.5 px-2.5">
+            <Icon aria-hidden="true" />
+            {label}
+            <ChevronDown aria-hidden="true" className="opacity-60" />
+          </Button>
+        </PopoverPrimitive.Trigger>
+        <PopoverPrimitive.Content
+          align="start"
+          sideOffset={6}
+          aria-label={label}
+          className="z-50 w-96 max-w-(--radix-popover-content-available-width) rounded-md bg-popover p-4 text-popover-foreground shadow-menu ring-1 ring-surface-ring outline-hidden"
+        >
+          <div className="flex flex-col gap-3">{children}</div>
+        </PopoverPrimitive.Content>
+      </PopoverPrimitive.Root>
+    </TemplateRibbonGroup>
   )
 }
 
@@ -71,7 +97,7 @@ function ChoiceSelect({ id, label, value, choices, disabled, onChange }: { id: s
   return (
     <Labelled id={id} label={label}>
       <Select value={value} disabled={disabled} onValueChange={onChange}>
-        <SelectTrigger id={id} size="sm" className="min-w-20">
+        <SelectTrigger id={id} size="sm" className="w-full">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -106,7 +132,7 @@ function NumberInput({ id, label, value, min, max, step, disabled, onChange }: {
   }
   return (
     <Labelled id={id} label={label}>
-      <Input id={id} type="number" inputMode="decimal" min={min} max={max} step={step} value={text ?? String(value)} disabled={disabled} className="h-8 w-18" onChange={(event) => change(event.target.value)} onBlur={() => setText(null)} />
+      <Input id={id} type="number" inputMode="decimal" min={min} max={max} step={step} value={text ?? String(value)} disabled={disabled} className="h-8 w-24" onChange={(event) => change(event.target.value)} onBlur={() => setText(null)} />
     </Labelled>
   )
 }
@@ -114,7 +140,7 @@ function NumberInput({ id, label, value, min, max, step, disabled, onChange }: {
 function TextInput({ id, label, value, maxLength, disabled, onChange }: { id: string; label: string; value: string; maxLength: number; disabled: boolean; onChange: (value: string) => void }) {
   return (
     <Labelled id={id} label={label}>
-      <Input id={id} value={value} maxLength={maxLength} disabled={disabled} className="h-8 w-40" onChange={(event) => onChange(event.target.value)} />
+      <Input id={id} value={value} maxLength={maxLength} disabled={disabled} className="h-8 w-full" onChange={(event) => onChange(event.target.value)} />
     </Labelled>
   )
 }
@@ -122,8 +148,8 @@ function TextInput({ id, label, value, maxLength, disabled, onChange }: { id: st
 function ColorInput({ id, label, value, fallback, disabled, onChange }: { id: string; label: string; value: string | null; fallback?: string; disabled: boolean; onChange: (value: string | null) => void }) {
   const empty = value === null
   return (
-    <div className="flex items-center gap-1">
-      <label htmlFor={id} className="text-xs whitespace-nowrap text-muted-foreground">{label}</label>
+    <div className="grid grid-cols-[8.5rem_auto_auto] items-center justify-start gap-2">
+      <label htmlFor={id} className="text-sm text-muted-foreground">{label}</label>
       <input
         id={id}
         type="color"
@@ -144,8 +170,9 @@ function ColorInput({ id, label, value, fallback, disabled, onChange }: { id: st
 }
 
 function HeadingControls({ name, prefix, heading, disabled, onChange }: { name: string; prefix: string; heading: Pick<Heading, "bold" | "italic" | "alignment">; disabled: boolean; onChange: (heading: Pick<Heading, "bold" | "italic" | "alignment">) => void }) {
+  const id = `template-style-${prefix}-alignment`
   return (
-    <>
+    <div className="flex items-center gap-1">
       <IconTooltip label={`Negrita ${name}`}>
         <Toggle size="sm" aria-label={`Negrita ${name}`} pressed={heading.bold} disabled={disabled} onPressedChange={(bold) => onChange({ ...heading, bold })}>
           <Bold aria-hidden="true" />
@@ -156,12 +183,22 @@ function HeadingControls({ name, prefix, heading, disabled, onChange }: { name: 
           <Italic aria-hidden="true" />
         </Toggle>
       </IconTooltip>
-      <ChoiceSelect id={`template-style-${prefix}-alignment`} label="Alineación" value={heading.alignment} choices={ALIGNMENTS} disabled={disabled} onChange={(alignment) => onChange({ ...heading, alignment })} />
-    </>
+      <label htmlFor={id} className="sr-only">Alineación {name}</label>
+      <Select value={heading.alignment} disabled={disabled} onValueChange={(alignment) => onChange({ ...heading, alignment })}>
+        <SelectTrigger id={id} size="sm" className="ml-1 w-32">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {ALIGNMENTS.map((choice) => <SelectItem key={choice.value} value={choice.value}>{choice.label}</SelectItem>)}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
   )
 }
 
-export function TemplateDesignTools({ options, layout, style = null, title = "", disabled = false, onLayout, onStyle, onTitle }: TemplateDesignToolsProps) {
+export const TemplateDesignTools = memo(function TemplateDesignTools({ options, layout, style = null, title = "", disabled = false, onLayout, onStyle, onTitle }: TemplateDesignToolsProps) {
   if (!options) return <p className="px-2 py-2 text-sm text-muted-foreground">El diseño del documento es el institucional</p>
 
   const change = <K extends keyof DocumentStyleDraft>(key: K, value: DocumentStyleDraft[K]): void => {
@@ -170,63 +207,50 @@ export function TemplateDesignTools({ options, layout, style = null, title = "",
   const sizes = sizeControls(options).map((control) => <LayoutSelect key={control.key} control={control} layout={layout} disabled={disabled} onLayout={onLayout} />)
 
   return (
-    <div className="flex shrink-0 items-stretch" data-design-tools>
-      <TemplateRibbonGroup label="Página">
-        <div className="grid grid-flow-col grid-rows-2 items-center justify-items-end gap-x-3 gap-y-1">
-          {style ? <ChoiceSelect id="template-style-paper" label="Papel" value={style.paper} choices={PAPERS} disabled={disabled} onChange={(value) => change("paper", value as DocumentStyleDraft["paper"])} /> : null}
-          {style ? <ChoiceSelect id="template-style-orientation" label="Orientación" value={style.orientation} choices={ORIENTATIONS} disabled={disabled} onChange={(value) => change("orientation", value as DocumentStyleDraft["orientation"])} /> : null}
-          {pageControls(options).map((control) => <LayoutSelect key={control.key} control={control} layout={layout} disabled={disabled} onLayout={onLayout} />)}
-        </div>
-      </TemplateRibbonGroup>
-      <TemplateRibbonDivider />
-      <TemplateRibbonGroup label="Fuente">
-        <div className="grid grid-flow-col grid-rows-2 items-center justify-items-end gap-x-3 gap-y-1">
-          {style ? <ChoiceSelect id="template-style-font_family" label="Letra" value={style.font_family} choices={FONTS} disabled={disabled} onChange={(value) => change("font_family", value)} /> : null}
-          {sizes}
-        </div>
-      </TemplateRibbonGroup>
+    <div className="flex shrink-0 items-center gap-1" data-design-tools>
+      <DesignMenu label="Página" icon={FileText} disabled={disabled}>
+        {style ? <ChoiceSelect id="template-style-paper" label="Papel" value={style.paper} choices={PAPERS} disabled={disabled} onChange={(value) => change("paper", value as DocumentStyleDraft["paper"])} /> : null}
+        {style ? <ChoiceSelect id="template-style-orientation" label="Orientación" value={style.orientation} choices={ORIENTATIONS} disabled={disabled} onChange={(value) => change("orientation", value as DocumentStyleDraft["orientation"])} /> : null}
+        {pageControls(options).map((control) => <LayoutSelect key={control.key} control={control} layout={layout} disabled={disabled} onLayout={onLayout} />)}
+      </DesignMenu>
+      <DesignMenu label="Fuente" icon={Type} disabled={disabled}>
+        {style ? <ChoiceSelect id="template-style-font_family" label="Letra" value={style.font_family} choices={FONTS} disabled={disabled} onChange={(value) => change("font_family", value)} /> : null}
+        {sizes}
+      </DesignMenu>
       {style ? (
         <>
-          <TemplateRibbonDivider />
-          <TemplateRibbonGroup label="Párrafo">
-            <div className="grid grid-flow-col grid-rows-2 items-center justify-items-end gap-x-3 gap-y-1">
-              <NumberInput id="template-style-line_height" label="Interlineado" value={style.line_height} min={1} max={3} step={0.05} disabled={disabled} onChange={(value) => change("line_height", value)} />
-              <NumberInput id="template-style-paragraph_spacing_pt" label="Espacio entre párrafos (pt)" value={style.paragraph_spacing_pt} min={0} max={36} step={1} disabled={disabled} onChange={(value) => change("paragraph_spacing_pt", value)} />
-              <ChoiceSelect id="template-style-body-alignment" label="Alineación del texto" value={style.body.alignment} choices={ALIGNMENTS} disabled={disabled} onChange={(alignment) => change("body", { alignment })} />
-              <TextInput id="template-style-empty_text" label="Texto vacío" value={style.empty_text} maxLength={120} disabled={disabled} onChange={(value) => change("empty_text", value)} />
+          <DesignMenu label="Párrafo" icon={Pilcrow} disabled={disabled}>
+            <NumberInput id="template-style-line_height" label="Interlineado" value={style.line_height} min={1} max={3} step={0.05} disabled={disabled} onChange={(value) => change("line_height", value)} />
+            <NumberInput id="template-style-paragraph_spacing_pt" label="Espacio entre párrafos (pt)" value={style.paragraph_spacing_pt} min={0} max={36} step={1} disabled={disabled} onChange={(value) => change("paragraph_spacing_pt", value)} />
+            <ChoiceSelect id="template-style-body-alignment" label="Alineación del texto" value={style.body.alignment} choices={ALIGNMENTS} disabled={disabled} onChange={(alignment) => change("body", { alignment })} />
+            <TextInput id="template-style-empty_text" label="Texto vacío" value={style.empty_text} maxLength={120} disabled={disabled} onChange={(value) => change("empty_text", value)} />
+          </DesignMenu>
+          <DesignMenu label="Colores" icon={Palette} disabled={disabled}>
+            {COLORS.map((color) => (
+              <ColorInput
+                key={color.key}
+                id={`template-style-colors-${color.key}`}
+                label={color.label}
+                value={style.colors[color.key]}
+                fallback={color.fallback}
+                disabled={disabled}
+                onChange={(value) => change("colors", { ...style.colors, [color.key]: value === null ? null : value.toUpperCase() })}
+              />
+            ))}
+          </DesignMenu>
+          <DesignMenu label="Títulos" icon={Heading} disabled={disabled}>
+            <TextInput id="template-style-title-text" label="Título" value={title} maxLength={180} disabled={disabled} onChange={(value) => onTitle?.(value)} />
+            <div className="grid grid-cols-[8.5rem_minmax(0,1fr)] items-center gap-2">
+              <span className="text-sm text-muted-foreground">Formato del título</span>
+              <HeadingControls name="del título" prefix="title" heading={style.title} disabled={disabled} onChange={(heading) => change("title", heading)} />
             </div>
-          </TemplateRibbonGroup>
-          <TemplateRibbonDivider />
-          <TemplateRibbonGroup label="Colores">
-            <div className="grid grid-flow-col grid-rows-2 items-center justify-items-end gap-x-3 gap-y-1">
-              {COLORS.map((color) => (
-                <ColorInput
-                  key={color.key}
-                  id={`template-style-colors-${color.key}`}
-                  label={color.label}
-                  value={style.colors[color.key]}
-                  fallback={color.fallback}
-                  disabled={disabled}
-                  onChange={(value) => change("colors", { ...style.colors, [color.key]: value === null ? null : value.toUpperCase() })}
-                />
-              ))}
+            <div className="grid grid-cols-[8.5rem_minmax(0,1fr)] items-center gap-2">
+              <span className="text-sm text-muted-foreground">Títulos de sección</span>
+              <HeadingControls name="de los títulos de sección" prefix="section_title" heading={style.section_title} disabled={disabled} onChange={(heading) => change("section_title", heading)} />
             </div>
-          </TemplateRibbonGroup>
-          <TemplateRibbonDivider />
-          <TemplateRibbonGroup label="Títulos">
-            <div className="flex flex-col items-start gap-1">
-              <div className="flex items-center gap-1.5">
-                <TextInput id="template-style-title-text" label="Título" value={title} maxLength={180} disabled={disabled} onChange={(value) => onTitle?.(value)} />
-                <HeadingControls name="del título" prefix="title" heading={style.title} disabled={disabled} onChange={(heading) => change("title", heading)} />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs whitespace-nowrap text-muted-foreground">Títulos de sección</span>
-                <HeadingControls name="de los títulos de sección" prefix="section_title" heading={style.section_title} disabled={disabled} onChange={(heading) => change("section_title", heading)} />
-              </div>
-            </div>
-          </TemplateRibbonGroup>
+          </DesignMenu>
         </>
       ) : null}
     </div>
   )
-}
+})
