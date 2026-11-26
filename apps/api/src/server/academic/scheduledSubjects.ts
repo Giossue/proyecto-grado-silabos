@@ -43,8 +43,8 @@ async function progressOf(templates: TemplateStore, subjectIds: string[]): Promi
   return profileProgress({ template, definition: template.definition, store: templates }, subjectIds)
 }
 
-export async function scheduledSubjects(request: Request, deps: ScheduledSubjectsDeps): Promise<Response> {
-  const career = await authorizedCareer(request, deps)
+export async function scheduledSubjects(request: Request, deps: ScheduledSubjectsDeps, requestedCareerId: string | null = null): Promise<Response> {
+  const career = await authorizedCareer(request, deps, requestedCareerId)
   if (career instanceof Response) return career
   return scheduledSubjectsResponse(request, career, deps)
 }

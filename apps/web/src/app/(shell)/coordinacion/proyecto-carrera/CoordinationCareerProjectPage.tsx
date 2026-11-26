@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
 import { type ScheduledSubjects } from "@/api/career-academics"
+import { AdminCareerBackLink, AdminCareerTabs } from "@/components/domain/academic/AdminCareerNavigation"
 import { FichaImportDialog } from "@/components/domain/academic/FichaImportDialog"
 import { SupportDocumentsPanel } from "@/components/domain/academic/SupportDocumentsPanel"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
@@ -23,6 +24,7 @@ import { Field, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAcademicCareerScope } from "@/composables/useAcademicCareerScope"
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { paths } from "@/lib/routes"
 import { rowLinkClass } from "@/lib/rowActivation"
@@ -44,13 +46,14 @@ const subjectFilters: Record<string, ClientFilterDefinition<Subject>> = {
 const compareCycles = (left: string, right: string): number => left.localeCompare(right, "es", { numeric: true })
 const completeCount = (list: Subject[]): number => list.filter((subject) => subject.profile_complete).length
 
-export default function CoordinationCareerProjectPage() {
+export default function CoordinationCareerProjectPage({ careerId = null }: { careerId?: string | null }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [tab, setTab] = useState(() => (searchParams.get("tab") === "documentos" ? "documentos" : "materias"))
+  useAcademicCareerScope(careerId)
+  const [tab, setTab] = useState(() => (careerId === null && searchParams.get("tab") === "documentos" ? "documentos" : "materias"))
   const [uploadOpen, setUploadOpen] = useState(false)
-  const scope = useQuery(coordinatorCareerQuery())
-  const query = useQuery({ ...scheduledSubjectsQuery(), enabled: typeof scope.data === "string" })
+  const scope = useQuery(coordinatorCareerQuery(careerId))
+  const query = useQuery({ ...scheduledSubjectsQuery(careerId), enabled: typeof scope.data === "string" })
   const data = query.data ?? null
   const loading = scope.isFetching || query.isFetching
   const loadError = queryErrorMessage(scope, "No se pudo cargar el proyecto de carrera") ?? queryErrorMessage(query, "No se pudo cargar el proyecto de carrera")
@@ -83,10 +86,13 @@ export default function CoordinationCareerProjectPage() {
   }
 
   const documents = tab === "documentos"
+  const subjectHref = (subject: string): string => (careerId ? paths.admin.careerProjectSubject(careerId, subject) : paths.coordination.careerProjectSubject(subject))
+  const title = documents ? "Documentos de apoyo" : careerId && data ? `Proyecto de ${data.career.name}` : "Proyecto de carrera por materia"
 
   return (
     <PageFrame
-      title={documents ? "Documentos de apoyo" : "Proyecto de carrera por materia"}
+      title={title}
+      eyebrow={careerId ? <AdminCareerBackLink /> : null}
       description={documents ? "Material de la carrera que sus docentes pueden consultar" : "Contenido de cada materia que se copia en sus sílabos"}
       size="wide"
       loading={!data && !loadError}
@@ -103,6 +109,7 @@ export default function CoordinationCareerProjectPage() {
         )
       }
     >
+      {careerId ? <AdminCareerTabs careerId={careerId} current="project" /> : null}
       <Tabs value={tab} onValueChange={changeTab} className="gap-4">
         {!data && !loadError ? (
           <div data-skeleton="table-tabs" className="flex h-11 items-center gap-2" aria-hidden="true">
@@ -113,7 +120,7 @@ export default function CoordinationCareerProjectPage() {
               </div>
             ))}
           </div>
-        ) : (
+        ) : careerId ? null : (
           <TabsList className="h-11 justify-start" aria-label="Vistas del proyecto de carrera">
             <TabsTrigger value="materias" className="flex-none gap-2 px-4 data-[state=active]:font-semibold">
               <BookOpen aria-hidden="true" />
@@ -198,7 +205,7 @@ export default function CoordinationCareerProjectPage() {
                             <Card className="relative h-full cursor-pointer transition-colors hover:bg-accent/40 has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50">
                               <CardHeader>
                                 <CardTitle>
-                                  <Link href={paths.coordination.careerProjectSubject(subject.id)} className={cn(rowLinkClass, "after:absolute after:inset-0 after:rounded-[inherit] focus-visible:ring-0")}>
+                                  <Link href={subjectHref(subject.id)} className={cn(rowLinkClass, "after:absolute after:inset-0 after:rounded-[inherit] focus-visible:ring-0")}>
                                     {subject.nombre}
                                   </Link>
                                 </CardTitle>
@@ -217,9 +224,11 @@ export default function CoordinationCareerProjectPage() {
             </div>
           ) : null}
         </TabsContent>
-        <TabsContent value="documentos" className="flex flex-col gap-4">
-          <SupportDocumentsPanel manages uploadOpen={uploadOpen} onUploadOpenChange={setUploadOpen} />
-        </TabsContent>
+        {careerId ? null : (
+          <TabsContent value="documentos" className="flex flex-col gap-4">
+            <SupportDocumentsPanel manages uploadOpen={uploadOpen} onUploadOpenChange={setUploadOpen} />
+          </TabsContent>
+        )}
       </Tabs>
     </PageFrame>
   )

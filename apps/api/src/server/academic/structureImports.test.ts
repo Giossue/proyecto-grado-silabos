@@ -336,3 +336,32 @@ describe("POST /api/v1/coordination/academic/curriculum-import", () => {
     expect(state.subjects).toHaveLength(1)
   })
 })
+
+describe("curriculum import through /api/v1/admin/careers/{career}/academic/curriculum-import", () => {
+  const OTHER = "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"
+  const adminImport = (careerId: string, file: Buffer) => importCurriculum(post(`/api/v1/admin/careers/${careerId}/academic/curriculum-import`, file, { confirm: "1" }), deps(), careerId)
+  const row = () => xlsx([CURRICULUM_HEADER, ["ADM-001", "Redes I", "1", "Unidad básica", "", "48", "32", "64", "3", "", ""]])
+
+  beforeEach(() => {
+    state.careers.push({ id: OTHER, code: "RD-8", name: "Redes", cycles: 4, active: true })
+  })
+
+  it("lets the administrator download the template and import into the requested career", async () => {
+    const template = await curriculumImportTemplate(get(`/api/v1/admin/careers/${OTHER}/academic/curriculum-import/template`), deps(), OTHER)
+    expect(template.headers.get("content-disposition")).toBe("attachment; filename=plantilla-malla.xlsx")
+    expect(await json(await adminImport(OTHER, await row()))).toMatchObject({ valid: true, created: 1 })
+    expect(state.subjects.find((subject) => subject.code === "ADM-001")?.careerId).toBe(OTHER)
+  })
+
+  it("answers 404 to the administrator for an unknown career", async () => {
+    expect((await adminImport("01a1c5bc-79cf-7000-8000-000000000009", await row())).status).toBe(404)
+    expect(state.subjects).toHaveLength(1)
+  })
+
+  it("refuses a coordinator who sends another career and creates nothing", async () => {
+    signIn("coordinador", CAREER)
+    expect((await adminImport(OTHER, await row())).status).toBe(403)
+    expect((await curriculumImportTemplate(get(`/api/v1/admin/careers/${OTHER}/academic/curriculum-import/template`), deps(), OTHER)).status).toBe(403)
+    expect(state.subjects).toHaveLength(1)
+  })
+})

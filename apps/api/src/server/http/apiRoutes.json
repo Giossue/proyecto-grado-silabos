@@ -1111,6 +1111,330 @@
       "GET",
       "HEAD"
     ],
+    "uri": "api/v1/admin/careers/{career}/academic/curriculum/{curriculum}",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "curriculum": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/careers/{career}/ficha-imports/template",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/careers/{career}/ficha-imports/spreadsheet",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/careers/{career}/ficha-imports/apply",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/scheduled-subjects",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/teacher-assignments",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/teachers",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/curriculum-import/template",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/curriculum-import",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/teachers/import-template",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/teachers/import",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/teachers/{user}/resend-activation",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career",
+      "user": "App\\Models\\User"
+    }
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/teachers/{user}",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career",
+      "user": "App\\Models\\User"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/parallels",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/parallels/{parallel}",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "parallel": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/parallels/{parallel}/teacher",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "parallel": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/parallels/{parallel}",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "parallel": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/{entity}",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "entity": "asignatura|asignacion_docente"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/{entity}/{record}",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "entity": "asignatura",
+      "record": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/{entity}/{record}",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "entity": "asignacion_docente",
+      "record": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/curriculum/{curriculum}/configuration",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "curriculum": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/curriculum/{curriculum}/requirements",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "curriculum": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/curriculum/{curriculum}/requirements/{requirement}",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "curriculum": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "requirement": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/curriculum/{curriculum}/subjects/{subject}",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "curriculum": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "subject": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/admin/careers/{career}/academic/curriculum/{curriculum}/subject-layout",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "curriculum": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
     "uri": "api/v1/teacher/syllabi",
     "wheres": {},
     "bindings": {}

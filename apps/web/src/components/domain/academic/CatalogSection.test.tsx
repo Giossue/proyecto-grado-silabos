@@ -78,4 +78,13 @@ describe("CatalogSection", () => {
     expect(screen.getByRole("columnheader", { name: "Facultad" }).getAttribute("aria-sort")).toBe("descending")
     expect(screen.getByRole("columnheader", { name: "Carrera" }).hasAttribute("aria-sort")).toBe(false)
   })
+
+  it("cada carrera activa ofrece abrir su malla y paralelos y su proyecto de carrera", () => {
+    const withInactive = { ...catalogs, careers: [...catalogs.careers, { ...catalogs.careers[0], id: "c2", code: "RD", name: "Redes", active: false }] } as AcademicStructureProps["catalogs"]
+    renderWithProviders(<CatalogSection section="careers" catalogs={withInactive} options={options} onChanged={vi.fn()} />)
+
+    expect(screen.getByRole("link", { name: "Malla y paralelos de Software" }).getAttribute("href")).toBe("/admin/estructura-academica/carreras/c1/malla")
+    expect(screen.getByRole("link", { name: "Proyecto de carrera de Software" }).getAttribute("href")).toBe("/admin/estructura-academica/carreras/c1/proyecto-carrera")
+    expect(screen.queryByRole("link", { name: /de Redes$/ })).toBeNull()
+  })
 })

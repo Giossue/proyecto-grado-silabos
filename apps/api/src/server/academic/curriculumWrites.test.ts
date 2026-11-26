@@ -272,3 +272,40 @@ describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/subject-la
     expect((await reposition({ subject_id: ALGORITHMS, cycle: 1, position: 1000 })).json?.errors).toEqual({ position: ["El campo posición no debe ser mayor que 999."] })
   })
 })
+
+describe("curriculum edits through /api/v1/admin/careers/{career}/academic/curriculum/{curriculum}", () => {
+  const adminBase = (careerId: string) => `/api/v1/admin/careers/${careerId}/academic/curriculum/${careerId}`
+
+  it("lets the administrator configure, relate, reorder and delete in the requested career", async () => {
+    world.assignments = [makeAssignment({ role: "administrador", careerId: null, careerLabel: null })]
+    expect((await send("PATCH", `${adminBase(CAREER)}/configuration`, { cycle_count: "10" }, (request) => updateCurriculumConfiguration(request, CAREER, deps(), CAREER))).status).toBe(200)
+    expect(log).toContain(`cycles:${CAREER}:10`)
+    log = []
+    expect((await send("POST", `${adminBase(CAREER)}/requirements`, { subject_id: CALCULUS_II, requirement_id: CALCULUS, type: "prerrequisito" }, (request) => createSubjectRequirement(request, CAREER, deps(), CAREER))).status).toBe(200)
+    expect(log).toContain(`requirement:${CALCULUS_II}:${CALCULUS}:prerrequisito`)
+    log = []
+    expect((await send("DELETE", `${adminBase(CAREER)}/requirements/${REQUIREMENT}`, {}, (request) => deleteSubjectRequirement(request, CAREER, REQUIREMENT, deps(), CAREER))).status).toBe(200)
+    expect(log).toContain(`delete-requirement:${REQUIREMENT}`)
+    log = []
+    expect((await send("PATCH", `${adminBase(CAREER)}/subject-layout`, { subject_id: CALCULUS, cycle: 1, position: 0 }, (request) => updateSubjectLayout(request, CAREER, deps(), CAREER))).status).toBe(200)
+    log = []
+    expect((await send("DELETE", `${adminBase(CAREER)}/subjects/${CALCULUS}`, {}, (request) => deleteCurriculumSubject(request, CAREER, CALCULUS, deps(), CAREER))).status).toBe(200)
+    expect(log).toContain(`delete-subject:${CALCULUS}`)
+  })
+
+  it("answers 404 to the administrator for an inactive career", async () => {
+    world.assignments = [makeAssignment({ role: "administrador", careerId: null, careerLabel: null })]
+    const response = await send("PATCH", `${adminBase(OTHER_CAREER)}/configuration`, { cycle_count: "10" }, (request) => updateCurriculumConfiguration(request, OTHER_CAREER, deps(), OTHER_CAREER))
+    expect(response.status).toBe(404)
+    expect(log).toEqual([])
+  })
+
+  it("refuses a coordinator who sends another career and writes nothing", async () => {
+    const attempts = [
+      await send("PATCH", `${adminBase(OTHER_CAREER)}/configuration`, { cycle_count: "10" }, (request) => updateCurriculumConfiguration(request, OTHER_CAREER, deps(), OTHER_CAREER)),
+      await send("DELETE", `${adminBase(OTHER_CAREER)}/subjects/${CALCULUS}`, {}, (request) => deleteCurriculumSubject(request, OTHER_CAREER, CALCULUS, deps(), OTHER_CAREER)),
+    ]
+    expect(attempts.map((attempt) => `${attempt.status} ${attempt.text}`)).toEqual([`403 ${FORBIDDEN}`, `403 ${FORBIDDEN}`])
+    expect(log).toEqual([])
+  })
+})

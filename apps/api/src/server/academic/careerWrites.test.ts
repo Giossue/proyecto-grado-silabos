@@ -93,7 +93,7 @@ function deps(): CareerWriteDeps {
       try {
         const result = await work({
           careerLocked: async () => locked,
-          lockCareer: async (id) => (id === CAREER ? { id, cycleCount: 4 } : null),
+          lockCareer: async (id) => (id === CAREER || id === OTHER_CAREER ? { id, cycleCount: 4 } : null),
           lastPosition: async (careerId, cycle) => {
             const positions = [...subjects.values()].filter((subject) => subject.careerId === careerId && subject.columns.ciclo_asignatura === cycle).map((subject) => Number(subject.columns.orden_asignatura_en_ciclo))
             return positions.length === 0 ? null : Math.max(...positions)
@@ -603,5 +603,81 @@ describe("PUT /api/v1/coordination/academic/parallels/{parallel}/teacher", () =>
   it("validates the teacher with its own label and answers Laravel's model 404 for a foreign parallel", async () => {
     expect((await replaceTeacher(PARALLEL, {})).json?.errors).toEqual({ user_id: ["El campo docente es obligatorio."] })
     expect(await replaceTeacher(OTHER_PARALLEL, { user_id: TEACHER })).toMatchObject({ status: 404, text: '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Parallel]."}' })
+  })
+})
+
+describe("the administrator works on any career through /api/v1/admin/careers/{career}/academic", () => {
+  const OTHER_TEACHER_ROLE = "01a1c5bc-7ca5-7009-83f0-4ebc012572d6"
+  const adminPath = (careerId: string, path: string) => `/api/v1/admin/careers/${careerId}/academic/${path}`
+
+  beforeEach(() => {
+    world.assignments = [makeAssignment({ role: "administrador", careerId: null, careerLabel: null })]
+    grants.push({ id: OTHER_TEACHER_ROLE, userId: TEACHER, careerId: OTHER_CAREER, role: "docente", active: true, eligible: true })
+  })
+
+  it("creates and edits subjects, creates parallels with their teacher, edits them and replaces their teacher in the requested career", async () => {
+    expect((await send("POST", adminPath(OTHER_CAREER, "asignatura"), subjectBody, (request) => createCareerRecord(request, "asignatura", deps(), OTHER_CAREER))).text).toBe(CREATED)
+    expect(log.some((entry) => entry.startsWith(`insert-subject:${OTHER_CAREER}:`))).toBe(true)
+    log = []
+    expect((await send("PATCH", adminPath(OTHER_CAREER, `asignatura/${OTHER_SUBJECT}`), { ...subjectBody, code: "SW-B1-001" }, (request) => updateCareerRecord(request, "asignatura", OTHER_SUBJECT, deps(), OTHER_CAREER))).status).toBe(200)
+    expect(log).toContain(`keep:false:${OTHER_CAREER}`)
+    log = []
+    const created = await send("POST", adminPath(OTHER_CAREER, "parallels"), { subject_id: OTHER_SUBJECT, codes: ["B"], shift: "matutina", user_id: TEACHER }, (request) => createParallels(request, deps(), OTHER_CAREER))
+    expect(created.status).toBe(200)
+    expect(log).toContain(`insert-parallel:${OTHER_SUBJECT}:B:matutina`)
+    expect(log.some((entry) => entry.startsWith(`assign:${OTHER_TEACHER_ROLE}:`))).toBe(true)
+    log = []
+    expect((await send("PATCH", adminPath(OTHER_CAREER, `parallels/${OTHER_PARALLEL}`), { code: "C", shift: "matutina" }, (request) => updateParallel(request, OTHER_PARALLEL, deps(), OTHER_CAREER))).status).toBe(200)
+    expect(log).toContain(`update-parallel:${OTHER_PARALLEL}:C:matutina`)
+    log = []
+    expect((await send("PUT", adminPath(OTHER_CAREER, `parallels/${OTHER_PARALLEL}/teacher`), { user_id: TEACHER }, (request) => replaceParallelTeacher(request, OTHER_PARALLEL, deps(), OTHER_CAREER))).text).toBe(CREATED)
+    expect(log).toContain(`assign:${OTHER_TEACHER_ROLE}:${OTHER_PARALLEL}`)
+  })
+
+  it("assigns a teacher to a parallel of the requested career and keeps records of other careers out of reach", async () => {
+    expect((await send("POST", adminPath(OTHER_CAREER, "asignacion_docente"), { user_id: TEACHER, parallel_id: OTHER_PARALLEL }, (request) => createCareerRecord(request, "asignacion_docente", deps(), OTHER_CAREER))).text).toBe(CREATED)
+    expect(log).toContain(`assign:${OTHER_TEACHER_ROLE}:${OTHER_PARALLEL}`)
+    log = []
+    expect((await send("PATCH", adminPath(OTHER_CAREER, `parallels/${PARALLEL}`), { code: "C", shift: "matutina" }, (request) => updateParallel(request, PARALLEL, deps(), OTHER_CAREER))).status).toBe(404)
+    expect(log.filter((entry) => entry.startsWith("update-parallel"))).toEqual([])
+  })
+
+  it("answers 404 for a career that does not exist or is inactive, writing nothing", async () => {
+    const missing = "01a1c5bc-79cf-7000-8000-000000000009"
+    const response = await send("POST", adminPath(missing, "parallels"), { subject_id: OTHER_SUBJECT, codes: ["B"], shift: "matutina", user_id: TEACHER }, (request) => createParallels(request, deps(), missing))
+    expect(response.status).toBe(404)
+    expect(log).toEqual([])
+  })
+
+  it("is refused on the coordinator routes, which carry no career", async () => {
+    expect((await storeParallels({ subject_id: OTHER_SUBJECT, codes: ["B"], shift: "matutina", user_id: TEACHER })).text).toBe(FORBIDDEN)
+    expect(log).toEqual([])
+  })
+})
+
+describe("a coordinator never reaches another career", () => {
+  const adminPath = (path: string) => `/api/v1/admin/careers/${OTHER_CAREER}/academic/${path}`
+
+  it("gets 403 and writes nothing when it sends another career identifier", async () => {
+    const attempts = [
+      await send("POST", adminPath("asignatura"), subjectBody, (request) => createCareerRecord(request, "asignatura", deps(), OTHER_CAREER)),
+      await send("PATCH", adminPath(`asignatura/${OTHER_SUBJECT}`), subjectBody, (request) => updateCareerRecord(request, "asignatura", OTHER_SUBJECT, deps(), OTHER_CAREER)),
+      await send("POST", adminPath("parallels"), { subject_id: OTHER_SUBJECT, codes: ["B"], shift: "matutina", user_id: TEACHER }, (request) => createParallels(request, deps(), OTHER_CAREER)),
+      await send("PATCH", adminPath(`parallels/${OTHER_PARALLEL}`), { code: "C", shift: "matutina" }, (request) => updateParallel(request, OTHER_PARALLEL, deps(), OTHER_CAREER)),
+      await send("PUT", adminPath(`parallels/${OTHER_PARALLEL}/teacher`), { user_id: TEACHER }, (request) => replaceParallelTeacher(request, OTHER_PARALLEL, deps(), OTHER_CAREER)),
+    ]
+    expect(attempts.map((attempt) => `${attempt.status} ${attempt.text}`)).toEqual(attempts.map(() => `403 ${FORBIDDEN}`))
+    expect(log).toEqual([])
+  })
+
+  it("keeps working on its own career when the identifier is its own", async () => {
+    expect((await send("POST", `/api/v1/admin/careers/${CAREER}/academic/asignatura`, subjectBody, (request) => createCareerRecord(request, "asignatura", deps(), CAREER))).text).toBe(CREATED)
+  })
+
+  it("answers 401 without a session", async () => {
+    const request = new Request(apiRequest(adminPath("parallels"), { method: "POST", headers: { "content-type": "application/json" } }), { body: "{}" })
+    const response = await createParallels(request, deps(), OTHER_CAREER)
+    expect(response.status).toBe(401)
+    expect(log).toEqual([])
   })
 })

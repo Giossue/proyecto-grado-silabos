@@ -98,3 +98,24 @@ describe("Proyecto de carrera", () => {
     expect(document.body.textContent).toContain("Subir documento")
   })
 })
+
+describe("Proyecto de carrera elegido por Administración", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    navigation.reset("/admin/estructura-academica/carreras/carrera-9/proyecto-carrera")
+    vi.mocked(getScheduledSubjects).mockResolvedValue({ ...scheduled([subject("m2", "Matemática Discreta", 1)]), career: { name: "Redes", lock_reason: null, lock: null } } as unknown as ScheduledSubjects)
+  })
+
+  it("lee la carrera indicada, enlaza las materias a sus páginas de Administración y no ofrece documentos de apoyo", async () => {
+    renderWithProviders(<CoordinationCareerProjectPage careerId="carrera-9" />)
+    await flush()
+    await openCycles()
+
+    expect(getSession).not.toHaveBeenCalled()
+    expect(getScheduledSubjects).toHaveBeenCalledWith("carrera-9")
+    expect(document.querySelector('[data-tour="page-header"]')!.textContent).toContain("Proyecto de Redes")
+    expect(document.querySelector<HTMLAnchorElement>('[data-slot="card-title"] a')?.getAttribute("href")).toBe("/admin/estructura-academica/carreras/carrera-9/proyecto-carrera/m2")
+    expect([...document.querySelectorAll('[role="tab"]')].some((tab) => tab.textContent === "Documentos de apoyo")).toBe(false)
+    expect(document.querySelector('[data-testid="support-documents"]')).toBeNull()
+  })
+})

@@ -32,6 +32,12 @@ export const paths = {
     security: '/admin/configuracion/seguridad',
     system: '/admin/configuracion/sistema',
     notifications: '/admin/notificaciones',
+    careerCurriculum: (career: string): string => `/admin/estructura-academica/carreras/${segment(career)}/malla`,
+    careerSchedule: (career: string): string => `/admin/estructura-academica/carreras/${segment(career)}/materias-asignaciones`,
+    careerTeachers: (career: string): string => `/admin/estructura-academica/carreras/${segment(career)}/docentes`,
+    careerProject: (career: string): string => `/admin/estructura-academica/carreras/${segment(career)}/proyecto-carrera`,
+    careerProjectSubject: (career: string, subject: string): string =>
+      `/admin/estructura-academica/carreras/${segment(career)}/proyecto-carrera/${segment(subject)}`,
   },
   coordination: {
     root: '/coordinacion',
@@ -203,6 +209,11 @@ export const routeRegistry: readonly RouteDefinition[] = [
   { name: 'admin-security', path: paths.admin.security, component: 'SecurityPage', shortcut: 'security', ...admin },
   { name: 'admin-system-settings', path: paths.admin.system, component: 'AdminSystemSettingsPage', breadcrumb: 'Sistema', ...admin },
   { name: 'admin-notifications', path: paths.admin.notifications, component: 'NotificationsPage', shortcut: 'notifications', ...admin },
+  { name: 'admin-career-curriculum', path: '/admin/estructura-academica/carreras/:career/malla', component: 'CoordinationAcademicStructurePage', states: ['curriculum'], breadcrumb: 'Malla de la carrera', ...admin },
+  { name: 'admin-career-schedule', path: '/admin/estructura-academica/carreras/:career/materias-asignaciones', component: 'CoordinationAcademicStructurePage', states: ['schedule'], breadcrumb: 'Paralelos de la carrera', ...admin },
+  { name: 'admin-career-teachers', path: '/admin/estructura-academica/carreras/:career/docentes', component: 'CoordinationAcademicStructurePage', states: ['teachers'], breadcrumb: 'Docentes de la carrera', ...admin },
+  { name: 'admin-career-project', path: '/admin/estructura-academica/carreras/:career/proyecto-carrera', component: 'CoordinationCareerProjectPage', breadcrumb: 'Proyecto de la carrera', ...admin },
+  { name: 'admin-career-project-subject', path: '/admin/estructura-academica/carreras/:career/proyecto-carrera/:subject', component: 'CoordinationSubjectProfilePage', breadcrumb: 'Proyecto de carrera de una materia', ...admin },
 
   { name: 'coordination-notifications', path: paths.coordination.notifications, component: 'NotificationsPage', shortcut: 'notifications', ...coordinator },
   { name: 'coordination-profile', path: paths.coordination.profile, component: 'ProfilePage', shortcut: 'profile', ...coordinator },

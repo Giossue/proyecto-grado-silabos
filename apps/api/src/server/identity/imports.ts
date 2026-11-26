@@ -1,3 +1,4 @@
+import { activeCareerId, resolveCareerScope } from "../academic/careerScope"
 import { requireSession } from "../auth/requireSession"
 import type { AppSession } from "../auth/types"
 import { importTemplate, type TemplateSelect } from "../excel/importTemplate"
@@ -14,7 +15,6 @@ import {
   fullName,
   isValidNamePart,
   NAME_MAX_LENGTH,
-  ROLE_COORDINATOR,
   ROLE_LABELS,
 } from "./accountRules"
 import { createCareerTeacher, createManagedUser, teacherBlockedReason } from "./accounts"
@@ -54,9 +54,8 @@ export type IdentityImportStore = {
 
 export type IdentityImportDeps = IdentityWriteDeps & { store: IdentityImportStore; now: () => number; maxPostSize?: number }
 
-async function mayAddTeachers(session: AppSession, deps: IdentityImportDeps): Promise<boolean> {
-  const role = session.activeRole
-  return session.user.active && role?.role === ROLE_COORDINATOR && role.careerId !== null && (await deps.accounts.activeCareer(role.careerId))
+function teacherCareer(session: AppSession, deps: IdentityImportDeps, requestedCareerId: string | null): Promise<string | Response> {
+  return resolveCareerScope(session, requestedCareerId, activeCareerId((careerId) => deps.accounts.activeCareer(careerId)))
 }
 
 function compose(values: Record<string, string>): [Record<string, string>, string[]] {
@@ -89,10 +88,11 @@ async function templateResponse(headers: string[], selects: TemplateSelect[], no
   return xlsxDownload(await importTemplate(headers, selects, notes, { now: deps.now() }), filename)
 }
 
-export async function teacherImportTemplate(request: Request, deps: IdentityImportDeps): Promise<Response> {
+export async function teacherImportTemplate(request: Request, deps: IdentityImportDeps, requestedCareerId: string | null = null): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
-  if (!(await mayAddTeachers(session, deps))) return forbidden()
+  const careerId = await teacherCareer(session, deps, requestedCareerId)
+  if (careerId instanceof Response) return careerId
   return templateResponse(Object.values(TEACHER_COLUMNS), [], TEACHER_NOTES, "plantilla-docentes.xlsx", deps)
 }
 
@@ -178,20 +178,20 @@ async function checkUsers(rows: ImportRow[], deps: IdentityImportDeps): Promise<
   return { checked, payloads }
 }
 
-export async function importTeachers(request: Request, deps: IdentityImportDeps): Promise<Response> {
+export async function importTeachers(request: Request, deps: IdentityImportDeps, requestedCareerId: string | null = null): Promise<Response> {
   const ready = await importSession(request, deps, 10)
   if (ready instanceof Response) return ready
   const { session, original, finish } = ready
   const upload = await spreadsheetUpload(request)
   if (upload instanceof Response) return finish(upload)
-  if (!(await mayAddTeachers(session, deps))) return finish(forbidden())
+  const careerId = await teacherCareer(session, deps, requestedCareerId)
+  if (careerId instanceof Response) return finish(careerId)
   const rows = importRows(upload.file, TEACHER_COLUMNS)
   if (rows instanceof Response) return finish(rows)
   const result = await checkTeachers(rows, deps)
   const { checked, payloads } = result
   const valid = checked.every((row) => row.errors.length === 0)
   if (!upload.confirm || !valid) return finish(apiJson({ rows: checked, valid, created: 0 } satisfies ImportResult))
-  const careerId = session.activeRole?.careerId as string
   const outcome = await perform(deps, original, session, async (ctx) => {
     let created = 0
     for (const payload of payloads) {

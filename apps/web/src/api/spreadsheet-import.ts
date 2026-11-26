@@ -1,4 +1,5 @@
 import { api, apiBlob } from '@/api/client';
+import { careerAcademicPath } from '@/api/careerScope';
 
 export type ImportRow = { line: number; values: Record<string, string>; errors: string[] };
 export type ImportResult = { rows: ImportRow[]; valid: boolean; created: number };
@@ -14,12 +15,12 @@ const imports: Record<ImportKind, { send: (body: FormData) => Promise<ImportResu
     template: () => apiBlob('/admin/academic/careers/import-template'),
   },
   teachers: {
-    send: (body) => api<ImportResult>('/coordination/academic/teachers/import', { method: 'POST', body }),
-    template: () => apiBlob('/coordination/academic/teachers/import-template'),
+    send: (body) => api<ImportResult>(careerAcademicPath('/teachers/import'), { method: 'POST', body }),
+    template: () => apiBlob(careerAcademicPath('/teachers/import-template')),
   },
   curriculum: {
-    send: (body) => api<ImportResult>('/coordination/academic/curriculum-import', { method: 'POST', body }),
-    template: () => apiBlob('/coordination/academic/curriculum-import/template'),
+    send: (body) => api<ImportResult>(careerAcademicPath('/curriculum-import'), { method: 'POST', body }),
+    template: () => apiBlob(careerAcademicPath('/curriculum-import/template')),
   },
 };
 

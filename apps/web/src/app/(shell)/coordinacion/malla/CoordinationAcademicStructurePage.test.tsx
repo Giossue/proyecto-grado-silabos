@@ -2,6 +2,8 @@ import { fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getCurriculum, getScheduledSubjects, getTeacherAssignments, type Curriculum } from "@/api/career-academics"
 import { getSession } from "@/api/session"
+import { academicCareerScope } from "@/api/careerScope"
+import { navigation } from "@/test/nextNavigation"
 import { curriculumEditorState } from "@/state/curriculumEditor"
 import { flush, renderWithProviders } from "@/test/render"
 import { CoordinationAcademicStructurePage } from "./CoordinationAcademicStructurePage"
@@ -110,5 +112,44 @@ describe("CoordinationAcademicStructurePage, edición de malla", () => {
     await flush()
     expect(canvasEditing()).toBe("false")
     expect(editButton()).toBeDisabled()
+  })
+})
+
+describe("CoordinationAcademicStructurePage para una carrera elegida por Administración", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    navigation.reset("/admin/estructura-academica/carreras/career-9/materias-asignaciones")
+    vi.mocked(getCurriculum).mockResolvedValue({ ...curriculum(), career: { id: "career-9", name: "Redes", modality: null } } as unknown as Curriculum)
+    vi.mocked(getScheduledSubjects).mockResolvedValue({ career: { id: "career-9", name: "Redes", lock_reason: null }, scheduledSubjects: [], options: { shiftOptions: [], activeSubjects: [] } } as never)
+    vi.mocked(getTeacherAssignments).mockResolvedValue({ career: { id: "career-9", name: "Redes", lock_reason: null }, teacherAssignments: [], careerTeachers: [], pendingTeachers: [], options: { parallels: [], teacherUsers: [] }, canCreateTeacher: true } as never)
+  })
+
+  it("lee la carrera indicada sin mirar el rol activo y muestra su nombre, la vuelta y las vistas de la carrera", async () => {
+    const view = renderWithProviders(<CoordinationAcademicStructurePage mode="curriculum" careerId="career-9" />)
+    await flush()
+
+    expect(getSession).not.toHaveBeenCalled()
+    expect(getCurriculum).toHaveBeenCalledWith("career-9", "career-9")
+    expect(getScheduledSubjects).toHaveBeenCalledWith("career-9")
+    expect(getTeacherAssignments).toHaveBeenCalledWith("career-9")
+    expect(academicCareerScope()).toBe("career-9")
+    const header = document.querySelector('[data-tour="page-header"]')!
+    expect(header.textContent).toContain("Malla de Redes")
+    expect(header.querySelector("a")?.getAttribute("href")).toBe("/admin/estructura-academica?seccion=carrera")
+    expect([...document.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent)).toEqual(["Malla", "Materias y paralelos", "Docentes", "Proyecto de carrera"])
+
+    fireEvent.mouseDown([...document.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent === "Materias y paralelos")!, { button: 0 })
+    expect(navigation.push).toHaveBeenLastCalledWith("/admin/estructura-academica/carreras/career-9/materias-asignaciones")
+    view.unmount()
+    expect(academicCareerScope()).toBeNull()
+  })
+
+  it("la vista de Coordinación sigue sin ámbito de carrera ni pestañas de Administración", async () => {
+    vi.mocked(getSession).mockResolvedValue({ active_role: { code: "coordinador", career_id: "career-1" } } as never)
+    renderWithProviders(<CoordinationAcademicStructurePage mode="curriculum" />)
+    await flush()
+    expect(getScheduledSubjects).toHaveBeenCalledWith(null)
+    expect(academicCareerScope()).toBeNull()
+    expect(document.querySelector('[aria-label="Trabajo de la carrera"]')).toBeNull()
   })
 })

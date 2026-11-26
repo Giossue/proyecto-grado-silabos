@@ -3,6 +3,7 @@ import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants"
 import { API_PREFIX } from "../config/api.config"
 import { isRootPath } from "../common/http/root-paths"
 import { AdminAcademicController } from "./academic/admin-academic.controller"
+import { AdminCareerAcademicController } from "./academic/admin-career-academic.controller"
 import { CoordinationAcademicController } from "./academic/coordination-academic.controller"
 import { SupportDocumentsController } from "./academic/support-documents.controller"
 import { TemplateAssistantController } from "./ai/template-assistant.controller"
@@ -30,6 +31,7 @@ export const PORTED_CONTROLLERS: readonly Type<unknown>[] = [
   NotificationsController,
   AdminAcademicController,
   CoordinationAcademicController,
+  AdminCareerAcademicController,
   SupportDocumentsController,
   CoordinationConvocationsController,
   CoordinationReviewsController,

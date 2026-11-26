@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { CareerWorkLinks } from "@/components/domain/academic/CareerWorkLinks"
 import { CatalogActions } from "@/components/domain/academic/CatalogActions"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { StatusBadge } from "@/components/domain/StatusBadge"
@@ -9,7 +10,7 @@ import { TablePagination } from "@/components/domain/TablePagination"
 import { SortableHead, SortStatus } from "@/components/domain/TableSort"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableEmpty, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { useClientPagination } from "@/composables/useClientPagination"
 import { useTableSort, type SortColumns } from "@/composables/useTableSort"
@@ -194,11 +195,14 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                 <SortableHead sort={careerSort} column="faculty">Facultad</SortableHead>
                 <SortableHead sort={careerSort} column="modality">Modalidad</SortableHead>
                 <SortableHead sort={careerSort} column="campus">Campus</SortableHead>
+                <TableHead className="w-24">
+                  <span className="sr-only">Trabajo de la carrera</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {careerPage.items.length === 0 ? (
-                <TableEmpty colSpan={4}>{careerFilter.active ? "Ninguna carrera coincide con los filtros" : "No existen carreras registradas"}</TableEmpty>
+                <TableEmpty colSpan={5}>{careerFilter.active ? "Ninguna carrera coincide con los filtros" : "No existen carreras registradas"}</TableEmpty>
               ) : (
                 careerPage.items.map((career) => (
                   <TableRow
@@ -238,6 +242,7 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                     <TableCell>{facultyName(career.faculty_id)}</TableCell>
                     <TableCell data-card-hide="true">{career.modality_label ?? "Sin modalidad"}</TableCell>
                     <TableCell data-card-hide="true">{career.campus_name ?? "Sin campus"}</TableCell>
+                    <TableCell>{career.active ? <CareerWorkLinks careerId={career.id} careerName={career.name} /> : null}</TableCell>
                   </TableRow>
                 ))
               )}

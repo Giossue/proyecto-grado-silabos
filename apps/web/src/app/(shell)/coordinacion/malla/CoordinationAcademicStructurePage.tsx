@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { type Curriculum } from "@/api/career-academics"
+import { AdminCareerBackLink, AdminCareerTabs } from "@/components/domain/academic/AdminCareerNavigation"
 import { CurriculumActions } from "@/components/domain/academic/CurriculumActions"
 import { CurriculumConfigurationDialog } from "@/components/domain/academic/curriculum/CurriculumConfigurationDialog"
 import { ScheduledSubjectsTab } from "@/components/domain/academic/ScheduledSubjectsTab"
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { paths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
+import { useAcademicCareerScope } from "@/composables/useAcademicCareerScope"
 import { curriculumEditorState } from "@/state/curriculumEditor"
 import { errorMessage, failedQuery } from "@/lib/queryClient"
 
@@ -36,6 +38,11 @@ const pageDescriptions: Record<AcademicStructureMode, string> = {
   curriculum: "Malla curricular de su carrera",
   schedule: "Materias, paralelos y docentes de su carrera",
   teachers: "Docentes de su carrera",
+}
+const adminDescriptions: Record<AcademicStructureMode, string> = {
+  curriculum: "Malla curricular de la carrera",
+  schedule: "Materias, paralelos y docentes de la carrera",
+  teachers: "Docentes de la carrera",
 }
 const actionSkeletons: Record<AcademicStructureMode, string[]> = { teachers: ["w-44", "w-36"], curriculum: ["w-44", "w-32"], schedule: [] }
 const teacherColumns = [
@@ -59,13 +66,14 @@ const removeLegacyBreakdownMode = (): void => {
   window.history.replaceState(window.history.state, "", url)
 }
 
-export function CoordinationAcademicStructurePage({ mode }: { mode: AcademicStructureMode }) {
+export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerId = null }: { mode: AcademicStructureMode; careerId?: string | null }) {
   const router = useRouter()
-  const scope = useQuery(coordinatorCareerQuery())
+  useAcademicCareerScope(adminCareerId)
+  const scope = useQuery(coordinatorCareerQuery(adminCareerId))
   const careerId = typeof scope.data === "string" ? scope.data : null
-  const curriculumState = useQuery({ ...curriculumQuery(careerId ?? ""), enabled: careerId !== null })
-  const scheduleState = useQuery({ ...scheduledSubjectsQuery(), enabled: careerId !== null })
-  const assignmentsState = useQuery({ ...teacherAssignmentsQuery(), enabled: careerId !== null })
+  const curriculumState = useQuery({ ...curriculumQuery(careerId ?? "", adminCareerId), enabled: careerId !== null })
+  const scheduleState = useQuery({ ...scheduledSubjectsQuery(adminCareerId), enabled: careerId !== null })
+  const assignmentsState = useQuery({ ...teacherAssignmentsQuery(adminCareerId), enabled: careerId !== null })
   const curriculum = curriculumState.data ?? null
   const schedule = scheduleState.data ?? null
   const assignments = assignmentsState.data ?? null
@@ -155,11 +163,13 @@ export function CoordinationAcademicStructurePage({ mode }: { mode: AcademicStru
 
   const ready = curriculum && schedule && assignments
   const curriculumLocked = locked(curriculum)
+  const careerName = curriculum?.career.name ?? null
+  const title = editingCurriculum && curriculum ? `Malla de ${curriculum.career.name}` : adminCareerId && careerName ? `${pageTitles[mode]} de ${careerName}` : pageTitles[mode]
 
   return (
     <PageFrame
-      title={editingCurriculum && curriculum ? `Malla de ${curriculum.career.name}` : pageTitles[mode]}
-      description={pageDescriptions[mode]}
+      title={title}
+      description={adminCareerId ? adminDescriptions[mode] : pageDescriptions[mode]}
       size={mode === "curriculum" ? "full" : "wide"}
       loading={!ready && !loadError}
       actionsSkeleton={loading && !loadError ? actionSkeletons[mode] : []}
@@ -170,6 +180,8 @@ export function CoordinationAcademicStructurePage({ mode }: { mode: AcademicStru
             <ArrowLeft aria-hidden="true" />
             Volver a la vista
           </Button>
+        ) : adminCareerId ? (
+          <AdminCareerBackLink />
         ) : null
       }
       actions={
@@ -196,6 +208,7 @@ export function CoordinationAcademicStructurePage({ mode }: { mode: AcademicStru
         </>
       }
     >
+      {adminCareerId && !editingCurriculum ? <AdminCareerTabs careerId={adminCareerId} current={mode} /> : null}
       {actionError ? (
         <Alert variant="destructive">
           <AlertDescription>{actionError}</AlertDescription>

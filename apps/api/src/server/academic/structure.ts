@@ -1,11 +1,12 @@
 import { aborted } from "../http/responses"
 import { fromController } from "../auth/controllerResponse"
 import { requireSession } from "../auth/requireSession"
-import type { BridgeDeps, AppSession } from "../auth/types"
+import type { BridgeDeps } from "../auth/types"
 import { phpIsNumeric } from "@silabos/shared/schemas/php"
 import { CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES } from "@silabos/shared/schemas/academic"
 import { apiJson } from "../http/responses"
 import { unmatchedRoute, routeAllows } from "../http/router"
+import { resolveCareerScope } from "./careerScope"
 
 export const FORBIDDEN = "No tiene permiso para hacer esto."
 export const CONVOCATION_LOCK_REASON = "Periodo académico activo"
@@ -89,12 +90,6 @@ export function forbidden(): Response {
   return apiJson({ message: FORBIDDEN }, 403)
 }
 
-export async function careerContext(session: AppSession, activeCareer: (careerId: string) => Promise<CareerRecord | null>): Promise<CareerRecord | null> {
-  const role = session.activeRole
-  if (!session.user.active || role?.role !== "coordinador" || role.careerId === null) return null
-  return activeCareer(role.careerId)
-}
-
 export function modalityOptions(): { value: string; label: string }[] {
   return STUDY_MODALITIES.map((value) => ({ value, label: value }))
 }
@@ -173,20 +168,20 @@ function subjectPayload(subject: SubjectRecord): Record<string, unknown> {
   }
 }
 
-export async function authorizedCareer(request: Request, deps: AcademicStructureDeps): Promise<CareerRecord | Response> {
+export async function authorizedCareer(request: Request, deps: AcademicStructureDeps, requestedCareerId: string | null = null): Promise<CareerRecord | Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
-  const career = await careerContext(session, (careerId) => deps.academic.activeCareer(careerId))
-  return career ?? forbidden()
+  return resolveCareerScope(session, requestedCareerId, (careerId) => deps.academic.activeCareer(careerId), forbidden)
 }
 
 export async function curriculumBuilder(
   request: Request,
   curriculumId: string,
   deps: AcademicStructureDeps,
+  requestedCareerId: string | null = null,
 ): Promise<Response> {
   if (!routeAllows(request)) return unmatchedRoute(request)
-  const career = await authorizedCareer(request, deps)
+  const career = await authorizedCareer(request, deps, requestedCareerId)
   if (career instanceof Response) return career
   if (curriculumId !== career.id) return fromController(aborted(404))
 
@@ -242,8 +237,8 @@ function uniqueById<T extends { id: string }>(items: T[]): T[] {
   return items.filter((item) => (seen.has(item.id) ? false : (seen.add(item.id), true)))
 }
 
-export async function teacherAssignments(request: Request, deps: AcademicStructureDeps): Promise<Response> {
-  const career = await authorizedCareer(request, deps)
+export async function teacherAssignments(request: Request, deps: AcademicStructureDeps, requestedCareerId: string | null = null): Promise<Response> {
+  const career = await authorizedCareer(request, deps, requestedCareerId)
   if (career instanceof Response) return career
 
   const lock = await deps.academic.careerLock(career.id)

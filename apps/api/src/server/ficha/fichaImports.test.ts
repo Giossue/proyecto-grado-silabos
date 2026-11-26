@@ -401,3 +401,52 @@ describe("FichaImportOwnOptionsTest", () => {
     expect(attrs.customOptions).toBe(true)
   })
 })
+
+describe("career project workbook through /api/v1/admin/careers/{career}/ficha-imports", () => {
+  const OTHER = "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"
+  const base = (careerId: string) => `/api/v1/admin/careers/${careerId}/ficha-imports`
+
+  it("lets the administrator download, preview and apply the workbook of the requested career", async () => {
+    const file = await workbook({ descripcion: { D4: "Ficha del administrador" } })
+    signIn("administrador")
+    expect((await fichaTemplate(get(`${base(CAREER)}/template`), deps(), CAREER)).status).toBe(200)
+    const previewed = await previewFichaImport(post(`${base(CAREER)}/spreadsheet`, file), deps(), CAREER)
+    expect(previewed.status).toBe(200)
+    const detail = ((await previewed.json()) as { preview: PhpRecord }).preview
+    const applied = await applyFichaImport(
+      post(`${base(CAREER)}/apply`, file, [
+        ["fingerprint", String(detail.fingerprint)],
+        ["file_hash", String(detail.file_hash)],
+        ["subjects[]", SUBJECTS[0].id],
+      ]),
+      deps(),
+      CAREER,
+    )
+    expect(await applied.text()).toBe('{"message":"Proyecto de carrera aplicado.","applied":1}')
+    expect(log).toEqual([`keep:false:${CAREER}:${SUBJECTS[0].id}`, `lock:${CAREER}`])
+  })
+
+  it("answers 404 to the administrator for an unknown career", async () => {
+    signIn("administrador")
+    expect((await fichaTemplate(get(`${base(OTHER)}/template`), deps(), OTHER)).status).toBe(404)
+  })
+
+  it("refuses a coordinator who sends another career and applies nothing", async () => {
+    const file = await workbook({ descripcion: { D4: "Texto" } })
+    const template = await fichaTemplate(get(`${base(OTHER)}/template`), deps(), OTHER)
+    expect({ status: template.status, text: await template.text() }).toEqual({ status: 403, text: EMPTY_FORBIDDEN })
+    const detail = await preview(file)
+    const applied = await applyFichaImport(
+      post(`${base(OTHER)}/apply`, file, [
+        ["fingerprint", String(detail.fingerprint)],
+        ["file_hash", String(detail.file_hash)],
+        ["subjects[]", SUBJECTS[0].id],
+      ]),
+      deps(),
+      OTHER,
+    )
+    expect(applied.status).toBe(403)
+    expect(log).toEqual([])
+    expect(stored(SUBJECTS[0].id, "descripcion")).toBeNull()
+  })
+})

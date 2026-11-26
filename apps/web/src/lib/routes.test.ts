@@ -78,4 +78,18 @@ describe('contrato de rutas', () => {
     expect(routeRegistry.some((route) => route.name === 'teacher-formation' || route.path === '/docente/configuracion/perfil-docente')).toBe(false);
     expect(Object.keys(paths.teacher)).not.toContain('formation');
   });
+
+  it('Administración abre la malla, los paralelos, los docentes y el proyecto de una carrera bajo «Facultades y carreras»', () => {
+    expect(paths.admin.careerCurriculum('c/1')).toBe('/admin/estructura-academica/carreras/c%2F1/malla');
+    expect(paths.admin.careerProjectSubject('c1', 'm1')).toBe('/admin/estructura-academica/carreras/c1/proyecto-carrera/m1');
+    const adminCareer = routeRegistry.filter((route) => route.path.startsWith('/admin/estructura-academica/carreras/'));
+    expect(adminCareer.map((route) => [route.path, route.component])).toEqual([
+      ['/admin/estructura-academica/carreras/:career/malla', 'CoordinationAcademicStructurePage'],
+      ['/admin/estructura-academica/carreras/:career/materias-asignaciones', 'CoordinationAcademicStructurePage'],
+      ['/admin/estructura-academica/carreras/:career/docentes', 'CoordinationAcademicStructurePage'],
+      ['/admin/estructura-academica/carreras/:career/proyecto-carrera', 'CoordinationCareerProjectPage'],
+      ['/admin/estructura-academica/carreras/:career/proyecto-carrera/:subject', 'CoordinationSubjectProfilePage'],
+    ]);
+    expect(adminCareer.every((route) => route.roles?.join() === 'administrador')).toBe(true);
+  });
 });

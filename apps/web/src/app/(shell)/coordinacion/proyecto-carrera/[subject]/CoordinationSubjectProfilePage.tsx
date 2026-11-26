@@ -22,6 +22,7 @@ import { Field, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAcademicCareerScope } from "@/composables/useAcademicCareerScope"
 import { useDiscardConfirmation } from "@/composables/useDiscardConfirmation"
 import { goBack } from "@/lib/goBack"
 import { RESPONSE_NODE, responseAttrs, responseNeedsOptions } from "@silabos/shared/lib/responseKinds"
@@ -42,8 +43,8 @@ const cycleLabel = (cycle: number): string => (cycle ? `Ciclo ${cycle}` : "Sin c
 const valuesFrom = (fields: SubjectProfileField[], stored: Record<string, DocumentNode | null | undefined>): Values =>
   Object.fromEntries(fields.map((field) => [field.id, stored[field.id] ?? field.template ?? field.content ?? null]))
 
-const loadProfile = async (subjectId: string): Promise<Loaded> => {
-  const [scheduled, profile] = await Promise.all([getScheduledSubjects(), getSubjectProfile(subjectId)])
+const loadProfile = async (subjectId: string, careerId: string | null): Promise<Loaded> => {
+  const [scheduled, profile] = await Promise.all([getScheduledSubjects(careerId), getSubjectProfile(subjectId)])
   const fields = profile.fields.toSorted((first, second) => (first.position ?? 0) - (second.position ?? 0))
 
   return {
@@ -59,8 +60,11 @@ const loadProfile = async (subjectId: string): Promise<Loaded> => {
   }
 }
 
-function SubjectProfile({ subjectId }: { subjectId: string }) {
+function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: string | null }) {
   const router = useRouter()
+  useAcademicCareerScope(careerId)
+  const projectHref = careerId ? paths.admin.careerProject(careerId) : paths.coordination.careerProject
+  const subjectHref = (id: string): string => (careerId ? paths.admin.careerProjectSubject(careerId, id) : paths.coordination.careerProjectSubject(id))
   const queryClient = useQueryClient()
   const [data, setData] = useState<Loaded | null>(null)
   const [values, setValues] = useState<Values>({})
@@ -97,7 +101,7 @@ function SubjectProfile({ subjectId }: { subjectId: string }) {
 
   const fetchProfile = useCallback(async (): Promise<void> => {
     try {
-      const next = await queryClient.fetchQuery({ queryKey: careerAcademicKeys.subjectProfile(subjectId), queryFn: () => loadProfile(subjectId), staleTime: 0 })
+      const next = await queryClient.fetchQuery({ queryKey: careerAcademicKeys.subjectProfile(subjectId), queryFn: () => loadProfile(subjectId, careerId), staleTime: 0 })
       setData(next)
       setValues(next.values)
       setLoaded(JSON.stringify(next.values))
@@ -106,7 +110,7 @@ function SubjectProfile({ subjectId }: { subjectId: string }) {
     } finally {
       setLoading(false)
     }
-  }, [queryClient, subjectId])
+  }, [careerId, queryClient, subjectId])
 
   const warnBeforeUnload = useEffectEvent((event: BeforeUnloadEvent): void => {
     if (!changed) return
@@ -143,7 +147,7 @@ function SubjectProfile({ subjectId }: { subjectId: string }) {
   useLeaveGuard({ needed: () => changed, confirm: askToDiscard, navigate: (href) => router.push(href) })
 
   const openSubject = (id: string): void => {
-    if (id !== "" && id !== subjectId) void leave(() => router.push(paths.coordination.careerProjectSubject(id)))
+    if (id !== "" && id !== subjectId) void leave(() => router.push(subjectHref(id)))
   }
 
   const loadPreview = async (): Promise<void> => {
@@ -201,7 +205,7 @@ function SubjectProfile({ subjectId }: { subjectId: string }) {
       loading={loading && !loadError}
       actionsSkeleton={loading ? ["w-9", "w-52"] : []}
       eyebrow={
-        <Button type="button" variant="link" size="sm" className="h-auto px-0" onClick={() => void leave(() => goBack(router, paths.coordination.careerProject))}>
+        <Button type="button" variant="link" size="sm" className="h-auto px-0" onClick={() => void leave(() => goBack(router, projectHref))}>
           <ArrowLeft aria-hidden="true" />
           Volver al proyecto de carrera
         </Button>
@@ -340,9 +344,9 @@ function SubjectProfile({ subjectId }: { subjectId: string }) {
   )
 }
 
-export default function CoordinationSubjectProfilePage() {
+export default function CoordinationSubjectProfilePage({ careerId = null }: { careerId?: string | null }) {
   const params = useParams<{ subject?: string }>()
   const subjectId = String(params?.subject ?? "")
 
-  return <SubjectProfile key={subjectId} subjectId={subjectId} />
+  return <SubjectProfile key={subjectId} subjectId={subjectId} careerId={careerId} />
 }

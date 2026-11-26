@@ -256,3 +256,36 @@ describe("DELETE /api/v1/coordination/academic/parallels/{parallel}", () => {
     expect(transactions).toBe(0)
   })
 })
+
+describe("deletions through /api/v1/admin/careers/{career}/academic", () => {
+  const OTHER_CAREER = "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"
+  const OTHER_PARALLEL = "01a1c5bc-7a00-7000-8000-000000000004"
+  const OTHER_ASSIGNMENT = "01a1c5bc-7a00-7000-8000-000000000005"
+
+  beforeEach(() => {
+    activeCareers.add(OTHER_CAREER)
+    parallels.set(OTHER_PARALLEL, { careerId: OTHER_CAREER, code: "B", teacherAssignments: 0, syllabi: [] })
+    assignments.set(OTHER_ASSIGNMENT, { careerId: OTHER_CAREER })
+  })
+
+  it("lets the administrator delete a parallel and a teacher assignment of the requested career", async () => {
+    asRole("administrador", null)
+    const base = `/api/v1/admin/careers/${OTHER_CAREER}/academic`
+    expect((await read(await deleteParallel(remove(`${base}/parallels/${OTHER_PARALLEL}`), OTHER_PARALLEL, deps(), OTHER_CAREER))).status).toBe(200)
+    expect((await read(await deleteCareerRecord(remove(`${base}/asignacion_docente/${OTHER_ASSIGNMENT}`), "asignacion_docente", OTHER_ASSIGNMENT, deps(), OTHER_CAREER))).status).toBe(200)
+    expect(committed).toEqual([
+      { op: "delete silabos", parallel: OTHER_PARALLEL, count: 0 },
+      { op: "delete paralelos", id: OTHER_PARALLEL },
+      { op: "delete asignaciones_paralelo", id: OTHER_ASSIGNMENT },
+    ])
+  })
+
+  it("refuses a coordinator who sends another career and deletes nothing", async () => {
+    asRole("coordinador", CAREER)
+    const base = `/api/v1/admin/careers/${OTHER_CAREER}/academic`
+    expect(await read(await deleteParallel(remove(`${base}/parallels/${OTHER_PARALLEL}`), OTHER_PARALLEL, deps(), OTHER_CAREER))).toEqual({ status: 403, text: FORBIDDEN })
+    expect(await read(await deleteCareerRecord(remove(`${base}/asignacion_docente/${OTHER_ASSIGNMENT}`), "asignacion_docente", OTHER_ASSIGNMENT, deps(), OTHER_CAREER))).toEqual({ status: 403, text: FORBIDDEN })
+    expect(transactions).toBe(0)
+    expect(committed).toEqual([])
+  })
+})

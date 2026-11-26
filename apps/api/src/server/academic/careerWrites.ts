@@ -12,6 +12,7 @@ import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { phpIntCast } from "./governanceWrites"
 import { CONVOCATION_LOCK_REASON } from "./structure"
 import { unmatchedRoute, routeAllows } from "../http/router"
+import { activeCareerId, resolveCareerScope } from "./careerScope"
 
 export const SUBJECT_COLUMNS = [
   "codigo_asignatura",
@@ -105,12 +106,17 @@ export function notJson(request: Request): boolean {
   return request.headers.get("content-type") !== null && !isJsonRequest(request)
 }
 
-export async function careerSession(request: Request, bridge: BridgeDeps, careerActive: (careerId: string) => Promise<boolean>): Promise<CareerContext | Response> {
+export async function careerSession(
+  request: Request,
+  bridge: BridgeDeps,
+  careerActive: (careerId: string) => Promise<boolean>,
+  requestedCareerId: string | null = null,
+): Promise<CareerContext | Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, bridge)
   if (session instanceof Response) return session
-  const role = session.activeRole
-  if (!session.user.active || role?.role !== "coordinador" || role.careerId === null || !(await careerActive(role.careerId))) return forbidden()
-  return { session, careerId: role.careerId }
+  const careerId = await resolveCareerScope(session, requestedCareerId, activeCareerId(careerActive))
+  if (careerId instanceof Response) return careerId
+  return { session, careerId }
 }
 
 export function decimalString(value: string | number, scale = 2): string {
@@ -217,16 +223,16 @@ async function assignTeacher(tx: CareerWriteTx, context: CareerContext, parallel
   )
 }
 
-async function prepared(request: Request, deps: CareerWriteDeps): Promise<{ context: CareerContext; input: PhpArray } | Response> {
-  const context = await careerSession(request.clone(), deps.bridge, deps.careerActive)
+async function prepared(request: Request, deps: CareerWriteDeps, requestedCareerId: string | null): Promise<{ context: CareerContext; input: PhpArray } | Response> {
+  const context = await careerSession(request.clone(), deps.bridge, deps.careerActive, requestedCareerId)
   if (context instanceof Response) return context
   return { context, input: await requestInput(request) }
 }
 
-export async function createCareerRecord(request: Request, entity: string, deps: CareerWriteDeps): Promise<Response> {
+export async function createCareerRecord(request: Request, entity: string, deps: CareerWriteDeps, requestedCareerId: string | null = null): Promise<Response> {
   const original = request.clone()
   if (!["asignatura", "asignacion_docente"].includes(entity) || !routeAllows(request)) return unmatchedRoute(request)
-  const ready = await prepared(request, deps)
+  const ready = await prepared(request, deps, requestedCareerId)
   if (ready instanceof Response) return ready
   const { context, input } = ready
   const careerId = context.careerId
@@ -275,10 +281,10 @@ export async function insertCareerSubject(tx: CareerWriteTx, context: CareerCont
   return id
 }
 
-export async function updateCareerRecord(request: Request, entity: string, recordId: string, deps: CareerWriteDeps): Promise<Response> {
+export async function updateCareerRecord(request: Request, entity: string, recordId: string, deps: CareerWriteDeps, requestedCareerId: string | null = null): Promise<Response> {
   const original = request.clone()
   if (entity !== "asignatura" || !routeAllows(request)) return unmatchedRoute(request)
-  const ready = await prepared(request, deps)
+  const ready = await prepared(request, deps, requestedCareerId)
   if (ready instanceof Response) return ready
   const { context, input } = ready
   const careerId = context.careerId
@@ -309,9 +315,9 @@ export async function updateCareerRecord(request: Request, entity: string, recor
   })
 }
 
-export async function createParallels(request: Request, deps: CareerWriteDeps): Promise<Response> {
+export async function createParallels(request: Request, deps: CareerWriteDeps, requestedCareerId: string | null = null): Promise<Response> {
   const original = request.clone()
-  const ready = await prepared(request, deps)
+  const ready = await prepared(request, deps, requestedCareerId)
   if (ready instanceof Response) return ready
   const { context, input } = ready
   const careerId = context.careerId
@@ -348,10 +354,10 @@ export async function createParallels(request: Request, deps: CareerWriteDeps): 
   })
 }
 
-export async function updateParallel(request: Request, parallelId: string, deps: CareerWriteDeps): Promise<Response> {
+export async function updateParallel(request: Request, parallelId: string, deps: CareerWriteDeps, requestedCareerId: string | null = null): Promise<Response> {
   const original = request.clone()
   if (!routeAllows(request)) return unmatchedRoute(request)
-  const ready = await prepared(request, deps)
+  const ready = await prepared(request, deps, requestedCareerId)
   if (ready instanceof Response) return ready
   const { context, input } = ready
   if (typeof input.code === "string") input.code = phpTrim(input.code)
@@ -382,10 +388,10 @@ export async function updateParallel(request: Request, parallelId: string, deps:
   })
 }
 
-export async function replaceParallelTeacher(request: Request, parallelId: string, deps: CareerWriteDeps): Promise<Response> {
+export async function replaceParallelTeacher(request: Request, parallelId: string, deps: CareerWriteDeps, requestedCareerId: string | null = null): Promise<Response> {
   const original = request.clone()
   if (!routeAllows(request)) return unmatchedRoute(request)
-  const ready = await prepared(request, deps)
+  const ready = await prepared(request, deps, requestedCareerId)
   if (ready instanceof Response) return ready
   const { context, input } = ready
   const { errors } = await validateSchema(parallelTeacherSchema, input)

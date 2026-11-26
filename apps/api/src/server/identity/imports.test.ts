@@ -207,3 +207,23 @@ describe("GET /api/v1/coordination/academic/teachers/import-template", () => {
     expect(await (await teacherImportTemplate(download("/api/v1/coordination/academic/teachers/import-template"), importDeps(harness()))).text()).toBe(FORBIDDEN)
   })
 })
+
+describe("teacher import through /api/v1/admin/careers/{career}/academic/teachers/import", () => {
+  const path = (careerId: string) => `/api/v1/admin/careers/${careerId}/academic/teachers/import`
+
+  it("imports teachers into the requested career for the administrator", async () => {
+    const test = harness()
+    const file = await xlsx([TEACHERS, ["Doc Ana", "Uno Mía", "doc.admin@silabos.test"]])
+    expect(await json(await importTeachers(upload(path(OTHER_CAREER), file, { confirm: "1" }), importDeps(test), OTHER_CAREER))).toMatchObject({ valid: true, created: 1 })
+    const created = test.identity.accounts.find((row) => row.email === "doc.admin@silabos.test")!
+    expect(test.identity.grants.find((row) => row.userId === created.id)).toMatchObject({ role: "docente", careerId: OTHER_CAREER })
+    expect((await teacherImportTemplate(download(`/api/v1/admin/careers/${OTHER_CAREER}/academic/teachers/import-template`), importDeps(test), OTHER_CAREER)).status).toBe(200)
+  })
+
+  it("refuses a coordinator who sends another career and creates nothing", async () => {
+    const test = coordination()
+    const file = await xlsx([TEACHERS, ["Doc Ana", "Uno Mía", "doc.otra@silabos.test"]])
+    expect(await (await importTeachers(upload(path(OTHER_CAREER), file, { confirm: "1" }), importDeps(test), OTHER_CAREER)).text()).toBe(FORBIDDEN)
+    expect(emails(test)).not.toContain("doc.otra@silabos.test")
+  })
+})

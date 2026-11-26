@@ -49,10 +49,11 @@ async function curriculumChange(
   deps: CurriculumDeps,
   schema: ((input: PhpArray) => z.ZodType) | null,
   mutate: Mutation,
+  requestedCareerId: string | null,
 ): Promise<Response> {
   const original = request.clone()
   if (!routeAllows(request)) return unmatchedRoute(request)
-  const context = await careerSession(request.clone(), deps.bridge, deps.careerActive)
+  const context = await careerSession(request.clone(), deps.bridge, deps.careerActive, requestedCareerId)
   if (context instanceof Response) return context
   const input = await requestInput(request)
   const errors = schema === null ? null : (await validateSchema(schema(input), input)).errors
@@ -67,7 +68,7 @@ function confirmedSync(tx: CurriculumTx, context: CareerContext, input: PhpArray
   return tx.sync(requestBoolean(input.confirm_purge), context.careerId)
 }
 
-export function updateCurriculumConfiguration(request: Request, curriculumId: string, deps: CurriculumDeps): Promise<Response> {
+export function updateCurriculumConfiguration(request: Request, curriculumId: string, deps: CurriculumDeps, requestedCareerId: string | null = null): Promise<Response> {
   return curriculumChange(
     request,
     [curriculumId],
@@ -81,6 +82,7 @@ export function updateCurriculumConfiguration(request: Request, curriculumId: st
       await confirmedSync(tx, context, input)
       return "Configuración de la malla actualizada."
     },
+    requestedCareerId,
   )
 }
 
@@ -128,27 +130,28 @@ export async function curriculumMutation(tx: CurriculumTx, context: CareerContex
   })
 }
 
-export function createSubjectRequirement(request: Request, curriculumId: string, deps: CurriculumDeps): Promise<Response> {
+export function createSubjectRequirement(request: Request, curriculumId: string, deps: CurriculumDeps, requestedCareerId: string | null = null): Promise<Response> {
   return curriculumChange(
     request,
     [curriculumId],
     deps,
     (input) => requirementSchema({ subjectId: input.subject_id, hasSubject: "subject_id" in input }),
     addRequirement,
+    requestedCareerId,
   )
 }
 
-export function deleteSubjectRequirement(request: Request, curriculumId: string, requirementId: string, deps: CurriculumDeps): Promise<Response> {
+export function deleteSubjectRequirement(request: Request, curriculumId: string, requirementId: string, deps: CurriculumDeps, requestedCareerId: string | null = null): Promise<Response> {
   return curriculumChange(request, [curriculumId, requirementId], deps, null, async (tx, career, context, input) => {
     const requirement = await tx.lockRequirement(requirementId, career.id)
     if (requirement === null) throw new Missing(MODELS.requirement, requirementId)
     await tx.deleteRequirement(requirement.id)
     await confirmedSync(tx, context, input)
     return "Relación académica eliminada."
-  })
+  }, requestedCareerId)
 }
 
-export function deleteCurriculumSubject(request: Request, curriculumId: string, subjectId: string, deps: CurriculumDeps): Promise<Response> {
+export function deleteCurriculumSubject(request: Request, curriculumId: string, subjectId: string, deps: CurriculumDeps, requestedCareerId: string | null = null): Promise<Response> {
   return curriculumChange(request, [curriculumId, subjectId], deps, null, async (tx, career, context, input) => {
     const subject = await tx.lockSubject(subjectId, career.id)
     if (subject === null) throw new Missing(MODELS.subject, subjectId)
@@ -165,10 +168,10 @@ export function deleteCurriculumSubject(request: Request, curriculumId: string, 
     await tx.deleteSubject(subject.id)
     await confirmedSync(tx, context, input)
     return "Materia eliminada de la malla."
-  })
+  }, requestedCareerId)
 }
 
-export function updateSubjectLayout(request: Request, curriculumId: string, deps: CurriculumDeps): Promise<Response> {
+export function updateSubjectLayout(request: Request, curriculumId: string, deps: CurriculumDeps, requestedCareerId: string | null = null): Promise<Response> {
   return curriculumChange(
     request,
     [curriculumId],
@@ -192,5 +195,6 @@ export function updateSubjectLayout(request: Request, curriculumId: string, deps
       await confirmedSync(tx, context, input)
       return "Posición de la materia actualizada."
     },
+    requestedCareerId,
   )
 }

@@ -131,6 +131,7 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 - **Cada envío de sílabo** guarda una **instantánea** del contenido y su **SHA-256**. Lo aprobado no cambia.
 - **Formación del docente:** es el campo `formacion_docente` de la sección «Identificación» de la plantilla. Lo llena el docente en cada sílabo; la definición de la plantilla lo marca en `teacher_fields`, así que no aparece en el perfil de la asignatura de Coordinación ni en la ficha en Excel. En el Word y el PDF sale en la misma fila de la tabla de identificación (variable `formacion_docente`), no como bloque aparte. Es obligatorio para enviar.
 - **Arrastre entre sílabos:** cada valor guarda en `valores_campo.huella_definicion_campo` el SHA-256 de la definición del campo con la que se escribió. Al generar o iniciar un sílabo, si un campo del docente está vacío, toma lo último que escribió cada docente vigente en ese mismo campo (cualquier materia o período, por `silabos.guardado_en`), siempre que la definición no haya cambiado. Si hay varios docentes, sus textos van uno debajo del otro, sin repetir.
+- **Estado al abrir un sílabo:** al abrirlo por primera vez, la API (`POST /teacher/syllabi/{id}/start`) lo prepara: copia lo del período anterior, arrastra los campos del docente y fija `silabos.iniciado_en`, pero lo deja en `sin_iniciar`. Pasa a `borrador` con el primer guardado de un campo que cambia lo guardado (o con «Copiar desde otro paralelo»); guardar el mismo valor no lo cambia. Un sílabo `sin_iniciar` con `iniciado_en` ya se puede editar, validar y enviar, y para el resto del sistema (plantilla nueva, cambio de docente al reabrir, copiar desde otro paralelo, protección al eliminar) cuenta como empezado.
 - **Migración `20261125220000_formacion_como_campo`:** agrega el campo y la huella, pasa la formación que estaba en `usuarios` a los sílabos vivos (los enviados o aprobados toman la de su última versión enviada), llena las huellas y elimina `usuarios.formacion_experiencia_usuario`. No toca versiones, aprobaciones ni instantáneas.
 
 ---
@@ -143,13 +144,14 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 - **Límites de intentos:** guardados en Redis, con las cabeceras `X-RateLimit-*`.
 - **Documentación:** Swagger UI en `/api/docs` y el documento OpenAPI en `/api/docs-json` (puerto de la API). Muestra todas las rutas de la API.
 
-**121 endpoints** en total.
+**146 endpoints** en total.
 
 | Área | Endpoints | Qué cubre |
 |---|---|---|
 | `authentication` | 8 | Ingreso y salida, activación de cuenta, recuperar y restablecer contraseña por correo, perfil y accesibilidad |
 | `session`, `active-role` | 2 | Sesión actual y cambio de rol o carrera activa |
 | `admin` | 43 | Facultades, carreras y períodos (con importación desde Excel), usuarios y roles (con importación), procesos del período (abrir, pausar, reanudar, prórroga, impacto, finalizar), ajustes del sistema (correo, IA, catálogo, firmas), plantilla (estructura, campos, bloques, formato, logo, vista previa del docente, JSON) y asistente de IA |
+| `admin/careers/:career` | 25 | Las mismas rutas de malla, materias programadas, paralelos, asignación docente, docentes y proyecto de carrera de `coordination`, para la carrera indicada. Solo Administración; no incluyen revisar ni aprobar sílabos |
 | `coordination` | 35 | Malla (asignaturas, requisitos, disposición, configuración, importación), materias programadas, paralelos y asignación docente, docentes (con importación), periodo académico de la carrera, proyecto de carrera (ficha en Excel), revisiones (comparar versiones, pedir corrección, aprobar con firma), historial y documentos de apoyo |
 | `teacher` | 12 | Mis sílabos (iniciar, guardar campo, validar, copiar desde otro paralelo, declaración de firma, enviar), historial, documentos de apoyo y búsqueda en el catálogo de Biblioteca |
 | `library` | 5 | Revisiones de Biblioteca (observaciones y verificación con firma) e historial |
@@ -180,7 +182,8 @@ Rutas públicas fuera de la API: `/logos/institucion`, `/logos/facultad/:id`, `/
 - **CSRF y orígenes:** solo se aceptan peticiones desde los dominios configurados (`STATEFUL_DOMAINS`).
 - **Permisos:**
   - por rol y por carrera, verificados en el servidor en cada endpoint;
-  - un rol activo por sesión.
+  - un rol activo por sesión;
+  - la carrera de cada ruta de carrera la resuelve una sola función (`resolveCareerScope`): Coordinación trabaja siempre en la carrera de su rol y recibe 403 si pide otra; Administración trabaja en la carrera de `admin/careers/:career` y recibe 404 si no existe o está inactiva.
 - **Límites de intentos** en el ingreso, la recuperación y las acciones sensibles, guardados en Redis.
 - **Validación:** todas las entradas pasan por esquemas Zod en el servidor.
 - **Firma digital:**

@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto"
 import { requireSession } from "../auth/requireSession"
+import { activeCareerId, resolveCareerScope } from "../academic/careerScope"
 import type { AppSession } from "../auth/types"
 import { freeTextNormalize } from "../configuration/freeText"
 import { phpTrim, type PhpRecord } from "../configuration/phpValues"
@@ -71,10 +72,8 @@ function rejectWith(errors: Record<string, string[]>): never {
   throw new Rejected(validationError(errors))
 }
 
-async function careerContext(session: AppSession, store: Pick<FichaImportStore, "careerActive">): Promise<string | null> {
-  const role = session.activeRole
-  if (!session.user.active || role === null || role.role !== "coordinador" || role.careerId === null) return null
-  return (await store.careerActive(role.careerId)) ? role.careerId : null
+function careerContext(session: AppSession, store: Pick<FichaImportStore, "careerActive">, requestedCareerId: string | null): Promise<string | Response> {
+  return resolveCareerScope(session, requestedCareerId, activeCareerId((careerId) => store.careerActive(careerId)), () => jsonError(403, ""))
 }
 
 function sheetName(index: number, label: string): string {
@@ -113,11 +112,11 @@ function contextFailure(error: unknown, careerId: string): Response {
   throw error
 }
 
-export async function fichaTemplate(request: Request, deps: FichaImportDeps): Promise<Response> {
+export async function fichaTemplate(request: Request, deps: FichaImportDeps, requestedCareerId: string | null = null): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
-  const careerId = await careerContext(session, deps.store)
-  if (careerId === null) return jsonError(403, "")
+  const careerId = await careerContext(session, deps.store, requestedCareerId)
+  if (careerId instanceof Response) return careerId
   if (await deps.store.careerLocked(careerId)) return validationError({ process: [CONVOCATION_LOCK] })
   try {
     const { definition } = await fichaContext(careerId, deps.store)
@@ -129,9 +128,9 @@ export async function fichaTemplate(request: Request, deps: FichaImportDeps): Pr
 
 type Preview = { definition: FichaDefinition; fileHash: string; subjects: FichaEntry[] }
 
-async function previewWorkbook(file: UploadedFile, session: AppSession, deps: FichaImportDeps): Promise<Preview | Response> {
-  const careerId = await careerContext(session, deps.store)
-  if (careerId === null) return jsonError(403, "")
+async function previewWorkbook(file: UploadedFile, session: AppSession, deps: FichaImportDeps, requestedCareerId: string | null): Promise<Preview | Response> {
+  const careerId = await careerContext(session, deps.store, requestedCareerId)
+  if (careerId instanceof Response) return careerId
   if (await deps.store.careerLocked(careerId)) return validationError({ process: [CONVOCATION_LOCK] })
   try {
     const { definition } = await fichaContext(careerId, deps.store)
@@ -179,14 +178,14 @@ async function previewDetail(preview: Preview, deps: FichaImportDeps): Promise<P
   }
 }
 
-export async function previewFichaImport(request: Request, deps: FichaImportDeps): Promise<Response> {
+export async function previewFichaImport(request: Request, deps: FichaImportDeps, requestedCareerId: string | null = null): Promise<Response> {
   const ready = await importSession(request, deps, 20)
   if (ready instanceof Response) return ready
   const { session, finish } = ready
   const read = await readUpload(request, FICHA_FILE)
   if ("errors" in read) return finish(validationError(read.errors))
   try {
-    const preview = await previewWorkbook(read.upload.file, session, deps)
+    const preview = await previewWorkbook(read.upload.file, session, deps, requestedCareerId)
     if (preview instanceof Response) return finish(preview)
     return finish(apiJson({ preview: await previewDetail(preview, deps) }))
   } catch (error) {
@@ -276,7 +275,7 @@ function chosenFields(input: PhpArray): Map<string, string[]> | null {
   return chosen
 }
 
-export async function applyFichaImport(request: Request, deps: FichaImportDeps): Promise<Response> {
+export async function applyFichaImport(request: Request, deps: FichaImportDeps, requestedCareerId: string | null = null): Promise<Response> {
   const ready = await importSession(request, deps, 20)
   if (ready instanceof Response) return ready
   const { session, original, finish } = ready
@@ -288,14 +287,13 @@ export async function applyFichaImport(request: Request, deps: FichaImportDeps):
   return finish(
     await settle(original, deps, async () => {
       try {
-        const preview = await previewWorkbook(file, session, deps)
+        const preview = await previewWorkbook(file, session, deps, requestedCareerId)
         if (preview instanceof Response) return preview
         if (!safeEquals(fichaFingerprint(preview.definition), String(input.fingerprint)) || !safeEquals(preview.fileHash, String(input.file_hash))) {
           return validationError({ file: ["El Excel o la estructura cambió desde la vista previa. Vuelva a revisar el archivo antes de aplicar."] })
         }
         assertSelection(preview, subjectIds, fieldsBySubject)
         const careerId = preview.definition.careerId
-        if (session.activeRole === null || session.activeRole.careerId !== careerId) return jsonError(403, "")
         const applied = await deps.transaction((tx) =>
           tx.keepContent(requestBoolean(input.confirm_purge), careerId, subjectIds, () => applyEntries(tx, preview, subjectIds, fieldsBySubject)),
         )

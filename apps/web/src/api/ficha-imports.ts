@@ -1,5 +1,6 @@
 import { withPurgeConfirmation } from '@/api/career-academics';
 import { api, apiBlob } from '@/api/client';
+import { fichaImportPath } from '@/api/careerScope';
 
 export type FichaTableValue = { columns: string[]; rows: string[][] };
 export type FichaProposalValue = string | string[] | FichaTableValue;
@@ -36,18 +37,18 @@ export const applyFichaWorkbook = (file: File, preview: FichaWorkbookPreview, su
     Object.entries(fields ?? {}).forEach(([subject, keys]) => keys.forEach((key) => body.append(`fields[${subject}][]`, key)));
     if (confirmPurge) body.append('confirm_purge', '1');
 
-    return api<{ message: string; applied: number }>('/coordination/ficha-imports/apply', { method: 'POST', body });
+    return api<{ message: string; applied: number }>(fichaImportPath('/apply'), { method: 'POST', body });
   });
 
 export const previewFichaWorkbook = (file: File) => {
   const body = new FormData();
   body.append('file', file);
 
-  return api<{ preview: FichaWorkbookPreview }>('/coordination/ficha-imports/spreadsheet', { method: 'POST', body });
+  return api<{ preview: FichaWorkbookPreview }>(fichaImportPath('/spreadsheet'), { method: 'POST', body });
 };
 
 export const downloadFichaWorkbook = async (): Promise<void> => {
-  const url = URL.createObjectURL(await apiBlob('/coordination/ficha-imports/template'));
+  const url = URL.createObjectURL(await apiBlob(fichaImportPath('/template')));
   try {
     const link = document.createElement('a');
     link.href = url;

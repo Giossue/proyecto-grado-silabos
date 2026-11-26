@@ -2,6 +2,7 @@ import { HttpFailure, Missing } from "../http/failures"
 import { MODELS } from "../http/models"
 import { Prisma } from "../../generated/prisma/client"
 import type { Db } from "../../prisma/db"
+import { activeCareerId, resolveCareerScope } from "./careerScope"
 import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { apiJson, serverError, validationError } from "../http/responses"
@@ -93,12 +94,12 @@ async function inTransaction(request: Request, deps: AcademicDeletionDeps, work:
   return apiJson({ message })
 }
 
-async function careerSession(request: Request, deps: AcademicDeletionDeps): Promise<{ session: AppSession; careerId: string } | Response> {
+async function careerSession(request: Request, deps: AcademicDeletionDeps, requestedCareerId: string | null): Promise<{ session: AppSession; careerId: string } | Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
-  const role = session.activeRole
-  if (!session.user.active || role?.role !== "coordinador" || role.careerId === null || !(await deps.store.careerActive(role.careerId))) return forbidden()
-  return { session, careerId: role.careerId }
+  const careerId = await resolveCareerScope(session, requestedCareerId, activeCareerId((id) => deps.store.careerActive(id)))
+  if (careerId instanceof Response) return careerId
+  return { session, careerId }
 }
 
 export async function deleteGovernanceRecord(
@@ -131,9 +132,10 @@ export async function deleteCareerRecord(
   entity: string,
   recordId: string,
   deps: AcademicDeletionDeps,
+  requestedCareerId: string | null = null,
 ): Promise<Response> {
   if (entity !== "asignacion_docente" || !routeAllows(request)) return unmatchedRoute(request)
-  const context = await careerSession(request, deps)
+  const context = await careerSession(request, deps, requestedCareerId)
   if (context instanceof Response) return context
 
   return inTransaction(
@@ -148,9 +150,9 @@ export async function deleteCareerRecord(
   )
 }
 
-export async function deleteParallel(request: Request, parallelId: string, deps: AcademicDeletionDeps): Promise<Response> {
+export async function deleteParallel(request: Request, parallelId: string, deps: AcademicDeletionDeps, requestedCareerId: string | null = null): Promise<Response> {
   if (!routeAllows(request)) return unmatchedRoute(request)
-  const context = await careerSession(request, deps)
+  const context = await careerSession(request, deps, requestedCareerId)
   if (context instanceof Response) return context
 
   return inTransaction(

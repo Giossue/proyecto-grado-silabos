@@ -151,3 +151,24 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
     expect(await read(response)).toEqual({ status: 401, text: '{"message":"Unauthenticated."}' })
   })
 })
+
+describe("GET /api/v1/admin/careers/{career}/academic/scheduled-subjects", () => {
+  const OTHER = "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"
+  const read = (careerId: string) => scheduledSubjects(apiRequest(`/api/v1/admin/careers/${careerId}/academic/scheduled-subjects`, { cookie }), deps(), careerId)
+
+  beforeEach(() => {
+    careers.set(OTHER, { id: OTHER, name: "Redes", modality: "Presencial", cycleCount: 8 })
+  })
+
+  it("lists the requested career for the administrator", async () => {
+    asRole("administrador", null)
+    const response = await read(OTHER)
+    expect(response.status).toBe(200)
+    expect(((await response.json()) as { career: { id: string; name: string } }).career).toMatchObject({ id: OTHER, name: "Redes" })
+  })
+
+  it("refuses a coordinator who requests another career", async () => {
+    const response = await read(OTHER)
+    expect({ status: response.status, text: await response.text() }).toEqual({ status: 403, text: FORBIDDEN })
+  })
+})

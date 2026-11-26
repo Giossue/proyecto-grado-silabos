@@ -1,3 +1,4 @@
+import { resolveCareerScope } from "./careerScope"
 import { requireSession } from "../auth/requireSession"
 import type { AppSession } from "../auth/types"
 import { importTemplate, type TemplateSelect } from "../excel/importTemplate"
@@ -82,10 +83,13 @@ function mayImportCareers(session: AppSession): boolean {
   return session.activeRole?.role === "administrador"
 }
 
-async function curriculumCareer(session: AppSession, deps: StructureImportDeps): Promise<{ id: string; cycleCount: number } | null> {
-  const role = session.activeRole
-  if (role?.role !== "coordinador" || role.careerId === null || !(await deps.store.careerActive(role.careerId))) return null
-  return deps.store.career(role.careerId)
+function curriculumCareer(session: AppSession, deps: StructureImportDeps, requestedCareerId: string | null): Promise<{ id: string; cycleCount: number } | Response> {
+  return resolveCareerScope(
+    session,
+    requestedCareerId,
+    async (careerId) => ((await deps.store.careerActive(careerId)) ? deps.store.career(careerId) : null),
+    () => forbiddenWith(CURRICULUM_FORBIDDEN),
+  )
 }
 
 export function unitFromText(text: string): string | null {
@@ -122,10 +126,11 @@ export async function careerImportTemplate(request: Request, deps: StructureImpo
   return templateResponse(Object.values(CAREER_COLUMNS), [{ column: 0, options: faculties }, { column: 1, options: STUDY_MODALITIES }], CAREER_NOTES, "plantilla-carreras.xlsx", deps)
 }
 
-export async function curriculumImportTemplate(request: Request, deps: StructureImportDeps): Promise<Response> {
+export async function curriculumImportTemplate(request: Request, deps: StructureImportDeps, requestedCareerId: string | null = null): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
-  if ((await curriculumCareer(session, deps)) === null) return forbiddenWith(CURRICULUM_FORBIDDEN)
+  const career = await curriculumCareer(session, deps, requestedCareerId)
+  if (career instanceof Response) return career
   const keys = Object.keys(CURRICULUM_COLUMNS)
   return templateResponse(
     Object.values(CURRICULUM_COLUMNS),
@@ -302,14 +307,14 @@ async function checkCurriculum(
   return { checked, payloads, existing }
 }
 
-export async function importCurriculum(request: Request, deps: StructureImportDeps): Promise<Response> {
+export async function importCurriculum(request: Request, deps: StructureImportDeps, requestedCareerId: string | null = null): Promise<Response> {
   const ready = await importSession(request, deps, 10)
   if (ready instanceof Response) return ready
   const { session, original, finish } = ready
   const upload = await spreadsheetUpload(request)
   if (upload instanceof Response) return finish(upload)
-  const career = await curriculumCareer(session, deps)
-  if (career === null) return finish(forbiddenWith(CURRICULUM_FORBIDDEN))
+  const career = await curriculumCareer(session, deps, requestedCareerId)
+  if (career instanceof Response) return finish(career)
   const rows = importRows(upload.file, CURRICULUM_COLUMNS, CURRICULUM_OPTIONAL)
   if (rows instanceof Response) return finish(rows)
   const { checked, payloads, existing } = await checkCurriculum(rows, career, deps)

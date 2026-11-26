@@ -259,3 +259,30 @@ describe("GET /api/v1/coordination/academic/teacher-assignments", () => {
     expect(await read(await teacherAssignments(get(path), deps()))).toEqual({ status: 403, text: FORBIDDEN })
   })
 })
+
+describe("reads through /api/v1/admin/careers/{career}/academic", () => {
+  beforeEach(() => {
+    careers.set(OTHER, { id: OTHER, name: "Redes", modality: "Presencial", cycleCount: 8 })
+  })
+
+  it("gives the administrator the curriculum and teacher assignments of the requested career", async () => {
+    asRole("administrador", null)
+    const curriculum = await curriculumBuilder(get(`/api/v1/admin/careers/${OTHER}/academic/curriculum/${OTHER}`), OTHER, deps(), OTHER)
+    expect(curriculum.status).toBe(200)
+    expect(((await curriculum.json()) as { career: { id: string; name: string } }).career).toMatchObject({ id: OTHER, name: "Redes" })
+    const staff = await teacherAssignments(get(`/api/v1/admin/careers/${OTHER}/academic/teacher-assignments`), deps(), OTHER)
+    expect(((await staff.json()) as { career: { id: string } }).career.id).toBe(OTHER)
+  })
+
+  it("answers 404 for a curriculum that is not the requested career and for an unknown career", async () => {
+    asRole("administrador", null)
+    expect((await curriculumBuilder(get(`/api/v1/admin/careers/${OTHER}/academic/curriculum/${CAREER}`), CAREER, deps(), OTHER)).status).toBe(404)
+    const unknown = "01a1c5bc-79cf-7000-8000-000000000009"
+    expect((await teacherAssignments(get(`/api/v1/admin/careers/${unknown}/academic/teacher-assignments`), deps(), unknown)).status).toBe(404)
+  })
+
+  it("refuses a coordinator who requests another career", async () => {
+    expect(await read(await curriculumBuilder(get(`/api/v1/admin/careers/${OTHER}/academic/curriculum/${OTHER}`), OTHER, deps(), OTHER))).toEqual({ status: 403, text: FORBIDDEN })
+    expect(await read(await teacherAssignments(get(`/api/v1/admin/careers/${OTHER}/academic/teacher-assignments`), deps(), OTHER))).toEqual({ status: 403, text: FORBIDDEN })
+  })
+})

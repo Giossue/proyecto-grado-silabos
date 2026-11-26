@@ -13,6 +13,7 @@ import { FichaDeps } from "./ficha-deps"
 const VALIDATION = { description: "Errores por campo.", type: ValidationErrorDto }
 const THROTTLED = { description: "Más de 20 envíos por minuto.", type: MessageDto }
 const WORKBOOK = { schema: { type: "object", properties: { file: { type: "string", format: "binary" } } } }
+const CAREER = { name: "career", format: "uuid", description: "Carrera sobre la que trabaja el administrador." }
 const APPLY = { schema: { type: "object", properties: { file: { type: "string", format: "binary" }, confirm_purge: { type: "boolean" } } } }
 
 @ApiTags("Ficha de asignatura")
@@ -46,6 +47,36 @@ export class FichaController {
   @ApiTooManyRequestsResponse(THROTTLED)
   apply(@Req() request: ApiRequest): Promise<WebReply> {
     return handled(request, (web) => applyFichaImport(web, this.deps.imports()))
+  }
+
+  @Get("admin/careers/:career/ficha-imports/template")
+  @ApiOperation({ summary: "Descarga el libro .xlsx con las fichas de la carrera indicada (administración)." })
+  @ApiParam(CAREER)
+  @ApiOkResponse({ description: "Libro .xlsx." })
+  adminTemplate(@Req() request: ApiRequest, @Param("career") career: string): Promise<WebReply> {
+    return handled(request, (web) => fichaTemplate(web, this.deps.imports(), career))
+  }
+
+  @Post("admin/careers/:career/ficha-imports/spreadsheet")
+  @ApiOperation({ summary: "Revisa un libro de fichas de la carrera indicada sin guardarlo (administración, 20 por minuto)." })
+  @ApiParam(CAREER)
+  @ApiConsumes("multipart/form-data")
+  @ApiBody(WORKBOOK)
+  @ApiUnprocessableEntityResponse(VALIDATION)
+  @ApiTooManyRequestsResponse(THROTTLED)
+  adminPreview(@Req() request: ApiRequest, @Param("career") career: string): Promise<WebReply> {
+    return handled(request, (web) => previewFichaImport(web, this.deps.imports(), career))
+  }
+
+  @Post("admin/careers/:career/ficha-imports/apply")
+  @ApiOperation({ summary: "Guarda las fichas del libro en la carrera indicada (administración, 20 por minuto)." })
+  @ApiParam(CAREER)
+  @ApiConsumes("multipart/form-data")
+  @ApiBody(APPLY)
+  @ApiUnprocessableEntityResponse(VALIDATION)
+  @ApiTooManyRequestsResponse(THROTTLED)
+  adminApply(@Req() request: ApiRequest, @Param("career") career: string): Promise<WebReply> {
+    return handled(request, (web) => applyFichaImport(web, this.deps.imports(), career))
   }
 
   @Get("academic/asignaturas/:asignatura/ficha")

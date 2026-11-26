@@ -52,6 +52,11 @@ export const routeTable: readonly RouteRecord[] = [
   { path: '/admin/configuracion/seguridad', meta: { ...admin, title: 'Seguridad' } },
   { path: '/admin/configuracion/sistema', meta: { ...admin, title: 'Sistema' } },
   { path: '/admin/notificaciones', meta: { ...admin, title: 'Notificaciones' } },
+  { path: '/admin/estructura-academica/carreras/:career/malla', meta: { ...admin, title: 'Malla de la carrera' } },
+  { path: '/admin/estructura-academica/carreras/:career/materias-asignaciones', meta: { ...admin, title: 'Paralelos de la carrera' } },
+  { path: '/admin/estructura-academica/carreras/:career/docentes', meta: { ...admin, title: 'Docentes de la carrera' } },
+  { path: '/admin/estructura-academica/carreras/:career/proyecto-carrera', meta: { ...admin, title: 'Proyecto de la carrera' } },
+  { path: '/admin/estructura-academica/carreras/:career/proyecto-carrera/:subject', meta: { ...admin, title: 'Proyecto de carrera' } },
 
   { path: '/coordinacion/puesta-en-marcha', meta: {}, redirect: '/coordinacion/revisiones' },
   { path: '/coordinacion/notificaciones', meta: { ...coordinator, title: 'Notificaciones' } },

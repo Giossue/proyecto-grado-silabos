@@ -175,3 +175,40 @@ describe("POST /api/v1/coordination/academic/teachers/{user}/resend-activation",
     expect((await resend(other, TEACHER)).status).toBe(403)
   })
 })
+
+describe("career teachers through /api/v1/admin/careers/{career}/academic/teachers", () => {
+  const adminPath = (careerId: string, rest = "") => `/api/v1/admin/careers/${careerId}/academic/teachers${rest}`
+
+  function administration() {
+    const test = harness()
+    test.identity.accounts.push(account({ id: FOREIGN, name: "DOCENTE DERECHO", email: "derecho@silabos.test" }))
+    test.identity.grants.push(grant({ id: "01a1c5bc-2222-7000-8000-0000000000a2", userId: FOREIGN, role: "docente", careerId: OTHER_CAREER }))
+    return test
+  }
+
+  it("lets the administrator add and remove teachers of the requested career", async () => {
+    const test = administration()
+    const created = await storeCareerTeacher(jsonRequest(adminPath(OTHER_CAREER), "POST", { nombres: "Nueva", apellidos: "Docente", correo_electronico: "nueva@silabos.test" }), test.deps, OTHER_CAREER)
+    expect(created.status).toBe(200)
+    const account = test.identity.accounts.find((row) => row.email === "nueva@silabos.test")
+    expect(test.identity.grants.filter((row) => row.userId === account?.id).map((row) => [row.role, row.careerId])).toEqual([["docente", OTHER_CAREER]])
+    const removed = await destroyCareerTeacher(jsonRequest(adminPath(OTHER_CAREER, `/${FOREIGN}`), "DELETE", undefined), FOREIGN, test.deps, OTHER_CAREER)
+    expect(removed.status).toBe(200)
+    expect(test.identity.grants.find((row) => row.userId === FOREIGN)?.active).toBe(false)
+  })
+
+  it("keeps refusing the administrator on the coordinator routes", async () => {
+    const test = administration()
+    expect(await (await storeCareerTeacher(jsonRequest("/api/v1/coordination/academic/teachers", "POST", { nombres: "Ana", apellidos: "Paz", correo_electronico: "ana@silabos.test" }), test.deps)).text()).toBe(FORBIDDEN)
+  })
+
+  it("refuses a coordinator who sends another career and changes nothing", async () => {
+    const test = coordination()
+    const created = await storeCareerTeacher(jsonRequest(adminPath(OTHER_CAREER), "POST", { nombres: "Ana", apellidos: "Paz", correo_electronico: "ana@silabos.test" }), test.deps, OTHER_CAREER)
+    expect(await created.text()).toBe(FORBIDDEN)
+    const removed = await destroyCareerTeacher(jsonRequest(adminPath(OTHER_CAREER, `/${FOREIGN}`), "DELETE", undefined), FOREIGN, test.deps, OTHER_CAREER)
+    expect(removed.status).toBe(403)
+    expect(test.identity.accounts).toHaveLength(4)
+    expect(test.identity.grants.find((row) => row.userId === FOREIGN)?.active).toBe(true)
+  })
+})

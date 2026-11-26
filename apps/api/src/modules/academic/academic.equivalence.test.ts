@@ -271,6 +271,43 @@ const ORACLE: Record<string, Oracle> = {
   "api/v1/coordination/support-documents:POST": (web) => storeSupportDocument(web, academic.supportDocumentWrites()),
   "api/v1/coordination/support-documents/[document]:DELETE": (web, params) => destroySupportDocument(web, p(params, "document"), academic.supportDocumentWrites()),
   "api/v1/support-documents/[document]/view:GET": (web, params) => viewSupportDocument(web, p(params, "document"), academic.supportDocumentWrites()),
+  "api/v1/admin/careers/[career]/academic/curriculum/[curriculum]:GET": (web, params) => curriculumBuilder(web, p(params, "curriculum"), academic.structure(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/curriculum/[curriculum]/configuration:PATCH": (web, params) =>
+    updateCurriculumConfiguration(web, p(params, "curriculum"), academic.curriculum(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/curriculum/[curriculum]/requirements:POST": (web, params) =>
+    createSubjectRequirement(web, p(params, "curriculum"), academic.curriculum(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/curriculum/[curriculum]/requirements/[requirement]:DELETE": (web, params) =>
+    deleteSubjectRequirement(web, p(params, "curriculum"), p(params, "requirement"), academic.curriculum(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/curriculum/[curriculum]/subject-layout:PATCH": (web, params) =>
+    updateSubjectLayout(web, p(params, "curriculum"), academic.curriculum(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/curriculum/[curriculum]/subjects/[subject]:DELETE": (web, params) =>
+    deleteCurriculumSubject(web, p(params, "curriculum"), p(params, "subject"), academic.curriculum(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/curriculum-import:POST": (web, params) => importCurriculum(web, academic.structureImports(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/curriculum-import/template:GET": (web, params) => curriculumImportTemplate(web, academic.structureImports(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/[entity]:POST": (web, params) => createCareerRecord(web, p(params, "entity"), academic.careerWrites(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/[entity]/[record]:PATCH": (web, params) =>
+    updateCareerRecord(web, p(params, "entity"), p(params, "record"), academic.careerWrites(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/[entity]/[record]:DELETE": (web, params) =>
+    deleteCareerRecord(web, p(params, "entity"), p(params, "record"), academic.deletions(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/parallels:POST": (web, params) => createParallels(web, academic.careerWrites(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/parallels/[parallel]:PATCH": (web, params) => updateParallel(web, p(params, "parallel"), academic.careerWrites(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/parallels/[parallel]:DELETE": (web, params) => deleteParallel(web, p(params, "parallel"), academic.deletions(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/parallels/[parallel]/teacher:PUT": (web, params) =>
+    replaceParallelTeacher(web, p(params, "parallel"), academic.careerWrites(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/scheduled-subjects:GET": (web, params) => scheduledSubjects(web, academic.scheduled(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/teacher-assignments:GET": (web, params) => teacherAssignments(web, academic.structure(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/teachers:POST": (web, params) => storeCareerTeacher(web, academic.careerTeachers(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/teachers/import:POST": (web, params) => importTeachers(web, academic.teacherImports(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/teachers/import:DELETE": (web, params) => destroyCareerTeacher(web, "import", academic.careerTeachers(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/teachers/import-template:GET": (web, params) => teacherImportTemplate(web, academic.teacherImports(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/teachers/import-template:DELETE": (web, params) =>
+    destroyCareerTeacher(web, "import-template", academic.careerTeachers(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/teachers/[user]:DELETE": (web, params) => destroyCareerTeacher(web, p(params, "user"), academic.careerTeachers(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/teachers/[user]/resend-activation:POST": (web, params) =>
+    resendCareerTeacherActivation(web, p(params, "user"), academic.careerTeachers(), p(params, "career")),
+  "api/v1/admin/careers/[career]/ficha-imports/template:GET": (web, params) => fichaTemplate(web, ficha.imports(), p(params, "career")),
+  "api/v1/admin/careers/[career]/ficha-imports/spreadsheet:POST": (web, params) => previewFichaImport(web, ficha.imports(), p(params, "career")),
+  "api/v1/admin/careers/[career]/ficha-imports/apply:POST": (web, params) => applyFichaImport(web, ficha.imports(), p(params, "career")),
   "api/v1/academic/asignaturas/[asignatura]/ficha:GET": (web, params) => showSubjectProfile(web, p(params, "asignatura"), ficha.profile()),
   "api/v1/academic/asignaturas/[asignatura]/ficha:PUT": (web, params) => updateSubjectProfile(web, p(params, "asignatura"), ficha.profileWrites()),
   "api/v1/academic/asignaturas/[asignatura]/ficha/vista-previa:GET": (web, params) => previewSubjectProfile(web, p(params, "asignatura"), ficha.preview()),
@@ -491,6 +528,26 @@ describe("academic structure served by Nest answers exactly like the route handl
       { method: "GET", path: "/api/v1/admin/library-catalog/libraries", headers: { accept: "text/html" } },
     )
     expect(answers.map((answer) => answer.status)).toEqual([200, 404, 200, 200, 200, 403, 403])
+  })
+
+  it("shows any career's screens to the administrator through the career routes and keeps coordinators in their own career", async () => {
+    const OTHER = "c0000000-0000-4000-8000-000000000002"
+    activeRole = ADMIN
+    const admin = await expectSame(
+      { method: "GET", path: `/api/v1/admin/careers/${CAREER}/academic/curriculum/${CAREER}` },
+      { method: "GET", path: `/api/v1/admin/careers/${CAREER}/academic/teacher-assignments` },
+      { method: "GET", path: `/api/v1/admin/careers/${CAREER}/academic/scheduled-subjects` },
+      { method: "GET", path: "/api/v1/coordination/academic/scheduled-subjects" },
+    )
+    expect(admin.map((answer) => answer.status)).toEqual([200, 200, 200, 403])
+    activeRole = COORDINATOR
+    const coordinator = await expectSame(
+      { method: "GET", path: `/api/v1/admin/careers/${OTHER}/academic/scheduled-subjects` },
+      { method: "DELETE", path: `/api/v1/admin/careers/${OTHER}/academic/parallels/${PARALLEL}` },
+      { method: "GET", path: `/api/v1/admin/careers/${CAREER}/academic/scheduled-subjects` },
+    )
+    expect(coordinator.map((answer) => answer.status)).toEqual([403, 403, 200])
+    expect(coordinator[1].writes).toEqual([])
   })
 
   it("deletes a parallel inside the same transaction and rejects missing records the same way", async () => {

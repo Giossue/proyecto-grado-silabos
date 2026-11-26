@@ -1,3 +1,4 @@
+import { activeCareerId, resolveCareerScope } from "../academic/careerScope"
 import { requireSession } from "../auth/requireSession"
 import type { AppSession } from "../auth/types"
 import { requestInput } from "../http/input"
@@ -10,32 +11,32 @@ import { bindAccount, perform, stringOf, type IdentityWriteDeps } from "./accoun
 
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
-async function mayAddTeachers(session: AppSession, deps: IdentityWriteDeps): Promise<boolean> {
-  const role = session.activeRole
-  return session.user.active && role?.role === ROLE_COORDINATOR && role.careerId !== null && (await deps.accounts.activeCareer(role.careerId))
+function teacherCareer(session: AppSession, deps: IdentityWriteDeps, requestedCareerId: string | null): Promise<string | Response> {
+  return resolveCareerScope(session, requestedCareerId, activeCareerId((careerId) => deps.accounts.activeCareer(careerId)))
 }
 
-async function teachesInCareer(session: AppSession, target: Account, deps: IdentityWriteDeps): Promise<boolean> {
-  const careerId = session.activeRole?.careerId ?? null
+async function teachesInCareer(careerId: string | null, target: Account, deps: IdentityWriteDeps): Promise<boolean> {
   return careerId !== null && deps.accounts.hasEffectiveRole(target.id, ROLE_TEACHER, careerId)
 }
 
-async function mayResend(session: AppSession, target: Account, deps: IdentityWriteDeps): Promise<boolean> {
+async function mayResend(session: AppSession, target: Account, deps: IdentityWriteDeps, requestedCareerId: string | null): Promise<boolean | Response> {
+  const careerId = requestedCareerId === null ? (session.activeRole?.careerId ?? null) : await teacherCareer(session, deps, requestedCareerId)
+  if (careerId instanceof Response) return careerId
   if (!session.user.active || session.user.id === target.id || !target.active || target.verified) return false
   if (session.activeRole?.role === ROLE_ADMINISTRATOR) return true
-  return session.activeRole?.role === ROLE_COORDINATOR && (await teachesInCareer(session, target, deps))
+  return session.activeRole?.role === ROLE_COORDINATOR && (await teachesInCareer(careerId, target, deps))
 }
 
-export async function storeCareerTeacher(request: Request, deps: IdentityWriteDeps): Promise<Response> {
+export async function storeCareerTeacher(request: Request, deps: IdentityWriteDeps, requestedCareerId: string | null = null): Promise<Response> {
   const original = request.clone()
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
-  if (!(await mayAddTeachers(session, deps))) return forbidden()
+  const careerId = await teacherCareer(session, deps, requestedCareerId)
+  if (careerId instanceof Response) return careerId
   const input = collapseNameColumns(await requestInput(request))
   if (typeof input.correo_electronico === "string") input.correo_electronico = input.correo_electronico.replace(PHP_TRIM, "").toLowerCase()
   const { errors } = await validateSchema(careerTeacherSchema(), input)
   if (errors !== null) return validationError(errors)
-  const careerId = session.activeRole?.careerId as string
   const outcome = await perform(deps, original, session, (ctx) =>
     createCareerTeacher(ctx, { name: fullName(stringOf(input.nombres), stringOf(input.apellidos)), email: stringOf(input.correo_electronico) }, careerId),
   )
@@ -49,12 +50,13 @@ export async function storeCareerTeacher(request: Request, deps: IdentityWriteDe
   return apiJson({ message })
 }
 
-export async function destroyCareerTeacher(request: Request, id: string, deps: IdentityWriteDeps): Promise<Response> {
+export async function destroyCareerTeacher(request: Request, id: string, deps: IdentityWriteDeps, requestedCareerId: string | null = null): Promise<Response> {
   const bound = await bindAccount(request, id, deps)
   if (bound instanceof Response) return bound
   const { session, target, original } = bound
-  if (!(await mayAddTeachers(session, deps)) || !target.active || !(await teachesInCareer(session, target, deps))) return forbidden()
-  const careerId = session.activeRole?.careerId as string
+  const careerId = await teacherCareer(session, deps, requestedCareerId)
+  if (careerId instanceof Response) return careerId
+  if (!target.active || !(await teachesInCareer(careerId, target, deps))) return forbidden()
   const outcome = await perform(deps, original, session, (ctx) => removeCareerTeacher(ctx, target, careerId))
   if (outcome instanceof Response) return outcome
   const count = outcome.value
@@ -67,11 +69,13 @@ export async function destroyCareerTeacher(request: Request, id: string, deps: I
   return apiJson({ message })
 }
 
-export async function resendCareerTeacherActivation(request: Request, id: string, deps: IdentityWriteDeps): Promise<Response> {
+export async function resendCareerTeacherActivation(request: Request, id: string, deps: IdentityWriteDeps, requestedCareerId: string | null = null): Promise<Response> {
   const bound = await bindAccount(request, id, deps, { throttled: true })
   if (bound instanceof Response) return bound
   const { session, target, original, finish } = bound
-  if (!(await mayResend(session, target, deps))) return finish(forbidden())
+  const allowed = await mayResend(session, target, deps, requestedCareerId)
+  if (allowed instanceof Response) return finish(allowed)
+  if (!allowed) return finish(forbidden())
   const outcome = await perform(deps, original, session, (ctx) => resendActivation(ctx, target, RESEND))
   if (outcome instanceof Response) return finish(outcome)
   return finish(apiJson({ message: `Invitación de activación enviada a ${target.email}.` }))

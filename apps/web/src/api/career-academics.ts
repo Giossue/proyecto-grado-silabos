@@ -5,6 +5,7 @@ import type { DocumentPresentation } from '@/api/syllabi';
 import type { PreviewSection } from '@/components/domain/syllabus/previewSection';
 import type { DocumentNode } from '@silabos/shared/lib/templateDocument';
 import { api, ApiError } from "@/api/client";
+import { careerAcademicPath } from "@/api/careerScope";
 import { FINALIZED_NOTICE, requestPurgeConfirmation } from "@/composables/usePurgeConfirmation";
 
 export const PURGE_CANCELLED_MESSAGE = "Cambio cancelado. No se guardó nada";
@@ -191,13 +192,13 @@ export type TeacherAssignments = {
   };
 };
 
-export const getCurriculum = (careerId: string) =>
-  api<Curriculum>(`/coordination/academic/curriculum/${careerId}`);
+export const getCurriculum = (careerId: string, scope: string | null = null) =>
+  api<Curriculum>(careerAcademicPath(`/curriculum/${careerId}`, scope));
 
-export const getScheduledSubjects = () =>
-  api<ScheduledSubjects>("/coordination/academic/scheduled-subjects");
-export const getTeacherAssignments = () =>
-  api<TeacherAssignments>("/coordination/academic/teacher-assignments");
+export const getScheduledSubjects = (scope: string | null = null) =>
+  api<ScheduledSubjects>(careerAcademicPath("/scheduled-subjects", scope));
+export const getTeacherAssignments = (scope: string | null = null) =>
+  api<TeacherAssignments>(careerAcademicPath("/teacher-assignments", scope));
 /**
  * Cómo tratar la confirmación de un cambio que afecta sílabos. `ask` (por defecto) pregunta si hace falta.
  * En un cambio masivo la pantalla pregunta una sola vez antes de empezar: `confirmed` envía la respuesta ya dada y
@@ -217,13 +218,13 @@ export const createCareerRecord = (
   purge: PurgeHandling = 'ask',
 ) =>
   sendWith((confirm) =>
-    api<{ message: string }>(`/coordination/academic/${entity}`, {
+    api<{ message: string }>(careerAcademicPath(`/${entity}`), {
       method: "POST",
       body: jsonBody(payload, confirm),
     }),
   purge);
 export const deleteCareerRecord = (entity: string, id: string) =>
-  api<{ message: string }>(`/coordination/academic/${entity}/${id}`, {
+  api<{ message: string }>(careerAcademicPath(`/${entity}/${id}`), {
     method: "DELETE",
   });
 export const updateCurriculumConfiguration = (
@@ -232,7 +233,7 @@ export const updateCurriculumConfiguration = (
 ) =>
   withPurgeConfirmation((confirm) =>
     api<{ message: string }>(
-      `/coordination/academic/curriculum/${careerId}/configuration`,
+      careerAcademicPath(`/curriculum/${careerId}/configuration`),
       { method: "PATCH", body: jsonBody(payload, confirm) },
     ),
   );
@@ -242,7 +243,7 @@ export const updateSubjectLayout = (
 ) =>
   withPurgeConfirmation((confirm) =>
     api<{ message: string }>(
-      `/coordination/academic/curriculum/${curriculumId}/subject-layout`,
+      careerAcademicPath(`/curriculum/${curriculumId}/subject-layout`),
       { method: "PATCH", body: jsonBody(payload, confirm) },
     ),
   );
@@ -252,7 +253,7 @@ export const updateCareerRecord = (
   payload: Record<string, unknown>,
 ) =>
   withPurgeConfirmation((confirm) =>
-    api<{ message: string }>(`/coordination/academic/${entity}/${id}`, {
+    api<{ message: string }>(careerAcademicPath(`/${entity}/${id}`), {
       method: "PATCH",
       body: jsonBody(payload, confirm),
     }),
@@ -267,7 +268,7 @@ export const createSubjectRequirement = (
 ) =>
   withPurgeConfirmation((confirm) =>
     api<{ message: string }>(
-      `/coordination/academic/curriculum/${curriculumId}/requirements`,
+      careerAcademicPath(`/curriculum/${curriculumId}/requirements`),
       { method: "POST", body: jsonBody(payload, confirm) },
     ),
   );
@@ -277,7 +278,7 @@ export const deleteSubjectRequirement = (
 ) =>
   withPurgeConfirmation((confirm) =>
     api<{ message: string }>(
-      `/coordination/academic/curriculum/${curriculumId}/requirements/${requirementId}`,
+      careerAcademicPath(`/curriculum/${curriculumId}/requirements/${requirementId}`),
       { method: "DELETE", ...(confirm ? { body: jsonBody({}, true) } : {}) },
     ),
   );
@@ -287,7 +288,7 @@ export const deleteCurriculumSubject = (
 ) =>
   withPurgeConfirmation((confirm) =>
     api<{ message: string }>(
-      `/coordination/academic/curriculum/${curriculumId}/subjects/${subjectId}`,
+      careerAcademicPath(`/curriculum/${curriculumId}/subjects/${subjectId}`),
       { method: "DELETE", ...(confirm ? { body: jsonBody({}, true) } : {}) },
     ),
   );
@@ -298,25 +299,25 @@ export const createParallels = (payload: {
   user_id: string;
 }, purge: PurgeHandling = 'ask') =>
   sendWith((confirm) =>
-    api<{ message: string }>("/coordination/academic/parallels", {
+    api<{ message: string }>(careerAcademicPath("/parallels"), {
       method: "POST",
       body: jsonBody(payload, confirm),
     }),
   purge);
 export const updateParallel = (id: string, payload: { code: string; shift: string }, purge: PurgeHandling = 'ask') =>
-  sendWith((confirm) => api<{ message: string }>(`/coordination/academic/parallels/${id}`, {
+  sendWith((confirm) => api<{ message: string }>(careerAcademicPath(`/parallels/${id}`), {
     method: "PATCH",
     body: jsonBody(payload, confirm),
   }), purge);
 export const replaceParallelTeacher = (parallelId: string, userId: string, purge: PurgeHandling = 'ask') =>
   sendWith((confirm) =>
-    api<{ message: string }>(`/coordination/academic/parallels/${parallelId}/teacher`, {
+    api<{ message: string }>(careerAcademicPath(`/parallels/${parallelId}/teacher`), {
       method: "PUT",
       body: jsonBody({ user_id: userId }, confirm),
     }),
   purge);
 export const deleteParallel = (id: string) =>
-  api<{ message: string }>(`/coordination/academic/parallels/${id}`, {
+  api<{ message: string }>(careerAcademicPath(`/parallels/${id}`), {
     method: "DELETE",
   });
 export const createCareerTeacher = (payload: {
@@ -324,16 +325,16 @@ export const createCareerTeacher = (payload: {
   apellidos: string;
   correo_electronico: string;
 }) =>
-  api<{ message: string }>("/coordination/academic/teachers", {
+  api<{ message: string }>(careerAcademicPath("/teachers"), {
     method: "POST",
     body: JSON.stringify(payload),
   });
 /** Solo cuando la invitación venció sin aceptarse; el enlace llega al correo del docente. */
 export const resendCareerTeacherInvitation = (userId: string) =>
-  api<{ message: string }>(`/coordination/academic/teachers/${userId}/resend-activation`, {
+  api<{ message: string }>(careerAcademicPath(`/teachers/${userId}/resend-activation`), {
     method: "POST",
   });
 export const removeCareerTeacher = (userId: string) =>
-  api<{ message: string }>(`/coordination/academic/teachers/${userId}`, {
+  api<{ message: string }>(careerAcademicPath(`/teachers/${userId}`), {
     method: "DELETE",
   });
