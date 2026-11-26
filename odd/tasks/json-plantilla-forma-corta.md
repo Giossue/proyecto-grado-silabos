@@ -41,9 +41,18 @@ Goal: the template JSON (Admin → Plantilla → Opciones avanzadas → Editar J
 - S5 — Nothing else changes: the internal definition stored in `plantilla_silabo.definicion_plantilla`, `valores_campo`, snapshots, the PDF/DOCX, validation and the Koha catalog search keep working exactly as today. Errors in an invalid short form are reported in Spanish with the path, like the current import errors.
 - S6 — Update `plantilla.schema.json` (the `$schema` of the export) and any help or docs that describe the template JSON format.
 
+- S7 — Everything in the template JSON is in Spanish:
+  - the `unidades` list key `units` becomes `unidades`, and the stored data is migrated;
+  - the catalog columns are shown in Spanish (`autor`, `titulo`, `anio`, `ciudad`, `editorial`, `isbn`, `codigo`) and the system translates them to the Koha names;
+  - the export writes `"horas"` instead of `"número"` for hour columns.
+
+  User (2026-11-26): «pero no podemos usar español? o si osi necesitamos inglés?» → «ok hazlo».
+
 ## Tasks
 
-- [x] T1 (S1–S6) delegated writer (reason: context backstop of the parent session) — commit: pending. RED: 6 of 7 new tests in `templateShortForm.test.ts` failed (the full-form import test already passed); GREEN: all 7 pass.
+- [x] T1 (S1–S6) delegated writer (reason: context backstop of the parent session) — commit: 1263c46. RED: 6 of 7 new tests in `templateShortForm.test.ts` failed (the full-form import test already passed); GREEN: all 7 pass.
+
+- [x] T2 (S7) delegated writer (context backstop); Risk item 1 (migration of stored data) → independent verifier — commit: pending. RED: 6 of 12 failed (two updated expectations, «unidades» export, «units» in a field document, Spanish catalog, «horas»; the «units» import test passed trivially until the rename and then failed when the alias was disabled); GREEN: 13 of 13 in `templateShortForm.test.ts`. Migration `20261126140000_lista_unidades` checked on a throwaway copy and applied to dev (see L5).
 
 ## Log
 
@@ -73,3 +82,20 @@ Goal: the template JSON (Admin → Plantilla → Opciones avanzadas → Editar J
     - shared: 17 files and 156 tests pass;
     - tsc for api and web: 0 errors;
     - the export validates against `plantilla.schema.json` with ajv 2020, and so does an old full-form export.
+
+- L4 (2026-11-26) — T1 committed as 1263c46. User: «pero no podemos usar español? o si osi necesitamos inglés?» → «ok hazlo» (S7).
+
+- L5 (2026-11-26, T2 writer) — Done (S7):
+  - `units` → `unidades` in `officialTemplate.json` (value key, 11 rule paths, layout repeat), `historicalFieldDocument.ts` and the api goldens (`block-golden`, `draft-golden`, `html-golden`, `template-golden`, `laravel-word-golden`). The AI resources had no `units`.
+  - Legacy alias in `legacyUnits.ts`: `defineAnyBlock` renames `units` for the kind `unidades` (value or `campos`, rule paths `count`/`filled`/`sum`, layout repeat in HTML or nodes, catalog list), and `fieldDocument` renames the value of a `documentBlock` of kind `unidades` in imported field contents.
+  - Catalog: export writes `autor, titulo, anio, ciudad, editorial, isbn, codigo`; import maps them to the Koha names and still accepts the English names. `call_number` has no Spanish name in S7 and stays as is. Unknown or repeated names give a Spanish error with the path `blocks.<kind>.catalogo.columnas`.
+  - Hours: a number with maximum 999.99 and 2 decimals is exported as `"horas"`; `"número"` is still read the same.
+  - Migration `20261126140000_lista_unidades` (SQL only, three `regexp_replace` on key/path patterns: `"value": {"units":`, `"count|filled|sum": "units[.\"]`, `"repeat": {"value": "units"}`) on `plantilla_silabo` (json), `definiciones_campo`, `valores_campo`, `propuestas_ia_plantilla` and `silabos`. Counts, identical on the throwaway copy (postgres:18, port 55497) and on dev: `units` 14/2/21/0/0 → 0/0/0/0/0; `unidades` 10/2/21 → 24/4/42; rows 1/46/438/0/21 unchanged; an md5 of the text with both words masked is identical before and after, so only the key changed. The template update bumps `plantilla_modificada_en` through its trigger.
+  - Not migrated: `revisiones_silabo.contenido_enviado` (3 rows, 45 `units`) because each snapshot carries its own `template_definition` and `hash_contenido` fingerprints the content; a test renders a `units` snapshot through `snapshotDefinition`. `mensajes_ia_plantilla` (2 old chat messages) is history and stays.
+  - Not renamed (outside the edit surface): `packages/shared/src/test/fixtures/template-definition.json` and `block-conformance.json` and the web/shared tests that read them (`DocumentBlock.test.tsx`, `FieldResponseEditor.test.tsx`, `blocks.test.ts`, `TeacherSyllabusDetailPage.test.tsx`). They use `units` in both the template and the values, so they stay consistent and pass; the engine is generic.
+  - Checks: api vitest 2355/2356 (the one failure, `redis/lock.test.ts` timing, passes alone); web 175 files/1040 tests; shared 17/156; tsc api and web 0 errors; the export validates against `plantilla.schema.json` with ajv 2020.
+
+- L6 (2026-11-26) — The independent verifier passed S1–S4 and S6. Blocker B1: the migration bumped `plantilla_modificada_en` through the triggers, which made `changedDuringPause` true. Fixed with the save/restore pattern used by earlier migrations, proven in a rolled-back transaction. On the dev DB the timestamp was set back to 06:42:47 (before the pause) and the migration checksum was updated. Advisories accepted:
+  - stale `huella_definicion_campo` for unidades (not a teacher field);
+  - pending AI proposals would go stale (0 in dev);
+  - old AI chat messages still say `units` (the import alias covers it).

@@ -146,7 +146,7 @@ export function historicalFieldDocument(field: PhpRecord): PhpRecord {
   if (field.type === "unidades") {
     const found = isPhpArray(value) ? Object.values(record(value)).filter(isPhpArray) : []
     const units = found.length === 0 ? [{ nombre: "", resultado: "", semanas: Array.from({ length: 16 }, () => []) }] : found
-    return { type: "doc", content: [{ type: "documentBlock", attrs: { kind: "unidades", props: [], value: { units } } }] }
+    return { type: "doc", content: [{ type: "documentBlock", attrs: { kind: "unidades", props: [], value: { unidades: units } } }] }
   }
   return value === null ? EMPTY_DOCUMENT : documentFromText(wordDisplay(value))
 }

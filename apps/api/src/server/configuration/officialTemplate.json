@@ -318,7 +318,7 @@
         "unidades": {
             "label": "Distribución y planificación de las unidades",
             "value": {
-                "units": {
+                "unidades": {
                     "type": "array",
                     "minItems": 1,
                     "maxItems": 8,
@@ -421,7 +421,7 @@
                     "message": "Las unidades suman más semanas que el período.",
                     "checks": [
                         {
-                            "count": "units.*.semanas",
+                            "count": "unidades.*.semanas",
                             "max": {
                                 "variable": "semanas_periodo"
                             }
@@ -436,16 +436,16 @@
                     "checks": [
                         {
                             "label": "Nombres",
-                            "filled": "units.*.nombre",
+                            "filled": "unidades.*.nombre",
                             "equals": {
-                                "count": "units"
+                                "count": "unidades"
                             }
                         },
                         {
                             "label": "Resultados",
-                            "filled": "units.*.resultado",
+                            "filled": "unidades.*.resultado",
                             "equals": {
-                                "count": "units"
+                                "count": "unidades"
                             }
                         }
                     ]
@@ -458,9 +458,9 @@
                     "checks": [
                         {
                             "label": "Unidades con semanas",
-                            "filled": "units.*.semanas",
+                            "filled": "unidades.*.semanas",
                             "equals": {
-                                "count": "units"
+                                "count": "unidades"
                             }
                         }
                     ]
@@ -472,7 +472,7 @@
                     "checks": [
                         {
                             "label": "Semanas",
-                            "count": "units.*.semanas",
+                            "count": "unidades.*.semanas",
                             "equals": {
                                 "variable": "semanas_periodo"
                             }
@@ -487,21 +487,21 @@
                     "checks": [
                         {
                             "label": "ACD",
-                            "sum": "units.*.semanas.*.acd_h",
+                            "sum": "unidades.*.semanas.*.acd_h",
                             "equals": {
                                 "variable": "horas_docencia"
                             }
                         },
                         {
                             "label": "APE",
-                            "sum": "units.*.semanas.*.ape_h",
+                            "sum": "unidades.*.semanas.*.ape_h",
                             "equals": {
                                 "variable": "horas_practicas"
                             }
                         },
                         {
                             "label": "AA",
-                            "sum": "units.*.semanas.*.aa_h",
+                            "sum": "unidades.*.semanas.*.aa_h",
                             "equals": {
                                 "variable": "horas_autonomas"
                             }
@@ -510,7 +510,7 @@
                 }
             ],
             "layout": [
-                "<section data-repeat='{\"value\":\"units\"}'>",
+                "<section data-repeat='{\"value\":\"unidades\"}'>",
                 "<table>",
                 "<tr><th rowspan=\"2\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Unidad No.</span></strong></th><th rowspan=\"2\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\"><span data-slot='{\"index\":true}'></span></span></strong></th><th colspan=\"3\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Nombre de la unidad</span></strong></th><td colspan=\"4\"><span data-slot='{\"value\":\"nombre\"}'></span></td></tr>",
                 "<tr><th colspan=\"3\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Resultados de aprendizaje</span></strong></th><td colspan=\"4\"><span data-slot='{\"value\":\"resultado\"}'></span></td></tr>",

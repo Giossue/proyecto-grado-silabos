@@ -267,7 +267,7 @@
         },
         "shortType": {
             "enum": ["texto", "texto largo", "número", "horas", "sí/no"],
-            "description": "texto: hasta 1000 caracteres en una línea. texto largo: igual, en varias líneas. número u horas: hasta 999.99 con 2 decimales. sí/no: opciones «si» (Sí) y «no» (No)."
+            "description": "texto: hasta 1000 caracteres en una línea. texto largo: igual, en varias líneas. horas: hasta 999.99 con 2 decimales (la exportación lo usa para las columnas de horas). número: igual que horas; se usa cuando cambia «max» o «decimales». sí/no: opciones «si» (Sí) y «no» (No)."
         },
         "shortLeaf": {
             "type": "object",
@@ -280,7 +280,7 @@
                 "solo_si": { "$ref": "#/$defs/condition" },
                 "max": { "type": "number", "description": "Texto: máximo de caracteres (1000 por defecto). Número: valor máximo (999.99 por defecto)." },
                 "min": { "enum": [0, 1], "description": "Solo texto. 1: obligatorio." },
-                "decimales": { "type": "integer", "minimum": 0, "maximum": 6, "description": "Solo número. 2 por defecto." }
+                "decimales": { "type": "integer", "minimum": 0, "maximum": 6, "description": "Solo número u horas. 2 por defecto." }
             }
         },
         "shortChoice": {
@@ -373,7 +373,8 @@
                         "columnas": {
                             "type": "object",
                             "minProperties": 1,
-                            "propertyNames": { "enum": ["author", "title", "year", "place", "publisher", "isbn", "call_number", "format"] },
+                            "description": "Clave: dato del libro (autor, titulo, anio, ciudad, editorial, isbn, codigo o call_number; también se aceptan los nombres de Koha author, title, year, place, publisher y format). Valor: columna de texto de la lista.",
+                            "propertyNames": { "enum": ["autor", "titulo", "anio", "ciudad", "editorial", "isbn", "codigo", "call_number", "author", "title", "year", "place", "publisher", "format"] },
                             "additionalProperties": { "$ref": "#/$defs/key" }
                         }
                     }

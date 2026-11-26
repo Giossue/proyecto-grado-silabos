@@ -6,10 +6,11 @@ import { officialDefinition, officialSections } from "./officialTemplate"
 import { phpShape, type PhpRecord } from "./phpValues"
 import { buildTable, designWithKeys } from "./repeatableTable"
 import { defineTemplate } from "./templateDefinition"
-import { DraftRequest, prepareDraft, toRuntime } from "./templateDraft"
+import { DraftRequest, fieldDocument, prepareDraft, toRuntime } from "./templateDraft"
 import type { SyllabusTemplate } from "./templatePresentation"
 import { templateExport } from "./templateReads"
-import { TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
+import { expandBlock, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
+import { snapshotDefinition } from "../syllabus/snapshotDocuments"
 
 const request = new Request("https://silabos.ueb.edu.ec/")
 
@@ -119,14 +120,14 @@ describe("template JSON blocks in short form", () => {
 
     expect(units.reglas).toEqual(["semanas_maximas", "unidades_sin_nombre", "unidades_sin_semanas", "semanas_unidades_incompletas", "horas_unidades_no_coinciden"])
     expect(blocks.bibliografia.reglas).toEqual(["libros_sin_titulo"])
-    const list = (units.campos as PhpRecord).units as PhpRecord
+    const list = (units.campos as PhpRecord).unidades as PhpRecord
     expect(list).toMatchObject({ titulo: "unidad", filas: "1-8", al_empezar: 4, error: "La planificación admite de 1 a 8 unidades." })
     const columns = list.columnas as PhpRecord
     expect(columns.nombre).toEqual({ titulo: "Nombre de la unidad", error: "El nombre de la unidad supera los 1000 caracteres." })
     expect(columns.resultado).toEqual({ tipo: "texto largo", titulo: "Resultados de aprendizaje", error: "El resultado de aprendizaje supera los 1000 caracteres." })
     const weeks = columns.semanas as PhpRecord
     expect(weeks).toMatchObject({ titulo: "semana", filas: "0-52", al_empezar: 4 })
-    expect((weeks.columnas as PhpRecord).acd_h).toEqual({ tipo: "número", titulo: "ACD", error: "Las horas por semana deben ser un número." })
+    expect((weeks.columnas as PhpRecord).acd_h).toEqual({ tipo: "horas", titulo: "ACD", error: "Las horas por semana deben ser un número." })
     const disability = ((blocks.identificacion.campos as PhpRecord).disability as PhpRecord).campos as PhpRecord
     expect(disability.answer).toEqual({ tipo: "sí/no", titulo: "Estudiantes con discapacidad", error: "La respuesta sobre estudiantes con discapacidad no es válida." })
     expect(disability.description).toEqual({
@@ -138,7 +139,7 @@ describe("template JSON blocks in short form", () => {
     })
     expect(blocks.bibliografia.catalogo).toEqual({
       lista: "libros",
-      columnas: { author: "autor", title: "titulo", year: "anio", place: "ciudad", publisher: "editorial", isbn: "isbn", format: "codigo" },
+      columnas: { autor: "autor", titulo: "titulo", anio: "anio", ciudad: "ciudad", editorial: "editorial", isbn: "isbn", codigo: "codigo" },
     })
     expect(blocks.evaluacion).toEqual({ titulo: "Indicadores de evaluación por parcial", diseño: expect.any(Array) })
   })
@@ -178,7 +179,7 @@ describe("template JSON blocks in short form", () => {
 
     const reglas = blocksOf(exported(definition)).unidades.reglas as unknown[]
 
-    expect(reglas[0]).toEqual({ code: "semanas_maximas", on: "save", message: "Hay más semanas que en el período.", checks: [{ count: "units.*.semanas", max: { variable: "semanas_periodo" } }] })
+    expect(reglas[0]).toEqual({ code: "semanas_maximas", on: "save", message: "Hay más semanas que en el período.", checks: [{ count: "unidades.*.semanas", max: { variable: "semanas_periodo" } }] })
     expect(reglas.slice(1)).toEqual(["unidades_sin_nombre", "unidades_sin_semanas", "semanas_unidades_incompletas", "horas_unidades_no_coinciden"])
     expect(imported(exported(definition), definition).blocks).toEqual(definition.blocks)
   })
@@ -211,5 +212,107 @@ describe("template JSON blocks in short form", () => {
     const after = lines(blocksOf(exported(definition)))
 
     expect(after).toBeLessThan(before * 0.6)
+  })
+})
+
+function legacyUnitsText(payload: unknown): string {
+  return JSON.stringify(payload)
+    .replace(/"value":\{"unidades":/g, '"value":{"units":')
+    .replace(/"campos":\{"unidades":/g, '"campos":{"units":')
+    .replace(/"(count|filled|sum)":"unidades/g, '"$1":"units')
+    .replace(/"repeat":\{"value":"unidades"\}/g, '"repeat":{"value":"units"}')
+    .replace(/\\"value\\":\\"unidades\\"/g, '\\"value\\":\\"units\\"')
+}
+
+function legacyUnits(payload: unknown): PhpRecord {
+  return JSON.parse(legacyUnitsText(payload)) as PhpRecord
+}
+
+describe("template JSON in Spanish", () => {
+  it("names the unidades list «unidades» in the export and in every rule and layout path", () => {
+    const definition = officialDefinition()
+    const text = JSON.stringify(blocksOf(exported(definition)).unidades)
+
+    expect(Object.keys((definition.blocks.unidades as PhpRecord).value as PhpRecord)).toEqual(["unidades"])
+    expect(Object.keys(blocksOf(exported(definition)).unidades.campos as PhpRecord)).toEqual(["unidades"])
+    expect(text).not.toMatch(/\bunits\b/)
+    expect(JSON.stringify(definition.blocks)).not.toMatch(/\bunits\b/)
+    expect(text).toContain('\\"value\\":\\"unidades\\"')
+  })
+
+  it("imports a JSON that still names the unidades list «units», in short and in full form", () => {
+    const definition = officialDefinition()
+    const short = legacyUnits(exported(definition))
+    const full = legacyUnits({ ...exported(definition), blocks: asJson(fullBlocks(definition)) })
+
+    expect(legacyUnitsText(short)).toMatch(/"campos":\{"units":/)
+    expect(legacyUnitsText(full)).toMatch(/"value":\{"units":/)
+    expect(legacyUnitsText(full)).toMatch(/"count":"units\.\*\.semanas"/)
+    expect(imported(short)).toEqual(definition)
+    expect(imported(full)).toEqual(definition)
+    const nodes = legacyUnits({ ...exported(definition), blocks: asJson(definition.blocks) })
+    expect(legacyUnitsText(nodes)).toMatch(/"repeat":\{"value":"units"\}/)
+    expect(imported(nodes)).toEqual(definition)
+  })
+
+  it("reads a unidades block value saved under «units» in a field of an older JSON as «unidades»", () => {
+    const value = { unidades: [{ nombre: "Matrices", resultado: "Resuelve", semanas: [{ contenidos: "Tema", acd_h: "2" }] }] }
+    const node = { type: "doc", content: [{ type: "documentBlock", attrs: { kind: "unidades", props: [], value } }] }
+    const old = JSON.parse(JSON.stringify(node).replace('"value":{"unidades":', '"value":{"units":')) as PhpRecord
+    const lines = JSON.parse(JSON.stringify(documentLines(node)).replace("&quot;unidades&quot;", "&quot;units&quot;")) as string[]
+    const other = { type: "doc", content: [{ type: "documentBlock", attrs: { kind: "practicas", props: [], value: { units: [] } } }] }
+
+    expect(JSON.stringify(lines)).toContain("units")
+    expect(fieldDocument(old)).toEqual(node)
+    expect(fieldDocument(lines)).toEqual(fieldDocument(documentLines(node)))
+    expect(fieldDocument(other)).toEqual(other)
+  })
+
+  it("renders a revision snapshot saved with «units» through its own template definition", () => {
+    const definition = legacyUnits(asJson(officialDefinition()))
+    const value = { units: [{ nombre: "Matrices y determinantes", resultado: "Resuelve sistemas", semanas: [{ contenidos: "Operaciones con matrices", acd_h: "2" }] }] }
+    const node = { type: "documentBlock", attrs: { kind: "unidades", props: [], value } }
+
+    expect(JSON.stringify(definition.blocks)).toMatch(/"value":\{"units":/)
+    const rendered = JSON.stringify(expandBlock(node, {}, snapshotDefinition({ template_definition: definition })))
+    expect(rendered).toContain("Matrices y determinantes")
+    expect(rendered).toContain("Operaciones con matrices")
+  })
+
+  it("writes the catalog columns with the Spanish names of the book data and reads them back to the Koha names", () => {
+    const definition = officialDefinition()
+    const payload = exported(definition)
+    const english = structuredClone(payload)
+    ;(blocksOf(english).bibliografia.catalogo as PhpRecord).columnas = { author: "autor", title: "titulo", year: "anio", place: "ciudad", publisher: "editorial", isbn: "isbn", format: "codigo" }
+    const twice = structuredClone(payload)
+    ;(blocksOf(twice).bibliografia.catalogo as PhpRecord).columnas = { autor: "autor", author: "titulo" }
+    const unknown = structuredClone(payload)
+    ;(blocksOf(unknown).bibliografia.catalogo as PhpRecord).columnas = { editor: "autor" }
+
+    expect(blocksOf(payload).bibliografia.catalogo).toEqual({
+      lista: "libros",
+      columnas: { autor: "autor", titulo: "titulo", anio: "anio", ciudad: "ciudad", editorial: "editorial", isbn: "isbn", codigo: "codigo" },
+    })
+    expect((imported(payload).blocks.bibliografia as PhpRecord).catalog).toEqual((definition.blocks.bibliografia as PhpRecord).catalog)
+    expect(((definition.blocks.bibliografia as PhpRecord).catalog as PhpRecord).map).toEqual({ author: "autor", title: "titulo", year: "anio", place: "ciudad", publisher: "editorial", isbn: "isbn", format: "codigo" })
+    expect(imported(english)).toEqual(definition)
+    expect(definitionErrors(() => imported(twice))).toEqual(["blocks.bibliografia.catalogo.columnas: «autor» y «author» son el mismo dato del libro."])
+    expect(definitionErrors(() => imported(unknown))).toEqual([
+      "blocks.bibliografia.catalogo.columnas: «editor» no es un dato del libro (autor, titulo, anio, ciudad, editorial, isbn, codigo o call_number).",
+    ])
+  })
+
+  it("writes «horas» for the hour columns and still reads «número»", () => {
+    const definition = officialDefinition()
+    const payload = exported(definition)
+    const weeks = (((blocksOf(payload).unidades.campos as PhpRecord).unidades as PhpRecord).columnas as PhpRecord).semanas as PhpRecord
+    const columns = weeks.columnas as PhpRecord
+    const number = JSON.parse(JSON.stringify(payload).replaceAll('"tipo":"horas"', '"tipo":"número"')) as PhpRecord
+
+    for (const key of ["acd_h", "ape_h", "aa_h"]) expect(columns[key]).toMatchObject({ tipo: "horas" })
+    expect(JSON.stringify(payload)).not.toContain('"tipo":"número"')
+    expect(JSON.stringify(number)).toContain('"tipo":"número"')
+    expect(imported(number)).toEqual(definition)
+    expect(imported(payload)).toEqual(definition)
   })
 })

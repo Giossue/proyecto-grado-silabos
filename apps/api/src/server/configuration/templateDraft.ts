@@ -17,6 +17,7 @@ import {
 import { defineDocumentStyle, documentWithLayout } from "./templateStyle"
 import { documentFromHtml } from "./documentHtml"
 import { DEFINITION_KEYS, defineTemplate, listLimitsOf, withBlocks, withListLimits } from "./templateDefinition"
+import { legacyUnitsDocument } from "./legacyUnits"
 
 export const FORMAT_VERSION = 2
 export { FIELD_LIMIT_INVALID, KEY_PATTERN, RESPONSIBLES }
@@ -78,7 +79,7 @@ function htmlOrDocument(content: unknown): unknown {
 }
 
 export function fieldDocument(content: unknown): unknown {
-  return isPhpArray(content) && !isPhpList(content) ? content : documentFromHtml(content)
+  return legacyUnitsDocument(isPhpArray(content) && !isPhpList(content) ? content : documentFromHtml(content))
 }
 
 function htmlLines(value: unknown): boolean {

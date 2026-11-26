@@ -1,6 +1,7 @@
 import { canonicalJson } from "../documents/canonicalJson"
-import { BLOCK_KEYS, defineBlock, given, isInt, MULTIPLES } from "./blockDefinition"
+import { BLOCK_KEYS, CATALOG_FIELDS, defineBlock, given, isInt, MULTIPLES } from "./blockDefinition"
 import { documentLines } from "./documentHtml"
+import { legacyUnitsBlock } from "./legacyUnits"
 import officialJson from "./officialTemplate.json"
 import { isList, isPhpArray, isRecord, list, phpCount, phpString, record, type PhpRecord } from "./phpValues"
 import { TemplateValidationError } from "./templateRuntime"
@@ -32,6 +33,16 @@ const LEAF_KEYS: Record<string, string[]> = {
   [HOURS]: ["tipo", "max", "decimales"],
   [YES_NO]: ["tipo"],
 }
+const CATALOG_NAMES: Record<string, string> = {
+  author: "autor",
+  title: "titulo",
+  year: "anio",
+  place: "ciudad",
+  publisher: "editorial",
+  isbn: "isbn",
+  format: "codigo",
+}
+const CATALOG_FIELD_OF: Record<string, string> = Object.fromEntries(Object.entries(CATALOG_NAMES).map(([field, name]) => [name, field]))
 const NAMES: Record<string, string> = {
   title: "titulo",
   errorMessage: "error",
@@ -99,6 +110,7 @@ function shortSchema(schema: PhpRecord): unknown {
     })
   }
   if (schema.type === "number") {
+    if (schema.maximum === NUMBER_MAX && schema.multipleOf === MULTIPLES[NUMBER_DECIMALS]) return leaf(HOURS, shared)
     return leaf(NUMBER, {
       ...shared,
       ...(schema.maximum !== NUMBER_MAX ? { max: schema.maximum } : {}),
@@ -124,6 +136,11 @@ function shortRule(rule: unknown): unknown {
   return Object.prototype.hasOwnProperty.call(RULE_CATALOG, code) && same(rule, RULE_CATALOG[code]) ? code : rule
 }
 
+function shortCatalogColumns(map: unknown): unknown {
+  if (!isRecord(map)) return map
+  return Object.fromEntries(Object.entries(map).map(([field, column]) => [CATALOG_NAMES[field] ?? field, column]))
+}
+
 export function shortBlock(block: PhpRecord): PhpRecord {
   const catalog = given(block, "catalog")
   return {
@@ -131,7 +148,7 @@ export function shortBlock(block: PhpRecord): PhpRecord {
     ...(phpCount(block.props ?? []) !== 0 ? { propiedades: shortFields(block.props) } : {}),
     ...(phpCount(block.value ?? []) !== 0 ? { campos: shortFields(block.value) } : {}),
     ...(phpCount(block.rules ?? []) !== 0 ? { reglas: list(block.rules).map(shortRule) } : {}),
-    ...(catalog !== null ? { catalogo: { lista: given(catalog, "list"), columnas: given(catalog, "map") } } : {}),
+    ...(catalog !== null ? { catalogo: { lista: given(catalog, "list"), columnas: shortCatalogColumns(given(catalog, "map")) } } : {}),
     diseño: documentLines({ type: "doc", content: block.layout }),
   }
 }
@@ -246,7 +263,22 @@ function expandRules(raw: unknown, where: string): unknown {
 function expandCatalog(raw: unknown, where: string): unknown {
   if (raw === null || raw === undefined) return null
   if (!isRecord(raw) || Object.keys(raw).some((key) => key !== "lista" && key !== "columnas")) definitionError(`${where}: use «lista» y «columnas».`)
-  return { list: given(raw, "lista"), map: given(raw, "columnas") }
+  return { list: given(raw, "lista"), map: catalogColumns(given(raw, "columnas"), `${where}.columnas`) }
+}
+
+function catalogColumns(raw: unknown, where: string): unknown {
+  if (!isRecord(raw)) return raw
+  const names = [...Object.values(CATALOG_NAMES), ...CATALOG_FIELDS.filter((field) => !Object.prototype.hasOwnProperty.call(CATALOG_NAMES, field))]
+  const map: PhpRecord = {}
+  const written: Record<string, string> = {}
+  for (const [key, column] of Object.entries(raw)) {
+    const field = CATALOG_FIELD_OF[key] ?? key
+    if (!CATALOG_FIELDS.includes(field)) definitionError(`${where}: «${key}» no es un dato del libro (${names.slice(0, -1).join(", ")} o ${names[names.length - 1]}).`)
+    if (Object.prototype.hasOwnProperty.call(written, field)) definitionError(`${where}: «${written[field]}» y «${key}» son el mismo dato del libro.`)
+    written[field] = key
+    map[field] = column
+  }
+  return map
 }
 
 export function expandBlock(kind: string, raw: PhpRecord, routes: Route[] = []): PhpRecord {
@@ -292,7 +324,8 @@ function translated(message: string, routes: Route[]): string {
   return at < 0 ? message : translatedPath(message.slice(0, at), routes) + message.slice(at)
 }
 
-export function defineAnyBlock(kind: string, raw: unknown, variables: string[]): PhpRecord {
+export function defineAnyBlock(kind: string, input: unknown, variables: string[]): PhpRecord {
+  const raw = legacyUnitsBlock(kind, input)
   if (!isShortBlock(raw)) return defineBlock(kind, raw, variables)
   const routes: Route[] = []
   const expanded = expandBlock(kind, record(raw), routes)
