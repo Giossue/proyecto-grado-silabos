@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RESPONSE_KINDS, careerFieldUndecided, emptyResponse, responseRequired, responseSetting, nextOptionKey, responseAnswered, responseAttrs, responseHasOptions, responseKindOptions, responseLabel, responseLines, responseNeedsOptions, responseSchema, keptAnswer, responseAdjustable, sameResponseOptions } from './responseKinds';
+import { RESPONSE_KINDS, TEMPLATE_ACCEPTED, careerFieldUndecided, emptyResponse, responseRequired, responseSetting, nextOptionKey, responseAnswered, responseAttrs, responseHasOptions, responseKindOptions, responseLabel, responseLines, responseNeedsOptions, responseSchema, keptAnswer, responseAdjustable, sameResponseOptions } from './responseKinds';
 import type { DocumentNode } from './templateDocument';
 
 const options = [{ const: 'o1', title: 'Presencial' }, { const: 'o2', title: 'En línea' }];
@@ -92,6 +92,12 @@ describe('Campo de Carrera sin definir', () => {
         expect(careerFieldUndecided(blank, doc(paragraph(), paragraph(text('   '))))).toBe(true);
         expect(careerFieldUndecided(table(paragraph()), table(paragraph()))).toBe(true);
         expect(careerFieldUndecided(block({}), block({ rows: [{ title: '', hours: null }] }))).toBe(true);
+    });
+
+    it('queda definido cuando Coordinación aceptó el texto de la plantilla tal cual', () => {
+        const template = doc(paragraph(text('Texto de la plantilla')));
+        expect(careerFieldUndecided(template, template)).toBe(true);
+        expect(careerFieldUndecided(template, { ...template, attrs: { [TEMPLATE_ACCEPTED]: true } })).toBe(false);
     });
 
     it('queda definido con texto, con un tipo de respuesta o con una respuesta que puso Administración', () => {

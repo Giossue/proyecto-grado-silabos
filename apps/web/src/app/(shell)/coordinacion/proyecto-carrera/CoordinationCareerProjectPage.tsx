@@ -20,8 +20,10 @@ import { StatusBadge } from "@/components/domain/StatusBadge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Field, FieldLabel } from "@/components/ui/field"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -33,6 +35,7 @@ import { toast } from "@/lib/toast"
 import { cn, withoutFinalPeriod } from "@/lib/utils"
 import { queryErrorMessage } from "@/lib/queryClient"
 import { coordinatorCareerQuery, scheduledSubjectsQuery } from "@/queries/careerAcademics"
+import { CareerProjectBulkActions } from "./CareerProjectBulkActions"
 
 // `malla_name` comes with each subject since careers can have several mallas (S8).
 type Subject = ScheduledSubjects["options"]["activeSubjects"][number] & { malla_name?: string | null }
@@ -47,6 +50,7 @@ const subjectFilters: Record<string, ClientFilterDefinition<Subject>> = {
 }
 const compareCycles = (left: string, right: string): number => left.localeCompare(right, "es", { numeric: true })
 const completeCount = (list: Subject[]): number => list.filter((subject) => subject.profile_complete).length
+const selectAllLabel = (cycle: string): string => (cycle === "Sin ciclo" ? "Seleccionar todas las materias sin ciclo" : `Seleccionar todo el ciclo ${cycle}`)
 
 export default function CoordinationCareerProjectPage({ careerId = null }: { careerId?: string | null }) {
   const router = useRouter()
@@ -54,6 +58,7 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
   useAcademicCareerScope(careerId)
   const [tab, setTab] = useState(() => (careerId === null && searchParams.get("tab") === "documentos" ? "documentos" : "materias"))
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const scope = useQuery(coordinatorCareerQuery(careerId))
   const query = useQuery({ ...scheduledSubjectsQuery(careerId), enabled: typeof scope.data === "string" })
   const data = query.data ?? null
@@ -67,6 +72,15 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
   const byCycle = new Map<string, Subject[]>()
   for (const subject of filter.items) byCycle.set(cycleLabel(subject), [...(byCycle.get(cycleLabel(subject)) ?? []), subject])
   const groups = [...byCycle].sort(([left], [right]) => compareCycles(left, right)).map(([cycle, list]) => ({ cycle, list }))
+  const selectedSubjects = subjects.filter((subject) => selectedIds.includes(subject.id))
+  const selectSubjects = (list: Subject[], checked: boolean): void => {
+    const ids = list.map((subject) => subject.id)
+    setSelectedIds((current) => (checked ? [...new Set([...current, ...ids])] : current.filter((id) => !ids.includes(id))))
+  }
+  const cycleState = (list: Subject[]): boolean | "indeterminate" => {
+    const count = list.filter((subject) => selectedIds.includes(subject.id)).length
+    return count === 0 ? false : count === list.length ? true : "indeterminate"
+  }
 
   useEffect(() => {
     if (scope.data === null) router.replace(paths.dashboard)
@@ -205,6 +219,10 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
                 }
               />
 
+              {selectedSubjects.length ? (
+                <CareerProjectBulkActions subjects={selectedSubjects} lockReason={profileLock} onApplied={(message) => void saved(message)} onClear={() => setSelectedIds([])} />
+              ) : null}
+
               <div data-tour="career-subjects" className="flex flex-col gap-2">
                 {!groups.length ? <EmptyState title={filter.active ? "Ninguna materia coincide con la búsqueda" : "La malla todavía no tiene materias"} /> : null}
                 {groups.map((group) => (
@@ -217,11 +235,28 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
                       <ChevronDown className="size-4 transition-transform group-data-[state=open]/cycle:rotate-180" aria-hidden="true" />
                     </CollapsibleTrigger>
                     <CollapsibleContent className="border-t bg-muted/60 p-3">
+                      <div className="mb-3 flex items-center gap-2">
+                        <Checkbox
+                          id={`career-project-cycle-${group.cycle}`}
+                          aria-label={selectAllLabel(group.cycle)}
+                          checked={cycleState(group.list)}
+                          onCheckedChange={(checked) => selectSubjects(group.list, checked === true)}
+                        />
+                        <Label htmlFor={`career-project-cycle-${group.cycle}`} className="font-normal">
+                          Seleccionar todo
+                        </Label>
+                      </div>
                       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label={group.cycle === "Sin ciclo" ? "Materias sin ciclo" : `Materias del ciclo ${group.cycle}`}>
                         {group.list.map((subject) => (
                           <li key={subject.id}>
                             <Card className="relative h-full cursor-pointer transition-colors hover:bg-accent/40 has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50">
-                              <CardHeader>
+                              <CardHeader className="flex items-start gap-2">
+                                <Checkbox
+                                  className="relative z-10 mt-0.5"
+                                  aria-label={`Seleccionar ${subject.nombre}`}
+                                  checked={selectedIds.includes(subject.id)}
+                                  onCheckedChange={(checked) => selectSubjects([subject], checked === true)}
+                                />
                                 <CardTitle>
                                   <Link href={subjectHref(subject.id)} className={cn(rowLinkClass, "after:absolute after:inset-0 after:rounded-[inherit] focus-visible:ring-0")}>
                                     {subject.nombre}

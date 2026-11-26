@@ -12,6 +12,7 @@ export const careerAcademicKeys = {
   mallas: (scope: string | null = null) => ["career-academics", "mallas", ...scoped(scope)] as const,
   subjectProfile: (subjectId: string) => ["career-academics", "subject-profile", subjectId] as const,
   subjectProfilePreview: (subjectId: string) => ["career-academics", "subject-profile", subjectId, "preview"] as const,
+  subjectProfileFields: (subjectId: string) => ["career-academics", "subject-profile", subjectId, "fields"] as const,
 }
 
 export const coordinatorCareerQuery = (scope: string | null = null) => ({

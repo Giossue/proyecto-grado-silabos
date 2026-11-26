@@ -1,7 +1,8 @@
 import { fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { getScheduledSubjects, type ScheduledSubjects } from "@/api/career-academics"
+import { applySubjectProfileBulk, getScheduledSubjects, getSubjectProfile, type ScheduledSubjects, type SubjectProfile } from "@/api/career-academics"
 import { getSession } from "@/api/session"
+import { toast } from "@/lib/toast"
 import { navigation } from "@/test/nextNavigation"
 import { flush, renderWithProviders } from "@/test/render"
 import CoordinationCareerProjectPage from "./CoordinationCareerProjectPage"
@@ -9,7 +10,13 @@ import CoordinationCareerProjectPage from "./CoordinationCareerProjectPage"
 const panel = vi.hoisted(() => ({ uploadOpen: undefined as boolean | undefined }))
 
 vi.mock("next/navigation", () => import("@/test/nextNavigation"))
-vi.mock("@/api/career-academics", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/api/career-academics")>()), getScheduledSubjects: vi.fn() }))
+vi.mock("@/api/career-academics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/api/career-academics")>()),
+  getScheduledSubjects: vi.fn(),
+  getSubjectProfile: vi.fn(),
+  applySubjectProfileBulk: vi.fn(),
+}))
+vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }))
 vi.mock("@/api/session", () => ({ getSession: vi.fn() }))
 vi.mock("@/components/domain/academic/FichaImportDialog", () => ({
   FichaImportDialog: ({ disabled }: { disabled?: boolean }) => (
@@ -150,6 +157,129 @@ describe("Proyecto de carrera", () => {
 
     expect(document.querySelector('[data-testid="support-documents"]')).not.toBeNull()
     expect(document.body.textContent).toContain("Subir documento")
+  })
+})
+
+describe("Acciones masivas del proyecto de carrera", () => {
+  const checkbox = (label: string) => document.querySelector<HTMLButtonElement>(`[role="checkbox"][aria-label="${label}"]`)!
+  const radio = (label: string) => [...document.querySelectorAll<HTMLButtonElement>('[role="radio"]')].find((item) => item.closest("label")?.textContent?.includes(label))!
+  const button = (label: string) => [...document.querySelectorAll<HTMLButtonElement>("button")].find((item) => item.textContent?.trim() === label)!
+  const toolbar = () => document.querySelector('[role="region"][aria-label="Acciones masivas del proyecto de carrera"]')
+  const dialog = () => document.querySelector('[role="dialog"]')
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    navigation.reset("/coordinacion/proyecto-carrera")
+    vi.mocked(getSession).mockResolvedValue({ active_role: { code: "coordinador", career_id: "carrera-1" } } as never)
+    vi.mocked(getScheduledSubjects).mockResolvedValue(
+      scheduled([
+        subject("m1", "Programación Básica", 1, { profile_complete: false, profile_total: 18, profile_filled: 12 }),
+        subject("m2", "Matemática Discreta", 1, { profile_complete: false, profile_total: 18, profile_filled: 17 }),
+        subject("m3", "Estructuras de Datos", 2),
+      ]),
+    )
+    vi.mocked(getSubjectProfile).mockResolvedValue({
+      fields: [
+        { id: "f1", key: "descripcion", label: "Descripción", section: null, quien_llena: "carrera", content: { type: "doc" } },
+        { id: "f2", key: "metodologia", label: "Metodología", section: null, quien_llena: "carrera", content: { type: "doc" } },
+      ],
+      values: {},
+      complete: false,
+    } as SubjectProfile)
+    vi.mocked(applySubjectProfileBulk).mockResolvedValue({ message: "Acción masiva aplicada.", applied: 3, skipped: 1, not_applicable: 0 })
+  })
+
+  it("selecciona materias o todo un ciclo y muestra la barra con la cantidad", async () => {
+    await mountPage()
+    await openCycles()
+    expect(toolbar()).toBeNull()
+
+    fireEvent.click(checkbox("Seleccionar Programación Básica"))
+    await flush()
+    expect(toolbar()?.textContent).toContain("1 materia seleccionada")
+
+    fireEvent.click(checkbox("Seleccionar todo el ciclo 1"))
+    await flush()
+    expect(toolbar()?.textContent).toContain("2 materias seleccionadas")
+    expect(checkbox("Seleccionar Matemática Discreta").getAttribute("data-state")).toBe("checked")
+
+    fireEvent.click(button("Quitar selección"))
+    await flush()
+    expect(toolbar()).toBeNull()
+  })
+
+  it("aplica «Que lo escriba el docente» a los campos elegidos, avisa el resumen y actualiza los conteos", async () => {
+    await mountPage()
+    await openCycles()
+    fireEvent.click(checkbox("Seleccionar todo el ciclo 1"))
+    await flush()
+    fireEvent.click(button("Acciones masivas"))
+    await flush()
+
+    expect(getSubjectProfile).toHaveBeenCalledWith("m1")
+    fireEvent.click(radio("Que lo escriba el docente"))
+    fireEvent.click(radio("Elegir campos"))
+    await flush()
+    fireEvent.click(checkbox("Metodología"))
+    await flush()
+    expect(dialog()?.textContent).toContain("2 materias")
+    const calls = vi.mocked(getScheduledSubjects).mock.calls.length
+
+    fireEvent.click(button("Aplicar"))
+    await flush()
+
+    expect(applySubjectProfileBulk).toHaveBeenCalledWith({ subjects: ["m1", "m2"], fields: ["f2"], action: "docente" })
+    expect(toast.success).toHaveBeenCalledWith("Se definieron 3 campos. 1 ya estaba definido")
+    expect(vi.mocked(getScheduledSubjects).mock.calls.length).toBeGreaterThan(calls)
+    expect(toolbar()).toBeNull()
+  })
+
+  it("por defecto usa el texto de la plantilla en todos los campos sin definir y confirma con los conteos", async () => {
+    await mountPage()
+    await openCycles()
+    fireEvent.click(checkbox("Seleccionar todo el ciclo 1"))
+    await flush()
+    fireEvent.click(button("Acciones masivas"))
+    await flush()
+
+    expect(dialog()?.textContent).toContain("2 materias seleccionadas con 7 campos sin definir")
+    fireEvent.click(button("Aplicar"))
+    await flush()
+
+    expect(applySubjectProfileBulk).toHaveBeenCalledWith({ subjects: ["m1", "m2"], fields: [], action: "plantilla" })
+  })
+
+  it("al elegir campos sin marcar ninguno no envía nada y lo indica", async () => {
+    await mountPage()
+    await openCycles()
+    fireEvent.click(checkbox("Seleccionar Programación Básica"))
+    await flush()
+    fireEvent.click(button("Acciones masivas"))
+    await flush()
+    fireEvent.click(radio("Elegir campos"))
+    await flush()
+
+    fireEvent.click(button("Aplicar"))
+    await flush()
+
+    expect(applySubjectProfileBulk).not.toHaveBeenCalled()
+    expect(dialog()?.textContent).toContain("Elija al menos un campo")
+  })
+
+  it("con el periodo en pausa o finalizado deshabilita «Acciones masivas» con el motivo", async () => {
+    vi.mocked(getScheduledSubjects).mockResolvedValue({
+      ...scheduled([subject("m1", "Programación Básica", 1, { profile_complete: false, profile_total: 18, profile_filled: 12 })]),
+      career: { lock_reason: null, lock: null, profile_lock_reason: CLOSED },
+    } as unknown as ScheduledSubjects)
+    await mountPage()
+    await openCycles()
+    fireEvent.click(checkbox("Seleccionar Programación Básica"))
+    await flush()
+
+    const action = button("Acciones masivas")
+    expect(action).toBeDisabled()
+    const trigger = action.closest("[aria-describedby]")!
+    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)?.textContent).toBe(CLOSED)
   })
 })
 

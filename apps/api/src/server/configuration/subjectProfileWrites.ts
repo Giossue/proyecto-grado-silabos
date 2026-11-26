@@ -11,10 +11,10 @@ import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { isPhpArray, phpEquals, type PhpRecord } from "./phpValues"
 import { keepsUsedOptions, keepsUsedResponses, USED_OPTION_REMOVED, USED_RESPONSE_REMOVED, usedOptions } from "./responseConditions"
 import { careerProfileLockReason, defaultSubjectProfileDeps, mayManageSubjectProfile, type SubjectProfileDeps, subjectProfileResponse, writableProfileContext } from "./subjectProfile"
-import { profileFields } from "./subjectProfileFields"
+import { fieldPending, profileFields, storedAccepted, type ProfileContext } from "./subjectProfileFields"
 import { createSubjectProfileWriteDeps } from "./subjectProfileWriteStore"
 import { toRuntime } from "./templateDraft"
-import { templateFields } from "./templatePresentation"
+import { templateFields, type TemplateField } from "./templatePresentation"
 import { careerResponse, fieldConditions, normalizeFieldDocument, responseTemplate, TemplateValidationError } from "./templateRuntime"
 import type { TemplateStore } from "../shared/templateStore"
 import { unmatchedRoute, modelNotFound, routeAllows } from "../http/router"
@@ -36,32 +36,48 @@ export function defaultSubjectProfileWriteDeps(prisma: PrismaService): SubjectPr
   return { ...defaultSubjectProfileDeps(prisma), bridge: defaultBridgeDeps(), ...createSubjectProfileWriteDeps(prisma) }
 }
 
-const FIELD_GONE = "El proyecto de carrera incluye un campo que ya no existe en la plantilla."
+export const FIELD_GONE = "El proyecto de carrera incluye un campo que ya no existe en la plantilla."
 
 function rejectWith(errors: Record<string, string[]>): never {
   throw new Rejected(validationError(errors))
 }
 
-async function saveValues(tx: SubjectProfileTx, session: AppSession, subjectId: string, values: PhpArray, deps: SubjectProfileWriteDeps): Promise<void> {
+export function usedProfileOptions(context: ProfileContext): Map<string, string[]> {
+  return usedOptions(
+    fieldConditions(context.definition),
+    templateFields(context.template).map((field) => field.content),
+  )
+}
+
+export function careerFieldDocument(field: TemplateField, value: unknown, context: ProfileContext, used: Map<string, string[]>, attribute: string): PhpRecord | null {
+  const raw = toRuntime(value)
+  const document = isPhpArray(raw) ? careerResponse(field.content, raw, context.definition, attribute) : null
+  if (document !== null && used.size > 0 && !keepsUsedResponses(field.content, document, used)) rejectWith({ [attribute]: [USED_RESPONSE_REMOVED] })
+  if (document !== null && used.size > 0 && !keepsUsedOptions(document, used)) rejectWith({ [attribute]: [USED_OPTION_REMOVED] })
+  return document
+}
+
+export async function lockCareerSubject(tx: SubjectProfileTx, session: AppSession, subjectId: string, deps: Pick<SubjectProfileWriteDeps, "careerActive">): Promise<string> {
   const locked = await tx.lockSubject(subjectId)
   if (locked === null) throw new Missing(MODELS.subject)
   if (!(await mayManageSubjectProfile(session, locked.careerId, deps.careerActive))) throw new Rejected(jsonError(403, ""))
   const lockReason = await careerProfileLockReason(session, locked.careerId, tx.careerEditable)
   if (lockReason !== null) rejectWith({ process: [lockReason] })
+  return locked.careerId
+}
+
+async function saveValues(tx: SubjectProfileTx, session: AppSession, subjectId: string, values: PhpArray, deps: SubjectProfileWriteDeps): Promise<void> {
+  await lockCareerSubject(tx, session, subjectId, deps)
   const context = await writableProfileContext(tx.store)
   const allowed = new Map(profileFields(context).map((field) => [field.id, field]))
-  const used = usedOptions(
-    fieldConditions(context.definition),
-    templateFields(context.template).map((field) => field.content),
-  )
+  const used = usedProfileOptions(context)
+  const accepted = new Set((await tx.store.subjectValues(subjectId)).filter((row) => storedAccepted(row.value)).map((row) => row.fieldId))
   const fieldIds = Object.keys(values)
   for (const fieldId of fieldIds) {
     const field = allowed.get(fieldId)
     if (field === undefined) throw new Missing(MODELS.field, fieldId)
-    const raw = toRuntime(values[fieldId])
-    const document = isPhpArray(raw) ? careerResponse(field.content, raw, context.definition, `values.${fieldId}`) : null
-    if (document !== null && used.size > 0 && !keepsUsedResponses(field.content, document, used)) rejectWith({ [`values.${fieldId}`]: [USED_RESPONSE_REMOVED] })
-    if (document !== null && used.size > 0 && !keepsUsedOptions(document, used)) rejectWith({ [`values.${fieldId}`]: [USED_OPTION_REMOVED] })
+    const document = careerFieldDocument(field, values[fieldId], context, used, `values.${fieldId}`)
+    if (document !== null && accepted.has(fieldId) && fieldPending(field.content, document, context.definition)) continue
     if (document === null || phpEquals(document, responseTemplate(normalizeFieldDocument(field.content, context.definition)))) {
       await tx.deleteValue(subjectId, fieldId)
       continue

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api, apiBlob } from '@/api/client';
-import { createParallels, deleteParallel, getCurriculum, getScheduledSubjects, getTeacherAssignments, replaceParallelTeacher, updateCurriculumConfiguration } from '@/api/career-academics';
+import { applySubjectProfileBulk, createParallels, deleteParallel, getCurriculum, getScheduledSubjects, getTeacherAssignments, replaceParallelTeacher, updateCurriculumConfiguration } from '@/api/career-academics';
 import { careerAcademicPath, fichaImportPath, setAcademicCareerScope } from '@/api/careerScope';
 import { downloadImportTemplate, sendImport } from '@/api/spreadsheet-import';
 
@@ -57,5 +57,16 @@ describe('ámbito de carrera de las llamadas académicas', () => {
       '/admin/careers/carrera-2/academic/teacher-assignments',
     ]);
     expect(careerAcademicPath('/teachers', 'a/b')).toBe('/admin/careers/a%2Fb/academic/teachers');
+  });
+
+  it('las acciones masivas del proyecto de carrera van a Coordinación o a la carrera elegida por Administración', async () => {
+    await applySubjectProfileBulk({ subjects: ['s1'], fields: [], action: 'plantilla' });
+    setAcademicCareerScope('carrera-9');
+    await applySubjectProfileBulk({ subjects: ['s1'], fields: ['f1'], action: 'docente' });
+    expect(calledPaths()).toEqual(['/coordination/subject-profiles/bulk', '/admin/careers/carrera-9/subject-profiles/bulk']);
+    expect(vi.mocked(api).mock.calls.map((call) => JSON.parse(String(call[1]?.body)))).toEqual([
+      { subjects: ['s1'], fields: [], action: 'plantilla' },
+      { subjects: ['s1'], fields: ['f1'], action: 'docente' },
+    ]);
   });
 });

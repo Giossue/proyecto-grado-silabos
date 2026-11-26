@@ -25,6 +25,7 @@ import { careerImportTemplate, curriculumImportTemplate, importCareers, importCu
 import { coordinationSupportDocuments } from "../../server/academic/supportDocuments"
 import { destroySupportDocument, storeSupportDocument, viewSupportDocument } from "../../server/academic/supportDocumentWrites"
 import { showSubjectProfile } from "../../server/configuration/subjectProfile"
+import { bulkSubjectProfiles } from "../../server/configuration/subjectProfileBulk"
 import { previewSubjectProfile } from "../../server/configuration/subjectProfilePreview"
 import { updateSubjectProfile } from "../../server/configuration/subjectProfileWrites"
 import { applyFichaImport, fichaTemplate, previewFichaImport } from "../../server/ficha/fichaImports"
@@ -285,6 +286,7 @@ const ORACLE: Record<string, Oracle> = {
   "api/v1/coordination/ficha-imports/template:GET": (web) => fichaTemplate(web, ficha.imports()),
   "api/v1/coordination/ficha-imports/spreadsheet:POST": (web) => previewFichaImport(web, ficha.imports()),
   "api/v1/coordination/ficha-imports/apply:POST": (web) => applyFichaImport(web, ficha.imports()),
+  "api/v1/coordination/subject-profiles/bulk:POST": (web) => bulkSubjectProfiles(web, ficha.profileWrites()),
   "api/v1/coordination/support-documents:GET": (web) => coordinationSupportDocuments(web, academic.supportDocuments()),
   "api/v1/coordination/support-documents:POST": (web) => storeSupportDocument(web, academic.supportDocumentWrites()),
   "api/v1/coordination/support-documents/[document]:DELETE": (web, params) => destroySupportDocument(web, p(params, "document"), academic.supportDocumentWrites()),
@@ -327,6 +329,7 @@ const ORACLE: Record<string, Oracle> = {
   "api/v1/admin/careers/[career]/ficha-imports/template:GET": (web, params) => fichaTemplate(web, ficha.imports(), p(params, "career")),
   "api/v1/admin/careers/[career]/ficha-imports/spreadsheet:POST": (web, params) => previewFichaImport(web, ficha.imports(), p(params, "career")),
   "api/v1/admin/careers/[career]/ficha-imports/apply:POST": (web, params) => applyFichaImport(web, ficha.imports(), p(params, "career")),
+  "api/v1/admin/careers/[career]/subject-profiles/bulk:POST": (web, params) => bulkSubjectProfiles(web, ficha.profileWrites(), p(params, "career")),
   "api/v1/academic/asignaturas/[asignatura]/ficha:GET": (web, params) => showSubjectProfile(web, p(params, "asignatura"), ficha.profile()),
   "api/v1/academic/asignaturas/[asignatura]/ficha:PUT": (web, params) => updateSubjectProfile(web, p(params, "asignatura"), ficha.profileWrites()),
   "api/v1/academic/asignaturas/[asignatura]/ficha/vista-previa:GET": (web, params) => previewSubjectProfile(web, p(params, "asignatura"), ficha.preview()),

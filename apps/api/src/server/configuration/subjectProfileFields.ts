@@ -1,4 +1,4 @@
-import { careerFieldUndecided } from "@silabos/shared/lib/responseKinds"
+import { careerFieldUndecided, TEMPLATE_ACCEPTED, templateAccepted } from "@silabos/shared/lib/responseKinds"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { phpEquals, type PhpRecord } from "./phpValues"
 import {
@@ -60,16 +60,21 @@ export async function profileValues(context: ProfileContext, subjectId: string):
     if (!isDocument(row.value)) value = null
     else if (definition) value = followTemplate(definition.content, row.value, context.definition)
     else value = normalizeFieldDocument(row.value, context.definition)
-    values.set(row.fieldId, value)
+    values.set(row.fieldId, value !== null && storedAccepted(row.value) ? { ...value, attrs: { [TEMPLATE_ACCEPTED]: true } } : value)
   }
   return values
 }
 
+export function storedAccepted(stored: unknown): boolean {
+  return isDocument(stored) && templateAccepted(stored as DocumentNode)
+}
+
 /** A career field is pending while Coordinación has not decided it, or while one of its choices has no options. */
-function fieldPending(content: unknown, stored: unknown, definition: TemplateDefinition): boolean {
+export function fieldPending(content: unknown, stored: unknown, definition: TemplateDefinition): boolean {
   const blank = responseTemplate(normalizeFieldDocument(content, definition))
   const document = profileTemplateOf(content, stored, definition) ?? blank
-  return pendingResponses(document).without_options > 0 || careerFieldUndecided(blank as unknown as DocumentNode, document as unknown as DocumentNode)
+  if (pendingResponses(document).without_options > 0) return true
+  return !storedAccepted(stored) && careerFieldUndecided(blank as unknown as DocumentNode, document as unknown as DocumentNode)
 }
 
 export async function profileProgress(context: ProfileContext, subjectIds: string[]): Promise<Map<string, { filled: number; total: number }>> {

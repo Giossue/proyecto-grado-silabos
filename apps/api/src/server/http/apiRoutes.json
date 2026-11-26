@@ -856,6 +856,14 @@
   },
   {
     "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/subject-profiles/bulk",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
       "GET",
       "HEAD"
     ],
@@ -1152,6 +1160,18 @@
       "POST"
     ],
     "uri": "api/v1/admin/careers/{career}/ficha-imports/apply",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/careers/{career}/subject-profiles/bulk",
     "wheres": {
       "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
     },
