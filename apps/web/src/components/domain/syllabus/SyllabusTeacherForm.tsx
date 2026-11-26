@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import { ArrowLeft, ArrowRight, Lock } from "lucide-react"
 import { useState } from "react"
 import { flushSync } from "react-dom"
 import type { SyllabusDetail, SyllabusField } from "@/api/syllabi"
@@ -65,7 +65,7 @@ export function SyllabusTeacherForm({
 
   const conditions = syllabusConditions(sections, documentOf)
   const shownFields = (section: Section): SyllabusField[] => section.fields.filter((field) => !conditions.hidden.has(field.key))
-  const visibleSections = sections.filter((section) => shownFields(section).some(isTeacherField))
+  const visibleSections = sections.filter((section) => shownFields(section).length > 0)
   const currentId = visibleSections.find((section) => section.id === activeSectionId)?.id ?? visibleSections[0]?.id ?? ""
   const shownSections = visibleSections.filter((section) => section.id === currentId)
   const position = visibleSections.findIndex((section) => section.id === currentId)
@@ -135,6 +135,7 @@ export function SyllabusTeacherForm({
                             </span>
                           ) : (
                             <Badge variant="outline" className="font-normal">
+                              <Lock aria-hidden="true" />
                               {responsibleLabel(field.quien_llena)}
                             </Badge>
                           )}
@@ -166,7 +167,13 @@ export function SyllabusTeacherForm({
                           ) : null}
                         </Field>
                       ) : (
-                        <FieldView id={`field-${field.id}`} field={field} bare />
+                        <div className="flex cursor-not-allowed flex-col gap-2" data-locked-field={field.id} aria-disabled="true">
+                          <FieldView id={`field-${field.id}`} field={field} bare />
+                          <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <Lock className="size-3.5" aria-hidden="true" />
+                            Bloqueado: este campo lo completa {responsibleLabel(field.quien_llena)}
+                          </p>
+                        </div>
                       )}
                       <FieldError errors={fieldErrors} />
                     </AccordionContent>

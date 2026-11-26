@@ -334,7 +334,7 @@ describe("TeacherSyllabusDetailPage", () => {
     page.unmount()
   })
 
-  it("una sección sin campos del docente no aparece en el formulario y no cuenta como faltante", async () => {
+  it("una sección sin campos del docente se ve con sus campos bloqueados y no cuenta como faltante", async () => {
     const detail = syllabus("borrador", "institucional")
     detail.sections[0]!.fields[0]!.value = doc("Software")
     detail.sections[0]!.fields[0]!.document = { type: "doc", content: [{ type: "table", content: [{ type: "tableRow", content: [{ type: "tableCell", content: [{ type: "paragraph", content: [{ type: "text", text: "FACULTAD: Ciencias" }] }] }] }] }] }
@@ -344,8 +344,8 @@ describe("TeacherSyllabusDetailPage", () => {
     await flush()
 
     expect(editorIds(page)).toHaveLength(0)
-    expect(page.container.querySelector("#field-field-1")).toBeNull()
-    expect(page.container.querySelector("#field-field-2")).toBeNull()
+    expect(page.container.querySelector("#field-field-2")!.textContent).toContain("Texto institucional")
+    expect(page.container.querySelector('[data-locked-field="field-2"]')!.textContent).toContain("Bloqueado")
     expect(buttonNamed(page, "Enviar")!.disabled).toBe(false)
   })
 
@@ -496,7 +496,7 @@ describe("TeacherSyllabusDetailPage", () => {
     page.unmount()
   })
 
-  it("deja la revisión final fuera del formulario, oculta el botón de validación y muestra los errores vigentes", async () => {
+  it("muestra la revisión final como sección bloqueada, oculta el botón de validación y muestra los errores vigentes", async () => {
     const draft = syllabus("borrador")
     draft.sections.push({
       id: "section-review",
@@ -522,7 +522,8 @@ describe("TeacherSyllabusDetailPage", () => {
     await flush()
 
     expect(page.container.textContent).toContain("Descripción")
-    expect(page.container.textContent).not.toContain("Revisión y aprobación")
+    expect(page.container.textContent).toContain("Revisión y aprobación")
+    expect(page.container.querySelector('[data-locked-field="review-field"]')).toBeNull()
     expect(page.container.textContent).not.toContain("Resultados de validación")
     expect(page.container.textContent).toContain("está vacío")
     expect([...page.container.querySelectorAll("button")].some((button) => button.textContent === "Validar sílabo")).toBe(false)
