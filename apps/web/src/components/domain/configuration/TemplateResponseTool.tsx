@@ -107,6 +107,7 @@ export function TemplateResponseTool({
   const id = useId()
   const [open, setOpen] = useState(false)
   const [more, setMore] = useState(false)
+  const locked = fixed || !advanced
   const [editing, setEditing] = useState(false)
   const [logicId, setLogicId] = useState<string | undefined>(undefined)
   const [allSources, setAllSources] = useState<ConditionSource[]>([])
@@ -234,7 +235,6 @@ export function TemplateResponseTool({
                   {!fixed ? <FieldDescription>{optionsHint}</FieldDescription> : null}
                 </Field>
               ) : null}
-              {advanced ? (
               <Collapsible open={more} onOpenChange={setMore}>
                 <CollapsibleTrigger asChild>
                   <Button type="button" variant="ghost" size="sm" className="w-fit" data-response-more>
@@ -244,12 +244,13 @@ export function TemplateResponseTool({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <FieldGroup className="pt-3">
+                    {!advanced ? <FieldDescription data-response-locked>Estas opciones las fija Administración</FieldDescription> : null}
                     <Field orientation="horizontal">
                       <FieldLabel htmlFor={`${id}-required`}>Obligatoria</FieldLabel>
                       <Controller
                         control={form.control}
                         name="required"
-                        render={({ field }) => <Switch id={`${id}-required`} checked={field.value} disabled={fixed} data-response-required onCheckedChange={field.onChange} />}
+                        render={({ field }) => <Switch id={`${id}-required`} checked={field.value} disabled={locked} data-response-required onCheckedChange={field.onChange} />}
                       />
                     </Field>
                     <Field>
@@ -260,7 +261,7 @@ export function TemplateResponseTool({
                         maxLength={RESPONSE_HELP_LENGTH}
                         autoComplete="off"
                         placeholder="Se muestra debajo de la respuesta"
-                        disabled={fixed}
+                        disabled={locked}
                         data-response-help
                       />
                     </Field>
@@ -273,7 +274,7 @@ export function TemplateResponseTool({
                           inputMode="numeric"
                           autoComplete="off"
                           placeholder={String(RESPONSE_TEXT_LENGTH)}
-                          disabled={fixed}
+                          disabled={locked}
                           data-response-max-length
                         />
                       </Field>
@@ -284,7 +285,7 @@ export function TemplateResponseTool({
                         <Controller
                           control={form.control}
                           name="display"
-                          render={({ field }) => <ChoiceGroup value={field.value} label="Cómo se muestra" options={DISPLAYS} disabled={fixed} onValueChange={(value) => field.onChange(value as ResponseDisplay)} />}
+                          render={({ field }) => <ChoiceGroup value={field.value} label="Cómo se muestra" options={DISPLAYS} disabled={locked} onValueChange={(value) => field.onChange(value as ResponseDisplay)} />}
                         />
                       </Field>
                     ) : null}
@@ -298,7 +299,7 @@ export function TemplateResponseTool({
                             inputMode="numeric"
                             autoComplete="off"
                             placeholder="1"
-                            disabled={fixed}
+                            disabled={locked}
                             data-response-min
                           />
                         </Field>
@@ -310,7 +311,7 @@ export function TemplateResponseTool({
                             inputMode="numeric"
                             autoComplete="off"
                             placeholder="Todas"
-                            disabled={fixed}
+                            disabled={locked}
                             data-response-max
                           />
                         </Field>
@@ -319,7 +320,6 @@ export function TemplateResponseTool({
                   </FieldGroup>
                 </CollapsibleContent>
               </Collapsible>
-              ) : null}
               {showsCondition && more ? (
                 <Controller
                   control={form.control}
