@@ -18,7 +18,6 @@ import {
 
 export type Account = { id: string; name: string; email: string; active: boolean; verified: boolean }
 export type RoleGrant = { id: string; userId: string; role: string; careerId: string | null; active: boolean }
-export type Accessibility = { high_contrast: boolean; text_size: string; no_motion: boolean; dyslexia: boolean }
 
 export interface AccountTx {
   nested<T>(work: () => Promise<T>): Promise<T>
@@ -27,7 +26,6 @@ export interface AccountTx {
   insertAccount(account: { name: string; email: string; passwordHash: string }): Promise<Account>
   updateIdentity(id: string, name: string, email: string): Promise<void>
   setActive(id: string, active: boolean): Promise<void>
-  setAccessibility(id: string, preferences: Accessibility): Promise<void>
   effectiveRoles(userId: string): Promise<string[]>
   lockEffectiveGrants(userId: string): Promise<RoleGrant[]>
   lockCurrentCoordinator(careerId: string | null, exceptUserId: string): Promise<{ grantId: string; userId: string; userName: string } | null>

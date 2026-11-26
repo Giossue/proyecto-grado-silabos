@@ -16,7 +16,7 @@ const EMAIL = "docente@silabos.test"
 
 let world: AuthWorld
 
-const profile: UserProfile = { name: "DOCENTE DEMO", email: EMAIL, accessibility: null }
+const profile: UserProfile = { name: "DOCENTE DEMO", email: EMAIL }
 
 function deps(overrides: Partial<AuthenticationDeps> = {}): AuthenticationDeps {
   return {
@@ -68,7 +68,7 @@ describe("POST /api/v1/authentication/login", () => {
     const response = await login(post("/api/v1/authentication/login", { email: EMAIL, password: PASSWORD }), deps())
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
-      user: { id: USER, name: "DOCENTE DEMO", email: EMAIL, email_verified: true, can_edit_identity: false, accessibility: null },
+      user: { id: USER, name: "DOCENTE DEMO", email: EMAIL, email_verified: true, can_edit_identity: false },
       active_role: { id: ROLE, code: "docente", career_id: "c-1", career_name: "Software" },
       available_roles: [{ id: ROLE, code: "docente", career_id: "c-1", career_name: "Software" }],
       institution: { today: "2026-10-21", timezone: "America/Guayaquil" },

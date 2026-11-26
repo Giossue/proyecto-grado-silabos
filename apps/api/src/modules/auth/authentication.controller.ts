@@ -20,9 +20,8 @@ import type { ApiRequest } from "../../common/http/web-request"
 import type { WebReply } from "../../common/http/web-reply"
 import { login, logout } from "../../server/identity/authentication"
 import { activateAccount, resetPassword, sendResetLink } from "../../server/identity/passwordRecovery"
-import { resendOwnActivation, updateAccessibility, updateProfile } from "../../server/identity/selfService"
+import { resendOwnActivation, updateProfile } from "../../server/identity/selfService"
 import {
-  AccessibilityDto,
   AccountActivationDto,
   LoginDto,
   PasswordResetDto,
@@ -125,16 +124,5 @@ export class AuthenticationController {
   @ApiUnprocessableEntityResponse(VALIDATION)
   updateProfile(@Req() request: ApiRequest): Promise<WebReply> {
     return identityReply(request, (web) => updateProfile(web, this.deps.set.writes))
-  }
-
-  @Put("accessibility")
-  @ApiCookieAuth(SESSION_COOKIE)
-  @ApiOperation({ summary: "Guarda las preferencias de accesibilidad." })
-  @ApiBody({ type: AccessibilityDto })
-  @ApiOkResponse({ description: "Sesión con las preferencias guardadas." })
-  @ApiUnauthorizedResponse(GUEST)
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  updateAccessibility(@Req() request: ApiRequest): Promise<WebReply> {
-    return identityReply(request, (web) => updateAccessibility(web, this.deps.set.writes))
   }
 }

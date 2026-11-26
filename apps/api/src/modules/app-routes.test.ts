@@ -183,6 +183,7 @@ describe("authentication on the registered routes", () => {
     ["DELETE", "authentication/sessions/others"],
     ["DELETE", "authentication/sessions/abc"],
     ["PUT", "authentication/formation"],
+    ["PUT", "authentication/accessibility"],
   ])("answers the removed %s /api/v1/%s with the JSON 404", async (method, path) => {
     expect(await nestShape(method, `/api/v1/${path}`, { accept: "application/json", "content-type": "application/json" })).toMatchObject({
       status: 404,

@@ -3,10 +3,9 @@ import type { AppSession } from "../auth/types"
 import { requestInput } from "../http/input"
 import { forbidden, apiJson, unauthenticated, validationError } from "../http/responses"
 import type { Throttle } from "../http/throttle"
-import { accessibilitySchema, profileSchema } from "@silabos/shared/schemas/account"
+import { profileSchema } from "@silabos/shared/schemas/account"
 import { validateSchema } from "../http/schemaValidation"
-import { phpBoolean } from "./accountRules"
-import { issueInvitation, updateManagedUserProfile, type Accessibility, type Account } from "./accounts"
+import { issueInvitation, updateManagedUserProfile, type Account } from "./accounts"
 import {
   isAdministrator,
   passwordRecoveryThrottle,
@@ -17,12 +16,10 @@ import {
 } from "./accountWrites"
 import { sessionPayload } from "./session"
 
-async function answerSession(deps: IdentityWriteDeps, session: AppSession, original: Request, accessibility?: Accessibility): Promise<Response> {
+async function answerSession(deps: IdentityWriteDeps, session: AppSession): Promise<Response> {
   const profile = await deps.session.profiles.find(session.user.id)
   if (profile === null) return unauthenticated()
-  const payload = sessionPayload(session, profile, deps.session)
-  if (accessibility !== undefined) payload.user.accessibility = accessibility
-  return apiJson(payload)
+  return apiJson(sessionPayload(session, profile, deps.session))
 }
 
 export async function updateProfile(request: Request, deps: IdentityWriteDeps): Promise<Response> {
@@ -37,25 +34,7 @@ export async function updateProfile(request: Request, deps: IdentityWriteDeps): 
     updateManagedUserProfile(ctx, session.user, { name: stringOf(input.nombre), email: stringOf(input.correo_electronico) }),
   )
   if (outcome instanceof Response) return outcome
-  return answerSession(deps, session, original)
-}
-
-export async function updateAccessibility(request: Request, deps: IdentityWriteDeps): Promise<Response> {
-  const original = request.clone()
-  const session = await requireSession(request, { verified: true, activeRole: "optional" }, deps.bridge)
-  if (session instanceof Response) return session
-  if (!session.user.active) return forbidden()
-  const input = await requestInput(request)
-  const { errors } = await validateSchema(accessibilitySchema, input)
-  if (errors !== null) return validationError(errors)
-  const preferences: Accessibility = {
-    high_contrast: phpBoolean(input.high_contrast),
-    text_size: stringOf(input.text_size),
-    no_motion: phpBoolean(input.no_motion),
-    dyslexia: phpBoolean(input.dyslexia),
-  }
-  await deps.accounts.direct((tx) => tx.setAccessibility(session.user.id, preferences))
-  return answerSession(deps, session, original, preferences)
+  return answerSession(deps, session)
 }
 
 const RESEND_MESSAGE = "Si su cuenta aún no estaba activada, se envió un enlace de activación."

@@ -40,8 +40,6 @@ function withoutDefaults(text: string): string {
   return `insert into ${insert[1]} (${kept.map(([column]) => column).join(", ")}) values (${kept.map(([, value]) => value).join(", ")})`
 }
 
-const ACCESSIBILITY = { high_contrast: true, text_size: "130", no_motion: false, dyslexia: false }
-
 const CALLS: [string, (tx: AccountTx, repo: AccountRepository) => Promise<unknown>, unknown][] = [
   ["nested", (tx) => tx.nested(async () => 1), 1],
   ["lockAccount", (tx) => tx.lockAccount(U), null],
@@ -49,7 +47,6 @@ const CALLS: [string, (tx: AccountTx, repo: AccountRepository) => Promise<unknow
   ["insertAccount", (tx) => tx.insertAccount({ name: "Ana", email: "ana@x.ec", passwordHash: "$2y$h" }), { id: "01a1c5ba-0000-7000-8000-000000000099", name: "Ana", email: "ana@x.ec", active: true, verified: false }],
   ["updateIdentity", (tx) => tx.updateIdentity(U, "Ana", "ana@x.ec"), undefined],
   ["setActive", (tx) => tx.setActive(U, false), undefined],
-  ["setAccessibility", (tx) => tx.setAccessibility(U, ACCESSIBILITY), undefined],
   ["effectiveRoles", (tx) => tx.effectiveRoles(U), []],
   ["lockEffectiveGrants", (tx) => tx.lockEffectiveGrants(U), []],
   ["lockCurrentCoordinator", (tx) => tx.lockCurrentCoordinator(C, U), null],

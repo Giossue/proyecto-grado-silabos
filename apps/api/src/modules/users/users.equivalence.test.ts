@@ -11,7 +11,7 @@ import { unmatchedRoute } from "../../server/http/router"
 import { destroyManagedUser, removeManagedUserRole, resendManagedUserActivation, storeManagedUser, updateManagedUser } from "../../server/identity/accountWrites"
 import { importUsers, userImportTemplate, type IdentityImportDeps, type IdentityImportStore } from "../../server/identity/imports"
 import { managedUsers, type ManagedUserRepository } from "../../server/identity/managedUsers"
-import { resendOwnActivation, updateAccessibility, updateProfile } from "../../server/identity/selfService"
+import { resendOwnActivation, updateProfile } from "../../server/identity/selfService"
 import { account, ACTOR, CAREER, COOKIE, grant, harness, NOW, OTHER_CAREER, type Harness } from "../../server/identity/testing"
 import { AuthModule } from "../auth/auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
@@ -83,7 +83,6 @@ const importDeps = (state: State): IdentityImportDeps => ({ ...state.deps, store
 
 const ROUTES: [string, RegExp, (web: Request, state: State, params: string[]) => Promise<Response>][] = [
   ["PUT", /^\/api\/v1\/authentication\/profile$/, (web, state) => updateProfile(web, state.deps)],
-  ["PUT", /^\/api\/v1\/authentication\/accessibility$/, (web, state) => updateAccessibility(web, state.deps)],
   ["POST", /^\/api\/v1\/authentication\/account-activation\/resend$/, (web, state) => resendOwnActivation(web, state.deps)],
   ["GET", /^\/api\/v1\/admin\/users$/, (web, state) => managedUsers(web, { bridge: state.deps.bridge, users: state.users })],
   ["POST", /^\/api\/v1\/admin\/users$/, (web, state) => storeManagedUser(web, state.deps)],
@@ -205,15 +204,13 @@ afterAll(async () => {
 })
 
 describe("account self-service served by Nest answers exactly like the route handlers it replaces", () => {
-  it("updates the profile and the accessibility with the same session answers", async () => {
+  it("updates the profile with the same session answers", async () => {
     const answers = await expectSame(
       asAdmin,
       { method: "PUT", path: "/api/v1/authentication/profile", body: { nombre: "Ana Luz Pérez", correo_electronico: "admin@silabos.test" } },
       { method: "PUT", path: "/api/v1/authentication/profile", body: { nombre: "", correo_electronico: "docente@silabos.test" } },
-      { method: "PUT", path: "/api/v1/authentication/accessibility", body: { high_contrast: true, text_size: "130", no_motion: "1", dyslexia: false } },
-      { method: "PUT", path: "/api/v1/authentication/accessibility", body: { text_size: "999" } },
     )
-    expect(answers.map((answer) => answer.status)).toEqual([200, 422, 200, 422])
+    expect(answers.map((answer) => answer.status)).toEqual([200, 422])
   })
 
   it("forbids the profile without the administrator role and asks for a role when none is active", async () => {
@@ -222,9 +219,8 @@ describe("account self-service served by Nest answers exactly like the route han
     const roleless = await expectSame(
       withoutRole,
       { method: "PUT", path: "/api/v1/authentication/profile", body: { nombre: "Ana", correo_electronico: "ana@silabos.test" } },
-      { method: "PUT", path: "/api/v1/authentication/accessibility", body: { high_contrast: true, text_size: "100", no_motion: false, dyslexia: false } },
     )
-    expect(roleless.map((answer) => answer.status)).toEqual([409, 200])
+    expect(roleless.map((answer) => answer.status)).toEqual([409])
   })
 
   it("answers a guest, an unverified and an inactive account the same way", async () => {

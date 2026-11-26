@@ -5,8 +5,6 @@ import { AccessibilityDialog } from "@/components/AccessibilityDialog"
 import { initializeAccessibility } from "@/composables/useAccessibility"
 import { renderWithProviders } from "@/test/render"
 
-vi.mock("@/api/session", () => ({ updateAccessibility: vi.fn().mockResolvedValue({}), getSession: vi.fn() }))
-
 describe("AccessibilityDialog", () => {
   it("abre el modal y cambia el tamaño del texto", async () => {
     localStorage.clear()
@@ -19,6 +17,20 @@ describe("AccessibilityDialog", () => {
     expect(document.body.textContent).toContain("Sin animaciones")
     await user.click(screen.getByRole("radio", { name: "Muy grande" }))
     expect(document.documentElement.dataset.textSize).toBe("130")
+  })
+
+  it("guarda la elección solo en el navegador", async () => {
+    localStorage.clear()
+    initializeAccessibility()
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+    const user = userEvent.setup()
+    renderWithProviders(<AccessibilityDialog />)
+    await user.click(screen.getByRole("button", { name: "Accesibilidad" }))
+    await user.click(screen.getByRole("switch", { name: "Alto contraste" }))
+
+    expect(JSON.parse(localStorage.getItem("silabos:accesibilidad") ?? "{}")).toMatchObject({ highContrast: true })
+    expect(fetchSpy).not.toHaveBeenCalled()
+    fetchSpy.mockRestore()
   })
 
   it("Restablecer está desactivado mientras no haya cambios", async () => {

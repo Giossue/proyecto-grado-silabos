@@ -45,7 +45,6 @@ describe("OpenAPI document of the identity routes", () => {
         "POST /api/v1/authentication/password-recovery",
         "POST /api/v1/authentication/password-reset",
         "PUT /api/v1/authentication/profile",
-        "PUT /api/v1/authentication/accessibility",
         "GET /api/v1/session",
         "PUT /api/v1/active-role",
         "DELETE /api/v1/active-role",

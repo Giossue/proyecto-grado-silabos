@@ -65,9 +65,6 @@ export function accountTx(db: Db): AccountTx {
     async setActive(id, active) {
       await db.$executeRaw`update "usuarios" set "usuario_activo" = ${active} where "usuarios"."usuario_id" = ${id}`
     },
-    async setAccessibility(id, preferences) {
-      await db.$executeRaw`update "usuarios" set "preferencias_accesibilidad_usuario" = ${JSON.stringify(preferences)} where "usuarios"."usuario_id" = ${id}`
-    },
     async effectiveRoles(userId) {
       const found = await rows<{ role: string }>(
         db,

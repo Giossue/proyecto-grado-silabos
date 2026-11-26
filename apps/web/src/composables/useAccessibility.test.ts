@@ -1,9 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
-import { updateAccessibility } from "@/api/session"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { accessibilitySettings, initializeAccessibility } from "@/composables/useAccessibility"
 import { sessionState } from "@/state/session"
-
-vi.mock("@/api/session", () => ({ updateAccessibility: vi.fn().mockResolvedValue({}), getSession: vi.fn() }))
 
 describe("accesibilidad", () => {
   beforeEach(() => {
@@ -46,48 +43,39 @@ describe("accesibilidad", () => {
   })
 })
 
-describe("accesibilidad en la cuenta", () => {
-  it("adopta las preferencias de la cuenta al iniciar sesión y guarda los cambios", () => {
-    vi.useFakeTimers()
-    sessionState.replace({
-      user: { id: "u1", name: "Ana", email: "a@x.test", email_verified: true, can_edit_identity: false, accessibility: { high_contrast: true, text_size: "150", no_motion: false, dyslexia: false } },
-      active_role: null,
-      available_roles: [],
-    })
-    expect(accessibilitySettings.value).toMatchObject({ highContrast: true, textSize: "150" })
-    expect(updateAccessibility).not.toHaveBeenCalled()
-
-    accessibilitySettings.update({ dyslexia: true })
-    vi.advanceTimersByTime(600)
-    expect(updateAccessibility).toHaveBeenCalledWith({ high_contrast: true, text_size: "150", no_motion: false, dyslexia: true })
+describe("solo en el navegador", () => {
+  afterEach(() => {
     sessionState.clear()
-    vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
-  it("lee el modo dislexia de la cuenta y lo apaga si la cuenta es anterior a la opción", () => {
-    vi.useFakeTimers()
+  it("guarda los cambios en el navegador sin llamar al servidor", () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+    localStorage.clear()
+    initializeAccessibility()
+    accessibilitySettings.update({ highContrast: true, dyslexia: true })
+    accessibilitySettings.reset()
+    accessibilitySettings.update({ textSize: "150" })
+
+    expect(JSON.parse(localStorage.getItem("silabos:accesibilidad") ?? "{}")).toMatchObject({ textSize: "150", highContrast: false })
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it("conserva las preferencias del navegador al iniciar y cerrar sesión", () => {
+    localStorage.clear()
+    initializeAccessibility()
+    accessibilitySettings.update({ highContrast: true, textSize: "130" })
+
     sessionState.replace({
-      user: { id: "u1", name: "Ana", email: "a@x.test", email_verified: true, can_edit_identity: false, accessibility: { high_contrast: false, text_size: "100", no_motion: false, dyslexia: true } },
+      user: { id: "u1", name: "Ana", email: "a@x.test", email_verified: true, can_edit_identity: false, accessibility: { high_contrast: false, text_size: "100", no_motion: false, dyslexia: true } } as never,
       active_role: null,
       available_roles: [],
     })
-    expect(accessibilitySettings.value.dyslexia).toBe(true)
-    sessionState.clear()
+    expect(accessibilitySettings.value).toMatchObject({ highContrast: true, textSize: "130", dyslexia: false })
 
-    sessionState.replace({
-      user: { id: "u2", name: "Luis", email: "l@x.test", email_verified: true, can_edit_identity: false, accessibility: { high_contrast: false, text_size: "115", no_motion: false, wide_spacing: false } as never },
-      active_role: null,
-      available_roles: [],
-    })
-    expect(accessibilitySettings.value).toMatchObject({ textSize: "115", dyslexia: false })
-
-    accessibilitySettings.update({ dyslexia: true })
-    vi.advanceTimersByTime(600)
-    expect(updateAccessibility).toHaveBeenLastCalledWith(expect.objectContaining({ dyslexia: true, text_size: "115" }))
     sessionState.clear()
-    expect(localStorage.getItem("silabos:accesibilidad")).toBeNull()
-    expect(accessibilitySettings.value.dyslexia).toBe(false)
-    vi.useRealTimers()
+    expect(accessibilitySettings.value).toMatchObject({ highContrast: true, textSize: "130" })
+    expect(JSON.parse(localStorage.getItem("silabos:accesibilidad") ?? "{}")).toMatchObject({ highContrast: true, textSize: "130" })
   })
 })
 
@@ -131,7 +119,6 @@ describe("varias pestañas", () => {
   it("aplica lo que otra pestaña guarda o restablece sin volver a guardarlo", () => {
     localStorage.clear()
     initializeAccessibility()
-    vi.mocked(updateAccessibility).mockClear()
     const fromOtherTab = (value: string | null): void => {
       if (value === null) localStorage.removeItem("silabos:accesibilidad")
       else localStorage.setItem("silabos:accesibilidad", value)
@@ -146,6 +133,5 @@ describe("varias pestañas", () => {
     expect(accessibilitySettings.value).toMatchObject({ highContrast: false, textSize: "100", dyslexia: false })
     expect(document.documentElement.dataset.contrast).toBe("normal")
     expect(localStorage.getItem("silabos:accesibilidad")).toBeNull()
-    expect(updateAccessibility).not.toHaveBeenCalled()
   })
 })

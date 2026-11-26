@@ -51,7 +51,7 @@
  "profile": {
   "queries": [
    {
-    "sql": "select u.nombre_usuario, u.correo_electronico, u.preferencias_accesibilidad_usuario from usuarios u where u.usuario_id = $1::uuid",
+    "sql": "select u.nombre_usuario, u.correo_electronico from usuarios u where u.usuario_id = $1::uuid",
     "params": [
      "0193a3c2-1111-7000-8000-000000000001"
     ]
@@ -59,16 +59,13 @@
   ],
   "expected": {
    "name": "ANA",
-   "email": "ana@silabos.test",
-   "accessibility": {
-    "text_size": "130"
-   }
+   "email": "ana@silabos.test"
   }
  },
  "profileMissing": {
   "queries": [
    {
-    "sql": "select u.nombre_usuario, u.correo_electronico, u.preferencias_accesibilidad_usuario from usuarios u where u.usuario_id = $1::uuid",
+    "sql": "select u.nombre_usuario, u.correo_electronico from usuarios u where u.usuario_id = $1::uuid",
     "params": [
      "0193a3c2-1111-7000-8000-000000000001"
     ]

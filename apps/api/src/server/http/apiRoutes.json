@@ -82,14 +82,6 @@
   },
   {
     "methods": [
-      "PUT"
-    ],
-    "uri": "api/v1/authentication/accessibility",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
       "GET",
       "HEAD"
     ],

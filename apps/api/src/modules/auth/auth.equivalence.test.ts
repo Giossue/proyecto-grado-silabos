@@ -84,7 +84,7 @@ async function freshState(): Promise<State> {
     async find(id) {
       const row = user(id)
       if (!row) return null
-      return { name: String(row.name), email: String(row.email), accessibility: null }
+      return { name: String(row.name), email: String(row.email) }
     },
   }
   state.credentials = {
@@ -368,6 +368,7 @@ describe("identity routes served by Nest answer exactly like the route handlers 
     ["GET", "/api/v1/authentication/sessions"],
     ["DELETE", "/api/v1/authentication/sessions/others"],
     ["DELETE", "/api/v1/authentication/sessions/abc"],
+    ["PUT", "/api/v1/authentication/accessibility"],
   ])("answers the removed %s %s with 404 like any unknown route", async (method, path) => {
     const answers = await expectSame(async (client) => {
       await client.send(signIn())

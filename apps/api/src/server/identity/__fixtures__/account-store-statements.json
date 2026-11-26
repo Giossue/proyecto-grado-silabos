@@ -29,7 +29,7 @@
  ],
  "insertAccount": [
   {
-   "text": "insert into \"usuarios\" (\"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"correo_verificado_en\", \"contrasena\", \"usuario_activo\", \"codigo_recordarme\", \"secreto_dos_factores\", \"codigos_recuperacion_dos_factores\", \"dos_factores_confirmado_en\", \"preferencias_accesibilidad_usuario\", \"preferencias_correo_usuario\") values ($1, $2, $3, $4, $5, $6, default, default, default, default, default, default)",
+   "text": "insert into \"usuarios\" (\"usuario_id\", \"nombre_usuario\", \"correo_electronico\", \"correo_verificado_en\", \"contrasena\", \"usuario_activo\", \"codigo_recordarme\", \"secreto_dos_factores\", \"codigos_recuperacion_dos_factores\", \"dos_factores_confirmado_en\", \"preferencias_correo_usuario\") values ($1, $2, $3, $4, $5, $6, default, default, default, default, default)",
    "values": [
     "01a1c5ba-0000-7000-8000-000000000099",
     "Ana",
@@ -65,15 +65,6 @@
    "text": "update \"usuarios\" set \"usuario_activo\" = $1 where \"usuarios\".\"usuario_id\" = $2",
    "values": [
     false,
-    "01a1c5ba-10b4-7129-925f-c28a9489323c"
-   ]
-  }
- ],
- "setAccessibility": [
-  {
-   "text": "update \"usuarios\" set \"preferencias_accesibilidad_usuario\" = $1 where \"usuarios\".\"usuario_id\" = $2",
-   "values": [
-    "{\"high_contrast\":true,\"text_size\":\"130\",\"no_motion\":false,\"dyslexia\":false}",
     "01a1c5ba-10b4-7129-925f-c28a9489323c"
    ]
   }

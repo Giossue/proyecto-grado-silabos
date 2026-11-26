@@ -1,12 +1,10 @@
 import { requireSession } from "../auth/requireSession"
-import { phpArrayCast } from "../auth/runtime"
 import type { BridgeDeps, AppSession, RoleAssignmentRecord } from "../auth/types"
 import { apiJson, unauthenticated } from "../http/responses"
 
 export type UserProfile = {
   name: string
   email: string
-  accessibility: unknown
 }
 
 export interface ProfileRepository {
@@ -20,7 +18,6 @@ export type SessionDeps = {
   timezone: () => string
 }
 
-export { phpArrayCast }
 
 function rolePayload(assignment: RoleAssignmentRecord) {
   return { id: assignment.id, code: assignment.role, career_id: assignment.careerId, career_name: assignment.careerLabel }
@@ -34,7 +31,6 @@ export function sessionPayload(session: AppSession, profile: UserProfile, deps: 
       email: profile.email,
       email_verified: session.user.emailVerifiedAt !== null,
       can_edit_identity: session.activeRole?.role === "administrador",
-      accessibility: phpArrayCast(profile.accessibility),
     },
     active_role: session.activeRole === null ? null : rolePayload(session.activeRole),
     available_roles: session.eligibleRoles.map(rolePayload),

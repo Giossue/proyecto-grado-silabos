@@ -30,7 +30,6 @@ beforeEach(() => {
   profile = {
     name: "ANA PÉREZ",
     email: "ana@ueb.edu.ec",
-    accessibility: {},
   }
 })
 
@@ -39,18 +38,18 @@ describe("session", () => {
     const response = await call(showSession, "/api/v1/session")
     expect(response.status).toBe(200)
     expect(response.text).toBe(
-      `{"user":{"id":"${golden.userId}","name":"ANA PÉREZ","email":"ana@ueb.edu.ec","email_verified":true,"can_edit_identity":false,"accessibility":[]},` +
+      `{"user":{"id":"${golden.userId}","name":"ANA PÉREZ","email":"ana@ueb.edu.ec","email_verified":true,"can_edit_identity":false},` +
         `"active_role":{"id":"${golden.roleId}","code":"docente","career_id":"c-1","career_name":"Software · SW-8"},` +
         `"available_roles":[{"id":"${golden.roleId}","code":"docente","career_id":"c-1","career_name":"Software · SW-8"}],` +
         `"institution":{"today":"2026-10-21","timezone":"America/Guayaquil"}}`,
     )
   })
 
-  it("lets only Administration edit its identity and keeps the accessibility preferences", async () => {
+  it("lets only Administration edit its identity and never answers accessibility preferences", async () => {
     world.assignments = [makeAssignment({ role: "administrador", careerId: null, careerLabel: null }), makeAssignment({ id: SECOND_ROLE, role: "docente" })]
-    profile = { ...profile, accessibility: { font_size: "grande", reduce_motion: true, "0": 1 } }
     const json = JSON.parse((await call(showSession, "/api/v1/session")).text)
-    expect(json.user).toMatchObject({ can_edit_identity: true, accessibility: { font_size: "grande", reduce_motion: true, "0": 1 } })
+    expect(json.user).toMatchObject({ can_edit_identity: true })
+    expect(json.user).not.toHaveProperty("accessibility")
     expect(json.available_roles.map((role: { id: string }) => role.id)).toEqual([golden.roleId, SECOND_ROLE])
     expect(json.active_role).toEqual({ id: golden.roleId, code: "administrador", career_id: null, career_name: null })
   })

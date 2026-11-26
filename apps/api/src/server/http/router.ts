@@ -12,7 +12,7 @@ const MINIMAL_TITLES: Record<number, string> = { 401: "Unauthorized", 403: "Forb
 
 export const API_ROUTES: readonly ApiRoute[] = apiRoutes as ApiRoute[]
 
-export const REMOVED_ROUTES: readonly string[] = ["api/v1/admin/audit-events", "api/v1/admin/audit-events/export", "api/v1/admin/reports", "api/v1/admin/reports/export", "api/v1/authentication/password", "api/v1/authentication/two-factor", "api/v1/authentication/two-factor/confirm", "api/v1/authentication/two-factor/recovery-codes", "api/v1/authentication/two-factor/challenge", "api/v1/authentication/formation", "api/v1/authentication/sessions", "api/v1/authentication/sessions/others", "api/v1/authentication/sessions/{session}"]
+export const REMOVED_ROUTES: readonly string[] = ["api/v1/admin/audit-events", "api/v1/admin/audit-events/export", "api/v1/admin/reports", "api/v1/admin/reports/export", "api/v1/authentication/password", "api/v1/authentication/two-factor", "api/v1/authentication/two-factor/confirm", "api/v1/authentication/two-factor/recovery-codes", "api/v1/authentication/two-factor/challenge", "api/v1/authentication/formation", "api/v1/authentication/sessions", "api/v1/authentication/sessions/others", "api/v1/authentication/sessions/{session}", "api/v1/authentication/accessibility"]
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")

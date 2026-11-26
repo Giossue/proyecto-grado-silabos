@@ -5,7 +5,6 @@ import { rowsOf, type RawExecutor } from "./raw-executor"
 type ProfileRow = {
   nombre_usuario: string
   correo_electronico: string
-  preferencias_accesibilidad_usuario: unknown
 }
 
 export function profileRepositoryOn(executor: RawExecutor): ProfileRepository {
@@ -13,7 +12,7 @@ export function profileRepositoryOn(executor: RawExecutor): ProfileRepository {
     async find(userId) {
       const [row] = await rowsOf<ProfileRow>(
         executor,
-        Prisma.sql`select u.nombre_usuario, u.correo_electronico, u.preferencias_accesibilidad_usuario
+        Prisma.sql`select u.nombre_usuario, u.correo_electronico
           from usuarios u
           where u.usuario_id = ${userId}::uuid`,
       )
@@ -21,7 +20,6 @@ export function profileRepositoryOn(executor: RawExecutor): ProfileRepository {
       return {
         name: row.nombre_usuario,
         email: row.correo_electronico,
-        accessibility: row.preferencias_accesibilidad_usuario,
       }
     },
   }

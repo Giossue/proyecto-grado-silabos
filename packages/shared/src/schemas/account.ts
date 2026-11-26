@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { emailShape } from "./email"
 import { messages } from "./messages"
-import { addIssues, codePointLength, requiredBoolean, requiredText, requiredValue } from "./rules"
+import { addIssues, codePointLength, requiredText, requiredValue } from "./rules"
 
 export type UniqueCheck = (value: string) => Promise<boolean>
 
@@ -25,17 +25,3 @@ export function profileSchema(unique?: UniqueCheck) {
 }
 
 export type ProfileValues = z.input<ReturnType<typeof profileSchema>>
-
-export const TEXT_SIZES = ["100", "115", "130", "150"] as const
-
-const preference = (label: string) => requiredBoolean(messages.required(label), messages.boolean(label))
-
-export const accessibilitySchema = z.object({
-  high_contrast: preference("alto contraste"),
-  text_size: requiredText(messages.required("tamaño del texto"), messages.string("tamaño del texto")).refine((value) => (TEXT_SIZES as readonly string[]).includes(value), {
-    message: messages.in("tamaño del texto"),
-  }),
-  no_motion: preference("sin animaciones"),
-  dyslexia: requiredBoolean(messages.boolean("modo dislexia"), messages.boolean("modo dislexia")).optional(),
-})
-
