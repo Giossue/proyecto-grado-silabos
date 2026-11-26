@@ -7,6 +7,7 @@ import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeTemplateStore, fieldId, goldenFields, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import { fieldResponseNormalize } from "../configuration/templateRehearsal"
+import { definitionHash } from "../ficha/definitionHash"
 import type { TemplateDefinition } from "../configuration/templateRuntime"
 import { copySyllabusContent, startDraft, type DraftStartDeps, type DraftStartTx } from "./draftStart"
 import type { CopySource, DetailSyllabus, SyllabusDetailStore } from "./syllabusDetail"
@@ -35,6 +36,7 @@ let rows: Map<string, Row>
 let log: string[]
 let previousSource: string | null
 let modifiedAtSeen: (string | null)[]
+let fingerprints: Map<string, string>
 
 const row = (overrides: Partial<Row> = {}): Row => ({
   id: TARGET,
@@ -85,7 +87,7 @@ const detailStore = (): SyllabusDetailStore => ({
       .filter((candidate) => candidate.id !== syllabus.id && candidate.subjectId === syllabus.subjectId && candidate.convocationId === syllabus.convocationId)
       .filter((candidate) => candidate.state !== "sin_iniciar" && candidate.currentTeacher)
       .map((candidate): CopySource => ({ id: candidate.id, parallel: candidate.parallel, state: candidate.state })),
-  identification: async () => ({ context: rows.get(TARGET)?.context ?? {}, parallelCode: "A", parallelShift: "matutina", teachers: [{ name: "Ana Pérez", email: "ana@ueb.edu.ec", formation: null }] }),
+  identification: async () => ({ context: rows.get(TARGET)?.context ?? {}, parallelCode: "A", parallelShift: "matutina", teachers: [{ name: "Ana Pérez", email: "ana@ueb.edu.ec" }], formation: null }),
   fieldContents: async () => new Map(),
 })
 
@@ -115,9 +117,13 @@ function tx(): DraftStartTx {
       log.push("delete")
       for (const id of fieldIds) rows.get(syllabusId)?.values.delete(id)
     },
-    async insertValue(syllabusId, id, document) {
+    async insertValue(syllabusId, id, document, fingerprint) {
       log.push(`insert:${id}`)
+      fingerprints.set(id, fingerprint)
       rows.get(syllabusId)?.values.set(id, document)
+    },
+    async carryTeacherFields(syllabusId, template) {
+      log.push(`carry:${syllabusId}:${template.id}`)
     },
     async start(syllabusId, now) {
       log.push("start")
@@ -195,10 +201,11 @@ beforeEach(() => {
   log = []
   previousSource = null
   modifiedAtSeen = []
+  fingerprints = new Map()
 })
 
 describe("POST teacher/syllabi/{syllabus}/start", () => {
-  it("starts the draft from the template and returns the syllabus", async () => {
+  it("starts the draft from the template, carries the teacher fields and returns the syllabus", async () => {
     templates.template = { ...goldenTemplate(), modifiedAt: "2026-11-23 16:10:54.932237+00" }
     const response = await start()
 
@@ -206,7 +213,7 @@ describe("POST teacher/syllabi/{syllabus}/start", () => {
     expect(Object.keys(response.json!)).toEqual(["message", "syllabus"])
     expect(response.json!.message).toBe("Borrador iniciado con la plantilla y los datos maestros fijados.")
     expect(response.json!.syllabus).toMatchObject({ id: TARGET, state: "borrador", iniciado_en: NOW_ISO, version_bloqueo: 1, guardado_en: NOW_ISO })
-    expect(log).toEqual(["begin", `lock:${TARGET}`, "start", "commit"])
+    expect(log).toEqual(["begin", `lock:${TARGET}`, `carry:${TARGET}:${goldenTemplate().id}`, "start", "commit"])
     expect(modifiedAtSeen).toEqual(["2026-11-23 16:10:54.932237+00"])
   })
 
@@ -218,7 +225,8 @@ describe("POST teacher/syllabi/{syllabus}/start", () => {
     const inherited = [techniques]
     const response = await start()
     expect(response.status).toBe(200)
-    expect(log).toEqual(["begin", `lock:${TARGET}`, "delete", ...inherited.map((id) => `insert:${id}`), "start", "commit"])
+    expect(log).toEqual(["begin", `lock:${TARGET}`, "delete", ...inherited.map((id) => `insert:${id}`), `carry:${TARGET}:${goldenTemplate().id}`, "start", "commit"])
+    expect(fingerprints.get(techniques)).toBe(definitionHash(goldenFields[fieldIndex("tecnicas_ensenanza")].content))
     expect(rows.get(TARGET)!.state).toBe("borrador")
     expect([...rows.get(TARGET)!.values.keys()]).toEqual(inherited)
     expect(rows.get(TARGET)!.values.get(techniques)).toEqual(fieldResponseNormalize(goldenFields[fieldIndex("tecnicas_ensenanza")].content, answer, definition()))

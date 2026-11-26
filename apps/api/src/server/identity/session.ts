@@ -6,7 +6,6 @@ import { apiJson, unauthenticated } from "../http/responses"
 export type UserProfile = {
   name: string
   email: string
-  formation: string | null
   accessibility: unknown
 }
 
@@ -35,7 +34,6 @@ export function sessionPayload(session: AppSession, profile: UserProfile, deps: 
       email: profile.email,
       email_verified: session.user.emailVerifiedAt !== null,
       can_edit_identity: session.activeRole?.role === "administrador",
-      formation: profile.formation,
       accessibility: phpArrayCast(profile.accessibility),
     },
     active_role: session.activeRole === null ? null : rolePayload(session.activeRole),

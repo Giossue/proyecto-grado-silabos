@@ -8,7 +8,7 @@ import { apiJson, validationError } from "../http/responses"
 import { list, phpCount, phpShape, record, type PhpRecord } from "./phpValues"
 import { documentLines } from "./documentHtml"
 import { fieldConditions, fieldLimits, limitAllowed, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
-import { IDENTIFICATION_SAMPLE, syllabusSectionPayload, type SyllabusTemplate } from "./templatePresentation"
+import { IDENTIFICATION_SAMPLE, syllabusSectionPayload, teacherFieldKeys, type SyllabusTemplate } from "./templatePresentation"
 import type { TemplateStore } from "../shared/templateStore"
 import { binaryFileResponse } from "../files/binaryFileResponse"
 import { modelNotFound } from "../http/router"
@@ -123,6 +123,7 @@ export function templateExport(request: Request, template: SyllabusTemplate, def
     blocks,
     required_sections: definition.required_sections,
     library_sections: definition.library_sections,
+    teacher_fields: teacherFieldKeys(definition),
     presets: list(definition.presets).map((preset) => ({ key: given(preset, "key"), label: given(preset, "label"), field: given(preset, "field") })),
     sections: template.sections.map((section) => ({
       key: section.key,

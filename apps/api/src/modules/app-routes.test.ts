@@ -179,6 +179,7 @@ describe("authentication on the registered routes", () => {
     ["POST", "authentication/two-factor/confirm"],
     ["POST", "authentication/two-factor/recovery-codes"],
     ["POST", "authentication/two-factor/challenge"],
+    ["PUT", "authentication/formation"],
   ])("answers the removed %s /api/v1/%s with the JSON 404", async (method, path) => {
     expect(await nestShape(method, `/api/v1/${path}`, { accept: "application/json", "content-type": "application/json" })).toMatchObject({
       status: 404,

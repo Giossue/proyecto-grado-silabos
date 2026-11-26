@@ -40,7 +40,8 @@ const identificationSource = () => ({
   context: { career: { name: "Software", faculty: "Ciencias", faculty_id: FACULTY }, subject: { name: "Biología", code: "C2" } },
   parallelCode: "A",
   parallelShift: "Matutina",
-  teachers: [{ name: "Ana Pérez", email: "ana@ueb.edu.ec", formation: null }],
+  teachers: [{ name: "Ana Pérez", email: "ana@ueb.edu.ec" }],
+  formation: null,
 })
 
 const store = (): SyllabusDetailStore => ({
@@ -153,7 +154,7 @@ describe("GET teacher/syllabi/{syllabus}", () => {
     expect(Object.keys(payload)).toEqual([
       "id", "subject", "code", "convocation", "period", "state", "iniciado_en", "version_bloqueo", "guardado_en", "editable", "edit_block_reason",
       "edit_blocked_by_convocation", "parallels", "copy_sources", "teachers", "approved_revision_id", "presentation", "template_variables", "definition",
-      "sections", "revisions", "review_stage", "review_comments", "signatures", "teacher_signature_required", "teacher_formation_required", "unchanged_since_correction",
+      "sections", "revisions", "review_stage", "review_comments", "signatures", "teacher_signature_required", "unchanged_since_correction",
     ])
     expect(payload).toMatchObject({
       id: SYLLABUS,
@@ -177,7 +178,6 @@ describe("GET teacher/syllabi/{syllabus}", () => {
       review_comments: [],
       signatures: [],
       teacher_signature_required: true,
-      teacher_formation_required: true,
       unchanged_since_correction: false,
     })
     const presentation = payload.presentation as PhpRecord

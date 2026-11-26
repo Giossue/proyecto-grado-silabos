@@ -1,13 +1,13 @@
 "use client"
 
-import { ArrowLeft, Bell, GraduationCap, Server, Settings, ShieldCheck, UserRound, type LucideIcon } from "lucide-react"
+import { ArrowLeft, Bell, Server, Settings, ShieldCheck, UserRound, type LucideIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import type { ReactNode } from "react"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { areaEmailNotices, areaForPath, areaSetting, areaTeacherFormation, paths, roleHome } from "@/lib/routes"
+import { areaEmailNotices, areaForPath, areaSetting, paths, roleHome } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { sessionState } from "@/state/session"
 import { settingsReturn } from "@/state/settingsReturn"
@@ -20,11 +20,9 @@ export function SettingsLayout({ loading, children }: { loading?: boolean; child
   const pathname = usePathname()
   const router = useRouter()
   const area = areaForPath(pathname)
-  const formation = area ? areaTeacherFormation(area) : null
   const emailNotices = area ? areaEmailNotices(area) : null
   const sidebarNavItems: SettingsNavItem[] = [
     { title: "Perfil", href: area ? areaSetting(area, "profile") : paths.configuration.profile, icon: UserRound },
-    ...(formation ? [{ title: "Perfil docente", href: formation, icon: GraduationCap }] : []),
     { title: "Seguridad", href: area ? areaSetting(area, "security") : paths.configuration.security, icon: ShieldCheck },
     ...(emailNotices ? [{ title: "Notificaciones", href: emailNotices, icon: Bell }] : []),
     ...(area === "admin" ? [{ title: "Sistema", href: paths.admin.system, icon: Server }] : []),

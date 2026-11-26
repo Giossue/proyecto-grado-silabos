@@ -83,16 +83,17 @@ describe("identification card", () => {
     expect(data.disability).toBe("no")
   })
 
-  it("builds the card of a syllabus from its snapshot, live parallel and current teachers", () => {
+  it("builds the card of a syllabus from its snapshot, live parallel, current teachers and the formation field", () => {
     const data = identificationOf({
       context: { subject: { name: "Redes", hours_ac: "48.50", cycle: "11" }, parallel: { code: "B" } },
       parallelCode: "A",
       parallelShift: "vespertina",
       teachers: [
-        { name: "Ana", email: "ana@ueb.edu.ec", formation: "Magíster" },
-        { name: "Ana", email: "ana@ueb.edu.ec", formation: "" },
-        { name: "Luis", email: "luis@ueb.edu.ec", formation: "Doctor" },
+        { name: "Ana", email: "ana@ueb.edu.ec" },
+        { name: "Ana", email: "ana@ueb.edu.ec" },
+        { name: "Luis", email: "luis@ueb.edu.ec" },
       ],
+      formation: "Magíster\n\nDoctor",
     })
     expect(data.parallel).toBe("B")
     expect(data.shift).toBe("Vespertina")

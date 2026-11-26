@@ -92,10 +92,6 @@ export function signatureSummary(signatures: SignatureRecord[]) {
   return signatures.map((signature) => ({ role: signature.role, name: signature.name, signed_at: isoFromSeconds(signature.signedAt) }))
 }
 
-function formationRequired(definition: TemplateDefinition): boolean {
-  return Object.values(definition.variables).some((variable) => variable.source === "identification.formation")
-}
-
 function editability(session: AppSession, syllabus: DetailSyllabus, today: string) {
   const allowed = syllabus.state === "sin_iniciar" ? mayStart(session, syllabus, today) : mayEdit(session, syllabus, today)
   if (allowed) return { allowed, fields: { editable: true, edit_block_reason: null, edit_blocked_by_convocation: false } }
@@ -217,7 +213,6 @@ export async function syllabusPayload(
     review_comments: await deps.store.reviewComments(syllabus.id, null),
     signatures: signatureSummary(signatures),
     teacher_signature_required: !signatures.some((signature) => signature.role === "docente"),
-    teacher_formation_required: formationRequired(current),
     unchanged_since_correction: syllabus.state === "correccion_solicitada" && latest !== null && latest.correctionRequested && syllabus.version === latest.versionOrigin + 2,
   }
 }

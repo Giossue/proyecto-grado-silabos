@@ -8,6 +8,7 @@ import { createTemplateStore } from "../shared/templateStore"
 import type { DraftFieldRecord, DraftFieldStore, DraftFieldTx, DraftSyllabus } from "./draftField"
 import type { IdentificationSource } from "./identificationCard"
 import { currentTeacherSql, SYLLABUS_EXISTS, writtenBySql } from "./syllabusSql"
+import { formationOf } from "./teacherFields"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export async function syllabusFacts(executor: Executor, id: string, userId: string): Promise<DraftSyllabus | null> {
@@ -37,13 +38,19 @@ export async function identificationSource(executor: Executor, syllabusId: strin
       from silabos left join paralelos on paralelos.paralelo_id = silabos.paralelo_id
       where silabos.silabo_id = ${syllabusId}::uuid limit 1`,
   )
-  const teachers = await rowsOf<{ name: string; email: string; formation: string | null }>(
+  const teachers = await rowsOf<{ name: string; email: string }>(
     executor,
-    Prisma.sql`select usuarios.nombre_usuario as name, usuarios.correo_electronico as email, usuarios.formacion_experiencia_usuario as formation
+    Prisma.sql`select usuarios.nombre_usuario as name, usuarios.correo_electronico as email
       from usuarios inner join docentes_vigentes_silabo on usuarios.usuario_id = docentes_vigentes_silabo.usuario_id
       where docentes_vigentes_silabo.silabo_id = ${syllabusId}::uuid`,
   )
-  return { context: phpJsonDecode(syllabus?.context ?? "[]"), parallelCode: syllabus?.code ?? null, parallelShift: syllabus?.shift ?? null, teachers }
+  return {
+    context: phpJsonDecode(syllabus?.context ?? "[]"),
+    parallelCode: syllabus?.code ?? null,
+    parallelShift: syllabus?.shift ?? null,
+    teachers,
+    formation: await formationOf(executor, syllabusId),
+  }
 }
 
 function syllabusValue(syllabusId: string, fieldId: string): Prisma.Sql {
@@ -72,18 +79,18 @@ function draftTx(executor: Executor): DraftFieldTx {
     },
     valueExists: (syllabusId, fieldId) =>
       hasRows(rowsOf(executor, Prisma.sql`select valores_campo.valor_campo_id as id from valores_campo where ${syllabusValue(syllabusId, fieldId)} limit 1`)),
-    async saveValue(syllabusId, fieldId, document, newId) {
+    async saveValue(syllabusId, fieldId, document, newId, fingerprint) {
       const value = jsonbValue(JSON.stringify(phpShape(document)))
       const [existing] = await rowsOf<{ id: string }>(
         executor,
         Prisma.sql`select valores_campo.valor_campo_id as id from valores_campo where ${syllabusValue(syllabusId, fieldId)} limit 1`,
       )
       if (existing) {
-        await executor.$executeRaw`update valores_campo set valor_campo = ${value} where valores_campo.valor_campo_id = ${existing.id}::uuid`
+        await executor.$executeRaw`update valores_campo set valor_campo = ${value}, huella_definicion_campo = ${fingerprint} where valores_campo.valor_campo_id = ${existing.id}::uuid`
         return
       }
-      await executor.$executeRaw`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
-        values (${newId}::uuid, ${syllabusId}::uuid, ${fieldId}::uuid, ${value})`
+      await executor.$executeRaw`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo, huella_definicion_campo)
+        values (${newId}::uuid, ${syllabusId}::uuid, ${fieldId}::uuid, ${value}, ${fingerprint})`
     },
     async saveDraft(syllabusId, version, savedAt) {
       await executor.$executeRaw`update silabos set version_borrador = ${version}, guardado_en = ${fromEpoch(savedAt)} where silabos.silabo_id = ${syllabusId}::uuid`

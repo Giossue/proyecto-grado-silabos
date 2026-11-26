@@ -132,7 +132,7 @@ describe("GET admin/template/{template}/json", () => {
     const expected =
       `{"$schema":"https://silabos.ueb.edu.ec/plantilla.schema.json","version":2,"response_policy":"protected",` +
       `"document":${JSON.stringify(definition.document)},"variables":${JSON.stringify(definition.variables)},"blocks":{${blocks}},` +
-      `"required_sections":${JSON.stringify(definition.required_sections)},"library_sections":${JSON.stringify(definition.library_sections)},` +
+      `"required_sections":${JSON.stringify(definition.required_sections)},"library_sections":${JSON.stringify(definition.library_sections)},"teacher_fields":[],` +
       `"presets":${JSON.stringify(presets)},"sections":[${sections}]}`
 
     const response = await read(await exportJson(TEMPLATE_ID, { host: "silabos.ueb.edu.ec", "x-forwarded-proto": "https" }))

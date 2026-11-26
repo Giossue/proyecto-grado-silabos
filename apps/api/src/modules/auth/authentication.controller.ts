@@ -21,7 +21,7 @@ import type { ApiRequest } from "../../common/http/web-request"
 import type { WebReply } from "../../common/http/web-reply"
 import { login, logout } from "../../server/identity/authentication"
 import { activateAccount, resetPassword, sendResetLink } from "../../server/identity/passwordRecovery"
-import { destroyOtherSessions, destroySession, resendOwnActivation, updateAccessibility, updateFormation, updateProfile } from "../../server/identity/selfService"
+import { destroyOtherSessions, destroySession, resendOwnActivation, updateAccessibility, updateProfile } from "../../server/identity/selfService"
 import { activeSessions } from "../../server/identity/sessions"
 import {
   AccessibilityDto,
@@ -31,7 +31,6 @@ import {
   PasswordResetDto,
   ProfileDto,
   RecoveryLinkDto,
-  TeacherFormationDto,
 } from "./dto/authentication.dto"
 import { KeycloakService } from "../keycloak/keycloak.service"
 import { IdentityDeps } from "./identity.deps"
@@ -129,18 +128,6 @@ export class AuthenticationController {
   @ApiUnprocessableEntityResponse(VALIDATION)
   updateProfile(@Req() request: ApiRequest): Promise<WebReply> {
     return identityReply(request, (web) => updateProfile(web, this.deps.set.writes))
-  }
-
-  @Put("formation")
-  @ApiCookieAuth(SESSION_COOKIE)
-  @ApiOperation({ summary: "Guarda la formación y experiencia del docente." })
-  @ApiBody({ type: TeacherFormationDto })
-  @ApiOkResponse({ description: "Sesión actualizada." })
-  @ApiUnauthorizedResponse(GUEST)
-  @ApiConflictResponse({ description: "Seleccione un rol vigente.", type: MessageDto })
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  updateFormation(@Req() request: ApiRequest): Promise<WebReply> {
-    return identityReply(request, (web) => updateFormation(web, this.deps.set.writes))
   }
 
   @Put("accessibility")

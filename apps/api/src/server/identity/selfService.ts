@@ -3,11 +3,11 @@ import type { AppSession, SessionUser } from "../auth/types"
 import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { forbidden, jsonError, apiJson, serverError, unauthenticated, validationError } from "../http/responses"
 import type { Throttle } from "../http/throttle"
-import { accessibilitySchema, profileSchema, teacherFormationSchema } from "@silabos/shared/schemas/account"
+import { accessibilitySchema, profileSchema } from "@silabos/shared/schemas/account"
 import { passwordConfirmationSchema } from "@silabos/shared/schemas/auth"
 import { validateSchema } from "../http/schemaValidation"
 import { phpBoolean } from "./accountRules"
-import { issueInvitation, revokeSessions, updateManagedUserProfile, updateTeacherFormation, type Accessibility, type Account } from "./accounts"
+import { issueInvitation, revokeSessions, updateManagedUserProfile, type Accessibility, type Account } from "./accounts"
 import {
   isAdministrator,
   passwordRecoveryThrottle,
@@ -57,19 +57,6 @@ export async function updateAccessibility(request: Request, deps: IdentityWriteD
   }
   await deps.accounts.direct((tx) => tx.setAccessibility(session.user.id, preferences))
   return answerSession(deps, session, original, preferences)
-}
-
-export async function updateFormation(request: Request, deps: IdentityWriteDeps): Promise<Response> {
-  const original = request.clone()
-  const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
-  if (session instanceof Response) return session
-  if (!session.user.active) return forbidden()
-  const input = await requestInput(request)
-  const { errors } = await validateSchema(teacherFormationSchema, input)
-  if (errors !== null) return validationError(errors)
-  const outcome = await perform(deps, original, session, (ctx) => updateTeacherFormation(ctx, session.user.id, stringOf(input.formacion_experiencia)))
-  if (outcome instanceof Response) return outcome
-  return answerSession(deps, session, original)
 }
 
 const RESEND_MESSAGE = "Si su cuenta aún no estaba activada, se envió un enlace de activación."

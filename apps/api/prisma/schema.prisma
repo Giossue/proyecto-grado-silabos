@@ -580,7 +580,6 @@ model usuarios {
   secreto_dos_factores                                                             String?
   codigos_recuperacion_dos_factores                                                String?
   dos_factores_confirmado_en                                                       DateTime?                 @db.Timestamptz(0)
-  formacion_experiencia_usuario                                                    String?
   preferencias_accesibilidad_usuario                                               Json?
   preferencias_correo_usuario                                                      Json?
   ajustes_sistema                                                                  ajustes_sistema[]
@@ -610,14 +609,15 @@ model usuarios {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model valores_campo {
-  valor_campo_id      String             @id @db.Uuid
-  silabo_id           String?            @db.Uuid
-  definicion_campo_id String             @db.Uuid
-  valor_campo         Json?
-  asignatura_id       String?            @db.Uuid
-  asignaturas         asignaturas?       @relation(fields: [asignatura_id], references: [asignatura_id], onDelete: Cascade, onUpdate: NoAction, map: "valores_campo_asignatura_id_foreign")
-  definiciones_campo  definiciones_campo @relation(fields: [definicion_campo_id], references: [definicion_campo_id], onUpdate: NoAction, map: "valores_campo_definicion_campo_id_foreign")
-  silabos             silabos?           @relation(fields: [silabo_id], references: [silabo_id], onDelete: Cascade, onUpdate: NoAction, map: "valores_campo_silabo_id_foreign")
+  valor_campo_id          String             @id @db.Uuid
+  silabo_id               String?            @db.Uuid
+  definicion_campo_id     String             @db.Uuid
+  valor_campo             Json?
+  asignatura_id           String?            @db.Uuid
+  huella_definicion_campo String?            @db.Char(64)
+  asignaturas             asignaturas?       @relation(fields: [asignatura_id], references: [asignatura_id], onDelete: Cascade, onUpdate: NoAction, map: "valores_campo_asignatura_id_foreign")
+  definiciones_campo      definiciones_campo @relation(fields: [definicion_campo_id], references: [definicion_campo_id], onUpdate: NoAction, map: "valores_campo_definicion_campo_id_foreign")
+  silabos                 silabos?           @relation(fields: [silabo_id], references: [silabo_id], onDelete: Cascade, onUpdate: NoAction, map: "valores_campo_silabo_id_foreign")
 
   @@unique([asignatura_id, definicion_campo_id], map: "valores_campo_asignatura_definicion_unica", where: raw("(asignatura_id IS NOT NULL)"))
   @@unique([silabo_id, definicion_campo_id], map: "valores_campo_silabo_definicion_unica", where: raw("(silabo_id IS NOT NULL)"))

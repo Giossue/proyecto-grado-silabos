@@ -34,6 +34,7 @@ import { createDraftFieldStore } from "./draftFieldStore"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
 import { requireBound, type Binder } from "./boundSession"
+import { fieldFingerprint } from "./teacherFields"
 
 export type DraftSyllabus = SyllabusFacts & { subjectId: string }
 export type DraftFieldRecord = { id: string; templateId: string; responsible: string; content: unknown; key: string; live: boolean }
@@ -44,7 +45,7 @@ export interface DraftFieldTx {
   templateStore: TemplateStore
   values(syllabusId: string): Promise<Map<string, unknown>>
   valueExists(syllabusId: string, fieldId: string): Promise<boolean>
-  saveValue(syllabusId: string, fieldId: string, document: PhpRecord, newId: string): Promise<void>
+  saveValue(syllabusId: string, fieldId: string, document: PhpRecord, newId: string, fingerprint: string): Promise<void>
   saveDraft(syllabusId: string, version: number, savedAt: number): Promise<void>
 }
 
@@ -131,7 +132,7 @@ async function save(input: PhpArray, auth: DraftFieldBound, deps: DraftFieldDeps
   const conditions = (values: Map<string, unknown>) => syllabusConditions(template, fieldConditions(definition), values, templates)
   const storedValues = limit === null ? null : await tx.values(locked.id)
   const before = storedValues === null ? 0 : fieldLimitCount(fieldTemplate, storedValues.get(field.id) ?? null, conditions(storedValues).answers, definition)
-  await tx.saveValue(locked.id, field.id, document, deps.newId())
+  await tx.saveValue(locked.id, field.id, document, deps.newId(), fieldFingerprint(field.content))
   if (limit !== null && storedValues !== null) {
     const after = conditions(new Map([...storedValues, [field.id, document]]))
     const written = after.hidden.has(field.id) ? 0 : fieldLimitCount(fieldTemplate, document, after.answers, definition)

@@ -15,7 +15,7 @@ export const SOURCES = [
   "signature.docente", "signature.coordinacion", "signature.biblioteca",
 ]
 
-export const DEFINITION_KEYS = ["document", "variables", "blocks", "required_sections", "library_sections", "presets", "response_policy"]
+export const DEFINITION_KEYS = ["document", "variables", "blocks", "required_sections", "library_sections", "presets", "response_policy", "teacher_fields"]
 const KEY = /^[a-z][a-z0-9_]{0,99}$/
 const VARIABLE_KEYS = ["label", "source", "sample", "format", "equals"]
 const LEGACY_RESPONSIBLES = ["docente", "coordinacion"]
@@ -105,6 +105,15 @@ function definePresets(raw: unknown, sections: DraftSectionSource[]): PhpRecord[
   })
 }
 
+function teacherFields(raw: unknown, sections: DraftSectionSource[]): string[] {
+  if (!isList(raw)) definitionError("«teacher_fields» debe ser una lista de claves de campo.")
+  const keys = new Set(sections.flatMap((section) => section.fields.map((field) => phpString(field.key))))
+  for (const key of raw) {
+    if (typeof key !== "string" || !keys.has(key)) definitionError(`teacher_fields: «${isScalar(key) ? phpString(key) : "?"}» no es un campo de la plantilla.`)
+  }
+  return [...new Set(raw as string[])]
+}
+
 export function defineTemplate(raw: unknown, sections: DraftSectionSource[] = []): TemplateDefinition {
   if (!isObjectLike(raw)) definitionError("La definición de la plantilla debe ser un objeto.")
   const unknown = keysOf(raw).filter((key) => !DEFINITION_KEYS.includes(key))
@@ -119,6 +128,7 @@ export function defineTemplate(raw: unknown, sections: DraftSectionSource[] = []
   const document = defineDocumentStyle(given(raw, "document") ?? [])
   const requiredSections = sectionKeys(given(raw, "required_sections") ?? [], "required_sections")
   const librarySections = sectionKeys(given(raw, "library_sections") ?? [], "library_sections")
+  const teacher = teacherFields(given(raw, "teacher_fields") ?? [], sections)
   const context: TemplateDefinition = { document: {}, variables: {}, blocks }
   const presets = definePresets(given(raw, "presets") ?? [], sections).map((preset) => {
     if (!isPhpArray(preset.content)) throw new TypeError("TemplateDocument::normalize(): Argument #1 ($document) must be of type array")
@@ -132,6 +142,7 @@ export function defineTemplate(raw: unknown, sections: DraftSectionSource[] = []
     required_sections: requiredSections,
     library_sections: librarySections,
     presets,
+    teacher_fields: teacher,
   }
 }
 

@@ -27,6 +27,7 @@ import { scheduleWorkflowNotification, storeInternalNotifications, type Notifica
 import { sameStructure, fieldResponseNormalize, documentIsEmpty } from "../configuration/templateRehearsal"
 import { dataGet } from "./identificationCard"
 import { DOCUMENT_PATHS, GenerationRejected, purgeRequired, SENT_STATES, type GenerateOptions, type WorkScope, type WorkSyllabus } from "./inProgressWorkHelpers"
+import { carryTeacherFields, fieldFingerprint } from "./teacherFields"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export const SYLLABUS_ALIVE = Prisma.sql`exists (select 1 from convocatorias_carreras vivo where vivo.convocatoria_carrera_id = silabos.convocatoria_carrera_id
@@ -410,8 +411,8 @@ export class InProgressWork {
       const template = templates[field.id] ?? field.content
       const document = teacherEditable(field, templates) ? this.stillFits(field, previous.get(field.key) ?? null, template, context) : template
       const value = document === null || documentIsEmpty(document, context.definition) ? template : document
-      await this.executor.$executeRaw(Prisma.sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
-        values (${uuid7()}::uuid, ${syllabus.id}::uuid, ${field.id}::uuid, ${JSON.stringify(phpShape(value))}::jsonb)`)
+      await this.executor.$executeRaw(Prisma.sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo, huella_definicion_campo)
+        values (${uuid7()}::uuid, ${syllabus.id}::uuid, ${field.id}::uuid, ${JSON.stringify(phpShape(value))}::jsonb, ${fieldFingerprint(field.content)})`)
     }
     await this.executor.$executeRaw(Prisma.sql`update silabos set estado_silabo = ${state}, version_borrador = ${syllabus.version + 1}, guardado_en = to_timestamp(${this.now()})
       where silabo_id = ${syllabus.id}::uuid`)
@@ -587,9 +588,11 @@ export class InProgressWork {
     const returning = pending.filter((item) => item.backToDraft)
     if (returning.length > 0) await this.clearHistory(returning.map((item) => item.syllabus.id))
     const recipients = recipientsOn(this.executor)
+    const contents = pending.some((item) => item.documents.size > 0) ? new Map(templateFields((await this.profileContext()).template).map((field) => [field.id, field.content])) : new Map<string, unknown>()
     for (const item of pending) {
       const { syllabus } = item
       for (const [fieldId, document] of item.documents) {
+        const fingerprint = contents.has(fieldId) ? fieldFingerprint(contents.get(fieldId)) : null
         const [existing] = await rowsOf<{ id: string; value: string | null }>(
           this.executor,
           Prisma.sql`select valor_campo_id::text as id, valor_campo::text as value from valores_campo where silabo_id = ${syllabus.id}::uuid and definicion_campo_id = ${fieldId}::uuid limit 1`,
@@ -597,11 +600,11 @@ export class InProgressWork {
         const encoded = JSON.stringify(phpShape(document))
         if (existing) {
           if (!phpIdentical(phpJsonDecode(existing.value), phpJsonDecode(encoded))) {
-            await this.executor.$executeRaw(Prisma.sql`update valores_campo set valor_campo = ${encoded}::jsonb where valor_campo_id = ${existing.id}::uuid`)
+            await this.executor.$executeRaw(Prisma.sql`update valores_campo set valor_campo = ${encoded}::jsonb, huella_definicion_campo = ${fingerprint} where valor_campo_id = ${existing.id}::uuid`)
           }
         } else {
-          await this.executor.$executeRaw(Prisma.sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
-            values (${uuid7()}::uuid, ${syllabus.id}::uuid, ${fieldId}::uuid, ${encoded}::jsonb)`)
+          await this.executor.$executeRaw(Prisma.sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo, huella_definicion_campo)
+            values (${uuid7()}::uuid, ${syllabus.id}::uuid, ${fieldId}::uuid, ${encoded}::jsonb, ${fingerprint})`)
         }
       }
       if (item.backToDraft) {
@@ -728,9 +731,10 @@ export class InProgressWork {
     for (const field of templateFields(template)) {
       if (!isCareerField(field)) continue
       const value = templates[field.id] ?? field.content
-      await this.executor.$executeRaw(Prisma.sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
-        values (${uuid7()}::uuid, ${id}::uuid, ${field.id}::uuid, ${JSON.stringify(phpShape(value))}::jsonb)`)
+      await this.executor.$executeRaw(Prisma.sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo, huella_definicion_campo)
+        values (${uuid7()}::uuid, ${id}::uuid, ${field.id}::uuid, ${JSON.stringify(phpShape(value))}::jsonb, ${fieldFingerprint(field.content)})`)
     }
+    await carryTeacherFields(this.executor, id, template, uuid7)
     return id
   }
 

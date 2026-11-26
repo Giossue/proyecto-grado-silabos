@@ -45,6 +45,7 @@ test.describe.serial("syllabus lifecycle", () => {
     await page.reload()
     await openSection(page, "1. Identificación institucional")
     await expect(page.getByRole("textbox", { name: "Breve descripción (obligatorio)" })).toHaveValue(description)
+    await expect(page.getByRole("textbox", { name: /^Formación y experiencia académica-investigativa/ })).not.toHaveText("")
 
     await expect(page.getByRole("button", { name: "Firmar y enviar" })).toBeVisible()
     await submitSyllabus(page, accounts.teacher)

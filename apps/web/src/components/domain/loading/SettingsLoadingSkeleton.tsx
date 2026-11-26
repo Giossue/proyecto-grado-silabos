@@ -8,10 +8,9 @@ type SettingsLoadingSkeletonProps = {
   section?: SettingsSection
   readonly?: boolean
   rows?: number
-  formation?: boolean
 }
 
-export function SettingsLoadingSkeleton({ section = "profile", readonly = false, rows = 4, formation = false }: SettingsLoadingSkeletonProps) {
+export function SettingsLoadingSkeleton({ section = "profile", readonly = false, rows = 4 }: SettingsLoadingSkeletonProps) {
   if (section === "system") {
     return (
       <div className="-mt-2 flex min-w-0 flex-col" data-settings-section="system">
@@ -100,17 +99,6 @@ export function SettingsLoadingSkeleton({ section = "profile", readonly = false,
         </div>
       </div>
 
-      {section === "profile" && formation ? (
-        <div className="-mt-6 flex min-w-0 flex-col gap-4 border-t pt-6" data-skeleton="settings-formation">
-          <div className="flex min-w-0 flex-col gap-2">
-            <Skeleton className="h-3.5 w-80 max-w-full" />
-            <Skeleton className="h-40 w-full" />
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-2/3" />
-          </div>
-          <Skeleton className="h-9 w-25" />
-        </div>
-      ) : null}
     </div>
   )
 }

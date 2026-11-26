@@ -82,20 +82,11 @@ test.describe.serial("account", () => {
     issues.expectClean()
   })
 
-  test("teacher formation is saved and restored", async ({ page, issues }) => {
-    await page.goto("/docente/configuracion/perfil-docente")
-    const formation = page.getByRole("textbox", { name: "Formación y experiencia académica-investigativa (obligatorio)" })
-    const original = await formation.inputValue()
-    const save = page.getByRole("button", { name: "Guardar" })
-    await formation.fill(`${original} Proyecto E2E.`)
-    await saveWith(page, save)
-    await expect(toast(page)).toBeVisible()
-    await page.reload()
-    await expect(formation).toHaveValue(`${original} Proyecto E2E.`)
-    await formation.fill(original)
-    await saveWith(page, save)
-    await page.reload()
-    await expect(formation).toHaveValue(original)
+  test("settings no longer have the «Perfil docente» tab: the formation is written in the syllabus", async ({ page, issues }) => {
+    await page.goto("/docente/configuracion/perfil")
+    await expect(page.getByRole("link", { name: "Seguridad" })).toBeVisible()
+    await expect(page.getByRole("link", { name: "Perfil docente" })).toHaveCount(0)
+    await expect(page.getByText("Formación y experiencia")).toHaveCount(0)
     issues.expectClean()
   })
 

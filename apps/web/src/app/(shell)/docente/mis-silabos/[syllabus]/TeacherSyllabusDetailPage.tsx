@@ -23,7 +23,6 @@ import { PageFrame } from "@/components/domain/PageFrame"
 import { ProcessLockAlert } from "@/components/domain/ProcessLockAlert"
 import { SyllabusStateBadge } from "@/components/domain/SyllabusStateBadge"
 import { UnsavedChangesDialog } from "@/components/domain/UnsavedChangesDialog"
-import { TeacherFormationDialog } from "@/components/domain/identity/TeacherFormationDialog"
 import { freeTextPlain } from "@/components/domain/syllabus/freeTextRender"
 import { ReviewCommentNotice } from "@/components/domain/syllabus/ReviewCommentNotice"
 import { SignatureDialog, type StatementSigner } from "@/components/domain/syllabus/SignatureDialog"
@@ -46,14 +45,12 @@ import { goBack } from "@/lib/goBack"
 import { openRevisionPdf } from "@/lib/openPdf"
 import { syllabusConditions, visibleSections as withoutHiddenParts } from "@/lib/responseConditions"
 import { paths } from "@/lib/routes"
-import { useSignal } from "@/lib/signal"
 import { isTeacherField } from "@/lib/syllabusForm"
 import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { toast } from "@/lib/toast"
 import { handleUnauthorized } from "@/lib/unauthorized"
 import { withoutFinalPeriod } from "@/lib/utils"
 import { teacherSyllabusQuery } from "@/queries/teacher"
-import { sessionState } from "@/state/session"
 import { scrollBehavior } from "@/lib/motion"
 
 type ValidationResult = { field_id: string | null; code: string; severity: string; message: string }
@@ -61,6 +58,7 @@ type CopySource = { id: string; parallel: string }
 
 const PAUSED_MESSAGE = "La convocatoria está en pausa. Podrá seguir editando cuando se reanude"
 const EDITABLE_STATES = ["borrador", "correccion_solicitada"]
+const FORMATION_FIELD = "formacion_docente"
 const NO_RESULTS: ValidationResult[] = []
 
 function useTracked<T>(initial: T): [T, (value: T) => void, { readonly current: T }] {
@@ -130,7 +128,6 @@ export default function TeacherSyllabusDetailPage() {
   const queryClient = useQueryClient()
   const syllabusId = String(useParams<{ syllabus: string }>().syllabus)
   const { open: discardOpen, ask: askToDiscard, decide: decideDiscard } = useDiscardConfirmation()
-  const session = useSignal(sessionState.current)
   const [syllabus, setSyllabus, syllabusRef] = useTracked<SyllabusDetail | null>(null)
   const [localBlockReason, setLocalBlockReason, localBlockRef] = useTracked<string | null>(null)
   const [conflict, setConflict, conflictRef] = useTracked(false)
@@ -151,6 +148,7 @@ export default function TeacherSyllabusDetailPage() {
   const shownCopySource = useShownWhileClosing(copySource)
   const saveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
   const dirtyFields = useRef(new Set<string>())
+  const formationEdited = useRef(false)
   const pendingSave = useRef<Promise<void>>(Promise.resolve())
   const inFlight = useRef(0)
 
@@ -174,7 +172,6 @@ export default function TeacherSyllabusDetailPage() {
   const submitLabel = mustSign ? "Firmar y enviar" : "Enviar"
   const emptyParts = allFields.filter((field) => field.required && isTeacherField(field)).filter(isFieldEmpty).length
   const blockIssue = blockIssueOf(allFields)
-  const formationMissing = syllabus?.teacher_formation_required === true && !session?.user.formation?.trim()
   const submitHint =
     emptyParts === 0 && blockIssue !== ""
       ? blockIssue
@@ -187,7 +184,7 @@ export default function TeacherSyllabusDetailPage() {
   const visibleSections = (syllabus?.sections ?? []).filter((section) => section.fields.some(isTeacherField))
   const activeSectionId = visibleSections.find((section) => section.id === chosenSectionId)?.id ?? visibleSections[0]?.id ?? ""
   const previewSections = useMemo(() => {
-    const sections = syllabus?.sections ?? []
+    const sections = (syllabus?.sections ?? []).map((section) => ({ ...section, fields: section.fields.filter((field) => field.key !== FORMATION_FIELD) }))
 
     return withoutHiddenParts(sections, syllabusConditions(sections, (field) => (field.template ? responseDocument(field.template, field.value) : field.value)))
   }, [syllabus])
@@ -337,6 +334,7 @@ export default function TeacherSyllabusDetailPage() {
     const current = syllabusRef.current
     if (!current || !isTeacherField(field) || !canEditNow() || conflictRef.current) return
     setSyllabus(withField(current, field.id, { value }))
+    if (field.key === FORMATION_FIELD) formationEdited.current = true
     setEditedHere(true)
     clearFieldValidation(field.id)
     scheduleSave(field.id)
@@ -376,12 +374,11 @@ export default function TeacherSyllabusDetailPage() {
   })
 
   const openPreview = async (): Promise<void> => {
-    await flushAutosave()
+    if ((await flushAutosave()) && formationEdited.current) {
+      formationEdited.current = false
+      await load()
+    }
     setPreviewing(true)
-  }
-
-  const refreshAfterFormation = async (): Promise<void> => {
-    if (await flushAutosave()) await load()
   }
 
   const retrySave = async (): Promise<void> => {
@@ -664,7 +661,6 @@ export default function TeacherSyllabusDetailPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        <TeacherFormationDialog open={formationMissing} required onSaved={() => void refreshAfterFormation()} />
         <SignatureDialog open={signOpen} onOpenChange={setSignOpen} title="Firmar y enviar" confirmLabel="Firmar y enviar" run={(sign) => submit(sign)} />
         <Dialog
           open={copySource !== null}

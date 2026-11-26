@@ -58,7 +58,6 @@ export const paths = {
     notifications: '/docente/notificaciones',
     profile: '/docente/configuracion/perfil',
     security: '/docente/configuracion/seguridad',
-    formation: '/docente/configuracion/perfil-docente',
     emailNotices: '/docente/configuracion/notificaciones',
     syllabi: '/docente/mis-silabos',
     syllabus: (syllabus: string): string => `/docente/mis-silabos/${segment(syllabus)}`,
@@ -154,10 +153,6 @@ export const roleDocuments = (role: RoleCode, revision: string): string => {
   return area ? areaDocuments[area](revision) : paths.roleSelection;
 };
 
-/** Configuración › Perfil docente (formación y experiencia): solo el docente. */
-export const areaTeacherFormation = (area: RoleArea): string | null =>
-  area === 'teacher' ? paths.teacher.formation : null;
-
 /** Configuración › Notificaciones (avisos por correo): Coordinación, Docente y Biblioteca. */
 export const areaEmailNotices = (area: RoleArea): string | null =>
   area === 'coordination' ? paths.coordination.emailNotices
@@ -227,7 +222,6 @@ export const routeRegistry: readonly RouteDefinition[] = [
   { name: 'teacher-notifications', path: paths.teacher.notifications, component: 'NotificationsPage', shortcut: 'notifications', ...teacher },
   { name: 'teacher-profile', path: paths.teacher.profile, component: 'ProfilePage', shortcut: 'profile', ...teacher },
   { name: 'teacher-security', path: paths.teacher.security, component: 'SecurityPage', shortcut: 'security', ...teacher },
-  { name: 'teacher-formation', path: paths.teacher.formation, component: 'TeacherFormationPage', breadcrumb: 'Perfil docente', ...teacher },
   { name: 'teacher-email-notices', path: paths.teacher.emailNotices, component: 'EmailPreferencesPage', breadcrumb: 'Notificaciones', ...teacher },
   { name: 'teacher-syllabi', path: paths.teacher.syllabi, component: 'TeacherSyllabiPage', breadcrumb: 'Mis sílabos', ...teacher },
   { name: 'teacher-history', path: paths.teacher.history, component: 'TeacherHistoryPage', breadcrumb: 'Historial', ...teacher },

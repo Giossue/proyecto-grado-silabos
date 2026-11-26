@@ -65,16 +65,6 @@ export function accountTx(db: Db): AccountTx {
     async setActive(id, active) {
       await db.$executeRaw`update "usuarios" set "usuario_activo" = ${active} where "usuarios"."usuario_id" = ${id}`
     },
-    async lockFormation(id) {
-      const row = await first<{ formation: string | null }>(
-        db,
-        Prisma.sql`select "formacion_experiencia_usuario" as "formation" from "usuarios" where "usuarios"."usuario_id" = ${id} limit ${1} for update`,
-      )
-      return row ? { formation: row.formation ?? null } : null
-    },
-    async setFormation(id, formation) {
-      await db.$executeRaw`update "usuarios" set "formacion_experiencia_usuario" = ${formation} where "usuarios"."usuario_id" = ${id}`
-    },
     async setAccessibility(id, preferences) {
       await db.$executeRaw`update "usuarios" set "preferencias_accesibilidad_usuario" = ${JSON.stringify(preferences)} where "usuarios"."usuario_id" = ${id}`
     },

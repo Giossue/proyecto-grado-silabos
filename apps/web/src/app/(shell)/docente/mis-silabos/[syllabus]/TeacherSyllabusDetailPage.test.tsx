@@ -1,7 +1,6 @@
 import { act, fireEvent, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ApiError } from "@/api/client"
-import { updateFormation } from "@/api/session"
 import { copyTeacherSyllabus, getTeacherSigningStatement, getTeacherSyllabus, saveTeacherField, startTeacherSyllabus, submitTeacherSyllabus, validateTeacherSyllabus, type SyllabusDetail, type SyllabusField } from "@/api/syllabi"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { SyllabusDocumentPreview } from "@/components/domain/syllabus/SyllabusDocumentPreview"
@@ -12,7 +11,6 @@ import { DIALOG_EXIT_MS } from "@/lib/dialogExit"
 import { makeTestP12 } from "@/lib/signature/testCertificate"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { handleUnauthorized } from "@/lib/unauthorized"
-import { sessionState } from "@/state/session"
 import definition from "@silabos/shared/test/fixtures/template-definition.json"
 import { navigation } from "@/test/nextNavigation"
 import { flush, renderWithProviders } from "@/test/render"
@@ -27,7 +25,7 @@ const editors = vi.hoisted(() => ({ props: new Map<string, EditorProps>() }))
 
 vi.mock("next/navigation", async () => ({ ...(await import("@/test/nextNavigation")), useParams: () => route.params }))
 vi.mock("@/lib/unauthorized", () => ({ handleUnauthorized: vi.fn() }))
-vi.mock("@/api/session", () => ({ getSession: vi.fn(), updateFormation: vi.fn() }))
+vi.mock("@/api/session", () => ({ getSession: vi.fn() }))
 vi.mock("@/components/domain/RoleDeadlineBanner", () => ({ RoleDeadlineBanner: () => <div data-testid="role-deadline-banner" /> }))
 vi.mock("@/components/domain/syllabus/FreeTextEditor", () => ({
   FreeTextEditor: function FreeTextEditorStub(props: EditorProps) {
@@ -442,7 +440,7 @@ describe("TeacherSyllabusDetailPage", () => {
   it("formación y discapacidad son documentos docentes sin controles por sección", async () => {
     const detail = syllabus("borrador", "institucional")
     detail.sections[0]!.fields.push(
-      field("field-2", "docente", { key: "formacion_experiencia", label: "Formación y experiencia" }),
+      field("field-2", "docente", { key: "formacion_docente", label: "Formación y experiencia académica-investigativa" }),
       field("field-3", "docente", { key: "discapacidad", label: "Estudiantes con discapacidad" }),
     )
     vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: detail })
@@ -861,38 +859,32 @@ describe("TeacherSyllabusDetailPage", () => {
     page.unmount()
   })
 
-  it("sin formación y experiencia no deja entrar al sílabo: pide configurarla en un modal y la guarda", async () => {
-    const teacherSession = (formation: string | null) => ({
-      user: { id: "u-1", name: "DOCENTE UNO", email: "docente@ueb.edu.ec", email_verified: true, can_edit_identity: false, formation },
-      active_role: { id: "r-1", code: "docente" as const, career_id: null, career_name: null },
-      available_roles: [],
-    })
-    sessionState.replace(teacherSession(null))
-    vi.mocked(updateFormation).mockResolvedValue(teacherSession("Magíster en Tecnología"))
-    const draft = syllabus("borrador")
-    draft.teacher_formation_required = true
+  it("la formación es un campo más del sílabo: sin modal, y la vista previa no la repite como bloque", async () => {
+    const draft = syllabus("borrador", "carrera")
+    draft.sections[0]!.fields.push(field("field-2", "carrera", { key: "formacion_docente", label: "Formación y experiencia académica-investigativa", value: doc("Magíster en Tecnología") }))
     vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: draft })
     const page = mountPage()
     await flush()
-
-    expect(document.body.textContent).toContain("Complete su formación y experiencia")
-    expect(document.body.querySelector('[data-test="leave-formation-button"]')).not.toBeNull()
-    expect(document.body.querySelector('[data-test="cancel-formation-button"]')).toBeNull()
-    expect(buttonNamed(page, "Formación y experiencia")).toBeUndefined()
-    fireEvent.keyDown(document, { key: "Escape" })
-    await flush()
-    expect(document.body.textContent).toContain("Complete su formación y experiencia")
-    fireEvent.change(document.body.querySelector<HTMLTextAreaElement>("#dialog-formation")!, { target: { value: "Magíster en Tecnología" } })
-    await flush()
-    fireEvent.click(document.body.querySelector<HTMLButtonElement>('[data-test="save-formation-button"]')!)
-    await flush()
-
-    expect(updateFormation).toHaveBeenCalledWith("Magíster en Tecnología")
-    expect(getTeacherSyllabus).toHaveBeenCalledTimes(2)
     expect(document.body.textContent).not.toContain("Complete su formación y experiencia")
-    expect(buttonNamed(page, "Enviar")!.disabled).toBe(false)
+    expect(editorIds(page)).toHaveLength(2)
+    await click(buttonNamed(page, "Vista previa")!)
+    expect(previewSections().flatMap((section) => section.fields.map((item) => item.key))).toEqual(["contenido"])
+    expect(getTeacherSyllabus).toHaveBeenCalledTimes(1)
     page.unmount()
-    sessionState.clear()
+  })
+
+  it("si el docente cambió su formación, la vista previa vuelve a leer el sílabo para mostrarla en la identificación", async () => {
+    const draft = syllabus("borrador", "carrera")
+    draft.sections[0]!.fields.push(field("field-2", "carrera", { key: "formacion_docente", label: "Formación y experiencia académica-investigativa", value: doc("Magíster") }))
+    vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: draft })
+    vi.mocked(saveTeacherField).mockResolvedValue({ version_bloqueo: 3, guardado_en: null, document: doc("Magíster y doctor") })
+    const page = mountPage()
+    await flush()
+    act(() => editors.props.get(editorIds(page)[1]!)!.onValueChange!(doc("Magíster y doctor")))
+    await click(buttonNamed(page, "Vista previa")!)
+    expect(saveTeacherField).toHaveBeenCalled()
+    expect(getTeacherSyllabus).toHaveBeenCalledTimes(2)
+    page.unmount()
   })
 
   it("mientras carga un sílabo enviado muestra la hoja del documento", async () => {

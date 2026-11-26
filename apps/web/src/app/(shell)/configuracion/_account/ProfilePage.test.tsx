@@ -12,9 +12,9 @@ vi.mock("@/layouts/settings/Layout", () => ({ SettingsLayout: ({ children }: { c
 describe("ProfilePage — datos de la cuenta", () => {
   beforeEach(() => sessionState.clear())
 
-  it("el docente ve solo los datos de la cuenta: la formación vive en su pestaña «Perfil docente»", () => {
+  it("el docente ve solo los datos de la cuenta: la formación la escribe en su sílabo", () => {
     sessionState.replace({
-      user: { id: "u-1", name: "DOCENTE UNO", email: "docente@ueb.edu.ec", email_verified: true, can_edit_identity: false, formation: "Ingeniero en Sistemas" },
+      user: { id: "u-1", name: "DOCENTE UNO", email: "docente@ueb.edu.ec", email_verified: true, can_edit_identity: false },
       active_role: { id: "r-1", code: "docente", career_id: null, career_name: null },
       available_roles: [],
     })

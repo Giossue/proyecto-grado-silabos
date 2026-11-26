@@ -125,7 +125,7 @@
     },
     "/docente/configuracion/perfil": {
         "title": "Perfil",
-        "content": "Aquí ve los datos de su cuenta. Si su nombre o correo están mal, pida el cambio a Administración.\n\nSu formación y experiencia se escribe una sola vez y pasa a todos sus sílabos."
+        "content": "Aquí ve los datos de su cuenta. Si su nombre o correo están mal, pida el cambio a Administración."
     },
     "/docente/configuracion/seguridad": {
         "title": "Seguridad",
@@ -149,7 +149,7 @@
     },
     "/docente/mis-silabos/:syllabus": {
         "title": "Su sílabo",
-        "content": "Aquí llena su sílabo. Los campos con asterisco son suyos; lo demás ya viene escrito. Todo se guarda solo mientras escribe.\n\nCuando termine, pulse «Enviar». La primera vez lo firma con su archivo de firma electrónica."
+        "content": "Aquí llena su sílabo. Los campos con asterisco son suyos; lo demás ya viene escrito. Todo se guarda solo mientras escribe.\n\nSu formación y experiencia llega de su último sílabo: revísela.\n\nCuando termine, pulse «Enviar». La primera vez lo firma con su archivo de firma electrónica."
     },
     "/docente/notificaciones": {
         "title": "Notificaciones",

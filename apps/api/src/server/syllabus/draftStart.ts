@@ -23,6 +23,7 @@ import { createDraftStartStore } from "./draftStartStore"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
 import { requireBound, type Binder } from "./boundSession"
+import { fieldFingerprint } from "./teacherFields"
 
 export type LockedDraft = { id: string; state: string; version: number; subjectId: string }
 export type TeacherField = { id: string; responsible: string; content: unknown }
@@ -35,7 +36,8 @@ export interface DraftStartTx {
   teacherFields(templateId: string): Promise<TeacherField[]>
   values(syllabusId: string, fieldIds: string[]): Promise<{ fieldId: string; value: unknown }[]>
   deleteValues(syllabusId: string, fieldIds: string[]): Promise<void>
-  insertValue(syllabusId: string, fieldId: string, document: PhpRecord): Promise<void>
+  insertValue(syllabusId: string, fieldId: string, document: PhpRecord, fingerprint: string): Promise<void>
+  carryTeacherFields(syllabusId: string, template: SyllabusTemplate): Promise<void>
   start(syllabusId: string, now: number): Promise<void>
   copied(syllabusId: string, version: number, now: number): Promise<void>
 }
@@ -117,7 +119,7 @@ async function inheritPreviousPeriod(tx: DraftStartTx, template: SyllabusTemplat
       setup === undefined && !responseWithin(value.value)
         ? fieldResponseNormalize(contents.get(value.fieldId), value.value, definition)
         : fieldCarried(setup ?? contents.get(value.fieldId), value.value, definition)
-    await tx.insertValue(syllabusId, value.fieldId, document as PhpRecord)
+    await tx.insertValue(syllabusId, value.fieldId, document as PhpRecord, fieldFingerprint(contents.get(value.fieldId)))
   }
 }
 
@@ -139,6 +141,7 @@ export async function startDraftFor(request: Request, { session, syllabus }: Dra
         if (template === null) throw new Missing(MODELS.template)
         const sourceId = await tx.previousPeriodSource(locked.id, locked.subjectId, session.user.id, template.modifiedAt)
         if (sourceId !== null) await inheritPreviousPeriod(tx, template, locked.id, locked.subjectId, sourceId)
+        await tx.carryTeacherFields(locked.id, template)
         const now = deps.now()
         await tx.start(locked.id, now)
         return payloadWithin(tx, request, session, locked.id, deps)
@@ -193,7 +196,7 @@ export async function copySyllabusContentFor(request: Request, auth: DraftStartB
         const copied = await tx.values(source.id, fieldIds)
         await tx.deleteValues(locked.id, fieldIds)
         for (const value of copied) {
-          await tx.insertValue(locked.id, value.fieldId, fieldResponseNormalize(setups[value.fieldId] ?? contents.get(value.fieldId), value.value, definition))
+          await tx.insertValue(locked.id, value.fieldId, fieldResponseNormalize(setups[value.fieldId] ?? contents.get(value.fieldId), value.value, definition), fieldFingerprint(contents.get(value.fieldId)))
         }
         const version = locked.version + 1
         const now = deps.now()

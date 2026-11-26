@@ -39,8 +39,3 @@ export const accessibilitySchema = z.object({
   dyslexia: requiredBoolean(messages.boolean("modo dislexia"), messages.boolean("modo dislexia")).optional(),
 })
 
-export const teacherFormationSchema = z.object({
-  formacion_experiencia: requiredText(messages.required("formación y experiencia"), messages.string("formación y experiencia")),
-})
-
-export type TeacherFormationValues = z.input<typeof teacherFormationSchema>

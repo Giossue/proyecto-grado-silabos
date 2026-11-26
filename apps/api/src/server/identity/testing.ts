@@ -13,7 +13,7 @@ export const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 export const OTHER_CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c6aa"
 export const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 
-export type FakeAccount = Account & { formation: string | null; accessibility: unknown; passwordHash: string }
+export type FakeAccount = Account & { accessibility: unknown; passwordHash: string }
 export type FakeInvitation = { userId: string; hash: string; expiresAt: number; issuerId: string; createdAt: number; usedAt: number | null; invalidatedAt: number | null }
 
 export type FakeIdentity = {
@@ -37,7 +37,6 @@ export function account(overrides: Partial<FakeAccount> & { id: string }): FakeA
     email: `${overrides.id.slice(0, 8)}@silabos.test`,
     active: true,
     verified: true,
-    formation: null,
     accessibility: null,
     passwordHash: golden.passwordHash,
     ...overrides,
@@ -101,13 +100,6 @@ function fakeTx(world: FakeIdentity): AccountTx {
     },
     async setActive(id, active) {
       Object.assign(find(id) as FakeAccount, { active })
-    },
-    lockFormation: async (id) => {
-      const row = find(id)
-      return row ? { formation: row.formation } : null
-    },
-    async setFormation(id, formation) {
-      Object.assign(find(id) as FakeAccount, { formation })
     },
     async setAccessibility(id, preferences: Accessibility) {
       Object.assign(find(id) as FakeAccount, { accessibility: preferences })
@@ -248,7 +240,7 @@ export function harness(role: { id?: string; role: string; careerId: string | nu
         find: async (userId) => {
           const row = identity.accounts.find((candidate) => candidate.id === userId)
           return row
-            ? { name: row.name, email: row.email, formation: row.formation, accessibility: row.accessibility }
+            ? { name: row.name, email: row.email, accessibility: row.accessibility }
             : null
         },
       },

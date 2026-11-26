@@ -98,7 +98,7 @@ describe("official template", () => {
     const sections = officialSections()
     expect(sections.map((section) => section.key)).toEqual(officialJson.sections.map((section) => section.key))
     expect(sections.every((section) => section.fields.every((field) => typeof field.content === "object" && !Array.isArray(field.content)))).toBe(true)
-    expect(Object.keys(officialDefinition())).toEqual(["response_policy", "document", "variables", "blocks", "required_sections", "library_sections", "presets"])
+    expect(Object.keys(officialDefinition())).toEqual(["response_policy", "document", "variables", "blocks", "required_sections", "library_sections", "presets", "teacher_fields"])
   })
 })
 

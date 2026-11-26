@@ -60,3 +60,20 @@ export const goldenPresentation = golden.presentation
 export const goldenCatalog = golden.catalog
 export const goldenSample = golden.sample
 export const goldenVariables = golden.variables
+
+export const FORMATION_FIELD_ID = "0195e7a0-0000-7000-8000-0000000000f1"
+export const FORMATION_CONTENT = { type: "doc", content: [{ type: "paragraph", attrs: { textAlign: "left" } }] }
+
+export function withFormation(template: SyllabusTemplate = goldenTemplate()): SyllabusTemplate {
+  const sections = structuredClone(template.sections)
+  const block = "0195e7a0-0000-7000-8000-0000000000b1"
+  const label = "Formación y experiencia académica-investigativa"
+  sections[0].blocks.push({
+    id: block,
+    key: "formacion_docente",
+    title: label,
+    position: sections[0].blocks.length + 1,
+    fields: [{ id: FORMATION_FIELD_ID, blockId: block, key: "formacion_docente", label, responsible: "carrera", content: FORMATION_CONTENT }],
+  })
+  return { ...template, definition: { ...template.definition, teacher_fields: ["formacion_docente"] }, sections }
+}

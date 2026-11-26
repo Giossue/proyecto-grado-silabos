@@ -12,7 +12,7 @@ export type ActiveRole = {
 export type AccessibilityPreferences = { high_contrast: boolean; text_size: string; no_motion: boolean; dyslexia?: boolean };
 
 export type Session = {
-  user: { id: string; name: string; email: string; email_verified: boolean; can_edit_identity: boolean; formation?: string | null; accessibility?: AccessibilityPreferences | null };
+  user: { id: string; name: string; email: string; email_verified: boolean; can_edit_identity: boolean; accessibility?: AccessibilityPreferences | null };
   active_role: ActiveRole | null;
   available_roles: ActiveRole[];
   institution?: { today: string; timezone: string };
@@ -59,11 +59,6 @@ export const selectActiveRole = (roleAssignmentId: string) =>
   api<Session>('/active-role', { method: 'PUT', body: JSON.stringify({ role_assignment_id: roleAssignmentId }) });
 export const updateAccessibility = (preferences: AccessibilityPreferences) =>
   api<Session>('/authentication/accessibility', { method: 'PUT', body: JSON.stringify(preferences) });
-export const updateFormation = (formation: string) =>
-  api<Session>('/authentication/formation', {
-    method: 'PUT',
-    body: JSON.stringify({ formacion_experiencia: formation }),
-  });
 export const updateProfile = (name: string, email: string) =>
   api<Session>('/authentication/profile', {
     method: 'PUT',

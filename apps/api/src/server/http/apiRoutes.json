@@ -115,14 +115,6 @@
   },
   {
     "methods": [
-      "PUT"
-    ],
-    "uri": "api/v1/authentication/formation",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
       "GET",
       "HEAD"
     ],

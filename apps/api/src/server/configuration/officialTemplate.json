@@ -659,6 +659,9 @@
     "library_sections": [
         "bibliografia"
     ],
+    "teacher_fields": [
+        "formacion_docente"
+    ],
     "presets": [
         {
             "key": "identificacion",
@@ -703,6 +706,14 @@
                     "quien_llena": "carrera",
                     "content": [
                         "<div data-block=\"identificacion\" data-props=\"{}\" data-value=\"{}\"></div>"
+                    ]
+                },
+                {
+                    "key": "formacion_docente",
+                    "label": "Formación y experiencia académica-investigativa",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
                     ]
                 }
             ]

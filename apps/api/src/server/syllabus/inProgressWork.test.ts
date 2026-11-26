@@ -3,6 +3,9 @@ import { Prisma } from "../../generated/prisma/client"
 import type { Db } from "../../prisma/db"
 import { returnApprovals } from "./coordinationHandover"
 import { anotherProcessInProgress } from "./finalizedChangeNotice"
+import { FORMATION_CONTENT, FORMATION_FIELD_ID, withFormation } from "../configuration/testing"
+import { templateFields } from "../configuration/templatePresentation"
+import { definitionHash } from "../ficha/definitionHash"
 import { InProgressWork } from "./inProgressWork"
 import { convocationsToReopen, reopenProcess } from "./reopenCatchUp"
 
@@ -113,5 +116,35 @@ describe("InProgressWork locking", () => {
     expect(sequence[2]).toMatch(/order by silabos\.silabo_id asc for update of silabos$/)
     const writes = statements.filter((statement) => statement.kind === "execute").map((statement) => statement.text.split(" set ")[0])
     expect(writes).toEqual(["update silabos", "update convocatorias_carreras", "update convocatorias_universidad"])
+  })
+})
+
+describe("InProgressWork generation", () => {
+  it("writes every generated value with the fingerprint of its definition and carries the teacher formation", async () => {
+    const formation = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Magíster en Redes" }] }] }
+    const writes: Prisma.Sql[] = []
+    const reply = (text: string): unknown[] => {
+      if (text.startsWith("select convocatoria.carrera_id::text as career_id")) return [{ career_id: CAREER, period_id: PERIOD }]
+      if (text.startsWith("select paralelo.paralelo_id::text as id")) return [{ id: PARALLEL, subject_id: CAREER, code: "A", shift: "matutina", subject: "Cálculo", campus: null, modality: "presencial", teachers: 1 }]
+      if (text.startsWith("select asignatura.asignatura_id::text as id")) return [{ id: CAREER, code: "C1", name: "Cálculo", cycle: 1, position: 1, unit: null, credits: "2.00", total_hours: 96, hours_ac: "1.00", hours_pae: "1.00", hours_aa: "1.00", career_id: CAREER, career_code: "SW", career_name: "Software", cycle_count: 8, faculty_id: null, faculty: null, faculty_logo: null }]
+      if (text.startsWith("select codigo_periodo_academico as code")) return [{ code: "2026-1", weeks: 16 }]
+      if (text.includes("order by silabos.guardado_en desc")) return [{ value: JSON.stringify(formation) }]
+      if (text.startsWith("select docentes_vigentes_silabo.usuario_id")) return [{ id: "t1" }]
+      return []
+    }
+    const db = {
+      $queryRaw: async (query: TemplateStringsArray | Prisma.Sql, ...values: unknown[]) => reply((query instanceof Prisma.Sql ? query : Prisma.sql(query, ...values)).text.replace(/\s+/g, " ").trim()),
+      $executeRaw: async (query: TemplateStringsArray | Prisma.Sql, ...values: unknown[]) => (writes.push(query instanceof Prisma.Sql ? query : Prisma.sql(query, ...values)), 1),
+    } as unknown as Db
+    const work = new InProgressWork(db, () => {})
+    const template = withFormation()
+    Reflect.set(work, "template", template)
+    await work.generateForParallel(CONVOCATION, PARALLEL)
+    const inserts = writes.filter((query) => query.text.includes("insert into valores_campo"))
+    const career = templateFields(template).filter((field) => field.responsible !== "institucional")
+    expect(inserts).toHaveLength(career.length + 1)
+    for (const insert of inserts) expect(insert.text.replace(/\s+/g, " ")).toContain("valor_campo, huella_definicion_campo)")
+    for (const [index, field] of career.entries()) expect(inserts[index].values.at(-1)).toBe(definitionHash(field.content))
+    expect(inserts.at(-1)?.values.slice(2)).toEqual([FORMATION_FIELD_ID, JSON.stringify(formation), definitionHash(FORMATION_CONTENT)])
   })
 })

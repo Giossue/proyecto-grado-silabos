@@ -9,6 +9,7 @@ import type { DraftStartTx } from "./draftStart"
 import { draftTx } from "./draftFieldStore"
 import { syllabusDetailStoreOn } from "./syllabusDetailQueries"
 import { SYLLABUS_EXISTS, writtenBySql } from "./syllabusSql"
+import { carryTeacherFields } from "./teacherFields"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export function draftStartTx(executor: Executor): DraftStartTx {
@@ -55,10 +56,11 @@ export function draftStartTx(executor: Executor): DraftStartTx {
       if (fieldIds.length === 0) return
       await executor.$executeRaw`delete from valores_campo where valores_campo.silabo_id = ${syllabusId}::uuid and valores_campo.definicion_campo_id in (${uuidList(fieldIds)})`
     },
-    async insertValue(syllabusId, fieldId, document) {
-      await executor.$executeRaw`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo)
-        values (${uuid7()}::uuid, ${syllabusId}::uuid, ${fieldId}::uuid, ${jsonbValue(JSON.stringify(phpShape(document)))})`
+    async insertValue(syllabusId, fieldId, document, fingerprint) {
+      await executor.$executeRaw`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo, huella_definicion_campo)
+        values (${uuid7()}::uuid, ${syllabusId}::uuid, ${fieldId}::uuid, ${jsonbValue(JSON.stringify(phpShape(document)))}, ${fingerprint})`
     },
+    carryTeacherFields: (syllabusId, template) => carryTeacherFields(executor, syllabusId, template, uuid7),
     async start(syllabusId, now) {
       await executor.$executeRaw`update silabos set estado_silabo = 'borrador', iniciado_en = ${fromEpoch(now)}, guardado_en = ${fromEpoch(now)}, version_borrador = 1
         where silabos.silabo_id = ${syllabusId}::uuid`

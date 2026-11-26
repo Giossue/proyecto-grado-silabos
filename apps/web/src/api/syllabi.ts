@@ -84,7 +84,6 @@ export type SyllabusDetail = {
   review_stage?: "biblioteca" | "coordinacion" | null;
   signatures?: SignatureSummary[];
   teacher_signature_required?: boolean;
-  teacher_formation_required?: boolean;
   /** En corrección solicitada: el docente no ha cambiado nada desde que se la pidieron. */
   unchanged_since_correction?: boolean;
   review_comments?: Array<{

@@ -116,6 +116,11 @@ export async function fillIdentification(page: Page, description: string): Promi
   await page.getByRole("radiogroup", { name: "Estudiantes con discapacidad" }).getByRole("radio", { name: "Sí" }).check()
   await page.getByRole("textbox", { name: "Capacidades esp (obligatorio)" }).fill("Baja visión")
   await page.getByRole("textbox", { name: "Breve descripción (obligatorio)" }).fill(description)
+  const formation = page.getByRole("textbox", { name: /^Formación y experiencia académica-investigativa/ })
+  if ((await formation.innerText()).trim() === "") {
+    await formation.click()
+    await page.keyboard.type("Ingeniero en Sistemas; magíster en Ingeniería de Software.", { delay: 10 })
+  }
   await settleAutosave(page)
 }
 

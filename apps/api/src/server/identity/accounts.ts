@@ -27,8 +27,6 @@ export interface AccountTx {
   insertAccount(account: { name: string; email: string; passwordHash: string }): Promise<Account>
   updateIdentity(id: string, name: string, email: string): Promise<void>
   setActive(id: string, active: boolean): Promise<void>
-  lockFormation(id: string): Promise<{ formation: string | null } | null>
-  setFormation(id: string, formation: string): Promise<void>
   setAccessibility(id: string, preferences: Accessibility): Promise<void>
   effectiveRoles(userId: string): Promise<string[]>
   lockEffectiveGrants(userId: string): Promise<RoleGrant[]>
@@ -291,11 +289,3 @@ export async function removeCareerTeacher(ctx: ActionContext, target: { id: stri
   return parallels.length
 }
 
-export async function updateTeacherFormation(ctx: ActionContext, userId: string, formation: string): Promise<boolean> {
-  const locked = await ctx.tx.lockFormation(userId)
-  if (locked === null) throw new Missing(MODELS.user, userId)
-  const value = formation.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, "")
-  if (locked.formation === value) return false
-  await ctx.tx.setFormation(userId, value)
-  return true
-}

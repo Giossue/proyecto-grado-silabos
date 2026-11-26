@@ -4,6 +4,7 @@ import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeTemplateStore, fieldId, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "../configuration/testing"
 import type { PhpRecord } from "../configuration/phpValues"
+import { definitionHash } from "../ficha/definitionHash"
 import { updateDraftField, type DraftFieldDeps, type DraftFieldRecord, type DraftSyllabus } from "./draftField"
 import type { IdentificationSource } from "./identificationCard"
 
@@ -27,7 +28,7 @@ let locked: { id: string; state: string; version: number; subjectId: string } | 
 let fields: Map<string, DraftFieldRecord>
 let values: Map<string, unknown>
 let log: string[]
-let saved: { syllabusId: string; fieldId: string; document: PhpRecord; newId: string }[]
+let saved: { syllabusId: string; fieldId: string; document: PhpRecord; newId: string; fingerprint?: string }[]
 let drafts: { id: string; version: number; savedAt: number }[]
 let committed: boolean
 let today: string
@@ -57,7 +58,7 @@ function deps(): DraftFieldDeps {
         log.push("stored")
         return values.get(`${syllabusId}:${field}`) ?? null
       },
-      identification: async () => ({ context: { subject: { name: "Redes" }, career: { name: "Software" } }, parallelCode: "A", parallelShift: "matutina", teachers }),
+      identification: async () => ({ context: { subject: { name: "Redes" }, career: { name: "Software" } }, parallelCode: "A", parallelShift: "matutina", teachers, formation: "Magíster" }),
       transaction: async (work) => {
         log.push("begin")
         const before = new Map(values)
@@ -74,9 +75,9 @@ function deps(): DraftFieldDeps {
               log.push("exists")
               return values.has(`${syllabusId}:${field}`)
             },
-            saveValue: async (syllabusId, field, document, newId) => {
+            saveValue: async (syllabusId, field, document, newId, fingerprint) => {
               log.push("save")
-              saved.push({ syllabusId, fieldId: field, document, newId })
+              saved.push({ syllabusId, fieldId: field, document, newId, ...(fingerprint === definitionHash(fields.get(field)?.content) ? {} : { fingerprint }) })
               values.set(`${syllabusId}:${field}`, document)
             },
             saveDraft: async (id, version, savedAt) => {
@@ -138,11 +139,11 @@ beforeEach(() => {
   drafts = []
   committed = false
   today = "2027-01-15"
-  teachers = [{ name: "Ana Pérez", email: "ana@ueb.edu.ec", formation: "Magíster" }]
+  teachers = [{ name: "Ana Pérez", email: "ana@ueb.edu.ec" }]
 })
 
 describe("PATCH /api/v1/teacher/syllabi/{syllabus}/fields/{field}", () => {
-  it("autosaves the field, bumps the draft version and answers with the resolved document", async () => {
+  it("autosaves the field with the fingerprint of its definition, bumps the draft version and answers with the resolved document", async () => {
     const template = goldenTemplate()
     if (template.definition) delete template.definition.response_policy
     templates.template = template

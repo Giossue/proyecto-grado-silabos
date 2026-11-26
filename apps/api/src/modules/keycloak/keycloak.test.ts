@@ -94,7 +94,7 @@ function authenticationOf(world: AuthWorld): AuthenticationDeps {
     profiles: {
       async find(id) {
         const row = world.user(id)
-        return row ? { name: row.name, email: row.email, formation: null, accessibility: null } : null
+        return row ? { name: row.name, email: row.email, accessibility: null } : null
       },
     },
     today: () => "2026-11-25",

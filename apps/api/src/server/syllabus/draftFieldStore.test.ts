@@ -34,15 +34,16 @@ describe("draft field store", () => {
     expect(queries[0].values).toEqual([SYLLABUS])
   })
 
-  it("updates an existing value in place and inserts a missing one", async () => {
+  it("updates an existing value in place and inserts a missing one, both with the fingerprint of the field definition", async () => {
     const existing = recordingDb((query) => (query.text.includes("select valores_campo.valor_campo_id") ? [{ id: "v1" }] : []))
-    await draftTx(existing.db).saveValue(SYLLABUS, FIELD, { type: "doc" }, "new-id")
+    await draftTx(existing.db).saveValue(SYLLABUS, FIELD, { type: "doc" }, "new-id", "huella")
     expect(existing.queries.map(text).map((sql) => sql.split(" ")[0])).toEqual(["select", "update"])
-    expect(text(existing.queries[1])).toBe("update valores_campo set valor_campo = $1::jsonb where valores_campo.valor_campo_id = $2::uuid")
+    expect(text(existing.queries[1])).toBe("update valores_campo set valor_campo = $1::jsonb, huella_definicion_campo = $2 where valores_campo.valor_campo_id = $3::uuid")
+    expect(existing.queries[1].values).toEqual(['{"type":"doc"}', "huella", "v1"])
     const missing = recordingDb()
-    await draftTx(missing.db).saveValue(SYLLABUS, FIELD, { type: "doc" }, "new-id")
-    expect(text(missing.queries[1])).toMatch(/^insert into valores_campo \(valor_campo_id, silabo_id, definicion_campo_id, valor_campo\)/)
-    expect(missing.queries[1].values).toEqual(["new-id", SYLLABUS, FIELD, '{"type":"doc"}'])
+    await draftTx(missing.db).saveValue(SYLLABUS, FIELD, { type: "doc" }, "new-id", "huella")
+    expect(text(missing.queries[1])).toMatch(/^insert into valores_campo \(valor_campo_id, silabo_id, definicion_campo_id, valor_campo, huella_definicion_campo\)/)
+    expect(missing.queries[1].values).toEqual(["new-id", SYLLABUS, FIELD, '{"type":"doc"}', "huella"])
   })
 
   it("skips the delete when there are no fields to drop", async () => {

@@ -10,13 +10,13 @@ import {
   writable,
   type TemplateDefinition,
 } from "./templateRuntime"
-import { isCareerField, templateFields, type SyllabusTemplate, type TemplateField } from "./templatePresentation"
+import { isCareerField, isTeacherField, templateFields, type SyllabusTemplate, type TemplateField } from "./templatePresentation"
 import type { TemplateStore } from "../shared/templateStore"
 
 export type ProfileContext = { template: SyllabusTemplate; definition: TemplateDefinition; store: TemplateStore }
 
 export function profileFields(context: ProfileContext): TemplateField[] {
-  return templateFields(context.template).filter((field) => isCareerField(field) && writable(field.content, context.definition))
+  return templateFields(context.template).filter((field) => isCareerField(field) && !isTeacherField(field, context.definition) && writable(field.content, context.definition))
 }
 
 export function profilePositions(context: ProfileContext): Map<string, number> {

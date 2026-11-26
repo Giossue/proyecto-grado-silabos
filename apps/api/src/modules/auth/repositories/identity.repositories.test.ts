@@ -49,7 +49,7 @@ describe("identity repositories on Prisma send the same SQL and map the rows lik
   })
 
   it("reads the profile", async () => {
-    const row = { nombre_usuario: "ANA", correo_electronico: "ana@silabos.test", formacion_experiencia_usuario: null, preferencias_accesibilidad_usuario: { text_size: "130" } }
+    const row = { nombre_usuario: "ANA", correo_electronico: "ana@silabos.test", preferencias_accesibilidad_usuario: { text_size: "130" } }
     await same("profile", [row], (executor) => profileRepositoryOn(executor).find(USER))
     await same("profileMissing", [], (executor) => profileRepositoryOn(executor).find(USER))
   })

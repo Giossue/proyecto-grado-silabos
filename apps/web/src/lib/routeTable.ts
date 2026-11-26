@@ -73,7 +73,6 @@ export const routeTable: readonly RouteRecord[] = [
   { path: '/docente/notificaciones', meta: { ...teacher, title: 'Notificaciones' } },
   { path: '/docente/configuracion/perfil', meta: { ...teacher, title: 'Perfil' } },
   { path: '/docente/configuracion/seguridad', meta: { ...teacher, title: 'Seguridad' } },
-  { path: '/docente/configuracion/perfil-docente', meta: { ...teacher, title: 'Perfil docente' } },
   { path: '/docente/configuracion/notificaciones', meta: { ...teacher, title: 'Notificaciones' } },
   { path: '/docente/mis-silabos', meta: { ...teacher, title: 'Mis sílabos' } },
   { path: '/docente/historial', meta: { ...teacher, title: 'Historial' } },

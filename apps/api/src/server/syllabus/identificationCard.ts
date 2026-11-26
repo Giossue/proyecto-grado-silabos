@@ -2,12 +2,13 @@ import { isPhpArray, list, record } from "../configuration/phpValues"
 import { identificationNumber } from "../configuration/templatePresentation"
 
 export type Identification = Record<string, string>
-export type IdentificationTeacher = { name: string | null; email: string | null; formation: string | null }
+export type IdentificationTeacher = { name: string | null; email: string | null }
 export type IdentificationSource = {
   context: unknown
   parallelCode: string | null
   parallelShift: string | null
   teachers: IdentificationTeacher[]
+  formation: string | null
 }
 
 const SHIFT_LABELS: Record<string, string> = { matutina: "Matutina", vespertina: "Vespertina", nocturna: "Nocturna" }
@@ -115,7 +116,7 @@ export function identificationOf(source: IdentificationSource): Identification {
     strings([contextString(source.context, "parallel.code", source.parallelCode)]),
     strings(source.teachers.map((teacher) => teacher.name)),
     strings(source.teachers.map((teacher) => teacher.email)),
-    { formacion_experiencia: strings(source.teachers.map((teacher) => teacher.formation)).join("\n\n") },
+    { formacion_experiencia: source.formation ?? "" },
   )
   data.shift = strings([contextString(source.context, "parallel.shift", source.parallelShift)])
     .map((shift) => SHIFT_LABELS[shift] ?? ucfirst(shift))

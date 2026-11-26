@@ -29,7 +29,7 @@ const type = async (label: string, text: string): Promise<void> => {
 const textOf = (value: DocumentNode): string => render(<FreeTextContent value={value} />).container.textContent ?? ""
 
 describe("bloques definidos en la plantilla", () => {
-  beforeEach(() => setTemplateRuntime(official, { nombre_facultad: "Ciencias", formacion_docente: "Formación escrita en el perfil", horas_docencia: "32", horas_practicas: "0", horas_autonomas: "32", semanas_periodo: "16" }))
+  beforeEach(() => setTemplateRuntime(official, { nombre_facultad: "Ciencias", formacion_docente: "Formación escrita en el sílabo", horas_docencia: "32", horas_practicas: "0", horas_autonomas: "32", semanas_periodo: "16" }))
 
   describe("identificación", () => {
     type Disability = { answer: string | null; type: string; description: string }
@@ -40,7 +40,7 @@ describe("bloques definidos en la plantilla", () => {
       const { container } = render(<FreeTextContent value={identification({ answer: "si", type: "Visual", description: "Baja visión" })} />)
       expect(container.querySelectorAll("table")).toHaveLength(1)
       expect(container.textContent).toContain("FACULTAD: Ciencias")
-      expect(container.textContent).toContain("Formación escrita en el perfil")
+      expect(container.textContent).toContain("Formación escrita en el sílabo")
       expect(container.textContent).toContain("Tipo de discapacidad: Visual")
       expect([...container.querySelectorAll("td")].map((item) => item.textContent)).toContain("X")
     })

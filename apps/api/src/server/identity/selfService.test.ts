@@ -1,13 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import { destroyOtherSessions, destroySession, resendOwnActivation, updateAccessibility, updateFormation, updateProfile } from "./selfService"
+import { destroyOtherSessions, destroySession, resendOwnActivation, updateAccessibility, updateProfile } from "./selfService"
 import { account, ACTOR, ACTOR_ROLE, CAREER, COOKIE, FORBIDDEN, harness, jsonRequest, NOW, SESSION_ID } from "./testing"
 
 const ISSUER = "01a1c5bc-3333-7000-8000-000000000001"
 
 function payload(name: string, extra: Record<string, unknown> = {}) {
   return {
-    user: { id: ACTOR, name, email: "admin@silabos.test", email_verified: true, can_edit_identity: true, formation: null, accessibility: null, ...extra },
+    user: { id: ACTOR, name, email: "admin@silabos.test", email_verified: true, can_edit_identity: true, accessibility: null, ...extra },
     active_role: { id: ACTOR_ROLE, code: "administrador", career_id: null, career_name: null },
     available_roles: [{ id: ACTOR_ROLE, code: "administrador", career_id: null, career_name: null }],
     institution: { today: "2027-01-15", timezone: "America/Guayaquil" },
@@ -85,21 +85,6 @@ describe("PUT /api/v1/authentication/accessibility", () => {
     expect(response.status).toBe(200)
     expect(JSON.parse(await response.text()).active_role.code).toBe("docente")
     expect(test.identity.accounts[0].accessibility).toEqual({ high_contrast: true, text_size: "100", no_motion: true, dyslexia: true })
-  })
-})
-
-describe("PUT /api/v1/authentication/formation", () => {
-  const put = (test: ReturnType<typeof harness>, body: unknown) => updateFormation(jsonRequest("/api/v1/authentication/formation", "PUT", body), test.deps)
-
-  it("trims the text and answers the session payload", async () => {
-    const test = harness({ role: "docente", careerId: CAREER })
-    const response = await put(test, { formacion_experiencia: "  Magíster en Software  " })
-    expect((await response.json()).user.formation).toBe("Magíster en Software")
-    expect(test.identity.accounts.find((row) => row.id === ACTOR)?.formation).toBe("Magíster en Software")
-    expect((await (await put(test, { formacion_experiencia: "Magíster en Software" })).json()).user.formation).toBe("Magíster en Software")
-    expect((await (await put(test, { formacion_experiencia: "   " })).json()).errors).toEqual({
-      formacion_experiencia: ["El campo formación y experiencia es obligatorio."],
-    })
   })
 })
 

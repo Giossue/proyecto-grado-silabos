@@ -129,6 +129,9 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
   - índices únicos;
   - una vista: `docentes_vigentes_silabo`.
 - **Cada envío de sílabo** guarda una **instantánea** del contenido y su **SHA-256**. Lo aprobado no cambia.
+- **Formación del docente:** es el campo `formacion_docente` de la sección «Identificación» de la plantilla. Lo llena el docente en cada sílabo; la definición de la plantilla lo marca en `teacher_fields`, así que no aparece en el perfil de la asignatura de Coordinación ni en la ficha en Excel. En el Word y el PDF sale en la misma fila de la tabla de identificación (variable `formacion_docente`), no como bloque aparte. Es obligatorio para enviar.
+- **Arrastre entre sílabos:** cada valor guarda en `valores_campo.huella_definicion_campo` el SHA-256 de la definición del campo con la que se escribió. Al generar o iniciar un sílabo, si un campo del docente está vacío, toma lo último que escribió cada docente vigente en ese mismo campo (cualquier materia o período, por `silabos.guardado_en`), siempre que la definición no haya cambiado. Si hay varios docentes, sus textos van uno debajo del otro, sin repetir.
+- **Migración `20261125220000_formacion_como_campo`:** agrega el campo y la huella, pasa la formación que estaba en `usuarios` a los sílabos vivos (los enviados o aprobados toman la de su última versión enviada), llena las huellas y elimina `usuarios.formacion_experiencia_usuario`. No toca versiones, aprobaciones ni instantáneas.
 
 ---
 
@@ -140,11 +143,11 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 - **Límites de intentos:** guardados en Redis, con las cabeceras `X-RateLimit-*`.
 - **Documentación:** Swagger UI en `/api/docs` y el documento OpenAPI en `/api/docs-json` (puerto de la API). Muestra todas las rutas de la API.
 
-**125 endpoints** en total.
+**124 endpoints** en total.
 
 | Área | Endpoints | Qué cubre |
 |---|---|---|
-| `authentication` | 12 | Ingreso y salida, activación de cuenta, recuperar y restablecer contraseña por correo, perfil, formación, accesibilidad, sesiones abiertas |
+| `authentication` | 11 | Ingreso y salida, activación de cuenta, recuperar y restablecer contraseña por correo, perfil, accesibilidad, sesiones abiertas |
 | `session`, `active-role` | 2 | Sesión actual y cambio de rol o carrera activa |
 | `admin` | 43 | Facultades, carreras y períodos (con importación desde Excel), usuarios y roles (con importación), procesos del período (abrir, pausar, reanudar, prórroga, impacto, finalizar), ajustes del sistema (correo, IA, catálogo, firmas), plantilla (estructura, campos, bloques, formato, logo, vista previa del docente, JSON) y asistente de IA |
 | `coordination` | 35 | Malla (asignaturas, requisitos, disposición, configuración, importación), materias programadas, paralelos y asignación docente, docentes (con importación), convocatoria de la carrera, proyecto de carrera (ficha en Excel), revisiones (comparar versiones, pedir corrección, aprobar con firma), historial y documentos de apoyo |
@@ -187,7 +190,7 @@ Rutas públicas fuera de la API: `/logos/institucion`, `/logos/facultad/:id`, `/
 - **Integridad:** cada versión enviada del sílabo guarda su **huella SHA-256**, y los documentos aprobados no se modifican.
 - **Datos sensibles:** la clave de la IA se guarda cifrada (`APP_KEY`).
 - **Datos personales (LOPDP):**
-  - solo se guarda lo necesario: nombre, correo institucional, roles y formación declarada por el docente;
+  - solo se guarda lo necesario: nombre, correo institucional y roles; la formación que declara el docente queda en sus sílabos;
   - los datos institucionales se leerán en modo de solo lectura.
 
 ---

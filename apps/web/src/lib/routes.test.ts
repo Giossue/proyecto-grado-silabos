@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaForPath, areaTeacherFormation, paths, roleDocuments, roleEntry, roleHome, roleNotifications, roleSetting, routeRegistry, type RoleCode } from '@/lib/routes';
+import { areaForPath, paths, roleDocuments, roleEntry, roleHome, roleNotifications, roleSetting, routeRegistry, type RoleCode } from '@/lib/routes';
 
 describe('contrato de rutas', () => {
   it('construye destinos dinámicos sin permitir segmentos ambiguos', () => {
@@ -74,11 +74,8 @@ describe('contrato de rutas', () => {
     ]);
   });
 
-  it('la pestaña «Perfil docente» existe solo en el área del docente', () => {
-    expect(areaTeacherFormation('teacher')).toBe('/docente/configuracion/perfil-docente');
-    expect(areaTeacherFormation('admin')).toBeNull();
-    expect(areaTeacherFormation('coordination')).toBeNull();
-    expect(areaTeacherFormation('library')).toBeNull();
-    expect(routeRegistry.find((route) => route.name === 'teacher-formation')?.roles).toEqual(['docente']);
+  it('ya no existe la pestaña «Perfil docente»: la formación es un campo del sílabo', () => {
+    expect(routeRegistry.some((route) => route.name === 'teacher-formation' || route.path === '/docente/configuracion/perfil-docente')).toBe(false);
+    expect(Object.keys(paths.teacher)).not.toContain('formation');
   });
 });

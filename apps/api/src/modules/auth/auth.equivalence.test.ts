@@ -86,7 +86,7 @@ async function freshState(): Promise<State> {
     async find(id) {
       const row = user(id)
       if (!row) return null
-      return { name: String(row.name), email: String(row.email), formation: null, accessibility: null }
+      return { name: String(row.name), email: String(row.email), accessibility: null }
     },
   }
   state.activeSessions = {

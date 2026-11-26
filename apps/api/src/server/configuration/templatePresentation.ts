@@ -1,4 +1,4 @@
-import { isScalar, phpString, record, type PhpRecord } from "./phpValues"
+import { isScalar, list, phpString, record, type PhpRecord } from "./phpValues"
 import {
   fieldConditions,
   fieldLimits,
@@ -112,6 +112,14 @@ export function fieldSection(template: SyllabusTemplate, field: TemplateField): 
 
 export function isCareerField(field: TemplateField): boolean {
   return field.responsible !== INSTITUTIONAL
+}
+
+export function teacherFieldKeys(definition: PhpRecord): string[] {
+  return list(definition.teacher_fields).filter((key): key is string => typeof key === "string")
+}
+
+export function isTeacherField(field: Pick<TemplateField, "key">, definition: PhpRecord): boolean {
+  return teacherFieldKeys(definition).includes(field.key)
 }
 
 export function teacherEditable(field: TemplateField, templates: Record<string, unknown>): boolean {

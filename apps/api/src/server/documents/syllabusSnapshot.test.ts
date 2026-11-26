@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import golden from "./__fixtures__/laravel-documents-golden.json"
-import { goldenTemplate } from "../configuration/testing"
+import { goldenTemplate, withFormation } from "../configuration/testing"
 import { canonicalHash, canonicalJson } from "./canonicalJson"
 import type { ArchivedField } from "../syllabus/syllabusDetailQueries"
 import { buildSyllabusSnapshot, SNAPSHOT_VERSION, visibleSections, type SnapshotSource } from "./syllabusSnapshot"
@@ -23,7 +23,8 @@ const source = (): SnapshotSource => ({
     context: { career: { name: "Software", faculty: "Ciencias", faculty_id: FACULTY }, subject: { name: "Biología", code: "C2" } },
     parallelCode: "A",
     parallelShift: "matutina",
-    teachers: [{ name: "Ana Pérez", email: "ana@ueb.edu.ec", formation: "Magíster" }],
+    teachers: [{ name: "Ana Pérez", email: "ana@ueb.edu.ec" }],
+    formation: "Magíster",
   }),
   archivedFields: async () => archived,
   logos: { faculty: async () => null },
@@ -64,6 +65,14 @@ describe("SyllabusConditions::visibleSections", () => {
 })
 
 describe("SyllabusSnapshot::build", () => {
+  it("shows the teacher formation in the identification card and does not draw its field again as a block", async () => {
+    const snapshot = await buildSyllabusSnapshot(SYLLABUS, { ...source(), template: async () => withFormation() })
+    expect((snapshot.identification as Record<string, string>).formation).toBe("Magíster")
+    const sections = snapshot.sections as { key: string; fields: { key: string }[] }[]
+    expect(sections.flatMap((section) => section.fields.map((field) => field.key))).not.toContain("formacion_docente")
+    expect(sections.map((section) => section.key)).toEqual(goldenTemplate().sections.map((section) => section.key))
+  })
+
   it("builds the version 9 snapshot with embedded logos, identification, variables and resolved fields", async () => {
     const snapshot = await buildSyllabusSnapshot(SYLLABUS, source())
     const template = goldenTemplate()

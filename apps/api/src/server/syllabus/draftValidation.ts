@@ -7,7 +7,7 @@ import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { aborted, apiJson } from "../http/responses"
 import { fieldLimitCount, fieldLimitExceeded } from "../configuration/fieldLimit"
-import { isPhpArray, list, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
+import { isPhpArray, list, record, type PhpRecord } from "../configuration/phpValues"
 import { clearHidden, shownResponses, syllabusConditions, type Answers } from "../configuration/responseConditions"
 import { profileTemplates } from "../configuration/subjectProfileFields"
 import { documentIsEmpty, fieldResponseNormalize } from "../configuration/templateRehearsal"
@@ -41,7 +41,6 @@ import { MODELS } from "../http/models"
 import { requireBound, type Binder } from "./boundSession"
 
 export type ValidationField = { id: string; key: string; responsible: string; content: unknown; displayName: string }
-export type ValidationTeacher = { id: string; name: string; formation: string | null }
 export type ValidationIssue = { field_id: string | null; code: string; severity: string; message: string }
 
 export interface DraftValidationTx {
@@ -50,7 +49,6 @@ export interface DraftValidationTx {
   documentFields(id: string): Promise<ValidationField[]>
   values(id: string): Promise<Map<string, unknown>>
   identification(id: string): Promise<IdentificationSource>
-  teachers(id: string): Promise<ValidationTeacher[]>
 }
 
 export interface DraftValidationStore {
@@ -154,7 +152,7 @@ function fieldIssues(
   return [...issues, ...blockIssues(field, stored, variables, definition)]
 }
 
-async function runValidation(tx: DraftValidationTx, session: AppSession, syllabusId: string) {
+async function runValidation(tx: DraftValidationTx, syllabusId: string) {
   const locked = await tx.lockSyllabus(syllabusId)
   if (locked === null) throw new Missing(MODELS.syllabus, syllabusId)
   const template = await tx.templateStore.template()
@@ -170,20 +168,6 @@ async function runValidation(tx: DraftValidationTx, session: AppSession, syllabu
     if (!teacherEditable({ id: field.id, responsible: field.responsible } as TemplateField, templates) || conditions.hidden.has(field.id)) continue
     const limit = limitAllowed(field.responsible) ? (limits[field.key] ?? null) : null
     issues.push(...fieldIssues(field, templates[field.id] ?? field.content, values.get(field.id) ?? null, conditions.answers, limit, variables, definition))
-  }
-  if (Object.values(definition.variables).some((variable) => variable.source === "identification.formation")) {
-    for (const teacher of await tx.teachers(locked.id)) {
-      if (phpTrim(teacher.formation ?? "") !== "") continue
-      issues.push({
-        field_id: null,
-        code: "formacion_docente_faltante",
-        severity: "error",
-        message:
-          teacher.id === session.user.id
-            ? "Falta su formación y experiencia académica-investigativa. Complétela antes de enviar."
-            : `Falta la formación y experiencia académica-investigativa de ${teacher.name}.`,
-      })
-    }
   }
   return { version: locked.version, issues }
 }
@@ -205,7 +189,7 @@ export async function validateDraftFor(session: AppSession, syllabus: DraftSylla
   if (!mayEdit(session, syllabus, deps.today())) return aborted(403)
   let result: Awaited<ReturnType<typeof runValidation>>
   try {
-    result = await deps.store.transaction((tx) => runValidation(tx, session, (syllabus as DraftSyllabus).id))
+    result = await deps.store.transaction((tx) => runValidation(tx, (syllabus as DraftSyllabus).id))
   } catch (error) {
     if (error instanceof HttpFailure) return error.response
     throw error

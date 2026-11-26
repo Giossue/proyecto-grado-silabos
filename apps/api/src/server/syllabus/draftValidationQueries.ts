@@ -48,14 +48,6 @@ function validationTx(executor: Executor): DraftValidationTx {
     documentFields: (id) => documentFields(executor, id),
     values: (id) => draft.values(id),
     identification: (id) => identificationSource(executor, id),
-    async teachers(id) {
-      return rowsOf<{ id: string; name: string; formation: string | null }>(
-        executor,
-        Prisma.sql`select usuarios.usuario_id as id, usuarios.nombre_usuario as name, usuarios.formacion_experiencia_usuario as formation
-          from usuarios inner join docentes_vigentes_silabo on usuarios.usuario_id = docentes_vigentes_silabo.usuario_id
-          where docentes_vigentes_silabo.silabo_id = ${id}::uuid`,
-      )
-    },
   }
 }
 
