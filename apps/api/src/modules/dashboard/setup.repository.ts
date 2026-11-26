@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common"
 import { PrismaService } from "../../prisma/prisma.service"
 import type { CareerReadinessFacts, SetupRepository } from "../../server/dashboard/setupChecklist"
+import { setupRepositoryOn } from "../../server/dashboard/setupQueries"
 
 @Injectable()
 export class PrismaSetupRepository implements SetupRepository {
@@ -46,34 +47,9 @@ export class PrismaSetupRepository implements SetupRepository {
     })
   }
 
-  async careerReadiness(careerId: string): Promise<CareerReadinessFacts | null> {
-    const career = await this.prisma.carreras.findFirst({
-      where: { carrera_id: careerId },
-      select: { _count: { select: { asignaturas: true } }, facultades: { select: { facultad_id: true, archivos: { select: { disco: true, ruta_archivo: true, categoria: true } } } } },
-    })
-    if (!career) return null
-    const subjects = await this.prisma.asignaturas.findMany({
-      where: { asignatura_activa: true, genera_silabo_asignatura: true, carrera_id: careerId },
-      select: { asignatura_id: true, paralelos: { select: { paralelo_id: true }, take: 1 } },
-    })
-    const [parallels] = await this.prisma.$queryRaw<{ total: number; withTeacher: number }[]>`select count(*)::int as "total",
-        (count(*) filter (where exists (select 1 from asignaciones_paralelo ap
-          inner join asignaciones_rol ar on ar.asignacion_rol_id = ap.asignacion_rol_id
-          inner join usuarios u on u.usuario_id = ar.usuario_id
-          where ap.paralelo_id = paralelos.paralelo_id and ap.asignacion_paralelo_activa = true and ar.asignacion_rol_activa = true and ar.rol = 'docente'
-            and ar.carrera_id = ${careerId}::uuid and u.usuario_activo = true and u.correo_verificado_en is not null)))::int as "withTeacher"
-      from paralelos
-      where exists (select 1 from asignaturas a where a.asignatura_id = paralelos.asignatura_id and a.asignatura_activa = true and a.genera_silabo_asignatura = true and a.carrera_id = ${careerId}::uuid)`
-    const faculty = career.facultades
-    const logo = faculty.archivos
-    return {
-      subjectsCount: career._count.asignaturas,
-      faculty: { id: faculty.facultad_id, logo: logo === null ? null : { disk: logo.disco, path: logo.ruta_archivo, classification: logo.categoria } },
-      scheduledSubjectIds: subjects.map((subject) => subject.asignatura_id),
-      scheduledWithParallels: subjects.filter((subject) => subject.paralelos.length > 0).length,
-      parallelTotal: parallels?.total ?? 0,
-      parallelsWithTeacher: parallels?.withTeacher ?? 0,
-    }
+  // Same query as the server repository, so both count the subjects of every malla that is not closed.
+  careerReadiness(careerId: string): Promise<CareerReadinessFacts | null> {
+    return setupRepositoryOn(this.prisma).careerReadiness(careerId)
   }
 
   async careerHasActiveTeacher(careerId: string): Promise<boolean> {

@@ -17,6 +17,7 @@ const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 const OTHER_CAREER = "01a1c5bc-79ca-7331-8f0f-000000000009"
 const FACULTY = "01a1c5bc-798f-72af-b64b-3cd174a1687b"
 const SUBJECT = "01a1c5bc-7a00-7000-8000-0000000000aa"
+const MALLA = "01a1c5bc-7a00-7000-8000-0000000000bb"
 const EMPTY_FORBIDDEN = '{"message":""}'
 
 const SUBJECT_ROW: SubjectContextRow = {
@@ -33,6 +34,8 @@ const SUBJECT_ROW: SubjectContextRow = {
   career_id: CAREER,
   career_code: "SW",
   career_name: "Software",
+  curriculum_id: MALLA,
+  curriculum_name: "Malla 2022",
   cycle_count: 8,
   faculty_id: FACULTY,
   faculty: "Ciencias Administrativas",
@@ -104,7 +107,7 @@ describe("GET academic/asignaturas/{asignatura}/ficha/vista-previa", () => {
     const context = contexts.get(SUBJECT)!
     expect(Object.keys(context)).toEqual(["schema_version", "career", "curriculum", "subject"])
     expect(context.career).toEqual({ id: CAREER, code: "SW", name: "Software", faculty: "Ciencias Administrativas", faculty_id: FACULTY, faculty_logo: null })
-    expect(context.curriculum).toEqual({ id: CAREER, cycle_count: 8 })
+    expect(context.curriculum).toEqual({ id: MALLA, name: "Malla 2022", cycle_count: 8 })
     expect(context.subject).toEqual({
       id: SUBJECT,
       code: "SW-P7-037",
@@ -204,5 +207,22 @@ describe("loadSubjectContext", () => {
     expect(context?.subject).toMatchObject({ prerequisites: ["SW-P5-021", "SW-P6-032"] })
     expect(context?.subject).not.toHaveProperty("corequisites")
     expect(queries.join(" ")).not.toMatch(/tipo_requisito|campus/)
+  })
+
+  it("takes the cycle count and the name from the malla of the subject, not from the career", async () => {
+    const queries: string[] = []
+    const db = {
+      $queryRaw: async (strings: TemplateStringsArray) => {
+        const text = strings.join("?").replace(/\s+/g, " ")
+        queries.push(text)
+        if (text.includes("from asignaturas asignatura")) return [{ ...SUBJECT_ROW, cycle_count: 3 }]
+        return []
+      },
+    } as unknown as Db
+    const context = await loadSubjectContext(db, SUBJECT)
+    expect(context?.curriculum).toEqual({ id: MALLA, name: "Malla 2022", cycle_count: 3 })
+    expect(queries[0]).toContain("inner join mallas malla on malla.malla_id = asignatura.malla_id")
+    expect(queries[0]).toContain("malla.numero_ciclos as cycle_count")
+    expect(queries[0]).not.toContain("carrera.numero_ciclos")
   })
 })

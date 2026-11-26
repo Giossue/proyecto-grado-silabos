@@ -12,7 +12,6 @@ import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { setTemplateRuntime } from "@/lib/blocks/runtime"
 import type { TemplateDefinitionPayload } from "@silabos/shared/lib/blocks/types"
 import definition from "@silabos/shared/test/fixtures/template-definition.json"
-import { typeConfirmation } from "@/test/confirmPhrase"
 import { templateEditorState } from "@/state/templateEditor"
 
 vi.mock("@/api/template")
@@ -47,7 +46,6 @@ const keepClosingDialogs = (): void => {
     return new Proxy(style, { get: (target, key) => (key === "animationName" && element.getAttribute("data-state") === "closed" ? "exit" : Reflect.get(target, key)) })
   })
 }
-const closingDialog = (): HTMLElement | null => body().querySelector<HTMLElement>('[role="dialog"][data-state="closed"]')
 
 describe("TemplateVisualBuilder", () => {
   beforeEach(() => {
@@ -375,21 +373,13 @@ describe("TemplateVisualBuilder", () => {
     expect(closing.textContent).toContain("Se quitará «Uno» con sus 2 campos")
   })
 
-  it("la frase para editar se borra al volver a abrir el aviso, no mientras se cierra", async () => {
-    keepClosingDialogs()
-    const handle = createRef<TemplateVisualBuilderHandle>()
-    render(<TemplateVisualBuilder ref={handle} template={template} presets={presets} />, { wrapper: createWrapper() })
-    await settle()
+  it("editar entra directo al modo de edición, sin aviso ni frase", async () => {
+    const { handle, onEditing } = await mountBuilder({ template, presets }, { edit: false })
     act(() => handle.current!.askEdit())
     await settle()
-    typeConfirmation("template-edit-confirm", "editar plantilla")
-    await settle()
-    await click(byText("button", "Cancelar"))
-
-    expect(closingDialog()?.querySelector<HTMLInputElement>("#template-edit-confirm")?.value).toBe("editar plantilla")
-    act(() => handle.current!.askEdit())
-    await settle()
-    expect(body().querySelector<HTMLInputElement>('[role="dialog"][data-state="open"] #template-edit-confirm')?.value).toBe("")
+    expect(onEditing).toHaveBeenLastCalledWith(true)
+    expect(body().querySelector('[role="dialog"]')).toBeNull()
+    expect(body().querySelector("#template-edit-confirm")).toBeNull()
   })
 
   it("no dibuja la formación del docente como bloque propio, ni en la vista ni al editar, y la conserva al guardar", async () => {

@@ -42,6 +42,7 @@ export class GovernancePrismaRepository implements GovernanceRepository {
         codigo_carrera: true,
         nombre_carrera: true,
         carrera_activa: true,
+        mallas: { where: { estado_malla: "vigente" }, take: 1, select: { numero_ciclos: true } },
         asignaciones_rol: {
           where: { rol: "coordinador", asignacion_rol_activa: true },
           take: 1,
@@ -59,6 +60,7 @@ export class GovernancePrismaRepository implements GovernanceRepository {
         modality: row.modalidad_carrera,
         code: row.codigo_carrera,
         name: row.nombre_carrera,
+        cycleCount: row.mallas[0]?.numero_ciclos ?? null,
         active: row.carrera_activa,
       }
     })

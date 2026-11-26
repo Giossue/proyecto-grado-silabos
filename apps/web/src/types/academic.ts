@@ -53,6 +53,8 @@ export type AcademicStructureProps = {
       coordinator: { id: string; name: string } | null;
       code: string;
       name: string;
+      /** Cycles of the career's vigente malla; null when no malla is vigente. */
+      cycle_count?: number | null;
       active: boolean;
       deactivate_block?: string | null;
       deactivate_users?: { coordinators: number; teachers: number };
@@ -185,12 +187,25 @@ export type CurriculumBuilderSubject = {
   }[];
 };
 
+export type MallaState = "vigente" | "en_transicion" | "cerrada";
+
+/** A curriculum (malla) of a career; a career has at most one vigente malla. */
+export type Malla = {
+  id: string;
+  name: string;
+  resolution: string | null;
+  cycle_count: number;
+  state: MallaState;
+  subject_count: number;
+};
+
 export type CurriculumBuilderProps = {
   career: {
     id: string;
     name: string;
     modality: { value: string; label: string } | null;
   };
+  malla: { id: string; name: string; state: MallaState };
   curriculum: {
     id: string;
     cycle_count: number;

@@ -10,6 +10,7 @@ import { FinalizedChangeNotice } from "../syllabus/finalizedChangeNotice"
 import { InProgressWork } from "../syllabus/inProgressWork"
 import { CAREERS_TABLE, FACULTIES_TABLE, PERIODS_TABLE, updateColumns, type TableColumns } from "./columnSql"
 import type { GovernanceWriteDeps, GovernanceWriteTx } from "./governanceWrites"
+import { insertMalla } from "./mallaWriteStore"
 import { insertStoredObject } from "./supportDocumentWriteStore"
 
 const TABLES: Record<"facultad" | "carrera" | "periodo", [TableColumns, Prisma.Sql]> = {
@@ -45,8 +46,9 @@ export function governanceWriteTx(db: Db, afterCommit: AfterCommit, now: number,
   return {
     async createCareer(data) {
       const id = uuid7()
-      await db.$executeRaw`insert into carreras (carrera_id, facultad_id, codigo_carrera, nombre_carrera, carrera_activa, modalidad_carrera, numero_ciclos)
-        values (${id}::uuid, ${data.facultyId}::uuid, ${data.code}, ${data.name}, true, ${data.modality}, ${data.cycleCount})`
+      await db.$executeRaw`insert into carreras (carrera_id, facultad_id, codigo_carrera, nombre_carrera, carrera_activa, modalidad_carrera)
+        values (${id}::uuid, ${data.facultyId}::uuid, ${data.code}, ${data.name}, true, ${data.modality})`
+      await insertMalla(db, id, { name: `Malla ${data.code}`, resolution: null, cycleCount: data.cycleCount, state: "vigente" })
       return id
     },
     async createFaculty(data) {

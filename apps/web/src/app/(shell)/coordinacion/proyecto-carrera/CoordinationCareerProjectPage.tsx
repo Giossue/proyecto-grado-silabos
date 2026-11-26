@@ -33,7 +33,8 @@ import { cn } from "@/lib/utils"
 import { queryErrorMessage } from "@/lib/queryClient"
 import { coordinatorCareerQuery, scheduledSubjectsQuery } from "@/queries/careerAcademics"
 
-type Subject = ScheduledSubjects["options"]["activeSubjects"][number]
+// `malla_name` comes with each subject since careers can have several mallas (S8).
+type Subject = ScheduledSubjects["options"]["activeSubjects"][number] & { malla_name?: string | null }
 
 const statusOf = (subject: Subject): string =>
   subject.profile_complete ? "Completa" : subject.profile_total ? `${subject.profile_filled ?? 0} de ${subject.profile_total} campos` : "Incompleta"
@@ -58,9 +59,10 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
   const loading = scope.isFetching || query.isFetching
   const loadError = queryErrorMessage(scope, "No se pudo cargar el proyecto de carrera") ?? queryErrorMessage(query, "No se pudo cargar el proyecto de carrera")
 
-  const subjects = useMemo(() => (data?.options.activeSubjects ?? []).filter((subject) => subject.generates_syllabus !== false), [data])
+  const subjects = useMemo((): Subject[] => (data?.options.activeSubjects ?? []).filter((subject) => subject.generates_syllabus !== false), [data])
   const filter = useClientFilter(subjects, searchable, subjectFilters)
   const cycleOptions = [...new Set(subjects.map(cycleLabel))].sort(compareCycles)
+  const severalMallas = new Set(subjects.map((subject) => subject.malla_name).filter(Boolean)).size > 1
   const byCycle = new Map<string, Subject[]>()
   for (const subject of filter.items) byCycle.set(cycleLabel(subject), [...(byCycle.get(cycleLabel(subject)) ?? []), subject])
   const groups = [...byCycle].sort(([left], [right]) => compareCycles(left, right)).map(([cycle, list]) => ({ cycle, list }))
@@ -210,7 +212,8 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
                                   </Link>
                                 </CardTitle>
                               </CardHeader>
-                              <CardContent>
+                              <CardContent className="flex flex-wrap items-center gap-2">
+                                {severalMallas && subject.malla_name ? <Badge variant="outline">{subject.malla_name}</Badge> : null}
                                 <StatusBadge label={statusOf(subject)} tone={subject.profile_complete ? "success" : "warning"} />
                               </CardContent>
                             </Card>

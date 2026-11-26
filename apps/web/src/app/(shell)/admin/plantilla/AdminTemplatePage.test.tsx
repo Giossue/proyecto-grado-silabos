@@ -4,7 +4,6 @@ import { getSession } from "@/api/session"
 import { checkTemplateDraft, createTemplate, getTemplate, getTemplateJson, getTemplateTeacherPreview, previewTemplateDraft, type TemplatePayload } from "@/api/template"
 import { applyTemplateAssistantProposal, discardTemplateAssistantProposal, getTemplateAssistant, getTemplateAssistantProposal, sendTemplateAssistantMessage } from "@/api/templateAssistant"
 import { TemplateVisualBuilder } from "@/components/domain/configuration/TemplateVisualBuilder"
-import { typeConfirmation } from "@/test/confirmPhrase"
 import { navigation } from "@/test/nextNavigation"
 import { renderWithProviders } from "@/test/render"
 import AdminTemplatePage from "./AdminTemplatePage"
@@ -94,9 +93,6 @@ const mountPage = async () => {
 
 const startEditing = async (): Promise<void> => {
   await click(buttonWithText("Editar"))
-  typeConfirmation("template-edit-confirm", "editar plantilla")
-  await settle()
-  await click(buttonWithText("Continuar"))
 }
 
 describe("AdminTemplatePage", () => {

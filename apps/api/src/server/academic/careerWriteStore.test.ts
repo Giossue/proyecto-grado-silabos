@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { Prisma } from "../../generated/prisma/client"
 import type { Db } from "../../prisma/db"
-import { careerWriteTx } from "./careerWriteStore"
+import { careerWriteTx, curriculumTx } from "./careerWriteStore"
 
 function recordingDatabase() {
   const statements: { text: string; values: unknown[] }[] = []
@@ -13,6 +13,23 @@ function recordingDatabase() {
   return { db: { $queryRaw: run, $executeRaw: run } as unknown as Db, statements }
 }
 
+const MALLA = "01a1c5ba-9000-7000-8000-000000000001"
+
+describe("curriculum writes address one malla", () => {
+  it("locks the malla only inside the career and changes the cycle count of that malla", async () => {
+    const { db, statements } = recordingDatabase()
+    const tx = curriculumTx(db, () => undefined, 0)
+    expect(await tx.lockMalla("01a1c5ba-10b4-7129-925f-c28a9489323c", MALLA)).toBeNull()
+    expect(statements[0].text).toMatch(/from mallas\s+where mallas.malla_id = \$1::uuid and mallas.carrera_id = \$2::uuid limit 1 for update/)
+    await tx.updateCycleCount(MALLA, 6)
+    expect(statements[1].text).toContain("update mallas set numero_ciclos = $1 where mallas.malla_id = $2::uuid")
+    await tx.lockSubjects(MALLA, [MALLA])
+    expect(statements[2].text).toContain("asignaturas.malla_id = $1::uuid")
+    expect(await tx.lockMalla("01a1c5ba-10b4-7129-925f-c28a9489323c", "abc")).toBeNull()
+    expect(statements).toHaveLength(3)
+  })
+})
+
 describe("careerWriteTx subject columns", () => {
   it("updates only the columns it receives", async () => {
     const { db, statements } = recordingDatabase()
@@ -21,9 +38,9 @@ describe("careerWriteTx subject columns", () => {
     expect(statements[0].values).toEqual(["Cálculo", "10.25", "01a1c5ba-10b4-7129-925f-c28a9489323c"])
   })
 
-  it("inserts every subject column with an active flag", async () => {
+  it("inserts every subject column with an active flag, its career and its malla", async () => {
     const { db, statements } = recordingDatabase()
-    await careerWriteTx(db, () => undefined, 0).insertSubject("01a1c5ba-10b4-7129-925f-c28a9489323c", {
+    await careerWriteTx(db, () => undefined, 0).insertSubject("01a1c5ba-10b4-7129-925f-c28a9489323c", MALLA, {
       codigo_asignatura: "MAT-1",
       nombre_asignatura: "Cálculo",
       ciclo_asignatura: 1,
@@ -37,7 +54,8 @@ describe("careerWriteTx subject columns", () => {
       genera_silabo_asignatura: true,
     })
     expect(statements[0].text).toContain('insert into "asignaturas"')
-    expect(statements[0].values).toEqual(expect.arrayContaining(["MAT-1", "Cálculo", 1, "3.00", 2, "basica", "presencial", true, "01a1c5ba-10b4-7129-925f-c28a9489323c"]))
+    expect(statements[0].text).toContain('"malla_id"')
+    expect(statements[0].values).toEqual(expect.arrayContaining(["MAT-1", "Cálculo", 1, "3.00", 2, "basica", "presencial", true, "01a1c5ba-10b4-7129-925f-c28a9489323c", MALLA]))
     expect(statements[0].text).not.toContain('"total_horas_asignatura"')
   })
 

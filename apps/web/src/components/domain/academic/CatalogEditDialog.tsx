@@ -3,6 +3,7 @@
 import { Check, Pencil, RefreshCw } from "lucide-react"
 import { useEffect, useEffectEvent, useState, type FormEvent } from "react"
 import { updateAcademicRecord } from "@/api/academic"
+import { ApiError } from "@/api/client"
 import type { CatalogLibrary } from "@/api/libraryCatalog"
 import { DatePicker } from "@/components/DatePicker"
 import { FacultyLibraryChecks } from "@/components/domain/academic/FacultyLibraryChecks"
@@ -19,8 +20,8 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { initialLibraries, librariesToStore, sameLibraries, useCatalogLibraries } from "@/composables/useCatalogLibraries"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
-import { requestPurgeConfirmation } from "@/composables/usePurgeConfirmation"
 import { applyApiErrors, errorMap, useSchemaForm } from "@/lib/forms"
+import { announcePurge, purgeMessageOf } from "@/lib/purgeNotice"
 import { careerSchema, facultySchema, periodSchema } from "@silabos/shared/schemas/academic"
 import type { CatalogRecord, GovernanceCatalogEntity } from "@/types/academic"
 
@@ -175,18 +176,20 @@ export function CatalogEditDialog({
       setOpen(false)
       onSaved?.(result.message)
     } catch (reason) {
+      const purgeMessage = reason instanceof ApiError && !confirmPurge ? purgeMessageOf(reason.errors) : undefined
+      if (purgeMessage) {
+        announcePurge(purgeMessage)
+        await save(true)
+        return
+      }
       const received = applyApiErrors(editForm.setError, reason, { fallback: "No se pudo guardar" })
       if (entity === "facultad") setTab(Object.keys(received).some((key) => key.startsWith("catalog_libraries")) ? "bibliotecas" : "datos")
-      const purgeMessage = received.purge_required?.[0]
-      if (purgeMessage) {
-        requestPurgeConfirmation(purgeMessage, Number(received.purge_count?.[0] ?? 0), () => void submit(true), undefined, received.purge_mode?.[0])
-      }
     } finally {
       setProcessing(false)
     }
   }
 
-  const submit = async (confirmPurge = false): Promise<void> => {
+  const submit = async (): Promise<void> => {
     if (readOnly) return
     editForm.clearErrors()
     if (entity === "facultad" && logoRequired && !logo) {
@@ -200,7 +203,7 @@ export function CatalogEditDialog({
       return
     }
     await editForm.handleSubmit(
-      () => save(confirmPurge),
+      () => save(false),
       () => {
         if (entity === "facultad") setTab("datos")
       },

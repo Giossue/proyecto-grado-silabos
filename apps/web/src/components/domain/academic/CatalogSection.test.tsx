@@ -13,7 +13,7 @@ const catalogs = {
     { id: "f2", nombre: "Salud", activo: false, logo_url: null },
   ],
   careers: [
-    { id: "c1", faculty_id: "f1", modality: "presencial", modality_label: "Presencial", coordinator: null, code: "SW", name: "Software", active: true },
+    { id: "c1", faculty_id: "f1", modality: "presencial", modality_label: "Presencial", coordinator: null, code: "SW", name: "Software", cycle_count: 9, active: true },
   ],
   periods: [],
 } as AcademicStructureProps["catalogs"]
@@ -81,6 +81,15 @@ describe("CatalogSection", () => {
     expect(careerRows()).toEqual(["Enfermería", "Software"])
     expect(screen.getByRole("columnheader", { name: "Facultad" }).getAttribute("aria-sort")).toBe("descending")
     expect(screen.getByRole("columnheader", { name: "Carrera" }).hasAttribute("aria-sort")).toBe(false)
+  })
+
+  it("muestra los ciclos de la malla vigente de cada carrera", () => {
+    const withoutVigente = { ...catalogs, careers: [...catalogs.careers, { ...catalogs.careers[0], id: "c2", code: "RD", name: "Redes", cycle_count: null }] } as AcademicStructureProps["catalogs"]
+    renderWithProviders(<CatalogSection section="careers" catalogs={withoutVigente} options={options} onChanged={vi.fn()} />)
+
+    expect(screen.getByRole("columnheader", { name: "Ciclos" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Software" }).closest("tr")!.textContent).toContain("9")
+    expect(screen.getByRole("button", { name: "Redes" }).closest("tr")!.textContent).toContain("Sin malla vigente")
   })
 
   it("cada carrera activa ofrece abrir su malla y paralelos y su proyecto de carrera", () => {

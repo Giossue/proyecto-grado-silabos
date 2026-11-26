@@ -108,16 +108,19 @@ model asignaturas {
   unidad_curricular_asignatura                                           String?                 @db.VarChar(30)
   modalidad_asignatura                                                   String?                 @db.VarChar(20)
   carrera_id                                                             String                  @db.Uuid
+  malla_id                                                               String                  @db.Uuid
   genera_silabo_asignatura                                               Boolean                 @default(true)
   creado_en                                                              DateTime                @default(now()) @db.Timestamptz(6)
   actualizado_en                                                         DateTime                @default(now()) @db.Timestamptz(6)
   carreras                                                               carreras                @relation(fields: [carrera_id], references: [carrera_id], onUpdate: NoAction, map: "asignaturas_carrera_id_fk")
+  mallas                                                                 mallas                  @relation(fields: [malla_id, carrera_id], references: [malla_id, carrera_id], onUpdate: Cascade, map: "asignaturas_malla_id_carrera_id_fk")
   paralelos                                                              paralelos[]
   requisitos_asignatura_requisitos_asignatura_asignatura_idToasignaturas requisitos_asignatura[] @relation("requisitos_asignatura_asignatura_idToasignaturas")
   requisitos_asignatura_requisitos_asignatura_requisito_idToasignaturas  requisitos_asignatura[] @relation("requisitos_asignatura_requisito_idToasignaturas")
   valores_campo                                                          valores_campo[]
 
-  @@unique([carrera_id, codigo_asignatura], map: "asignaturas_carrera_id_codigo_asignatura_unica")
+  @@unique([malla_id, codigo_asignatura], map: "asignaturas_malla_id_codigo_asignatura_unica")
+  @@index([carrera_id])
 }
 
 model campos_plantilla {
@@ -147,7 +150,6 @@ model carreras {
   nombre_carrera         String                   @db.VarChar(180)
   carrera_activa         Boolean                  @default(true)
   modalidad_carrera      String?                  @db.VarChar(20)
-  numero_ciclos          Int                      @db.SmallInt
   creado_en              DateTime                 @default(now()) @db.Timestamptz(6)
   actualizado_en         DateTime                 @default(now()) @db.Timestamptz(6)
   asignaciones_rol       asignaciones_rol[]
@@ -155,6 +157,7 @@ model carreras {
   facultades             facultades               @relation(fields: [facultad_id], references: [facultad_id], onUpdate: NoAction, map: "carreras_facultad_id_fk")
   convocatorias_carreras convocatorias_carreras[]
   documentos_apoyo       documentos_apoyo[]
+  mallas                 mallas[]
 
   @@index([facultad_id])
 }
@@ -342,6 +345,27 @@ model invitaciones_activacion {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model mallas {
+  malla_id                    String               @id @db.Uuid
+  carrera_id                  String               @db.Uuid
+  nombre_malla                String               @db.VarChar(180)
+  resolucion_malla            String?              @db.VarChar(180)
+  numero_ciclos               Int                  @db.SmallInt
+  estado_malla                String               @db.VarChar(20)
+  periodo_academico_inicio_id String?              @db.Uuid
+  creado_en                   DateTime             @default(now()) @db.Timestamptz(6)
+  actualizado_en              DateTime             @default(now()) @db.Timestamptz(6)
+  asignaturas                 asignaturas[]
+  carreras                    carreras             @relation(fields: [carrera_id], references: [carrera_id], onUpdate: NoAction, map: "mallas_carrera_id_fk")
+  periodos_academicos         periodos_academicos? @relation(fields: [periodo_academico_inicio_id], references: [periodo_academico_id], onDelete: Restrict, onUpdate: NoAction, map: "mallas_periodo_academico_inicio_id_fk")
+
+  @@unique([malla_id, carrera_id], map: "mallas_malla_id_carrera_id_unica")
+  @@unique([carrera_id, nombre_malla], map: "mallas_carrera_id_nombre_malla_unica")
+  @@unique([carrera_id], map: "mallas_carrera_id_vigente_unica", where: raw("((estado_malla)::text = 'vigente'::text)"))
+  @@index([periodo_academico_inicio_id])
+}
+
 model mensajes_ia_plantilla {
   mensaje_ia_plantilla_id String                   @id @db.Uuid
   plantilla_id            String                   @db.Uuid
@@ -409,6 +433,7 @@ model periodos_academicos {
   creado_en                 DateTime                   @default(now()) @db.Timestamptz(6)
   actualizado_en            DateTime                   @default(now()) @db.Timestamptz(6)
   convocatorias_universidad convocatorias_universidad?
+  mallas                    mallas[]
   notificaciones            notificaciones[]
 }
 

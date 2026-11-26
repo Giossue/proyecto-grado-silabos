@@ -6,6 +6,8 @@ import type {
   CareerLock,
   CareerRecord,
   CareerTeacherRecord,
+  MallaReadRepository,
+  MallaRecord,
   PersonRecord,
   RequirementRecord,
   SubjectRecord,
@@ -55,10 +57,34 @@ function toSubject(row: SubjectRow): SubjectRecord {
   }
 }
 
+const MALLA_COLUMNS = {
+  malla_id: true,
+  carrera_id: true,
+  nombre_malla: true,
+  resolucion_malla: true,
+  numero_ciclos: true,
+  estado_malla: true,
+  _count: { select: { asignaturas: true } },
+} satisfies Prisma.mallasSelect
+
+function toMalla(row: Prisma.mallasGetPayload<{ select: typeof MALLA_COLUMNS }>): MallaRecord {
+  return {
+    id: row.malla_id,
+    careerId: row.carrera_id,
+    name: row.nombre_malla,
+    resolution: row.resolucion_malla,
+    cycleCount: row.numero_ciclos,
+    state: row.estado_malla,
+    subjectCount: row._count.asignaturas,
+  }
+}
+
+const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i
+
 const roleScope = (careerId: string, roles: string[]): Prisma.asignaciones_rolWhereInput => ({ asignacion_rol_activa: true, carrera_id: careerId, rol: { in: roles } })
 
 @Injectable()
-export class AcademicStructurePrismaRepository implements AcademicStructureRepository {
+export class AcademicStructurePrismaRepository implements AcademicStructureRepository, MallaReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   private async usersById(ids: string[]): Promise<Map<string, UserRow>> {
@@ -84,9 +110,20 @@ export class AcademicStructurePrismaRepository implements AcademicStructureRepos
   async activeCareer(careerId: string): Promise<CareerRecord | null> {
     const row = await this.prisma.carreras.findFirst({
       where: { carrera_activa: true, carrera_id: careerId },
-      select: { carrera_id: true, nombre_carrera: true, modalidad_carrera: true, numero_ciclos: true },
+      select: { carrera_id: true, nombre_carrera: true, modalidad_carrera: true, mallas: { where: { estado_malla: "vigente" }, take: 1, select: { numero_ciclos: true } } },
     })
-    return row ? { id: row.carrera_id, name: row.nombre_carrera, modality: row.modalidad_carrera, cycleCount: row.numero_ciclos } : null
+    return row ? { id: row.carrera_id, name: row.nombre_carrera, modality: row.modalidad_carrera, cycleCount: row.mallas[0]?.numero_ciclos ?? 0 } : null
+  }
+
+  async mallas(careerId: string): Promise<MallaRecord[]> {
+    const found = await this.prisma.mallas.findMany({ where: { carrera_id: careerId }, select: MALLA_COLUMNS, orderBy: { nombre_malla: "asc" } })
+    return found.map(toMalla)
+  }
+
+  async malla(careerId: string, mallaId: string): Promise<MallaRecord | null> {
+    if (!UUID.test(mallaId)) return null
+    const row = await this.prisma.mallas.findFirst({ where: { carrera_id: careerId, malla_id: mallaId }, select: MALLA_COLUMNS })
+    return row ? toMalla(row) : null
   }
 
   async careerLock(careerId: string): Promise<CareerLock | null> {
@@ -102,9 +139,9 @@ export class AcademicStructurePrismaRepository implements AcademicStructureRepos
     return row ? { period: row.period, institutionalPause: row.state === "pausado", deliveryOn: row.delivery_on } : null
   }
 
-  async curriculumSubjects(careerId: string): Promise<SubjectRecord[]> {
+  async curriculumSubjects(mallaId: string): Promise<SubjectRecord[]> {
     const found = await this.prisma.asignaturas.findMany({
-      where: { carrera_id: careerId },
+      where: { malla_id: mallaId },
       select: SUBJECT_COLUMNS,
       orderBy: [{ ciclo_asignatura: "asc" }, { orden_asignatura_en_ciclo: "asc" }, { nombre_asignatura: "asc" }],
     })

@@ -47,6 +47,7 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
         name: { label: "Carrera", value: (item: Career) => item.name },
         faculty: { label: "Facultad", value: (item: Career) => facultyNames.get(item.faculty_id) ?? "Facultad no disponible" },
         modality: { label: "Modalidad", value: (item: Career) => item.modality_label },
+        cycles: { label: "Ciclos", type: "number", value: (item: Career) => item.cycle_count ?? null },
       }) satisfies SortColumns<Career>,
     [facultyNames],
   )
@@ -158,6 +159,7 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                 <SortableHead sort={careerSort} column="name">Carrera</SortableHead>
                 <SortableHead sort={careerSort} column="faculty">Facultad</SortableHead>
                 <SortableHead sort={careerSort} column="modality">Modalidad</SortableHead>
+                <SortableHead sort={careerSort} column="cycles">Ciclos</SortableHead>
                 <TableHead className="w-24">
                   <span className="sr-only">Trabajo de la carrera</span>
                 </TableHead>
@@ -165,7 +167,7 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
             </TableHeader>
             <TableBody>
               {careerPage.items.length === 0 ? (
-                <TableEmpty colSpan={4}>{careerFilter.active ? "Ninguna carrera coincide con los filtros" : "No existen carreras registradas"}</TableEmpty>
+                <TableEmpty colSpan={5}>{careerFilter.active ? "Ninguna carrera coincide con los filtros" : "No existen carreras registradas"}</TableEmpty>
               ) : (
                 careerPage.items.map((career) => (
                   <TableRow
@@ -203,6 +205,7 @@ export function CatalogSection({ section, catalogs, options, onChanged }: Catalo
                     </TableCell>
                     <TableCell>{facultyName(career.faculty_id)}</TableCell>
                     <TableCell data-card-hide="true">{career.modality_label ?? "Sin modalidad"}</TableCell>
+                    <TableCell data-card-hide="true" title="Ciclos de la malla vigente">{career.cycle_count ?? "Sin malla vigente"}</TableCell>
                     <TableCell>{career.active ? <CareerWorkLinks careerId={career.id} careerName={career.name} /> : null}</TableCell>
                   </TableRow>
                 ))

@@ -4,10 +4,22 @@ import { IDENTIFICATION_SAMPLE } from "../configuration/templatePresentation"
 import { buildIdentification, identificationOf } from "./identificationCard"
 
 describe("identification card", () => {
+  it("shows the malla the syllabus belongs to", () => {
+    const data = buildIdentification({ career: { name: "Software" }, curriculum: { id: "m-1", name: "Malla SW-8", cycle_count: 4 }, subject: { name: "Redes" } }, [], [], [])
+    expect(data.curriculum).toBe("Malla SW-8")
+  })
+
+  it("still renders a syllabus stored before mallas existed, leaving the malla empty", () => {
+    const data = buildIdentification({ career: { name: "Software" }, curriculum: { id: "c-1", cycle_count: 8 }, subject: { name: "Redes", code: "SW-1" } }, ["A"], [], [])
+    expect(data.curriculum).toBe("")
+    expect(data).toMatchObject({ career: "Software", subject: "Redes", code: "SW-1", parallel: "A" })
+  })
+
   it("rebuilds the template sample from its academic context", () => {
     const data = buildIdentification(
       {
         career: { name: "Software", faculty: "Ciencias Administrativas, Gestión Empresarial e Informática" },
+        curriculum: { name: "Malla 2022" },
         subject: {
           name: "Asignatura de ejemplo",
           code: "SW-P7-037",

@@ -192,6 +192,7 @@ export function syllabusSectionPayload(
 export const IDENTIFICATION_SAMPLE: Record<string, string> = {
   faculty: "Ciencias Administrativas, Gestión Empresarial e Informática",
   career: "Software",
+  curriculum: "Malla 2022",
   modality: "Presencial",
   teacher_campus: "Matriz",
   subject: "Asignatura de ejemplo",

@@ -4,6 +4,9 @@ import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, makeAssignment, loggedInAttributes, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeTemplateStore, fieldId, goldenFields, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import type { AcademicStructureRepository, CareerLock, CareerRecord } from "./structure"
+import { Prisma } from "../../generated/prisma/client"
+import type { PrismaService } from "../../prisma/prisma.service"
+import { ScheduledSubjectsPrismaRepository } from "../../modules/academic/repositories/scheduled-subjects.repository"
 import { scheduledSubjects, type CareerParallelRecord, type ScheduledSubjectRecord, type ScheduledSubjectsDeps } from "./scheduledSubjects"
 
 const SESSION_ID = golden.sessionId
@@ -27,7 +30,7 @@ let marks: { syllabus: string[]; teacher: string[]; sent: string[]; started: str
 let templates: FakeTemplateWorld
 
 function subject(overrides: Partial<ScheduledSubjectRecord>): ScheduledSubjectRecord {
-  return { id: ALGORITHMS, code: "SW-B1-001", name: "Algoritmos", cycle: 1, active: true, generatesSyllabus: true, modality: "presencial", ...overrides }
+  return { id: ALGORITHMS, code: "SW-B1-001", name: "Algoritmos", cycle: 1, active: true, generatesSyllabus: true, modality: "presencial", mallaName: "Malla SW-9", ...overrides }
 }
 
 const academic = (): AcademicStructureRepository => ({
@@ -94,7 +97,7 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
       subject({}),
       subject({ id: RETIRED, code: "SW-B1-002", name: "Retirada", active: false }),
       subject({ id: RETIRED_WITH_PARALLEL, code: "SW-B1-003", name: "Retirada con paralelo", active: false, cycle: null, modality: null, generatesSyllabus: false }),
-      subject({ id: NETWORKS, code: "SW-B2-004", name: "Redes", cycle: 2 }),
+      subject({ id: NETWORKS, code: "SW-B2-004", name: "Redes", cycle: 2, mallaName: "Malla SW-8" }),
     ]
     const respuestas = goldenFields.findIndex((field) => field.key === "respuestas")
     templates.values = [{ fieldId: fieldId(respuestas), subjectId: NETWORKS, value: goldenFields[respuestas].stored }]
@@ -105,16 +108,16 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
     expect(response.text).toBe(
       `{"career":{"id":"${CAREER}","name":"Software","lock_reason":"Periodo académico activo","lock":{"scope":"convocation","period":"2026-1","institutional_pause":true,"delivery_on":"2026-08-14"}},` +
         `"scheduledSubjects":[` +
-        `{"subject_id":"${ALGORITHMS}","label":"SW-B1-001 · Algoritmos","subject_code":"SW-B1-001","subject_name":"Algoritmos","subject_cycle":1,"profile_complete":false,"generates_syllabus":true,"modality_name":"Presencial","parallels":[` +
+        `{"subject_id":"${ALGORITHMS}","label":"SW-B1-001 · Algoritmos","subject_code":"SW-B1-001","subject_name":"Algoritmos","subject_cycle":1,"profile_complete":false,"generates_syllabus":true,"modality_name":"Presencial","malla_name":"Malla SW-9","parallels":[` +
         `{"id":"p-a","code":"A","shift":"matutina","editable":true,"deletable":false,"sent_syllabus":true,"started_syllabus":true},` +
         `{"id":"p-b","code":"B","shift":"nocturna","editable":true,"deletable":true,"sent_syllabus":false,"started_syllabus":false}],"editable":true},` +
-        `{"subject_id":"${RETIRED_WITH_PARALLEL}","label":"SW-B1-003 · Retirada con paralelo","subject_code":"SW-B1-003","subject_name":"Retirada con paralelo","subject_cycle":null,"profile_complete":false,"generates_syllabus":false,"modality_name":null,"parallels":[` +
+        `{"subject_id":"${RETIRED_WITH_PARALLEL}","label":"SW-B1-003 · Retirada con paralelo","subject_code":"SW-B1-003","subject_name":"Retirada con paralelo","subject_cycle":null,"profile_complete":false,"generates_syllabus":false,"modality_name":null,"malla_name":"Malla SW-9","parallels":[` +
         `{"id":"p-r","code":"C","shift":"vespertina","editable":true,"deletable":true,"sent_syllabus":false,"started_syllabus":true}],"editable":true},` +
-        `{"subject_id":"${NETWORKS}","label":"SW-B2-004 · Redes","subject_code":"SW-B2-004","subject_name":"Redes","subject_cycle":2,"profile_complete":true,"generates_syllabus":true,"modality_name":"Presencial","parallels":[],"editable":true}],` +
+        `{"subject_id":"${NETWORKS}","label":"SW-B2-004 · Redes","subject_code":"SW-B2-004","subject_name":"Redes","subject_cycle":2,"profile_complete":true,"generates_syllabus":true,"modality_name":"Presencial","malla_name":"Malla SW-8","parallels":[],"editable":true}],` +
         `"options":{"faculties":[],"careers":[],"periods":[],"modalityOptions":${MODALITIES},"shiftOptions":${SHIFTS},"currentCurricula":[],` +
         `"activeSubjects":[` +
-        `{"id":"${ALGORITHMS}","codigo_asignatura":"SW-B1-001","nombre":"Algoritmos","ciclo":1,"generates_syllabus":true,"profile_complete":false,"profile_filled":12,"profile_total":13},` +
-        `{"id":"${NETWORKS}","codigo_asignatura":"SW-B2-004","nombre":"Redes","ciclo":2,"generates_syllabus":true,"profile_complete":true,"profile_filled":13,"profile_total":13}],` +
+        `{"id":"${ALGORITHMS}","codigo_asignatura":"SW-B1-001","nombre":"Algoritmos","ciclo":1,"malla_name":"Malla SW-9","generates_syllabus":true,"profile_complete":false,"profile_filled":12,"profile_total":13},` +
+        `{"id":"${NETWORKS}","codigo_asignatura":"SW-B2-004","nombre":"Redes","ciclo":2,"malla_name":"Malla SW-8","generates_syllabus":true,"profile_complete":true,"profile_filled":13,"profile_total":13}],` +
         `"scheduledSubjects":[],"parallels":[],"teacherUsers":[]}}`,
     )
   })
@@ -170,5 +173,46 @@ describe("GET /api/v1/admin/careers/{career}/academic/scheduled-subjects", () =>
   it("refuses a coordinator who requests another career", async () => {
     const response = await read(OTHER)
     expect({ status: response.status, text: await response.text() }).toEqual({ status: 403, text: FORBIDDEN })
+  })
+})
+
+describe("scheduled subjects across mallas", () => {
+  function repository(rows: unknown[]) {
+    const queries: string[] = []
+    const prisma = {
+      $queryRaw: async (raw: TemplateStringsArray | Prisma.Sql, ...values: unknown[]) => {
+        queries.push((raw instanceof Prisma.Sql ? raw : Prisma.sql(raw, ...values)).text.replace(/\s+/g, " ").trim())
+        return rows
+      },
+    } as unknown as PrismaService
+    return { repository: new ScheduledSubjectsPrismaRepository(prisma), queries }
+  }
+
+  it("lists the subjects of every malla that is not closed, with the name of their malla", async () => {
+    const { repository: found, queries } = repository([
+      { id: ALGORITHMS, codigo: "SW-B1-001", nombre: "Algoritmos", ciclo: 1, activo: true, genera: true, modalidad: "presencial", malla: "Malla SW-8" },
+    ])
+    expect(await found.careerSubjects(CAREER)).toEqual([
+      { id: ALGORITHMS, code: "SW-B1-001", name: "Algoritmos", cycle: 1, active: true, generatesSyllabus: true, modality: "presencial", mallaName: "Malla SW-8" },
+    ])
+    expect(queries[0]).toContain("inner join mallas malla on malla.malla_id = asignatura.malla_id")
+    expect(queries[0]).toContain("malla.estado_malla <> 'cerrada'")
+    expect(queries[0]).toContain("malla.nombre_malla as malla")
+  })
+
+  it("only lists the parallels of subjects whose malla is not closed", async () => {
+    const { repository: found, queries } = repository([])
+    await found.careerParallels(CAREER)
+    expect(queries[0]).toMatch(/exists \(select 1 from mallas malla_abierta where malla_abierta\.malla_id = asignaturas\.malla_id and malla_abierta\.estado_malla <> 'cerrada'\)/)
+  })
+
+  it("sends malla_name for each subject and keeps listing a career with a single malla", async () => {
+    subjects = [subject({}), subject({ id: NETWORKS, code: "SW-B2-004", name: "Redes", cycle: 2, mallaName: "Malla SW-8" })]
+    const body = JSON.parse((await read(await get())).text) as { scheduledSubjects: { subject_id: string; malla_name: string | null }[] }
+    expect(body.scheduledSubjects.map((row) => [row.subject_id, row.malla_name])).toEqual([[ALGORITHMS, "Malla SW-9"], [NETWORKS, "Malla SW-8"]])
+    subjects = [subject({ mallaName: undefined })]
+    const single = JSON.parse((await read(await get())).text) as { scheduledSubjects: { malla_name: string | null }[] }
+    expect(single.scheduledSubjects).toHaveLength(1)
+    expect(single.scheduledSubjects[0].malla_name).toBeNull()
   })
 })

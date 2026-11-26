@@ -12,14 +12,18 @@ import { careerImportTemplate, curriculumImportTemplate, importCareers, importCu
 
 const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 const FACULTY = "01a1c5bc-79c0-7000-8000-000000000001"
+const MALLA = "01a1c5bc-9000-7000-8000-000000000001"
+const OLD_MALLA = "01a1c5bc-9000-7000-8000-000000000002"
+const OTHER_MALLA = "01a1c5bc-9000-7000-8000-000000000003"
 const FACULTY_NAME = "Facultad de Ciencias Administrativas"
 const CAREERS_HEADER = ["Facultad", "Modalidad", "Código de carrera", "Nombre de la carrera", "Número de ciclos"]
 const CURRICULUM_HEADER = ["Código", "Nombre de la materia", "Ciclo", "Unidad de organización", "Modalidad", "Horas ACD", "Horas APE", "Horas AA", "Créditos", "Prerrequisitos (códigos)"]
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 
-type Subject = { id: string; careerId: string; code: string; cycle: number; position: number; columns: Record<string, unknown> }
+type Subject = { id: string; careerId: string; mallaId: string; code: string; cycle: number; position: number; columns: Record<string, unknown> }
 type State = {
   careers: { id: string; code: string; name: string; cycles: number; active: boolean; columns?: Record<string, unknown> }[]
+  mallas: { id: string; careerId: string; cycles: number }[]
   subjects: Subject[]
   requirements: { id: string; subjectId: string; requirementId: string; extra: unknown[] }[]
   synced: number
@@ -53,17 +57,17 @@ const nextId = () => `01a1c5bc-0000-7000-8000-${String(++ids).padStart(12, "0")}
 function careerTx(): CareerWriteTx {
   return {
     careerLocked: async () => state.locked,
-    lockCareer: async (id: string) => {
-      const career = state.careers.find((candidate) => candidate.id === id)
-      return career ? { id, cycleCount: career.cycles } : null
+    lockMalla: async (careerId: string, mallaId: string) => {
+      const malla = state.mallas.find((candidate) => candidate.id === mallaId && candidate.careerId === careerId)
+      return malla ? { id: malla.id, cycleCount: malla.cycles } : null
     },
-    lastPosition: async (careerId: string, cycle: unknown) => {
-      const positions = state.subjects.filter((subject) => subject.careerId === careerId && subject.cycle === Number(cycle)).map((subject) => subject.position)
+    lastPosition: async (mallaId: string, cycle: unknown) => {
+      const positions = state.subjects.filter((subject) => subject.mallaId === mallaId && subject.cycle === Number(cycle)).map((subject) => subject.position)
       return positions.length === 0 ? null : Math.max(...positions)
     },
-    insertSubject: async (careerId: string, columns: Record<string, unknown>) => {
+    insertSubject: async (careerId: string, mallaId: string, columns: Record<string, unknown>) => {
       const id = nextId()
-      state.subjects.push({ id, careerId, code: String(columns.codigo_asignatura), cycle: Number(columns.ciclo_asignatura), position: Number(columns.orden_asignatura_en_ciclo), columns })
+      state.subjects.push({ id, careerId, mallaId, code: String(columns.codigo_asignatura), cycle: Number(columns.ciclo_asignatura), position: Number(columns.orden_asignatura_en_ciclo), columns })
       return id
     },
   } as unknown as CareerWriteTx
@@ -73,12 +77,12 @@ function requirementTx(): CurriculumTx {
   return {
     guard: (_confirmed: boolean, _careerId: string, change: () => Promise<unknown>) => change(),
     careerLocked: async () => state.locked,
-    lockCareer: async (careerId: string, curriculumId: string) => {
-      const career = state.careers.find((candidate) => candidate.id === careerId && careerId === curriculumId)
-      return career ? { id: career.id, cycleCount: career.cycles } : null
+    lockMalla: async (careerId: string, mallaId: string) => {
+      const malla = state.mallas.find((candidate) => candidate.id === mallaId && candidate.careerId === careerId)
+      return malla ? { id: malla.id, cycleCount: malla.cycles } : null
     },
-    lockSubjects: async (careerId: string, subjectIds: string[]) =>
-      state.subjects.filter((subject) => subject.careerId === careerId && subjectIds.includes(subject.id)).map((subject) => ({ id: subject.id, cycle: subject.cycle })),
+    lockSubjects: async (mallaId: string, subjectIds: string[]) =>
+      state.subjects.filter((subject) => subject.mallaId === mallaId && subjectIds.includes(subject.id)).map((subject) => ({ id: subject.id, cycle: subject.cycle })),
     prerequisites: async () => state.requirements,
     findRequirement: async (subjectId: string, requirementId: string) => state.requirements.find((row) => row.subjectId === subjectId && row.requirementId === requirementId) ?? null,
     insertRequirement: async (subjectId: string, requirementId: string, ...extra: unknown[]) => {
@@ -111,11 +115,11 @@ function deps(limiter = createRateLimiter()): StructureImportDeps {
       facultiesForImport: async () => [{ id: FACULTY, name: FACULTY_NAME }],
       careerCodes: async () => state.careers.map((career) => career.code),
       careerActive: async (id) => state.careers.some((career) => career.id === id && career.active),
-      career: async (id) => {
-        const career = state.careers.find((candidate) => candidate.id === id)
-        return career ? { id, cycleCount: career.cycles } : null
+      malla: async (careerId, mallaId) => {
+        const malla = state.mallas.find((candidate) => candidate.id === mallaId && candidate.careerId === careerId)
+        return malla ? { id: malla.id, cycleCount: malla.cycles } : null
       },
-      careerSubjects: async (id) => state.subjects.filter((subject) => subject.careerId === id).map((subject) => ({ id: subject.id, code: subject.code, cycle: subject.cycle })),
+      mallaSubjects: async (id) => state.subjects.filter((subject) => subject.mallaId === id).map((subject) => ({ id: subject.id, code: subject.code, cycle: subject.cycle })),
     },
     governance: (work) => staged(() => work(governanceTx())),
     curriculum: (work) => staged(() => work({ subjects: careerTx(), requirements: requirementTx() })),
@@ -139,14 +143,19 @@ function get(url: string): Request {
 
 const careers = (file: Buffer | null, fields: Record<string, string> = {}, limiter?: ReturnType<typeof createRateLimiter>) =>
   importCareers(post("/api/v1/admin/academic/careers/import", file, fields), deps(limiter))
-const curriculum = (file: Buffer | null, fields: Record<string, string> = {}) => importCurriculum(post("/api/v1/coordination/academic/curriculum-import", file, fields), deps())
+const curriculum = (file: Buffer | null, fields: Record<string, string> = {}) =>
+  importCurriculum(post("/api/v1/coordination/academic/curriculum-import", file, { malla_id: MALLA, ...fields }), deps())
 const json = async (response: Response) => JSON.parse(await response.text())
 
 beforeEach(() => {
   ids = 0
   state = {
     careers: [{ id: CAREER, code: "SW-8", name: "Software", cycles: 4, active: true }],
-    subjects: [{ id: "01a1c5bc-7cbf-7091-860c-63a02b91e998", careerId: CAREER, code: "SW-B1-001", cycle: 1, position: 0, columns: {} }],
+    mallas: [
+      { id: MALLA, careerId: CAREER, cycles: 4 },
+      { id: OLD_MALLA, careerId: CAREER, cycles: 2 },
+    ],
+    subjects: [{ id: "01a1c5bc-7cbf-7091-860c-63a02b91e998", careerId: CAREER, mallaId: MALLA, code: "SW-B1-001", cycle: 1, position: 0, columns: {} }],
     requirements: [],
     synced: 0,
     locked: false,
@@ -345,6 +354,36 @@ describe("POST /api/v1/coordination/academic/curriculum-import", () => {
     expect((await json(await curriculum(file))).rows.map((row: { errors: string[] }) => row.errors)).toEqual([[], []])
   })
 
+  it("loads into the malla it names: that malla's cycles, codes and prerequisites", async () => {
+    const file = await xlsx([
+      CURRICULUM_HEADER,
+      ["SW-B1-001", "Algoritmos (malla anterior)", "1", "Unidad básica", "", "1", "1", "1", "1", ""],
+      ["OLD-002", "Siguiente", "2", "Unidad básica", "", "1", "1", "1", "1", "SW-B1-001"],
+      ["OLD-003", "Fuera de la malla", "3", "Unidad básica", "", "1", "1", "1", "1", ""],
+    ])
+    const preview = await json(await curriculum(file, { malla_id: OLD_MALLA }))
+    expect(preview.rows.map((row: { errors: string[] }) => row.errors)).toEqual([[], [], ["El ciclo debe estar entre 1 y 2."]])
+    const fits = await xlsx([CURRICULUM_HEADER, ["SW-B1-001", "Algoritmos (malla anterior)", "1", "Unidad básica", "", "1", "1", "1", "1", ""], ["OLD-002", "Siguiente", "2", "Unidad básica", "", "1", "1", "1", "1", "SW-B1-001"]])
+    expect(await json(await curriculum(fits, { malla_id: OLD_MALLA, confirm: "1" }))).toMatchObject({ valid: true, created: 2 })
+    const added = state.subjects.filter((subject) => subject.mallaId === OLD_MALLA)
+    expect(added.map((subject) => [subject.code, subject.careerId])).toEqual([
+      ["SW-B1-001", CAREER],
+      ["OLD-002", CAREER],
+    ])
+    expect(state.requirements.map((row) => [row.subjectId, row.requirementId])).toEqual([[added[1].id, added[0].id]])
+  })
+
+  it("requires a malla of the career and creates nothing otherwise", async () => {
+    const file = await xlsx([CURRICULUM_HEADER, ["IMP-001", "Programación I", "1", "Unidad básica", "", "48", "32", "64", "3", ""]])
+    state.mallas.push({ id: OTHER_MALLA, careerId: "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9", cycles: 4 })
+    const missing = importCurriculum(post("/api/v1/coordination/academic/curriculum-import", file, { confirm: "1" }), deps())
+    expect(await (await missing).text()).toBe('{"message":"El campo malla es obligatorio.","errors":{"malla_id":["El campo malla es obligatorio."]}}')
+    const foreign = await curriculum(file, { malla_id: OTHER_MALLA, confirm: "1" })
+    expect(foreign.status).toBe(422)
+    expect((await json(foreign)).errors).toEqual({ malla_id: ["El valor seleccionado en malla no es válido."] })
+    expect(state.subjects).toHaveLength(1)
+  })
+
   it("stops on an open convocation and creates nothing", async () => {
     state.locked = true
     const file = await xlsx([CURRICULUM_HEADER, ["IMP-001", "Programación I", "1", "Unidad básica", "", "48", "32", "64", "3", ""]])
@@ -356,11 +395,13 @@ describe("POST /api/v1/coordination/academic/curriculum-import", () => {
 
 describe("curriculum import through /api/v1/admin/careers/{career}/academic/curriculum-import", () => {
   const OTHER = "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"
-  const adminImport = (careerId: string, file: Buffer) => importCurriculum(post(`/api/v1/admin/careers/${careerId}/academic/curriculum-import`, file, { confirm: "1" }), deps(), careerId)
+  const adminImport = (careerId: string, file: Buffer, mallaId = OTHER_MALLA) =>
+    importCurriculum(post(`/api/v1/admin/careers/${careerId}/academic/curriculum-import`, file, { confirm: "1", malla_id: mallaId }), deps(), careerId)
   const row = () => xlsx([CURRICULUM_HEADER, ["ADM-001", "Redes I", "1", "Unidad básica", "", "48", "32", "64", "3", ""]])
 
   beforeEach(() => {
     state.careers.push({ id: OTHER, code: "RD-8", name: "Redes", cycles: 4, active: true })
+    state.mallas.push({ id: OTHER_MALLA, careerId: OTHER, cycles: 4 })
   })
 
   it("lets the administrator download the template and import into the requested career", async () => {

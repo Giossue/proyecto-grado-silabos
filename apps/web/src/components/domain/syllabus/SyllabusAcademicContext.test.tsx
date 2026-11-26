@@ -24,4 +24,16 @@ describe("SyllabusAcademicContext", () => {
     expect(valueOf(container, "Correquisitos", "Asignatura")).toBe("Lo completa el docente")
     expect(valueOf(container, "Prerrequisitos", "Asignatura")).toBe("Pendiente de Coordinación")
   })
+
+  it("muestra la malla de la materia cuando la plantilla la trae", () => {
+    const { container } = render(<SyllabusAcademicContext variables={{ nombre_carrera: "Software", nombre_malla: "Malla SW-8" }} />)
+    expect(valueOf(container, "Malla", "Asignatura")).toBe("Malla SW-8")
+    expect(valueOf(container, "Carrera", "Asignatura")).toBe("Software")
+  })
+
+  it("omite la malla en los sílabos que no la registran", () => {
+    const { container } = render(<SyllabusAcademicContext variables={{ nombre_carrera: "Software" }} />)
+    expect(valueOf(container, "Malla", "Asignatura")).toBeNull()
+    expect(valueOf(container, "Carrera", "Asignatura")).toBe("Software")
+  })
 })

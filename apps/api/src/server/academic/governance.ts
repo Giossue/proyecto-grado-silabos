@@ -16,6 +16,8 @@ export type GovernanceCareer = {
   modality: string | null
   code: string
   name: string
+  /** Cycles of the career's vigente malla; null when no malla is vigente. */
+  cycleCount: number | null
   active: boolean
 }
 export type GovernancePeriod = { id: string; code: string; startsOn: string; endsOn: string; teachingWeeks: number | null }
@@ -93,6 +95,7 @@ async function governancePayload(request: Request, deps: GovernanceDeps): Promis
         modality_label: studyModalityLabel(career.modality),
         code: career.code,
         name: career.name,
+        cycle_count: career.cycleCount,
         active: career.active,
         deactivate_block: careerBlocks.has(career.id) ? CAREER_BLOCK : null,
         deactivate_users: careerUsers.get(career.id) ?? { coordinators: 0, teachers: 0 },

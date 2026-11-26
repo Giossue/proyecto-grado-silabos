@@ -20,6 +20,8 @@ export type ScheduledSubjectRecord = {
   active: boolean
   generatesSyllabus: boolean
   modality: string | null
+  /** Name of the malla of the subject; the list only holds subjects of mallas that are not closed. */
+  mallaName?: string | null
 }
 
 export type CareerParallelRecord = { id: string; subjectId: string; code: string; shift: string | null }
@@ -82,6 +84,7 @@ export async function scheduledSubjectsResponse(request: Request, career: Career
           profile_complete: done === undefined ? false : done.filled === done.total,
           generates_syllabus: subject.generatesSyllabus,
           modality_name: studyModalityLabel(subject.modality),
+          malla_name: subject.mallaName ?? null,
           parallels: group.map((parallel) => ({
             id: parallel.id,
             code: parallel.code,
@@ -108,6 +111,7 @@ export async function scheduledSubjectsResponse(request: Request, career: Career
             codigo_asignatura: subject.code,
             nombre: subject.name,
             ciclo: subject.cycle,
+            malla_name: subject.mallaName ?? null,
             generates_syllabus: subject.generatesSyllabus,
             profile_complete: (counts?.filled ?? 0) === (counts?.total ?? 0),
             profile_filled: counts?.filled ?? 0,

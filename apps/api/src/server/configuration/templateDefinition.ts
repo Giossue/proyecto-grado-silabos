@@ -5,7 +5,7 @@ import { normalizeTemplateDocument, type TemplateDefinition } from "./templateRu
 import { defineDocumentStyle, definitionError } from "./templateStyle"
 
 export const SOURCES = [
-  "identification.faculty", "identification.career", "identification.subject", "identification.code",
+  "identification.faculty", "identification.career", "identification.curriculum", "identification.subject", "identification.code",
   "identification.modality", "identification.teacher_campus", "identification.period", "identification.cycle",
   "identification.parallel", "identification.shift", "identification.prerequisites", "identification.teacher_corequisites",
   "identification.organization_unit", "identification.hours_ac", "identification.hours_pae", "identification.hours_aa",

@@ -6,6 +6,7 @@ import { institutionalTemplateProblem } from "./convocationWriteStore"
 import { dataGet } from "./identificationCard"
 import { idsIn, InProgressWork, SYLLABUS_ALIVE } from "./inProgressWork"
 import { DOCUMENT_PATHS, GenerationRejected } from "./inProgressWorkHelpers"
+import { openCurriculum } from "./syllabusSql"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export const FINALIZED_MODE = "convocatoria_finalizada"
@@ -168,7 +169,7 @@ export class FinalizedChangeNotice {
       Prisma.sql`select paralelo.paralelo_id::text as id from paralelos paralelo
         where exists (select 1 from asignaturas asignatura where asignatura.asignatura_id = paralelo.asignatura_id
             and asignatura.carrera_id = (select carrera_id from convocatorias_carreras where convocatoria_carrera_id = ${convocationId}::uuid)
-            and asignatura.asignatura_activa = true and asignatura.genera_silabo_asignatura = true)
+            and asignatura.asignatura_activa = true and asignatura.genera_silabo_asignatura = true and ${openCurriculum("asignatura")})
           and exists (select 1 from asignaciones_paralelo asignacion where asignacion.paralelo_id = paralelo.paralelo_id and asignacion.asignacion_paralelo_activa = true)
           ${subjectIds === null ? Prisma.empty : Prisma.sql`and ${idsIn(Prisma.sql`paralelo.asignatura_id`, subjectIds)}`}
           and paralelo.paralelo_id not in (select silabos.paralelo_id from silabos where silabos.convocatoria_carrera_id = ${convocationId}::uuid and ${SYLLABUS_ALIVE})

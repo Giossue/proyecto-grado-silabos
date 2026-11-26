@@ -2,7 +2,6 @@ import { act, fireEvent, render } from "@testing-library/react"
 import { createRef, type ComponentProps } from "react"
 import { expect, vi } from "vitest"
 import { TemplateVisualBuilder, type TemplateVisualBuilderHandle } from "@/components/domain/configuration/TemplateVisualBuilder"
-import { typeConfirmation } from "@/test/confirmPhrase"
 import { createWrapper } from "@/test/render"
 
 type BuilderProps = Omit<ComponentProps<typeof TemplateVisualBuilder>, "ref">
@@ -50,9 +49,6 @@ export const chooseMenuItem = async (text: string): Promise<void> => {
 export const startEditing = async (handle: { current: TemplateVisualBuilderHandle | null }): Promise<void> => {
   act(() => handle.current!.askEdit())
   await settle()
-  typeConfirmation("template-edit-confirm", "editar plantilla")
-  await settle()
-  await click(byText("button", "Continuar"))
 }
 
 export const mountBuilder = async (props: BuilderProps, { edit = true }: { edit?: boolean } = {}) => {

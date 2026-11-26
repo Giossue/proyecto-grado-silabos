@@ -23,8 +23,19 @@ const CALCULUS_II = "01a1c5bc-7d89-73f1-bdc1-194c0bc420ca"
 const DATA_STRUCTURES = "01a1c5bc-7dca-704c-9163-0c973d90f3fe"
 const REQUIREMENT = "01a1c5bc-7e56-7195-a7f3-26b3ab4e935a"
 const NEW_ID = "01a2aaaa-0000-7000-8000-000000000001"
+const MALLA = "01a1c5bc-9000-7000-8000-000000000001"
+const OLD_MALLA = "01a1c5bc-9000-7000-8000-000000000002"
+const OTHER_MALLA = "01a1c5bc-9000-7000-8000-000000000003"
+const OLD_ALGORITHMS = "01a1c5bc-9100-7000-8000-000000000001"
+const CYCLES: Record<string, { careerId: string; cycleCount: number }> = {
+  [MALLA]: { careerId: CAREER, cycleCount: 4 },
+  [OLD_MALLA]: { careerId: CAREER, cycleCount: 6 },
+  [OTHER_MALLA]: { careerId: OTHER_CAREER, cycleCount: 8 },
+}
 
-type Subject = { id: string; code: string; name: string; cycle: number | null; position: number; parallels: number; syllabi: number }
+type Subject = { id: string; code: string; name: string; cycle: number | null; position: number; parallels: number; syllabi: number; malla?: string }
+
+const inMalla = (subject: Subject, mallaId: string) => (subject.malla ?? MALLA) === mallaId
 type Requirement = { id: string; subjectId: string; requirementId: string }
 
 let world: FakeWorld
@@ -43,10 +54,11 @@ function deps(): CurriculumDeps {
       try {
         const result = await work({
           careerLocked: async () => locked,
-          lockCareer: async (careerId, curriculumId) => (careerId === CAREER && curriculumId === CAREER ? { id: CAREER, cycleCount: 4 } : null),
-          maxCycle: async () => Math.max(...subjects.map((subject) => subject.cycle ?? 0)),
-          updateCycleCount: async (careerId, count) => void log.push(`cycles:${careerId}:${count}`),
-          lockSubjects: async (_careerId, ids) => subjects.filter((subject) => ids.includes(subject.id)).map((subject) => ({ id: subject.id, cycle: subject.cycle })),
+          lockMalla: async (careerId, mallaId) => (CYCLES[mallaId]?.careerId === careerId ? { id: mallaId, cycleCount: CYCLES[mallaId].cycleCount } : null),
+          maxCycle: async (mallaId) => Math.max(0, ...subjects.filter((subject) => inMalla(subject, mallaId)).map((subject) => subject.cycle ?? 0)),
+          updateCycleCount: async (mallaId, count) => void log.push(`cycles:${mallaId}:${count}`),
+          lockSubjects: async (mallaId, ids) =>
+            subjects.filter((subject) => ids.includes(subject.id) && inMalla(subject, mallaId)).map((subject) => ({ id: subject.id, cycle: subject.cycle })),
           prerequisites: async () => requirements.map((item) => ({ subjectId: item.subjectId, requirementId: item.requirementId })),
           findRequirement: async (subjectId, requirementId) => {
             const found = requirements.find((item) => item.subjectId === subjectId && item.requirementId === requirementId)
@@ -61,8 +73,8 @@ function deps(): CurriculumDeps {
             return found ? { id: found.id } : null
           },
           deleteRequirement: async (id) => void log.push(`delete-requirement:${id}`),
-          lockSubject: async (id) => {
-            const found = subjects.find((subject) => subject.id === id)
+          lockSubject: async (id, mallaId) => {
+            const found = subjects.find((subject) => subject.id === id && inMalla(subject, mallaId))
             return found ? { id: found.id, code: found.code, name: found.name, cycle: found.cycle, position: found.position } : null
           },
           subjectUsage: async (id) => {
@@ -70,9 +82,9 @@ function deps(): CurriculumDeps {
             return { parallels: found.parallels, syllabi: found.syllabi }
           },
           deleteSubject: async (id) => void log.push(`delete-subject:${id}`),
-          lockCycleSubjects: async (_careerId, cycle) =>
+          lockCycleSubjects: async (mallaId, cycle) =>
             subjects
-              .filter((subject) => subject.cycle === cycle)
+              .filter((subject) => subject.cycle === cycle && inMalla(subject, mallaId))
               .sort((a, b) => a.position - b.position || a.name.localeCompare(b.name))
               .map((subject) => ({ id: subject.id, position: subject.position })),
           setPosition: async (id, position) => void log.push(`position:${id}:${position}`),
@@ -104,12 +116,12 @@ async function send(method: string, path: string, body: unknown, handler: (reque
 }
 
 const base = (curriculum: string) => `/api/v1/coordination/academic/curriculum/${curriculum}`
-const configure = (body: unknown, curriculum = CAREER) =>
+const configure = (body: unknown, curriculum = MALLA) =>
   send("PATCH", `${base(curriculum)}/configuration`, body, (request) => updateCurriculumConfiguration(request, curriculum, deps()))
-const relate = (body: unknown) => send("POST", `${base(CAREER)}/requirements`, body, (request) => createSubjectRequirement(request, CAREER, deps()))
-const unrelate = (id: string, body: unknown = {}) => send("DELETE", `${base(CAREER)}/requirements/${id}`, body, (request) => deleteSubjectRequirement(request, CAREER, id, deps()))
-const removeSubject = (id: string) => send("DELETE", `${base(CAREER)}/subjects/${id}`, {}, (request) => deleteCurriculumSubject(request, CAREER, id, deps()))
-const reposition = (body: unknown) => send("PATCH", `${base(CAREER)}/subject-layout`, body, (request) => updateSubjectLayout(request, CAREER, deps()))
+const relate = (body: unknown, curriculum = MALLA) => send("POST", `${base(curriculum)}/requirements`, body, (request) => createSubjectRequirement(request, curriculum, deps()))
+const unrelate = (id: string, body: unknown = {}) => send("DELETE", `${base(MALLA)}/requirements/${id}`, body, (request) => deleteSubjectRequirement(request, MALLA, id, deps()))
+const removeSubject = (id: string) => send("DELETE", `${base(MALLA)}/subjects/${id}`, {}, (request) => deleteCurriculumSubject(request, MALLA, id, deps()))
+const reposition = (body: unknown) => send("PATCH", `${base(MALLA)}/subject-layout`, body, (request) => updateSubjectLayout(request, MALLA, deps()))
 
 beforeEach(() => {
   world = {
@@ -126,6 +138,7 @@ beforeEach(() => {
     { id: OOP, code: "SW-B2-006", name: "Programación", cycle: 2, position: 0, parallels: 1, syllabi: 0 },
     { id: CALCULUS_II, code: "SW-B2-009", name: "Cálculo II", cycle: 2, position: 1, parallels: 0, syllabi: 0 },
     { id: DATA_STRUCTURES, code: "SW-B3-011", name: "Estructura de Datos", cycle: 3, position: 0, parallels: 0, syllabi: 0 },
+    { id: OLD_ALGORITHMS, code: "SW-B1-001", name: "Algoritmos (malla anterior)", cycle: 5, position: 0, parallels: 0, syllabi: 0, malla: OLD_MALLA },
   ]
   requirements = [
     { id: REQUIREMENT, subjectId: OOP, requirementId: ALGORITHMS },
@@ -137,7 +150,21 @@ describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/configurat
   it("changes the cycle count and keeps the syllabi in sync", async () => {
     const response = await configure({ cycle_count: "10" })
     expect(response.text).toBe('{"message":"Configuración de la malla actualizada."}')
-    expect(log).toEqual(["begin", `guard:false:${CAREER}`, `cycles:${CAREER}:10`, `sync:false:${CAREER}`, "commit"])
+    expect(log).toEqual(["begin", `guard:false:${CAREER}`, `cycles:${MALLA}:10`, `sync:false:${CAREER}`, "commit"])
+  })
+
+  it("configures the cycles of the addressed malla, checking only that malla's subjects", async () => {
+    expect((await configure({ cycle_count: 4 }, OLD_MALLA)).json?.errors).toEqual({ cycle_count: ["Existen materias en el ciclo 5. Muévalas antes de reducir la malla."] })
+    log = []
+    expect((await configure({ cycle_count: 5 }, OLD_MALLA)).status).toBe(200)
+    expect(log).toContain(`cycles:${OLD_MALLA}:5`)
+  })
+
+  it("answers Laravel's model 404 for a malla of another career and for the career id itself", async () => {
+    for (const curriculum of [OTHER_MALLA, CAREER]) {
+      expect(await configure({ cycle_count: 5 }, curriculum)).toMatchObject({ status: 404 })
+    }
+    expect(log.filter((line) => line.startsWith("cycles"))).toEqual([])
   })
 
   it("refuses fewer cycles than the last used one and an invalid count", async () => {
@@ -168,6 +195,13 @@ describe("POST /api/v1/coordination/academic/curriculum/{curriculum}/requirement
   it("adds a prerequisite from an earlier cycle and saves it without a requirement type", async () => {
     expect((await relate({ subject_id: CALCULUS_II, requirement_id: CALCULUS })).json).toEqual({ message: "Prerrequisito agregado." })
     expect(log.filter((line) => line.startsWith("requirement") || line.startsWith("sync"))).toEqual([`requirement:${CALCULUS_II}:${CALCULUS}`, `sync:false:${CAREER}`])
+  })
+
+  it("rejects a requirement taken from another malla of the career", async () => {
+    const across = await relate({ subject_id: DATA_STRUCTURES, requirement_id: OLD_ALGORITHMS })
+    expect(across.status).toBe(422)
+    expect(across.json?.errors).toEqual({ requirement_id: ["Ambas materias deben pertenecer a la malla actual."] })
+    expect(log.some((line) => line.startsWith("requirement"))).toBe(false)
   })
 
   it("rejects a requirement of the same cycle instead of saving a corequisite", async () => {
@@ -216,8 +250,8 @@ describe("DELETE /api/v1/coordination/academic/curriculum/{curriculum}/requireme
     expect(await unrelate("01a2cccc-0000-7000-8000-000000000001")).toMatchObject({ status: 404, text: '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\SubjectRequirement] 01a2cccc-0000-7000-8000-000000000001"}' })
     finalized = true
     const confirmed = await deleteSubjectRequirement(
-      new Request(apiRequest(`${base(CAREER)}/requirements/${REQUIREMENT}?confirm_purge=1`, { cookie, method: "DELETE", headers: { "x-csrf-token": golden.csrfToken } })),
-      CAREER,
+      new Request(apiRequest(`${base(MALLA)}/requirements/${REQUIREMENT}?confirm_purge=1`, { cookie, method: "DELETE", headers: { "x-csrf-token": golden.csrfToken } })),
+      MALLA,
       REQUIREMENT,
       deps(),
     )
@@ -267,36 +301,36 @@ describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/subject-la
 })
 
 describe("curriculum edits through /api/v1/admin/careers/{career}/academic/curriculum/{curriculum}", () => {
-  const adminBase = (careerId: string) => `/api/v1/admin/careers/${careerId}/academic/curriculum/${careerId}`
+  const adminBase = (careerId: string, mallaId = careerId === CAREER ? MALLA : OTHER_MALLA) => `/api/v1/admin/careers/${careerId}/academic/curriculum/${mallaId}`
 
   it("lets the administrator configure, relate, reorder and delete in the requested career", async () => {
     world.assignments = [makeAssignment({ role: "administrador", careerId: null, careerLabel: null })]
-    expect((await send("PATCH", `${adminBase(CAREER)}/configuration`, { cycle_count: "10" }, (request) => updateCurriculumConfiguration(request, CAREER, deps(), CAREER))).status).toBe(200)
-    expect(log).toContain(`cycles:${CAREER}:10`)
+    expect((await send("PATCH", `${adminBase(CAREER)}/configuration`, { cycle_count: "10" }, (request) => updateCurriculumConfiguration(request, MALLA, deps(), CAREER))).status).toBe(200)
+    expect(log).toContain(`cycles:${MALLA}:10`)
     log = []
-    expect((await send("POST", `${adminBase(CAREER)}/requirements`, { subject_id: CALCULUS_II, requirement_id: CALCULUS }, (request) => createSubjectRequirement(request, CAREER, deps(), CAREER))).status).toBe(200)
+    expect((await send("POST", `${adminBase(CAREER)}/requirements`, { subject_id: CALCULUS_II, requirement_id: CALCULUS }, (request) => createSubjectRequirement(request, MALLA, deps(), CAREER))).status).toBe(200)
     expect(log).toContain(`requirement:${CALCULUS_II}:${CALCULUS}`)
     log = []
-    expect((await send("DELETE", `${adminBase(CAREER)}/requirements/${REQUIREMENT}`, {}, (request) => deleteSubjectRequirement(request, CAREER, REQUIREMENT, deps(), CAREER))).status).toBe(200)
+    expect((await send("DELETE", `${adminBase(CAREER)}/requirements/${REQUIREMENT}`, {}, (request) => deleteSubjectRequirement(request, MALLA, REQUIREMENT, deps(), CAREER))).status).toBe(200)
     expect(log).toContain(`delete-requirement:${REQUIREMENT}`)
     log = []
-    expect((await send("PATCH", `${adminBase(CAREER)}/subject-layout`, { subject_id: CALCULUS, cycle: 1, position: 0 }, (request) => updateSubjectLayout(request, CAREER, deps(), CAREER))).status).toBe(200)
+    expect((await send("PATCH", `${adminBase(CAREER)}/subject-layout`, { subject_id: CALCULUS, cycle: 1, position: 0 }, (request) => updateSubjectLayout(request, MALLA, deps(), CAREER))).status).toBe(200)
     log = []
-    expect((await send("DELETE", `${adminBase(CAREER)}/subjects/${CALCULUS}`, {}, (request) => deleteCurriculumSubject(request, CAREER, CALCULUS, deps(), CAREER))).status).toBe(200)
+    expect((await send("DELETE", `${adminBase(CAREER)}/subjects/${CALCULUS}`, {}, (request) => deleteCurriculumSubject(request, MALLA, CALCULUS, deps(), CAREER))).status).toBe(200)
     expect(log).toContain(`delete-subject:${CALCULUS}`)
   })
 
   it("answers 404 to the administrator for an inactive career", async () => {
     world.assignments = [makeAssignment({ role: "administrador", careerId: null, careerLabel: null })]
-    const response = await send("PATCH", `${adminBase(OTHER_CAREER)}/configuration`, { cycle_count: "10" }, (request) => updateCurriculumConfiguration(request, OTHER_CAREER, deps(), OTHER_CAREER))
+    const response = await send("PATCH", `${adminBase(OTHER_CAREER)}/configuration`, { cycle_count: "10" }, (request) => updateCurriculumConfiguration(request, OTHER_MALLA, deps(), OTHER_CAREER))
     expect(response.status).toBe(404)
     expect(log).toEqual([])
   })
 
   it("refuses a coordinator who sends another career and writes nothing", async () => {
     const attempts = [
-      await send("PATCH", `${adminBase(OTHER_CAREER)}/configuration`, { cycle_count: "10" }, (request) => updateCurriculumConfiguration(request, OTHER_CAREER, deps(), OTHER_CAREER)),
-      await send("DELETE", `${adminBase(OTHER_CAREER)}/subjects/${CALCULUS}`, {}, (request) => deleteCurriculumSubject(request, OTHER_CAREER, CALCULUS, deps(), OTHER_CAREER)),
+      await send("PATCH", `${adminBase(OTHER_CAREER)}/configuration`, { cycle_count: "10" }, (request) => updateCurriculumConfiguration(request, OTHER_MALLA, deps(), OTHER_CAREER)),
+      await send("DELETE", `${adminBase(OTHER_CAREER)}/subjects/${CALCULUS}`, {}, (request) => deleteCurriculumSubject(request, OTHER_MALLA, CALCULUS, deps(), OTHER_CAREER)),
     ]
     expect(attempts.map((attempt) => `${attempt.status} ${attempt.text}`)).toEqual([`403 ${FORBIDDEN}`, `403 ${FORBIDDEN}`])
     expect(log).toEqual([])

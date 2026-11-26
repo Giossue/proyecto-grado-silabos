@@ -19,6 +19,7 @@ import { deleteCareerRecord, deleteGovernanceRecord, deleteParallel, type Deleti
 import { academicGovernance } from "../../server/academic/governance"
 import { createGovernanceRecord, postGovernanceRecord, setGovernanceStatus, updateGovernanceRecord } from "../../server/academic/governanceWrites"
 import { scheduledSubjects } from "../../server/academic/scheduledSubjects"
+import { createMalla, listMallas, updateMalla } from "../../server/academic/mallas"
 import { curriculumBuilder, teacherAssignments } from "../../server/academic/structure"
 import { careerImportTemplate, curriculumImportTemplate, importCareers, importCurriculum } from "../../server/academic/structureImports"
 import { coordinationSupportDocuments } from "../../server/academic/supportDocuments"
@@ -50,6 +51,7 @@ const TEACHER = golden.roleId
 const CAREER = "c0000000-0000-4000-8000-000000000001"
 const FACULTY = "f0000000-0000-4000-8000-000000000001"
 const SUBJECT = "50000000-0000-4000-8000-000000000001"
+const MALLA = "a0000000-0000-4000-8000-000000000001"
 const PARALLEL = "90000000-0000-4000-8000-000000000001"
 const MISSING = "90000000-0000-4000-8000-0000000000ff"
 const HEADERS = ["content-type", "content-disposition", "cache-control", "allow", "x-ratelimit-limit", "x-ratelimit-remaining", "retry-after", "x-ratelimit-reset", "set-cookie"]
@@ -127,6 +129,12 @@ const structureRepository = {
   teacherUsers: async () => [{ id: golden.userId, name: "Ana", email: "ana@ueb.edu.ec" }],
 }
 
+const mallaRecord = { id: MALLA, careerId: CAREER, name: "Malla SW", resolution: null, cycleCount: 8, state: "vigente", subjectCount: 1 }
+const mallaRepository = {
+  mallas: async (careerId: string) => (careerId === CAREER ? [mallaRecord] : []),
+  malla: async (careerId: string, id: string) => (careerId === CAREER && id === MALLA ? mallaRecord : null),
+}
+
 const fakes = {
   governance: () => ({
     bridge,
@@ -162,11 +170,12 @@ const fakes = {
       facultiesForImport: async () => [{ id: FACULTY, name: "Ciencias" }],
       careerCodes: async () => ["SW"],
       careerActive,
-      career: async (id: string) => (id === CAREER ? { id, cycleCount: 8 } : null),
-      careerSubjects: async () => [],
+      malla: async (careerId: string, id: string) => (careerId === CAREER && id === MALLA ? { id, cycleCount: 8 } : null),
+      mallaSubjects: async () => [],
     },
   }),
-  structure: () => ({ bridge, academic: structureRepository }),
+  structure: () => ({ bridge, academic: structureRepository, mallas: mallaRepository }),
+  mallas: () => ({ bridge, careerActive, mallas: mallaRepository, mallaNameTaken: async () => false, transaction: rejectTransaction }),
   scheduled: () => ({
     bridge,
     academic: structureRepository,
@@ -183,7 +192,8 @@ const fakes = {
   careerWrites: () => ({
     bridge,
     careerActive,
-    subjectInCareer: async () => false,
+    mallaInCareer: async () => false,
+    subjectMalla: async () => null,
     activeSubjectInCareer: async () => false,
     subjectCodeTaken: async () => false,
     eligibleUserExists: async () => false,
@@ -238,6 +248,12 @@ const ORACLE: Record<string, Oracle> = {
   "api/v1/admin/academic/careers/import-template:PATCH": (web) => updateGovernanceRecord(web, "careers", "import-template", academic.governanceWrites()),
   "api/v1/admin/academic/careers/import-template:DELETE": (web) => deleteGovernanceRecord(web, "careers", "import-template", academic.deletions()),
   "api/v1/admin/library-catalog/libraries:GET": (web) => catalogLibraries(web, academic.catalog()),
+  "api/v1/coordination/academic/mallas:GET": (web) => listMallas(web, academic.mallas()),
+  "api/v1/coordination/academic/mallas:POST": (web) => createMalla(web, academic.mallas()),
+  "api/v1/coordination/academic/mallas/[malla]:PATCH": (web, params) => updateMalla(web, p(params, "malla"), academic.mallas()),
+  "api/v1/admin/careers/[career]/academic/mallas:GET": (web, params) => listMallas(web, academic.mallas(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/mallas:POST": (web, params) => createMalla(web, academic.mallas(), p(params, "career")),
+  "api/v1/admin/careers/[career]/academic/mallas/[malla]:PATCH": (web, params) => updateMalla(web, p(params, "malla"), academic.mallas(), p(params, "career")),
   "api/v1/coordination/academic/curriculum/[curriculum]:GET": (web, params) => curriculumBuilder(web, p(params, "curriculum"), academic.structure()),
   "api/v1/coordination/academic/curriculum/[curriculum]/configuration:PATCH": (web, params) => updateCurriculumConfiguration(web, p(params, "curriculum"), academic.curriculum()),
   "api/v1/coordination/academic/curriculum/[curriculum]/requirements:POST": (web, params) => createSubjectRequirement(web, p(params, "curriculum"), academic.curriculum()),
@@ -519,22 +535,23 @@ describe("academic structure served by Nest answers exactly like the route handl
 
   it("shows the coordination screens with the same data", async () => {
     const answers = await expectSame(
-      { method: "GET", path: `/api/v1/coordination/academic/curriculum/${CAREER}` },
+      { method: "GET", path: `/api/v1/coordination/academic/curriculum/${MALLA}` },
       { method: "GET", path: `/api/v1/coordination/academic/curriculum/${MISSING}` },
+      { method: "GET", path: "/api/v1/coordination/academic/mallas" },
       { method: "GET", path: "/api/v1/coordination/academic/teacher-assignments" },
       { method: "GET", path: "/api/v1/coordination/academic/scheduled-subjects" },
       { method: "GET", path: "/api/v1/coordination/support-documents" },
       { method: "GET", path: "/api/v1/admin/academic" },
       { method: "GET", path: "/api/v1/admin/library-catalog/libraries", headers: { accept: "text/html" } },
     )
-    expect(answers.map((answer) => answer.status)).toEqual([200, 404, 200, 200, 200, 403, 403])
+    expect(answers.map((answer) => answer.status)).toEqual([200, 404, 200, 200, 200, 200, 403, 403])
   })
 
   it("shows any career's screens to the administrator through the career routes and keeps coordinators out of them", async () => {
     const OTHER = "c0000000-0000-4000-8000-000000000002"
     activeRole = ADMIN
     const admin = await expectSame(
-      { method: "GET", path: `/api/v1/admin/careers/${CAREER}/academic/curriculum/${CAREER}` },
+      { method: "GET", path: `/api/v1/admin/careers/${CAREER}/academic/curriculum/${MALLA}` },
       { method: "GET", path: `/api/v1/admin/careers/${CAREER}/academic/teacher-assignments` },
       { method: "GET", path: `/api/v1/admin/careers/${CAREER}/academic/scheduled-subjects` },
       { method: "GET", path: "/api/v1/coordination/academic/scheduled-subjects" },
@@ -561,6 +578,15 @@ describe("academic structure served by Nest answers exactly like the route handl
     )
     expect(answers.map((answer) => answer.status)).toEqual([200, 404, 404, 405, 404, 404])
     expect(answers[0].writes).toEqual([`deleteParallelSyllabi:${PARALLEL}`, `deleteParallel:${PARALLEL}`])
+  })
+
+  it("validates mallas before writing and answers 404 for a malla of another career the same way", async () => {
+    const answers = await expectSame(
+      { method: "POST", path: "/api/v1/coordination/academic/mallas", body: {} },
+      { method: "PATCH", path: `/api/v1/coordination/academic/mallas/${MALLA}`, body: { state: "otro" } },
+      { method: "PATCH", path: `/api/v1/coordination/academic/mallas/${MISSING}`, body: {} },
+    )
+    expect(answers.map((answer) => answer.status)).toEqual([422, 422, 404])
   })
 
   it("validates career records, parallels and teachers before writing the same way", async () => {

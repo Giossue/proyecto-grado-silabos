@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 import { DEFINITION_KEYS, defineTemplate, SOURCES } from "./templateDefinition"
 import { officialDefinition, officialSections } from "./officialTemplate"
 import { TemplateValidationError } from "./templateRuntime"
+import { resolveVariables } from "./templatePresentation"
+import { buildIdentification } from "../syllabus/identificationCard"
 
 const sections = [
   { key: "identificacion", fields: [{ key: "asignatura", quien_llena: "carrera", content: { type: "doc", content: [{ type: "paragraph" }] } }] },
@@ -50,5 +52,19 @@ describe("teacher fields in the template definition", () => {
     expect(variables.formacion_docente?.source).toBe("identification.formation")
     const legacy = { variables: { nombre_campus: { label: "Campus", source: "identification.campus" } } }
     expect(errorsOf(() => defineTemplate(legacy, sections))).toEqual({ definition: ["variables.nombre_campus.source: use una de las fuentes del sistema (ver el manual técnico)."] })
+  })
+})
+
+describe("malla of the syllabus as a template variable", () => {
+  it("lets a template show the malla of the subject, empty for syllabi stored before mallas existed", () => {
+    const definition = defineTemplate({ variables: { nombre_malla: { label: "Malla", source: "identification.curriculum", sample: "Malla 2022" } } }, sections)
+    const current = buildIdentification({ curriculum: { name: "Malla SW-8" } }, [], [], [])
+    const old = buildIdentification({ curriculum: { cycle_count: 8 } }, [], [], [])
+    expect(resolveVariables(definition, { identification: current }).nombre_malla).toBe("Malla SW-8")
+    expect(resolveVariables(definition, { identification: old }).nombre_malla).toBe("")
+  })
+
+  it("keeps the layout of the official template: the malla is not one of its variables", () => {
+    expect(Object.values(officialDefinition().variables).map((variable) => variable.source)).not.toContain("identification.curriculum")
   })
 })

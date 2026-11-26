@@ -31,3 +31,4 @@ export const SUBJECTS_TABLE: TableColumns = { table: "asignaturas", columns: Pri
 export const FACULTIES_TABLE: TableColumns = { table: "facultades", columns: Prisma.FacultadesScalarFieldEnum, json: ["bibliotecas_koha_facultad"] }
 export const CAREERS_TABLE: TableColumns = { table: "carreras", columns: Prisma.CarrerasScalarFieldEnum }
 export const PERIODS_TABLE: TableColumns = { table: "periodos_academicos", columns: Prisma.Periodos_academicosScalarFieldEnum }
+export const MALLAS_TABLE: TableColumns = { table: "mallas", columns: Prisma.MallasScalarFieldEnum }

@@ -6,48 +6,17 @@ import type { PreviewSection } from '@/components/domain/syllabus/previewSection
 import type { DocumentNode } from '@silabos/shared/lib/templateDocument';
 import { api, ApiError } from "@/api/client";
 import { careerAcademicPath } from "@/api/careerScope";
-import { FINALIZED_NOTICE, requestPurgeConfirmation } from "@/composables/usePurgeConfirmation";
-
-export const PURGE_CANCELLED_MESSAGE = "Cambio cancelado. No se guardó nada";
-
-let noticeBatch: { answer: boolean | null } | null = null;
-
-export async function askFinalizedNoticeOnce<T>(run: () => Promise<T>): Promise<T> {
-  noticeBatch = { answer: null };
-  try {
-    return await run();
-  } finally {
-    noticeBatch = null;
-  }
-}
+import { announcePurge, purgeMessageOf } from "@/lib/purgeNotice";
+import type { Malla, MallaState } from "@/types/academic";
 
 export function withPurgeConfirmation<T>(
   send: (confirmPurge: boolean) => Promise<T>,
 ): Promise<T> {
   return send(false).catch((reason: unknown) => {
-    const purgeMessage =
-      reason instanceof ApiError ? reason.errors.purge_required?.[0] : undefined;
-    if (!(reason instanceof ApiError) || !purgeMessage) throw reason;
-    const purgeMode = reason.errors.purge_mode?.[0];
-    const batch = purgeMode === FINALIZED_NOTICE ? noticeBatch : null;
-    if (batch?.answer === true) return send(true);
-    if (batch?.answer === false) throw new ApiError(PURGE_CANCELLED_MESSAGE, 409);
-
-    return new Promise<T>((resolve, reject) => {
-      requestPurgeConfirmation(
-        purgeMessage,
-        Number(reason.errors.purge_count?.[0] ?? 0),
-        () => {
-          if (batch) batch.answer = true;
-          return send(true).then(resolve, reject);
-        },
-        () => {
-          if (batch) batch.answer = false;
-          reject(new ApiError(PURGE_CANCELLED_MESSAGE, 409));
-        },
-        purgeMode,
-      );
-    });
+    const purgeMessage = reason instanceof ApiError ? purgeMessageOf(reason.errors) : undefined;
+    if (!purgeMessage) throw reason;
+    announcePurge(purgeMessage);
+    return send(true);
   });
 }
 
@@ -60,6 +29,8 @@ export type Curriculum = {
     name: string;
     modality: { value: string; label: string } | null;
   };
+  malla: { id: string; name: string; state: MallaState };
+  /** `id` is the malla id: every curriculum route addresses one malla of the career. */
   curriculum: {
     id: string;
     cycle_count: number;
@@ -117,6 +88,8 @@ export type ScheduledSubjects = {
     subject_code: string;
     subject_name: string;
     subject_cycle: number | null;
+    /** Malla of the subject (subjects of every malla that is not closed are scheduled). */
+    malla_name?: string | null;
     profile_complete?: boolean;
     generates_syllabus: boolean;
     modality_name: string | null;
@@ -130,6 +103,7 @@ export type ScheduledSubjects = {
       codigo_asignatura: string;
       nombre: string;
       ciclo: number;
+      malla_name?: string | null;
       generates_syllabus: boolean;
       profile_complete?: boolean;
       profile_filled?: number;
@@ -190,8 +164,20 @@ export type TeacherAssignments = {
   };
 };
 
-export const getCurriculum = (careerId: string, scope: string | null = null) =>
-  api<Curriculum>(careerAcademicPath(`/curriculum/${careerId}`, scope));
+export const getCurriculum = (mallaId: string, scope: string | null = null) =>
+  api<Curriculum>(careerAcademicPath(`/curriculum/${mallaId}`, scope));
+
+export type MallaPayload = { name: string; resolution: string | null; cycle_count: number; state: MallaState };
+
+/** Mallas of the career, vigente first, then en transición and cerradas. */
+export const getMallas = (scope: string | null = null) =>
+  api<{ mallas: Malla[] }>(careerAcademicPath("/mallas", scope)).then((result) => result.mallas);
+
+export const createMalla = (payload: MallaPayload) =>
+  api<{ message: string; id: string }>(careerAcademicPath("/mallas"), { method: "POST", body: JSON.stringify(payload) });
+
+export const updateMalla = (mallaId: string, payload: Partial<Omit<MallaPayload, "cycle_count">>) =>
+  api<{ message: string }>(careerAcademicPath(`/mallas/${mallaId}`), { method: "PATCH", body: JSON.stringify(payload) });
 
 export const getScheduledSubjects = (scope: string | null = null) =>
   api<ScheduledSubjects>(careerAcademicPath("/scheduled-subjects", scope));
@@ -226,12 +212,12 @@ export const deleteCareerRecord = (entity: string, id: string) =>
     method: "DELETE",
   });
 export const updateCurriculumConfiguration = (
-  careerId: string,
+  curriculumId: string,
   payload: { cycle_count: number },
 ) =>
   withPurgeConfirmation((confirm) =>
     api<{ message: string }>(
-      careerAcademicPath(`/curriculum/${careerId}/configuration`),
+      careerAcademicPath(`/curriculum/${curriculumId}/configuration`),
       { method: "PATCH", body: jsonBody(payload, confirm) },
     ),
   );

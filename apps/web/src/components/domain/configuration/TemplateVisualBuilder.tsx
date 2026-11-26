@@ -1,7 +1,7 @@
 "use client"
 
 import type { Editor } from "@tiptap/core"
-import { Braces, CircleAlert, Eye, EyeOff, GripVertical, ImageUp, Pencil, Plus, Ruler, Save, Settings2, Trash2 } from "lucide-react"
+import { Braces, CircleAlert, Eye, EyeOff, GripVertical, ImageUp, Plus, Ruler, Save, Settings2, Trash2 } from "lucide-react"
 import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type Ref } from "react"
 import { ApiError } from "@/api/client"
 import { checkTemplateDraft, getTemplateDraftImpact, importTemplateJson, previewTemplateDraft, uploadTemplateLogo } from "@/api/template"
@@ -24,7 +24,6 @@ import { draftProblemsByTarget, locateDraftProblems, problemCount, type DraftPro
 import { paginateSheet } from "@/components/domain/configuration/templatePagination"
 import { apiMessage, uniqueKey } from "@/components/domain/configuration/templateStructure"
 import { useStructureHistory } from "@/components/domain/configuration/useStructureHistory"
-import { ConfirmPhrase } from "@/components/domain/ConfirmPhrase"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { MenuTooltip } from "@/components/domain/MenuTooltip"
 import { UnsavedChangesDialog } from "@/components/domain/UnsavedChangesDialog"
@@ -37,7 +36,6 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Spinner } from "@/components/ui/spinner"
 import { setTemplateRuntime, templateRuntime } from "@/lib/blocks/runtime"
 import type { BlockDefinition, DocumentStyle, TemplateDefinitionPayload } from "@silabos/shared/lib/blocks/types"
-import { matchesPhrase } from "@/lib/confirmPhrase"
 import { useShownWhileClosing } from "@/lib/dialogExit"
 import { layoutOf, layoutStyle, paperOf, sheetPixels, type DocumentLayout } from "@/lib/documentLayout"
 import { limitLabel } from "@/lib/fieldLimits"
@@ -86,7 +84,6 @@ type TemplateVisualBuilderProps = {
   ref?: Ref<TemplateVisualBuilderHandle>
 }
 
-const EDIT_PHRASE = "editar plantilla"
 const NO_MARKS: Marks = { sections: [], fields: [] }
 const NO_TABLES: Tables = {}
 const SELECTION_KEEPERS = '[data-field], [data-section-heading], [data-insert-point], [data-template-ribbon], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-slot="popover-content"]'
@@ -134,8 +131,6 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const locked = Boolean(processLock)
   const [preview, setPreview] = useState(true)
   const [leaveOpen, setLeaveOpen] = useState(false)
-  const [editWarningOpen, setEditWarningOpen] = useState(false)
-  const [editTyped, setEditTyped] = useState("")
   const [selectedField, setSelectedField] = useState<string | null>(null)
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
   const [activeEditor, setActiveEditor] = useState<Editor | null>(null)
@@ -366,7 +361,6 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const snapshot = (): TemplateAssistantDraft => ({ sections: draftSections(), version: draftVersion })
 
   const startEditing = (): void => {
-    setEditWarningOpen(false)
     const sections = awaitingReload ? draft : clone(template.sections)
     const title = awaitingReload ? titleDraft : template.titleBlock.text
     const layout = awaitingReload ? layoutDraft : layoutOf(template.layout)
@@ -406,8 +400,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   }
   const askEdit = (): void => {
     if (locked) return
-    setEditTyped("")
-    setEditWarningOpen(true)
+    startEditing()
   }
   const applyProposal = (proposal: TemplateAssistantProposal): void => {
     record()
@@ -1212,26 +1205,6 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
       />
       <TemplateJsonDialog open={jsonOpen} onOpenChange={setJsonOpen} templateId={template.id} locked={locked} onImported={reloadAfterJson} />
 
-      <Dialog open={editWarningOpen} onOpenChange={setEditWarningOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar la plantilla</DialogTitle>
-            <DialogDescription>Si guarda cambios:</DialogDescription>
-            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
-              <li>Al reanudar un periodo académico en pausa, sus sílabos vuelven a borrador y conservan lo escrito en los campos que siguen igual</li>
-              <li>En el próximo período, los docentes no conservan lo que escribieron</li>
-            </ul>
-          </DialogHeader>
-          <ConfirmPhrase id="template-edit-confirm" phrase={EDIT_PHRASE} value={editTyped} onValueChange={setEditTyped} />
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setEditWarningOpen(false)}>Cancelar</Button>
-            <Button type="button" disabled={!matchesPhrase(editTyped, EDIT_PHRASE)} onClick={startEditing}>
-              <Pencil data-icon="inline-start" aria-hidden="true" />
-              Continuar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={removal !== null} onOpenChange={(value) => { if (!value) setRemoval(null) }}>
         <DialogContent>

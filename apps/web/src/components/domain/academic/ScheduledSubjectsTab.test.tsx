@@ -58,6 +58,40 @@ const choose = async (actor: ReturnType<typeof userEvent.setup>, label: string, 
 }
 
 describe("ScheduledSubjectsTab", () => {
+  const withMalla = (item: Row, malla: string) => ({ ...item, malla_name: malla })
+  const twoMallas: ScheduledSubjects = {
+    ...data,
+    scheduledSubjects: [
+      withMalla(data.scheduledSubjects[0], "Malla SW-9"),
+      withMalla(data.scheduledSubjects[1], "Malla SW-9"),
+      withMalla(data.scheduledSubjects[2], "Malla SW-8"),
+    ],
+  }
+
+  it("muestra la malla de cada materia cuando la carrera tiene dos mallas abiertas", () => {
+    mountTab(twoMallas)
+
+    expect(rowOf("Cálculo").querySelectorAll("td")[1]!.textContent).toBe("CálculoMalla SW-8")
+    expect(rowOf("Bases de Datos").querySelectorAll("td")[1]!.textContent).toBe("Bases de DatosMalla SW-9")
+  })
+
+  it("filtra por malla cuando hay más de una", async () => {
+    const actor = userEvent.setup()
+    mountTab(twoMallas)
+
+    expect(await optionsOf(actor, "Malla")).toEqual(["Todas las mallas", "Malla SW-8", "Malla SW-9"])
+    await choose(actor, "Malla", "Malla SW-8")
+    expect(screen.getAllByRole("row").slice(1).map((item) => item.querySelectorAll("td")[1]!.textContent)).toEqual(["CálculoMalla SW-8"])
+  })
+
+  it("con una sola malla no muestra la malla ni su filtro", () => {
+    mountTab({ ...data, scheduledSubjects: data.scheduledSubjects.map((item) => withMalla(item, "Malla SW-9")) })
+
+    expect(document.body.textContent).not.toContain("Malla SW-9")
+    expect(screen.queryByRole("combobox", { name: "Malla" })).toBeNull()
+    expect(rowOf("Cálculo").querySelectorAll("td")[1]!.textContent).toBe("Cálculo")
+  })
+
   it("marca las materias que no generan sílabo", () => {
     const withoutSyllabus = { ...row("4", "Prácticas preprofesionales", "SW-801", 8, []), generates_syllabus: false }
     mountTab({ ...data, scheduledSubjects: [...data.scheduledSubjects, withoutSyllabus] })

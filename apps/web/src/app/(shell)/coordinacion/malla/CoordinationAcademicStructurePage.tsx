@@ -9,6 +9,8 @@ import { type Curriculum } from "@/api/career-academics"
 import { AdminCareerBackLink, AdminCareerTabs } from "@/components/domain/academic/AdminCareerNavigation"
 import { CurriculumActions } from "@/components/domain/academic/CurriculumActions"
 import { CurriculumConfigurationDialog } from "@/components/domain/academic/curriculum/CurriculumConfigurationDialog"
+import { MallaDialog } from "@/components/domain/academic/curriculum/MallaDialog"
+import { MallaToolbar } from "@/components/domain/academic/curriculum/MallaToolbar"
 import { ScheduledSubjectsTab } from "@/components/domain/academic/ScheduledSubjectsTab"
 import { TeacherAssignmentsPanel } from "@/components/domain/academic/TeacherAssignmentsPanel"
 import { ManagedUserDialog } from "@/components/domain/identity/ManagedUserDialog"
@@ -19,6 +21,7 @@ import { PageFrame } from "@/components/domain/PageFrame"
 import { ProcessLockAlert } from "@/components/domain/ProcessLockAlert"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Spinner } from "@/components/ui/spinner"
 import { paths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
@@ -29,7 +32,7 @@ import { errorMessage, failedQuery } from "@/lib/queryClient"
 const CurriculumCanvas = dynamic(() => import("@/components/domain/academic/curriculum/CurriculumCanvas").then((module) => module.CurriculumCanvas), {
   loading: () => <LoadingSkeleton variant="academic-structure" mode="curriculum" />,
 })
-import { coordinatorCareerQuery, curriculumQuery, scheduledSubjectsQuery, teacherAssignmentsQuery } from "@/queries/careerAcademics"
+import { coordinatorCareerQuery, curriculumQuery, mallasQuery, scheduledSubjectsQuery, teacherAssignmentsQuery } from "@/queries/careerAcademics"
 
 export type AcademicStructureMode = "curriculum" | "schedule" | "teachers"
 
@@ -71,13 +74,19 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
   useAcademicCareerScope(adminCareerId)
   const scope = useQuery(coordinatorCareerQuery(adminCareerId))
   const careerId = typeof scope.data === "string" ? scope.data : null
-  const curriculumState = useQuery({ ...curriculumQuery(careerId ?? "", adminCareerId), enabled: careerId !== null })
+  const mallasState = useQuery({ ...mallasQuery(adminCareerId), enabled: careerId !== null })
+  const mallas = mallasState.data ?? null
+  const [chosenMallaId, setChosenMallaId] = useState<string | null>(null)
+  // The list comes vigente first, so the default is the vigente malla (or the first one when none is vigente).
+  const selectedMalla = mallas?.find((malla) => malla.id === chosenMallaId) ?? mallas?.[0] ?? null
+  const withoutMallas = mallas !== null && mallas.length === 0
+  const curriculumState = useQuery({ ...curriculumQuery(selectedMalla?.id ?? "", adminCareerId), enabled: selectedMalla !== null })
   const scheduleState = useQuery({ ...scheduledSubjectsQuery(adminCareerId), enabled: careerId !== null })
   const assignmentsState = useQuery({ ...teacherAssignmentsQuery(adminCareerId), enabled: careerId !== null })
   const curriculum = curriculumState.data ?? null
   const schedule = scheduleState.data ?? null
   const assignments = assignmentsState.data ?? null
-  const initialStates = [scope, curriculumState, scheduleState, assignmentsState]
+  const initialStates = withoutMallas ? [scope, mallasState, scheduleState, assignmentsState] : [scope, mallasState, curriculumState, scheduleState, assignmentsState]
   const failedInitial = initialStates.find((state) => failedQuery(state) && state.data === undefined)
   const loadError = failedInitial ? errorMessage(failedInitial.error, "No se pudo cargar la estructura académica") : null
   const loading = initialStates.some((state) => state.data === undefined && (state.isPending || state.isFetching))
@@ -86,6 +95,7 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
   const [configurationOpen, setConfigurationOpen] = useState(false)
   const [editingCurriculum, setEditingCurriculum] = useState(false)
   const [openingEditor, setOpeningEditor] = useState(false)
+  const [mallaDialog, setMallaDialog] = useState<"create" | "edit" | null>(null)
 
   const [seenCurriculum, setSeenCurriculum] = useState(curriculum)
   if (seenCurriculum !== curriculum) {
@@ -141,7 +151,14 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
 
   const handleCurriculumChanged = async (notice: string): Promise<void> => {
     toast.success(notice)
-    await reloadCurriculum()
+    await Promise.all([reloadCurriculum(), reload(mallasState, "No se pudieron actualizar las mallas")])
+  }
+
+  const handleMallaSaved = async (notice: string, mallaId: string): Promise<void> => {
+    toast.success(notice)
+    setChosenMallaId(mallaId)
+    await reload(mallasState, "No se pudieron actualizar las mallas")
+    if (mallaId === curriculum?.curriculum.id) await reloadCurriculum()
   }
 
   const openCurriculumEditor = async (): Promise<void> => {
@@ -161,10 +178,10 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
     setEditingCurriculum(false)
   }
 
-  const ready = curriculum && schedule && assignments
+  const ready = (curriculum || withoutMallas) && schedule && assignments
   const curriculumLocked = locked(curriculum)
   const careerName = curriculum?.career.name ?? null
-  const title = editingCurriculum && curriculum ? `Malla de ${curriculum.career.name}` : adminCareerId && careerName ? `${pageTitles[mode]} de ${careerName}` : pageTitles[mode]
+  const title = editingCurriculum && curriculum ? `${curriculum.malla.name} de ${curriculum.career.name}` : adminCareerId && careerName ? `${pageTitles[mode]} de ${careerName}` : pageTitles[mode]
 
   return (
     <PageFrame
@@ -197,7 +214,14 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
             </Button>
           ) : null}
           {mode === "curriculum" && !editingCurriculum && curriculum && !curriculumLocked ? (
-            <ImportSpreadsheetDialog title="Importar malla" kind="curriculum" templateName="plantilla-malla.xlsx" columns={curriculumColumns} onImported={(message) => void handleCurriculumChanged(message)} />
+            <ImportSpreadsheetDialog
+              title={`Importar materias a ${curriculum.malla.name}`}
+              kind="curriculum"
+              templateName="plantilla-malla.xlsx"
+              columns={curriculumColumns}
+              extra={{ malla_id: curriculum.curriculum.id }}
+              onImported={(message) => void handleCurriculumChanged(message)}
+            />
           ) : null}
           {mode === "curriculum" && !editingCurriculum && curriculum ? (
             <Button disabled={openingEditor || curriculumLocked} onClick={() => void openCurriculumEditor()}>
@@ -216,8 +240,28 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
       ) : null}
       {ready ? (
         <>
-          {mode === "curriculum" ? (
+          {mode === "curriculum" && withoutMallas ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>La carrera no tiene mallas</EmptyTitle>
+                <EmptyDescription>Cree la primera malla para registrar sus materias</EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button onClick={() => setMallaDialog("create")}>Nueva malla</Button>
+              </EmptyContent>
+            </Empty>
+          ) : null}
+          {mode === "curriculum" && curriculum ? (
             <>
+              {!editingCurriculum && mallas && selectedMalla ? (
+                <MallaToolbar
+                  mallas={mallas}
+                  selected={selectedMalla}
+                  onSelect={setChosenMallaId}
+                  onCreate={() => setMallaDialog("create")}
+                  onEdit={() => setMallaDialog("edit")}
+                />
+              ) : null}
               <CurriculumCanvas
                 career={curriculum.career}
                 modalityOptions={curriculum.modalityOptions}
@@ -248,6 +292,14 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
         <LoadErrorState message={loadError} onRetry={load} />
       ) : loading ? (
         <LoadingSkeleton variant="academic-structure" mode={mode} />
+      ) : null}
+      {mode === "curriculum" ? (
+        <MallaDialog
+          open={mallaDialog !== null}
+          onOpenChange={(open) => setMallaDialog(open ? mallaDialog : null)}
+          malla={mallaDialog === "edit" ? selectedMalla : null}
+          onSaved={(message, mallaId) => void handleMallaSaved(message, mallaId)}
+        />
       ) : null}
       {mode === "teachers" ? (
         <ManagedUserDialog open={teacherOpen} onOpenChange={setTeacherOpen} teacherCareer={assignments?.career ?? null} showTrigger={false} onSaved={(message) => void handleAssignmentChanged(message)} />

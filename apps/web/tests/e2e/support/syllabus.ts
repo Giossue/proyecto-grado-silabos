@@ -57,8 +57,6 @@ export async function restartFromReview(page: Page, subject: string, reason: str
   await page.getByRole("menuitem", { name: "Reiniciar sílabo" }).click()
   const dialog = page.getByRole("dialog", { name: `Reiniciar «${subject}»` })
   await dialog.locator("#restart-reason").fill(reason)
-  const phrase = dialog.locator("#restart-name")
-  if (await phrase.isVisible()) await phrase.fill(subject)
   const reset = page.waitForResponse((response) => /\/reset$/.test(response.url()) && response.request().method() === "POST")
   await dialog.getByRole("button", { name: /Reiniciar/ }).last().click()
   expect((await reset).status()).toBe(200)

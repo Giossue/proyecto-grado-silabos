@@ -1,15 +1,12 @@
-import { act, fireEvent, render } from "@testing-library/react"
-import type { ComponentProps, ComponentType, ReactNode } from "react"
+import { fireEvent, render } from "@testing-library/react"
+import type { ComponentProps } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { ApiError } from "@/api/client"
 import type { DatePicker as RealDatePicker } from "@/components/DatePicker"
 import { ConvocationPeriodDialog } from "@/components/domain/syllabus/ConvocationPeriodDialog"
-import { typeConfirmation } from "@/test/confirmPhrase"
 import { flush } from "@/test/render"
 
 type PickerProps = ComponentProps<typeof RealDatePicker>
-
-const stubs = vi.hoisted(() => ({ fading: false, handlers: new WeakMap<Element, (open: boolean) => void>() }))
 
 const api = vi.hoisted(() => ({ createAcademicRecord: vi.fn(), createProcess: vi.fn() }))
 vi.mock("@/api/academic", async (importOriginal) => ({ ...(await importOriginal<object>()), createAcademicRecord: api.createAcademicRecord }))
@@ -21,44 +18,9 @@ vi.mock("@/components/DatePicker", () => ({
   ),
 }))
 
-vi.mock("@/components/ui/dialog", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/components/ui/dialog")>()
-  const passthrough = <P extends { children?: ReactNode },>(Original: ComponentType<P>) =>
-    function Passthrough(props: P) {
-      return stubs.fading ? <div>{props.children}</div> : <Original {...props} />
-    }
-  function Dialog(props: { open?: boolean; onOpenChange?: (open: boolean) => void; children?: ReactNode }) {
-    if (!stubs.fading) return <actual.Dialog {...props} />
-    return (
-      <div
-        data-modal
-        data-state={props.open ? "open" : "closed"}
-        ref={(element) => {
-          if (element && props.onOpenChange) stubs.handlers.set(element, props.onOpenChange)
-        }}
-      >
-        {props.children}
-      </div>
-    )
-  }
-
-  return {
-    ...actual,
-    Dialog,
-    DialogContent: passthrough(actual.DialogContent),
-    DialogHeader: passthrough(actual.DialogHeader),
-    DialogTitle: passthrough(actual.DialogTitle),
-    DialogDescription: passthrough(actual.DialogDescription),
-    DialogFooter: passthrough(actual.DialogFooter),
-    DialogClose: passthrough(actual.DialogClose),
-    DialogTrigger: passthrough(actual.DialogTrigger),
-  }
-})
-
 afterEach(() => {
   document.body.innerHTML = ""
   vi.clearAllMocks()
-  stubs.fading = false
 })
 
 const pickers = (): HTMLInputElement[] => [...document.querySelectorAll<HTMLInputElement>("[data-date-picker]")]
@@ -67,14 +29,6 @@ const choose = (picker: HTMLInputElement, value: string): void => {
 }
 const submitForm = async (): Promise<void> => {
   fireEvent.submit(document.querySelector("form")!)
-  await flush()
-}
-const confirmSubmit = async (): Promise<void> => {
-  await submitForm()
-  typeConfirmation("convocation-open-confirm", "abrir periodo")
-  await flush()
-  const confirm = [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].reverse().find((button) => button.textContent?.includes("Abrir periodo académico"))
-  fireEvent.click(confirm!)
   await flush()
 }
 const fillSteps = async (): Promise<void> => {
@@ -95,7 +49,6 @@ const mountDialog = async () => {
 
   return { ...view, onSaved }
 }
-const emitOpen = (modal: Element, open: boolean): void => act(() => stubs.handlers.get(modal)?.(open))
 
 describe("ConvocationPeriodDialog", () => {
   it("pide el periodo primero, no avanza sin fechas y luego pide la elaboración", async () => {
@@ -147,9 +100,9 @@ describe("ConvocationPeriodDialog", () => {
     api.createProcess.mockRejectedValueOnce(new ApiError("Error", 422, { process: ["Ya hay un periodo académico en curso."] })).mockResolvedValueOnce({ message: "Periodo académico abierto." })
     const { unmount, onSaved } = await mountDialog()
     await fillSteps()
-    await confirmSubmit()
+    await submitForm()
     expect(document.body.textContent).toContain("El periodo ya quedó creado")
-    await confirmSubmit()
+    await submitForm()
 
     expect(api.createAcademicRecord).toHaveBeenCalledTimes(1)
     expect(api.createProcess).toHaveBeenCalledTimes(2)
@@ -162,7 +115,7 @@ describe("ConvocationPeriodDialog", () => {
     api.createProcess.mockResolvedValue({ message: "Periodo académico abierto." })
     const { unmount, onSaved } = await mountDialog()
     await fillSteps()
-    await confirmSubmit()
+    await submitForm()
 
     expect(api.createProcess).toHaveBeenCalledWith({ period_id: "p1", starts_at: "2026-10-06", due_at: "2026-10-30" })
     expect(onSaved.mock.calls[0]).toEqual(["Periodo académico abierto."])
@@ -180,30 +133,21 @@ describe("ConvocationPeriodDialog", () => {
     expect(document.querySelector("#convocation-period-weeks")).toBeNull()
     expect(document.body.textContent).toContain("Serían 21 semanas de clase entre las fechas")
     await fillSteps()
-    await confirmSubmit()
+    await submitForm()
 
     expect(api.createAcademicRecord).toHaveBeenLastCalledWith("periodo", { starts_on: "2026-10-05", ends_on: "2027-02-26" })
     unmount()
   })
 
-  it("la frase de confirmación se borra al volver a abrir, no al cerrar", async () => {
-    stubs.fading = true
-    const { container, unmount } = render(<ConvocationPeriodDialog open onOpenChange={vi.fn()} />)
-    await flush()
-    const modal = [...container.querySelectorAll("[data-modal]")].at(-1)!
-    emitOpen(modal, true)
-    await flush()
-    typeConfirmation("convocation-open-confirm", "abrir periodo")
-    await flush()
-    emitOpen(modal, false)
-    await flush()
+  it("al enviar el segundo paso abre el periodo directo, sin frase", async () => {
+    const { unmount } = await mountDialog()
+    await fillSteps()
+    expect(document.body.textContent).toContain("Al abrirlo, el periodo y sus fechas ya no se pueden editar")
+    await submitForm()
 
-    expect(modal.getAttribute("data-state")).toBe("closed")
-    expect(document.body.querySelector<HTMLInputElement>("#convocation-open-confirm")!.value).toBe("abrir periodo")
-    emitOpen(modal, true)
-    await flush()
-    expect(document.body.querySelector<HTMLInputElement>("#convocation-open-confirm")!.value).toBe("")
-
+    expect(document.querySelector("#convocation-open-confirm")).toBeNull()
+    expect(api.createAcademicRecord).toHaveBeenCalledTimes(1)
+    expect(api.createProcess).toHaveBeenCalledTimes(1)
     unmount()
   })
 })

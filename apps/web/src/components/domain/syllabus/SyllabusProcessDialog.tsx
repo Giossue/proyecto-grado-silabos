@@ -4,17 +4,12 @@ import { CalendarPlus } from "lucide-react"
 import { useState } from "react"
 import { createProcess } from "@/api/processes"
 import { DatePicker } from "@/components/DatePicker"
-import { ConfirmPhrase } from "@/components/domain/ConfirmPhrase"
 import { FormDialogActions } from "@/components/domain/FormDialogActions"
 import { FormModal } from "@/components/domain/FormModal"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Spinner } from "@/components/ui/spinner"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
 import { useInstitutionToday } from "@/composables/useInstitutionDate"
-import { matchesPhrase } from "@/lib/confirmPhrase"
 import { applyApiErrors, errorMessages, useSchemaForm } from "@/lib/forms"
 import { processCreationSchema } from "@silabos/shared/schemas/syllabus"
 
@@ -32,7 +27,6 @@ type SyllabusProcessDialogProps = {
   onSaved?: (message: string) => void
 }
 
-const OPEN_PHRASE = "abrir periodo"
 const schema = processCreationSchema()
 
 export function SyllabusProcessDialog({
@@ -47,8 +41,6 @@ export function SyllabusProcessDialog({
 }: SyllabusProcessDialogProps) {
   const [isOpen, setOpen] = useModelOpen(open, onOpenChange)
   const [processing, setProcessing] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [openingTyped, setOpeningTyped] = useState("")
   const blank = () => ({ period_id: period?.id ?? "", starts_at: "", due_at: "" })
   const form = useSchemaForm(schema, { defaultValues: blank() })
   const { errors } = form.formState
@@ -57,7 +49,6 @@ export function SyllabusProcessDialog({
   const periodErrors = errorMessages(errors.period_id)
   const startsErrors = errorMessages(errors.starts_at)
   const dueErrors = errorMessages(errors.due_at)
-  useOpened(confirmOpen, () => setOpeningTyped(""))
   useOpened(isOpen, () => form.reset(blank()))
 
   const todayIso = useInstitutionToday()
@@ -65,13 +56,8 @@ export function SyllabusProcessDialog({
   const dueMinimum = values.starts_at > todayIso ? values.starts_at : todayIso
   const update = (key: "period_id" | "starts_at" | "due_at", value: string): void => form.setValue(key, value)
 
-  const askConfirmation = form.handleSubmit(() => {
-    if (!disabled) setConfirmOpen(true)
-  })
-
-  const submit = async (): Promise<void> => {
+  const submit = form.handleSubmit(async (): Promise<void> => {
     if (disabled) return
-    setConfirmOpen(false)
     setProcessing(true)
     form.clearErrors()
     try {
@@ -83,7 +69,7 @@ export function SyllabusProcessDialog({
     } finally {
       setProcessing(false)
     }
-  }
+  })
 
   return (
     <FormModal
@@ -96,85 +82,62 @@ export function SyllabusProcessDialog({
       showTrigger={display !== "menu"}
     >
       {({ close }) => (
-        <>
-          <form onSubmit={(event) => void askConfirmation(event)} noValidate>
-            <FieldGroup>
-              {processErrors ? (
-                <Field data-invalid>
-                  <FieldError errors={processErrors} />
-                </Field>
-              ) : null}
-              {period ? (
-                <Field data-invalid={Boolean(periodErrors)}>
-                  <FieldLabel>Periodo académico</FieldLabel>
-                  <div className="rounded-md bg-muted/30 px-3 py-2 text-sm ring-1 ring-surface-ring">{period.codigo}</div>
-                  <p className="text-sm text-muted-foreground">Se fija desde el período seleccionado y no se vuelve a elegir aquí</p>
-                  <FieldError errors={periodErrors} />
-                </Field>
-              ) : (
-                <Field data-invalid={Boolean(periodErrors)}>
-                  <FieldLabel htmlFor="process-period" required>
-                    Periodo académico
-                  </FieldLabel>
-                  <Select value={values.period_id} onValueChange={(value) => update("period_id", value)} required>
-                    <SelectTrigger id="process-period" aria-required="true">
-                      <SelectValue placeholder="Seleccione un periodo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {periods.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.codigo}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  <FieldError errors={periodErrors} />
-                </Field>
-              )}
-              <Field data-invalid={Boolean(startsErrors)}>
-                <FieldLabel htmlFor="process-starts" required>
-                  Inicio de la elaboración
-                </FieldLabel>
-                <DatePicker id="process-starts" value={values.starts_at} onValueChange={(value) => update("starts_at", value)} minValue={todayIso} maxValue={periodEnd} required ariaInvalid={Boolean(startsErrors)} />
-                <p className="text-sm text-muted-foreground">Elija cuándo comienza la elaboración; no se copia el inicio de clases</p>
-                <FieldError errors={startsErrors} />
+        <form onSubmit={(event) => void submit(event)} noValidate>
+          <FieldGroup>
+            {processErrors ? (
+              <Field data-invalid>
+                <FieldError errors={processErrors} />
               </Field>
-              <Field data-invalid={Boolean(dueErrors)}>
-                <FieldLabel htmlFor="process-due" required>
-                  Fecha límite de entrega
-                </FieldLabel>
-                <DatePicker id="process-due" value={values.due_at} onValueChange={(value) => update("due_at", value)} minValue={dueMinimum} maxValue={periodEnd} required ariaInvalid={Boolean(dueErrors)} />
-                <p className="text-sm text-muted-foreground">Esta fecha se heredará en el periodo académico de cada carrera</p>
-                <FieldError errors={dueErrors} />
+            ) : null}
+            {period ? (
+              <Field data-invalid={Boolean(periodErrors)}>
+                <FieldLabel>Periodo académico</FieldLabel>
+                <div className="rounded-md bg-muted/30 px-3 py-2 text-sm ring-1 ring-surface-ring">{period.codigo}</div>
+                <p className="text-sm text-muted-foreground">Se fija desde el período seleccionado y no se vuelve a elegir aquí</p>
+                <FieldError errors={periodErrors} />
               </Field>
-              <FormDialogActions close={close} processing={processing} icon={CalendarPlus} label="Abrir periodo académico" />
-            </FieldGroup>
-          </form>
-          <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Abrir periodo académico</DialogTitle>
-                <DialogDescription>
-                  Una vez abierto, sus fechas no se pueden editar. Cada Coordinación abre después el periodo académico de su carrera y los sílabos parten del proyecto de carrera de cada materia
-                </DialogDescription>
-              </DialogHeader>
-              <ConfirmPhrase id="process-open-confirm" value={openingTyped} onValueChange={setOpeningTyped} phrase={OPEN_PHRASE} />
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="outline">
-                    Cancelar
-                  </Button>
-                </DialogClose>
-                <Button type="button" disabled={processing || !matchesPhrase(openingTyped, OPEN_PHRASE)} onClick={() => void submit()}>
-                  {processing ? <Spinner data-icon="inline-start" /> : <CalendarPlus data-icon="inline-start" aria-hidden="true" />}
-                  Abrir periodo académico
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </>
+            ) : (
+              <Field data-invalid={Boolean(periodErrors)}>
+                <FieldLabel htmlFor="process-period" required>
+                  Periodo académico
+                </FieldLabel>
+                <Select value={values.period_id} onValueChange={(value) => update("period_id", value)} required>
+                  <SelectTrigger id="process-period" aria-required="true">
+                    <SelectValue placeholder="Seleccione un periodo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {periods.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.codigo}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <FieldError errors={periodErrors} />
+              </Field>
+            )}
+            <Field data-invalid={Boolean(startsErrors)}>
+              <FieldLabel htmlFor="process-starts" required>
+                Inicio de la elaboración
+              </FieldLabel>
+              <DatePicker id="process-starts" value={values.starts_at} onValueChange={(value) => update("starts_at", value)} minValue={todayIso} maxValue={periodEnd} required ariaInvalid={Boolean(startsErrors)} />
+              <p className="text-sm text-muted-foreground">Elija cuándo comienza la elaboración; no se copia el inicio de clases</p>
+              <FieldError errors={startsErrors} />
+            </Field>
+            <Field data-invalid={Boolean(dueErrors)}>
+              <FieldLabel htmlFor="process-due" required>
+                Fecha límite de entrega
+              </FieldLabel>
+              <DatePicker id="process-due" value={values.due_at} onValueChange={(value) => update("due_at", value)} minValue={dueMinimum} maxValue={periodEnd} required ariaInvalid={Boolean(dueErrors)} />
+              <p className="text-sm text-muted-foreground">Esta fecha se heredará en el periodo académico de cada carrera</p>
+              <FieldError errors={dueErrors} />
+            </Field>
+            <p className="text-sm text-muted-foreground">Una vez abierto, sus fechas no se pueden editar</p>
+            <FormDialogActions close={close} processing={processing} icon={CalendarPlus} label="Abrir periodo académico" />
+          </FieldGroup>
+        </form>
       )}
     </FormModal>
   )

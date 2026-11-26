@@ -1,5 +1,5 @@
 import { ApiError, api } from "@/api/client"
-import { requestPurgeConfirmation } from "@/composables/usePurgeConfirmation"
+import { announcePurge } from "@/lib/purgeNotice"
 
 export type ApiErrors = Record<string, string>
 export type ApiVisitOptions = {
@@ -45,6 +45,8 @@ const withConfirmation = (data: Record<string, unknown> | FormData): Record<stri
   return { ...data, confirm_purge: true }
 }
 
+const confirmed = (data: Record<string, unknown> | FormData): boolean => (data instanceof FormData ? data.has("confirm_purge") : data.confirm_purge === true)
+
 const bodyFor = (data: Record<string, unknown> | FormData): BodyInit => (data instanceof FormData ? data : JSON.stringify(data))
 
 export const visitApi = async (url: string, options: ApiVisitOptions = {}): Promise<void> => {
@@ -66,6 +68,7 @@ export const visitApi = async (url: string, options: ApiVisitOptions = {}): Prom
     return
   }
 
+  let resend = false
   try {
     const payload = await api<unknown>(url, {
       method,
@@ -78,23 +81,20 @@ export const visitApi = async (url: string, options: ApiVisitOptions = {}): Prom
       const errors = flattenErrors(reason)
       const purgeMessage = errors.purge_required
 
-      if (purgeMessage) {
-        requestPurgeConfirmation(
-          purgeMessage,
-          Number(errors.purge_count ?? 0),
-          () => visitApi(url, { ...options, data: withConfirmation(data) }),
-          undefined,
-          errors.purge_mode,
-        )
+      if (purgeMessage && !confirmed(data)) {
+        announcePurge(purgeMessage)
+        resend = true
+      } else {
+        options.onError?.(errors)
       }
-
-      options.onError?.(errors)
     } else {
       options.onError?.({ request: "No se pudo completar la solicitud" })
     }
   } finally {
-    options.onFinish?.()
+    if (!resend) options.onFinish?.()
   }
+
+  if (resend) await visitApi(url, { ...options, data: withConfirmation(data) })
 }
 
 type FormOptions = Omit<ApiVisitOptions, "method" | "data">

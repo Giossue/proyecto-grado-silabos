@@ -25,13 +25,13 @@ export class StructureImportPrismaStore implements StructureImportStore {
     return (await this.prisma.carreras.findFirst({ where: { carrera_id: careerId, carrera_activa: true }, select: { carrera_id: true } })) !== null
   }
 
-  async career(careerId: string): Promise<{ id: string; cycleCount: number } | null> {
-    const row = await this.prisma.carreras.findFirst({ where: { carrera_id: careerId }, select: { carrera_id: true, numero_ciclos: true } })
-    return row ? { id: row.carrera_id, cycleCount: row.numero_ciclos } : null
+  async malla(careerId: string, mallaId: string): Promise<{ id: string; cycleCount: number } | null> {
+    const row = await this.prisma.mallas.findFirst({ where: { malla_id: mallaId, carrera_id: careerId }, select: { malla_id: true, numero_ciclos: true } })
+    return row ? { id: row.malla_id, cycleCount: row.numero_ciclos } : null
   }
 
-  async careerSubjects(careerId: string): Promise<{ id: string; code: string; cycle: number | null }[]> {
-    const rows = await this.prisma.asignaturas.findMany({ where: { carrera_id: careerId }, select: { asignatura_id: true, codigo_asignatura: true, ciclo_asignatura: true } })
+  async mallaSubjects(mallaId: string): Promise<{ id: string; code: string; cycle: number | null }[]> {
+    const rows = await this.prisma.asignaturas.findMany({ where: { malla_id: mallaId }, select: { asignatura_id: true, codigo_asignatura: true, ciclo_asignatura: true } })
     return rows.map((row) => ({ id: row.asignatura_id, code: String(row.codigo_asignatura), cycle: row.ciclo_asignatura }))
   }
 }

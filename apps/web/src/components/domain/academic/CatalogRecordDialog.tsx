@@ -256,6 +256,7 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
                       step={1}
                       aria-required="true"
                     />
+                    <FieldDescription>Se crea la malla vigente «Malla {form.code.trim() || "<código>"}» con estos ciclos. Después los ciclos se cambian en cada malla</FieldDescription>
                     <FieldError errors={errors.cycle_count} />
                   </Field>
                 </div>

@@ -5,6 +5,7 @@ import { ApiError } from "@/api/client"
 import { deleteProcess, getProcessImpact, transitionProcess, type SyllabusProcess } from "@/api/processes"
 import { SyllabusProcessActions, type SyllabusProcessActionsHandle } from "@/components/domain/syllabus/SyllabusProcessActions"
 import { DIALOG_EXIT_MS } from "@/lib/dialogExit"
+import { toast } from "@/lib/toast"
 import { flush } from "@/test/render"
 
 type ExtensionProps = { open?: boolean; process: SyllabusProcess; onSaved?: (message: string) => void }
@@ -20,6 +21,8 @@ vi.mock("@/api/processes", () => ({
   getProcessImpact: vi.fn(),
   transitionProcess: vi.fn(),
 }))
+
+vi.mock("@/lib/toast", () => ({ toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() } }))
 
 vi.mock("@/components/domain/TableActionsMenu", () => ({
   TableActionsMenu: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
@@ -110,10 +113,6 @@ const type = async (selector: string, value: string): Promise<void> => {
   fireEvent.change(document.querySelector(selector)!, { target: { value } })
   await flush()
 }
-const submitDialog = async (view: Mounted): Promise<void> => {
-  fireEvent.submit(view.container.querySelector("[data-dialog] form")!)
-  await flush()
-}
 const emitOpen = (modal: Element, open: boolean): void => act(() => stubs.handlers.get(modal)?.(open))
 
 describe("SyllabusProcessActions", () => {
@@ -132,7 +131,7 @@ describe("SyllabusProcessActions", () => {
     vi.mocked(transitionProcess).mockReset()
   })
 
-  it("antes de eliminar muestra cuántos sílabos se borran y pide el mensaje y la frase", async () => {
+  it("antes de eliminar muestra cuántos sílabos se borran y pide solo el mensaje", async () => {
     vi.useFakeTimers()
     const view = mountActions(openProcess())
 
@@ -149,8 +148,7 @@ describe("SyllabusProcessActions", () => {
     expect(dialog(view).querySelector('label[for="process-delete-message"]')!.textContent).toContain("Mensaje para docentes, coordinación y biblioteca")
 
     const confirm = (): HTMLButtonElement => buttonWith(view, "Eliminar periodo académico")!
-    expect(confirm().disabled).toBe(true)
-    fireEvent.change(document.querySelector("#process-delete-confirm")!, { target: { value: "eliminar periodo" } })
+    expect(document.querySelector("#process-delete-confirm")).toBeNull()
     expect(confirm().disabled).toBe(true)
     fireEvent.change(document.querySelector("#process-delete-message")!, { target: { value: "   " } })
     expect(confirm().disabled).toBe(true)
@@ -169,40 +167,46 @@ describe("SyllabusProcessActions", () => {
     expect(view.onCompleted.mock.calls).toEqual([["Periodo académico eliminado."]])
   })
 
-  it("al cerrar, el modal de pausar sigue mostrando su contenido mientras se desvanece", async () => {
-    const view = mountActions({ ...process(), state: "abierto" }, true)
+  it("pausar se aplica al primer clic, sin modal", async () => {
+    vi.mocked(transitionProcess).mockResolvedValue({ message: "Proceso pausado." })
+    const view = mountActions(openProcess())
 
     fireEvent.click(menuItem(view, "Pausar")!)
-    const transition = view.container.querySelectorAll("[data-modal]")[0]!
-    expect(transition.getAttribute("data-state")).toBe("open")
-    emitOpen(transition, false)
     await flush()
 
-    expect(transition.getAttribute("data-state")).toBe("closed")
-    expect(transition.textContent).toContain("Pausar el periodo académico")
-    expect(transition.textContent).toContain("Se detienen los envíos")
+    expect(view.container.querySelector("[data-dialog]")).toBeNull()
+    expect(transitionProcess).toHaveBeenCalledWith("process-1", "pausar")
+    expect(view.onCompleted.mock.calls).toEqual([["Proceso pausado."]])
   })
 
-  it("el mensaje y la frase de eliminar se borran al volver a abrir, no al cerrar", async () => {
+  it("si el servidor rechaza el cambio de estado lo avisa", async () => {
+    vi.mocked(transitionProcess).mockRejectedValueOnce(new ApiError("No se puede pausar.", 422))
+    const view = mountActions(openProcess())
+
+    fireEvent.click(menuItem(view, "Pausar")!)
+    await flush()
+
+    expect(toast.error).toHaveBeenCalledWith("No se puede pausar")
+    expect(view.onCompleted).not.toHaveBeenCalled()
+  })
+
+  it("el mensaje de eliminar se borra al volver a abrir, no al cerrar", async () => {
     const view = mountActions(openProcess(), true)
 
     view.run("eliminar")
     await flush()
     await type("#process-delete-message", "Fechas equivocadas")
-    await type("#process-delete-confirm", "eliminar periodo")
-    const removal = view.container.querySelectorAll("[data-modal]")[1]!
+    const removal = view.container.querySelectorAll("[data-modal]")[0]!
     emitOpen(removal, false)
     await flush()
 
     expect(removal.getAttribute("data-state")).toBe("closed")
     expect(document.querySelector<HTMLTextAreaElement>("#process-delete-message")!.value).toBe("Fechas equivocadas")
-    expect(document.querySelector<HTMLInputElement>("#process-delete-confirm")!.value).toBe("eliminar periodo")
     expect(removal.querySelectorAll("tbody tr")).not.toHaveLength(0)
 
     view.run("eliminar")
     await flush()
     expect(document.querySelector<HTMLTextAreaElement>("#process-delete-message")!.value).toBe("")
-    expect(document.querySelector<HTMLInputElement>("#process-delete-confirm")!.value).toBe("")
   })
 
   it("muestra el error del mensaje que devuelve el servidor", async () => {
@@ -212,7 +216,6 @@ describe("SyllabusProcessActions", () => {
     view.run("eliminar")
     await flush()
     await type("#process-delete-message", "Mensaje")
-    await type("#process-delete-confirm", "eliminar periodo")
     fireEvent.click(buttonWith(view, "Eliminar periodo académico")!)
     await flush()
 
@@ -220,90 +223,30 @@ describe("SyllabusProcessActions", () => {
     expect(view.onCompleted).not.toHaveBeenCalled()
   })
 
-  it("sin el conteo de sílabos no deja eliminar", async () => {
+  it("sin el conteo de sílabos lo avisa y deja eliminar con el mensaje", async () => {
     vi.mocked(getProcessImpact).mockRejectedValueOnce(new ApiError("Sin conexión.", 500))
     const view = mountActions(openProcess())
 
     view.run("eliminar")
     await flush()
     await type("#process-delete-message", "Mensaje")
-    await type("#process-delete-confirm", "eliminar periodo")
 
     expect(dialog(view).textContent).toContain("No se pudo saber cuántos sílabos se borran")
-    expect(buttonWith(view, "Eliminar periodo académico")!.disabled).toBe(true)
+    expect(buttonWith(view, "Eliminar periodo académico")!.disabled).toBe(false)
   })
 
-  it("finaliza el periodo académico tras ver lo que queda sin aprobar y escribir la frase", async () => {
+  it("finaliza el periodo académico al primer clic, sin modal ni frase", async () => {
     vi.mocked(transitionProcess).mockResolvedValue({ message: "Periodo académico cerrado." })
     const view = mountActions(openProcess())
 
     expect(menuItems(view).some((item) => item.textContent?.includes("Cerrar"))).toBe(false)
-    const finish = menuItem(view, "Finalizar")
-    expect(finish).toBeDefined()
-    fireEvent.click(finish!)
+    fireEvent.click(menuItem(view, "Finalizar")!)
     await flush()
 
-    expect(getProcessImpact).toHaveBeenCalledWith("process-1")
-    const text = dialog(view).textContent
-    expect(text).toContain("Finalizar el periodo académico")
-    expect(text).toContain("ya no se editan, envían, revisan ni firman")
-    expect(text).toContain("un cambio de docente no los borra")
-    expect(text).toContain("Puede volver a abrirlo con una prórroga mientras no hayan terminado las clases")
-    expect(text).not.toContain("no se deshace")
-    expect(text).toContain("Lo que no esté aprobado quedará solo para consulta")
-    expect([...dialog(view).querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual(["Sin iniciar12", "Borrador3", "En revisión5", "Total20"])
-
-    const confirm = (): HTMLButtonElement => view.container.querySelector<HTMLButtonElement>('[data-dialog] button[type="submit"]')!
-    expect(confirm().textContent).toContain("Finalizar")
-    expect(confirm().disabled).toBe(true)
-    await type("#process-transition-confirm", "Cerrar periodo")
-    expect(confirm().disabled).toBe(true)
-    await submitDialog(view)
-    expect(transitionProcess).not.toHaveBeenCalled()
-    await type("#process-transition-confirm", "Finalizar periodo")
-    expect(confirm().disabled).toBe(false)
-    await submitDialog(view)
-
-    expect(transitionProcess).toHaveBeenCalledWith("process-1", "cerrar", undefined)
+    expect(view.container.querySelector("[data-dialog]")).toBeNull()
+    expect(getProcessImpact).not.toHaveBeenCalled()
+    expect(transitionProcess).toHaveBeenCalledWith("process-1", "cerrar")
     expect(view.onCompleted.mock.calls).toEqual([["Periodo académico cerrado."]])
-  })
-
-  it("con todo aprobado lo dice al finalizar, sin tabla", async () => {
-    vi.mocked(getProcessImpact).mockResolvedValueOnce({
-      syllabi: { sin_iniciar: 0, borrador: 0, en_revision: 0, correccion_solicitada: 0, aprobado: 7 },
-      total: 7,
-    })
-    const view = mountActions(pausedProcess())
-
-    view.run("cerrar")
-    await flush()
-
-    expect(dialog(view).textContent).toContain("Todos los sílabos están aprobados")
-    expect(dialog(view).textContent).not.toContain("Lo que no esté aprobado")
-    expect(dialog(view).querySelector("table")).toBeNull()
-  })
-
-  it("sin el conteo de sílabos no deja finalizar", async () => {
-    vi.mocked(getProcessImpact).mockReturnValueOnce(new Promise(() => {}))
-    const view = mountActions(openProcess())
-
-    view.run("cerrar")
-    await flush()
-    await type("#process-transition-confirm", "finalizar periodo")
-
-    expect(view.container.querySelector<HTMLButtonElement>('[data-dialog] button[type="submit"]')!.disabled).toBe(true)
-  })
-
-  it("avisa si no pudo saber lo que queda sin aprobar y no deja finalizar", async () => {
-    vi.mocked(getProcessImpact).mockRejectedValueOnce(new ApiError("Sin conexión.", 500))
-    const view = mountActions(openProcess())
-
-    view.run("cerrar")
-    await flush()
-    await type("#process-transition-confirm", "finalizar periodo")
-
-    expect(dialog(view).textContent).toContain("No se pudo saber cuántos sílabos quedan sin aprobar")
-    expect(view.container.querySelector<HTMLButtonElement>('[data-dialog] button[type="submit"]')!.disabled).toBe(true)
   })
 
   it("un periodo académico pausado también ofrece finalizar", () => {
@@ -375,7 +318,7 @@ describe("SyllabusProcessActions", () => {
     expect(view.container.textContent).not.toContain("No se puede eliminar")
   })
 
-  it("shows the state counts and requires explicit confirmation before rebuilding", async () => {
+  it("resuming after a template change resends with confirmar_rehacer, without a dialog", async () => {
     vi.mocked(transitionProcess)
       .mockRejectedValueOnce(new ApiError("La plantilla cambió.", 422, {}, {
         code: "plantilla_cambiada",
@@ -384,19 +327,11 @@ describe("SyllabusProcessActions", () => {
       .mockResolvedValueOnce({ message: "Proceso reanudado. Los envíos vuelven a admitirse." })
     const view = mountActions(pausedProcess())
 
-    fireEvent.click(menuItems(view)[0]!)
+    view.run("reanudar")
     await flush()
-    await submitDialog(view)
 
-    expect(dialog(view).textContent).toContain("Borrador")
-    expect(dialog(view).textContent).toContain("Corrección solicitada")
-    expect(view.container.querySelector('[data-dialog] button[type="submit"]')!.textContent).toContain("Reanudar y adaptar sílabos")
-    await submitDialog(view)
-    expect(transitionProcess).toHaveBeenCalledTimes(1)
-    await type("#process-transition-confirm", "adaptar silabos")
-    await submitDialog(view)
-
-    expect(transitionProcess).toHaveBeenNthCalledWith(1, "process-1", "reanudar", undefined)
+    expect(view.container.querySelector("[data-dialog]")).toBeNull()
+    expect(transitionProcess).toHaveBeenNthCalledWith(1, "process-1", "reanudar")
     expect(transitionProcess).toHaveBeenNthCalledWith(2, "process-1", "reanudar", { confirmar_rehacer: true })
     expect(view.onCompleted.mock.calls).toEqual([["Proceso reanudado. Los envíos vuelven a admitirse."]])
   })

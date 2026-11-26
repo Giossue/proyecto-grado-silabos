@@ -1,10 +1,9 @@
 "use client"
 
-import { CalendarClock, Lock, Pause, Play, Trash2, type LucideIcon } from "lucide-react"
-import { useImperativeHandle, useState, type FormEvent, type ReactNode, type Ref } from "react"
+import { CalendarClock, Lock, Pause, Play, Trash2 } from "lucide-react"
+import { useImperativeHandle, useState, type ReactNode, type Ref } from "react"
 import { ApiError } from "@/api/client"
-import { deleteProcess, getProcessImpact, transitionProcess, type ProcessImpact, type SyllabusProcess, type SyllabusStateCounts } from "@/api/processes"
-import { ConfirmPhrase } from "@/components/domain/ConfirmPhrase"
+import { deleteProcess, getProcessImpact, transitionProcess, type ProcessImpact, type SyllabusProcess } from "@/api/processes"
 import { TableActionsMenu } from "@/components/domain/TableActionsMenu"
 import { DeadlineExtensionDialog } from "@/components/domain/syllabus/DeadlineExtensionDialog"
 import { SyllabusStateCountsTable } from "@/components/domain/syllabus/SyllabusStateCountsTable"
@@ -16,8 +15,8 @@ import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
-import { matchesPhrase } from "@/lib/confirmPhrase"
-import { afterDialogExit, useShownWhileClosing } from "@/lib/dialogExit"
+import { afterDialogExit } from "@/lib/dialogExit"
+import { toast } from "@/lib/toast"
 import { withoutFinalPeriod } from "@/lib/utils"
 
 type Transition = "pausar" | "reanudar" | "cerrar"
@@ -25,31 +24,6 @@ type Transition = "pausar" | "reanudar" | "cerrar"
 export type ProcessActionKey = Transition | "prorrogar" | "eliminar"
 
 export type SyllabusProcessActionsHandle = { run: (key: ProcessActionKey) => void }
-
-const DIALOGS: Record<Transition, { title: string; description: string; label: string; icon: LucideIcon; destructive?: boolean }> = {
-  pausar: {
-    title: "Pausar el periodo académico",
-    description: "Se detienen los envíos y la edición docente en todas las carreras hasta que lo reanude",
-    label: "Pausar",
-    icon: Pause,
-  },
-  reanudar: {
-    title: "Reanudar el periodo académico",
-    description: "Los envíos vuelven a admitirse y la plantilla vuelve a quedar protegida",
-    label: "Reanudar",
-    icon: Play,
-  },
-  cerrar: {
-    title: "Finalizar el periodo académico",
-    description:
-      "Los sílabos del período quedan guardados solo para consulta: ya no se editan, envían, revisan ni firman, y un cambio de docente no los borra. Puede volver a abrirlo con una prórroga mientras no hayan terminado las clases",
-    label: "Finalizar",
-    icon: Lock,
-    destructive: true,
-  },
-}
-
-const DELETE_PHRASE = "eliminar periodo"
 
 type SyllabusProcessActionsProps = {
   process: SyllabusProcess
@@ -59,85 +33,57 @@ type SyllabusProcessActionsProps = {
   ref?: Ref<SyllabusProcessActionsHandle>
 }
 
+const templateChanged = (cause: unknown): boolean => cause instanceof ApiError && cause.payload.code === "plantilla_cambiada"
+
 export function SyllabusProcessActions({ process, menu = true, onCompleted, children, ref }: SyllabusProcessActionsProps) {
-  const [pending, setPending] = useState<Transition | null>(null)
-  const shownPending = useShownWhileClosing(pending)
   const [processing, setProcessing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [templateImpact, setTemplateImpact] = useState<SyllabusStateCounts | null>(null)
   const [deadlineOpen, setDeadlineOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string[]>>({})
   const [deleteMessage, setDeleteMessage] = useState("")
-  const [deleteTyped, setDeleteTyped] = useState("")
   const [impact, setImpact] = useState<ProcessImpact | null>(null)
   const [impactLoading, setImpactLoading] = useState(false)
   const [impactError, setImpactError] = useState<string | null>(null)
-  const [typed, setTyped] = useState("")
 
-  const phrase = shownPending === "cerrar" ? "finalizar periodo" : shownPending === "reanudar" && templateImpact ? "adaptar sílabos" : null
-  const [phraseSeen, setPhraseSeen] = useState(phrase)
-  if (phraseSeen !== phrase) {
-    setPhraseSeen(phrase)
-    setTyped("")
-  }
-  const phraseReady = phrase === null || matchesPhrase(typed, phrase)
-  const transitionReady = phraseReady && (shownPending !== "cerrar" || impact !== null)
-  const unapproved: SyllabusStateCounts = Object.fromEntries(Object.entries(impact?.syllabi ?? {}).filter(([state, count]) => state !== "aprobado" && count > 0))
-  const unapprovedTotal = Object.values(unapproved).reduce((sum, count) => sum + count, 0)
-  const deleteReady = !deleting && impact !== null && deleteMessage.trim() !== "" && matchesPhrase(deleteTyped, DELETE_PHRASE)
+  const deleteReady = !deleting && deleteMessage.trim() !== ""
 
-  const loadImpact = async (failure: string): Promise<void> => {
+  const loadImpact = async (): Promise<void> => {
     setImpact(null)
     setImpactLoading(true)
     setImpactError(null)
     try {
       setImpact(await getProcessImpact(process.id))
     } catch {
-      setImpactError(failure)
+      setImpactError("No se pudo saber cuántos sílabos se borran. Inténtelo de nuevo")
     } finally {
       setImpactLoading(false)
     }
   }
 
-  const begin = (transition: Transition): void => {
-    setPending(transition)
-    setTemplateImpact(null)
-    setError(null)
-    setTyped("")
-    if (transition === "cerrar") void loadImpact("No se pudo saber cuántos sílabos quedan sin aprobar. Inténtelo de nuevo")
+  const begin = async (transition: Transition): Promise<void> => {
+    if (processing) return
+    setProcessing(true)
+    try {
+      const response = await transitionProcess(process.id, transition).catch((cause: unknown) => {
+        if (transition === "reanudar" && templateChanged(cause)) return transitionProcess(process.id, transition, { confirmar_rehacer: true })
+        throw cause
+      })
+      onCompleted?.(response.message)
+    } catch (cause) {
+      toast.error(cause instanceof ApiError ? cause.message : "No se pudo cambiar el estado del proceso")
+    } finally {
+      setProcessing(false)
+    }
   }
 
   const startDelete = (): void => {
     setDeleteError(null)
     setDeleteOpen(true)
-    setDeleteTyped("")
     setDeleteMessage("")
     setDeleteErrors({})
-    void loadImpact("No se pudo saber cuántos sílabos se borran. Inténtelo de nuevo")
-  }
-
-  const confirm = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
-    if (!pending || !transitionReady) return
-    setProcessing(true)
-    setError(null)
-    try {
-      const response = await transitionProcess(process.id, pending, templateImpact ? { confirmar_rehacer: true } : undefined)
-      setPending(null)
-      onCompleted?.(response.message)
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.payload.code === "plantilla_cambiada" && pending === "reanudar") {
-        const counts = cause.payload.counts
-        if (counts && typeof counts === "object") setTemplateImpact(counts as SyllabusStateCounts)
-        return
-      }
-      setError(cause instanceof ApiError ? cause.message : "No se pudo cambiar el estado del proceso")
-    } finally {
-      setProcessing(false)
-    }
+    void loadImpact()
   }
 
   const openDelete = (event: Event): void => {
@@ -153,7 +99,7 @@ export function SyllabusProcessActions({ process, menu = true, onCompleted, chil
   const run = (key: ProcessActionKey): void => {
     if (key === "prorrogar") setDeadlineOpen(true)
     else if (key === "eliminar") startDelete()
-    else begin(key)
+    else void begin(key)
   }
   useImperativeHandle(ref, () => ({ run }))
 
@@ -178,22 +124,19 @@ export function SyllabusProcessActions({ process, menu = true, onCompleted, chil
     }
   }
 
-  const shown = shownPending ? DIALOGS[shownPending] : null
-  const ShownIcon = shown?.icon
-
   return (
     <>
       {menu ? (
         <TableActionsMenu label={`Acciones para ${process.name}`}>
           {children}
           {process.state === "abierto" ? (
-            <DropdownMenuItem onSelect={() => begin("pausar")}>
+            <DropdownMenuItem disabled={processing} onSelect={() => void begin("pausar")}>
               <Pause />
               Pausar
             </DropdownMenuItem>
           ) : null}
           {process.state === "pausado" ? (
-            <DropdownMenuItem onSelect={() => begin("reanudar")}>
+            <DropdownMenuItem disabled={processing} onSelect={() => void begin("reanudar")}>
               <Play />
               Reanudar
             </DropdownMenuItem>
@@ -207,7 +150,7 @@ export function SyllabusProcessActions({ process, menu = true, onCompleted, chil
           </DropdownMenuItem>
           {process.state !== "cerrado" ? <DropdownMenuSeparator /> : null}
           {process.state === "abierto" || process.state === "pausado" ? (
-            <DropdownMenuItem variant="destructive" onSelect={() => begin("cerrar")}>
+            <DropdownMenuItem variant="destructive" disabled={processing} onSelect={() => void begin("cerrar")}>
               <Lock />
               Finalizar
             </DropdownMenuItem>
@@ -221,70 +164,6 @@ export function SyllabusProcessActions({ process, menu = true, onCompleted, chil
         </TableActionsMenu>
       ) : null}
 
-      <Dialog
-        open={pending !== null}
-        onOpenChange={(value) => {
-          if (!value) setPending(null)
-        }}
-      >
-        <DialogContent>
-          {shownPending && shown && ShownIcon ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>{shown.title}</DialogTitle>
-                <DialogDescription>{shown.description}</DialogDescription>
-              </DialogHeader>
-              <form className="flex flex-col gap-4" onSubmit={(event) => void confirm(event)}>
-                {templateImpact ? (
-                  <>
-                    <p>
-                      El administrador cambió la plantilla durante la pausa. Al reanudar, los sílabos de este período se adaptan a la plantilla nueva: se conserva lo escrito en los campos que siguen encajando y los enviados o aprobados vuelven a borrador, sin su historial ni sus firmas
-                    </p>
-                    <SyllabusStateCountsTable counts={templateImpact} caption="Cantidad de sílabos que se adaptan, por estado" />
-                  </>
-                ) : null}
-                {shownPending === "cerrar" ? (
-                  impactLoading ? (
-                    <Skeleton className="h-24 w-full" />
-                  ) : impactError ? (
-                    <Alert variant="destructive">
-                      <AlertDescription>{impactError}</AlertDescription>
-                    </Alert>
-                  ) : impact ? (
-                    impact.total === 0 ? (
-                      <p>El periodo académico no tiene sílabos</p>
-                    ) : unapprovedTotal === 0 ? (
-                      <p>Todos los sílabos están aprobados</p>
-                    ) : (
-                      <>
-                        <p>Lo que no esté aprobado quedará solo para consulta</p>
-                        <SyllabusStateCountsTable counts={unapproved} total={unapprovedTotal} caption="Sílabos sin aprobar, por estado" />
-                      </>
-                    )
-                  ) : null
-                ) : null}
-                {phrase ? <ConfirmPhrase id="process-transition-confirm" value={typed} onValueChange={setTyped} phrase={phrase} /> : null}
-                {error ? (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                ) : null}
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline">
-                      Cancelar
-                    </Button>
-                  </DialogClose>
-                  <Button type="submit" variant={templateImpact || shown.destructive ? "destructive" : "default"} disabled={processing || !transitionReady}>
-                    {processing ? <Spinner data-icon="inline-start" /> : <ShownIcon data-icon="inline-start" aria-hidden="true" />}
-                    {templateImpact ? "Reanudar y adaptar sílabos" : shown.label}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
@@ -318,7 +197,6 @@ export function SyllabusProcessActions({ process, menu = true, onCompleted, chil
             <FieldDescription>Les llega como aviso y por correo</FieldDescription>
             <FieldError errors={deleteErrors.mensaje} />
           </Field>
-          <ConfirmPhrase id="process-delete-confirm" value={deleteTyped} onValueChange={setDeleteTyped} phrase={DELETE_PHRASE} />
           {deleteError ? (
             <Alert variant="destructive">
               <AlertDescription>{deleteError}</AlertDescription>

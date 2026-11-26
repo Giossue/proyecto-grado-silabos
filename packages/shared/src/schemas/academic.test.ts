@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import { schemaErrors } from "./issues"
-import { careerSchema, facultySchema, parallelsSchema, periodSchema, requirementSchema, STUDY_MODALITIES, studyModalityLabel, subjectSchema } from "./academic"
+import { careerSchema, facultySchema, MALLA_STATE_LABELS, mallaSchema, mallaTargetSchema, parallelsSchema, periodSchema, requirementSchema, STUDY_MODALITIES, studyModalityLabel, subjectSchema } from "./academic"
 
 const UUID = "01a1c5ba-2222-7000-8000-999999999999"
 
@@ -61,5 +61,35 @@ describe("academic schemas", () => {
       "codes.0": ["El campo código de paralelo tiene un valor duplicado."],
       "codes.1": ["El campo código de paralelo tiene un valor duplicado."],
     })
+  })
+
+  it("validate a new malla: name unique in the career, optional resolution, cycles and state", async () => {
+    const taken = mallaSchema({ nameAvailable: async () => false, updating: false })
+    expect(await schemaErrors(taken, { name: "Malla 2025", cycle_count: 0, state: "abierta" })).toEqual({
+      name: ["Ya existe una malla con ese nombre en esta carrera."],
+      cycle_count: ["El campo cantidad de ciclos debe ser al menos 1."],
+      state: ["El valor seleccionado en estado no es válido."],
+    })
+    expect(await schemaErrors(taken, {})).toEqual({
+      name: ["El campo nombre es obligatorio."],
+      cycle_count: ["El campo cantidad de ciclos es obligatorio."],
+      state: ["El campo estado es obligatorio."],
+    })
+    const free = mallaSchema({ nameAvailable: async () => true, updating: false })
+    expect(await schemaErrors(free, { name: "Malla 2025", resolution: null, cycle_count: 9, state: "vigente" })).toEqual({})
+    expect(MALLA_STATE_LABELS).toEqual({ vigente: "Vigente", en_transicion: "En transición", cerrada: "Cerrada" })
+  })
+
+  it("validate a malla edit: every field optional, no cycle count", async () => {
+    const schema = mallaSchema({ nameAvailable: async () => true, updating: true })
+    expect(await schemaErrors(schema, {})).toEqual({})
+    expect(await schemaErrors(schema, { state: "cerrada", resolution: "RCU-2025-001" })).toEqual({})
+    expect(await schemaErrors(schema, { name: "", state: "x" })).toEqual({ name: ["El campo nombre es obligatorio."], state: ["El valor seleccionado en estado no es válido."] })
+  })
+
+  it("require the malla that receives subjects and check it belongs to the career", async () => {
+    expect(await schemaErrors(mallaTargetSchema({ mallaExists: async () => true }), {})).toEqual({ malla_id: ["El campo malla es obligatorio."] })
+    expect(await schemaErrors(mallaTargetSchema({ mallaExists: async () => false }), { malla_id: UUID })).toEqual({ malla_id: ["El valor seleccionado en malla no es válido."] })
+    expect(await schemaErrors(mallaTargetSchema({ mallaExists: async () => true }), { malla_id: UUID })).toEqual({})
   })
 })

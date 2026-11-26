@@ -132,6 +132,12 @@ async function readOnlyForm(sections: unknown, definition: TemplateDefinition, c
   })
 }
 
+// Syllabi generated before careers had several mallas did not record theirs.
+function mallaName(context: unknown): string | null {
+  const name = dataGet(context, "curriculum.name")
+  return typeof name === "string" && name !== "" ? name : null
+}
+
 export async function syllabusPayload(
   request: Request,
   session: AppSession,
@@ -184,6 +190,7 @@ export async function syllabusPayload(
     code: syllabus.code,
     convocation: convocationName(syllabus.career, syllabus.period),
     period: syllabus.period,
+    malla_name: mallaName(syllabus.context),
     state: syllabus.state,
     iniciado_en: syllabus.startedAt,
     version_bloqueo: syllabus.version,

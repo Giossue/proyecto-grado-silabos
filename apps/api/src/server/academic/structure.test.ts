@@ -9,6 +9,7 @@ import {
   type CareerLock,
   type CareerRecord,
   type CareerTeacherRecord,
+  type MallaRecord,
   type PersonRecord,
   type SubjectRecord,
   type TeacherAssignmentRecord,
@@ -18,6 +19,9 @@ const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
 const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 const OTHER = "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"
+const MALLA = "01a1c5bc-9000-7000-8000-000000000001"
+const OLD_MALLA = "01a1c5bc-9000-7000-8000-000000000002"
+const OTHER_MALLA = "01a1c5bc-9000-7000-8000-000000000003"
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const SHIFTS = '"shiftOptions":[{"value":"matutina","label":"Matutina"},{"value":"vespertina","label":"Vespertina"},{"value":"nocturna","label":"Nocturna"}]'
 const MODALITIES =
@@ -26,6 +30,7 @@ const BASE_OPTIONS = `"faculties":[],"careers":[],"periods":[],"modalityOptions"
 
 let world: FakeWorld
 let careers: Map<string, CareerRecord>
+let mallas: MallaRecord[]
 let lock: CareerLock | null
 let subjects: SubjectRecord[]
 let calls: string[]
@@ -56,7 +61,7 @@ function subject(overrides: Partial<SubjectRecord> = {}): SubjectRecord {
 const repository = (): AcademicStructureRepository => ({
   activeCareer: async (id) => careers.get(id) ?? null,
   careerLock: async () => lock,
-  curriculumSubjects: async (id) => (id === CAREER ? subjects : []),
+  curriculumSubjects: async (id) => (id === MALLA ? subjects : []),
   requirements: async (ids) => {
     calls.push(`requirements:${ids.join(",")}`)
     return ids.length < 2 ? [] : [{ id: "r-1", subjectId: ids[1], requirementId: ids[0] }]
@@ -69,8 +74,17 @@ const repository = (): AcademicStructureRepository => ({
 })
 
 function deps() {
-  return { bridge: fakeDeps(world), academic: repository() }
+  return {
+    bridge: fakeDeps(world),
+    academic: repository(),
+    mallas: {
+      mallas: async (careerId: string) => mallas.filter((malla) => malla.careerId === careerId),
+      malla: async (careerId: string, id: string) => mallas.find((malla) => malla.careerId === careerId && malla.id === id) ?? null,
+    },
+  }
 }
+
+const malla = (id: string, careerId: string, name: string, state: string, cycleCount: number): MallaRecord => ({ id, careerId, name, resolution: null, cycleCount, state, subjectCount: 0 })
 
 function get(path: string): Request {
   return apiRequest(path, { cookie })
@@ -92,6 +106,7 @@ beforeEach(() => {
   }
   asRole("coordinador")
   careers = new Map([[CAREER, { id: CAREER, name: "Software", modality: "presencial", cycleCount: 4 }]])
+  mallas = [malla(MALLA, CAREER, "Malla SW", "vigente", 4), malla(OLD_MALLA, CAREER, "Malla SW-8", "en_transicion", 9), malla(OTHER_MALLA, OTHER, "Malla RED", "vigente", 8)]
   lock = null
   subjects = [subject()]
   calls = []
@@ -101,7 +116,7 @@ beforeEach(() => {
 })
 
 describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
-  const path = `/api/v1/coordination/academic/curriculum/${CAREER}`
+  const path = `/api/v1/coordination/academic/curriculum/${MALLA}`
 
   it("returns the SPA curriculum contract of the coordinator's career, byte for byte", async () => {
     subjects = [
@@ -120,7 +135,7 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
         hoursAa: null,
       }),
     ]
-    const response = await curriculumBuilder(get(path), CAREER, deps())
+    const response = await curriculumBuilder(get(path), MALLA, deps())
     const fixed =
       '"fixedFields":[{"id":"horas_ac","key":"acd","label":"ACD","type":"entero","system_key":"horas_ac","system_label":"Horas AC / ACD","position":1,"visible_on_card":true,"totalizable":true},' +
       '{"id":"horas_pae","key":"ape","label":"APE","type":"entero","system_key":"horas_pae","system_label":"Horas PAE / APE","position":2,"visible_on_card":true,"totalizable":true},' +
@@ -144,7 +159,8 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
       status: 200,
       text:
         `{"career":{"id":"${CAREER}","name":"Software","modality":{"value":"presencial","label":"Presencial"}},` +
-        `"curriculum":{"id":"${CAREER}","cycle_count":4,"editable":true,"lock_reason":null,"lock":null},` +
+        `"malla":{"id":"${MALLA}","name":"Malla SW","state":"vigente"},` +
+        `"curriculum":{"id":"${MALLA}","cycle_count":4,"editable":true,"lock_reason":null,"lock":null},` +
         `${fixed},${totals},"subjects":[${first},${second}],` +
         `"requirements":[{"id":"r-1","subject_id":"01a1c5bc-7d0a-7172-b554-6ae09a4da972","requirement_id":"01a1c5bc-7cbf-7091-860c-63a02b91e998"}],` +
         `"modalityOptions":${MODALITIES},` +
@@ -159,10 +175,10 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
   it("marks a career with an open convocation as locked and totals an empty curriculum with integers", async () => {
     lock = { period: "Noviembre-Marzo 2026-2027", institutionalPause: true, deliveryOn: "2026-12-10" }
     subjects = []
-    careers.set(CAREER, { id: CAREER, name: "Software", modality: null, cycleCount: 9 })
-    const text = await (await curriculumBuilder(get(path), CAREER, deps())).text()
+    careers.set(CAREER, { id: CAREER, name: "Software", modality: null, cycleCount: 4 })
+    const text = await (await curriculumBuilder(get(`/api/v1/coordination/academic/curriculum/${OLD_MALLA}`), OLD_MALLA, deps())).text()
     expect(text).toContain(
-      `"career":{"id":"${CAREER}","name":"Software","modality":null},"curriculum":{"id":"${CAREER}","cycle_count":9,"editable":false,"lock_reason":"Periodo académico activo",` +
+      `"career":{"id":"${CAREER}","name":"Software","modality":null},"malla":{"id":"${OLD_MALLA}","name":"Malla SW-8","state":"en_transicion"},"curriculum":{"id":"${OLD_MALLA}","cycle_count":9,"editable":false,"lock_reason":"Periodo académico activo",` +
         '"lock":{"scope":"convocation","period":"Noviembre-Marzo 2026-2027","institutional_pause":true,"delivery_on":"2026-12-10"}}',
     )
     expect(text).toContain(
@@ -176,16 +192,17 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
     ["bibliotecario", null],
   ])("answers 403 to the %s role", async (role, careerId) => {
     asRole(role, careerId)
-    expect(await read(await curriculumBuilder(get(path), CAREER, deps()))).toEqual({ status: 403, text: FORBIDDEN })
+    expect(await read(await curriculumBuilder(get(path), MALLA, deps()))).toEqual({ status: 403, text: FORBIDDEN })
   })
 
   it("answers 403 when the coordinator's career is inactive", async () => {
     careers.clear()
-    expect(await read(await curriculumBuilder(get(path), CAREER, deps()))).toEqual({ status: 403, text: FORBIDDEN })
+    expect(await read(await curriculumBuilder(get(path), MALLA, deps()))).toEqual({ status: 403, text: FORBIDDEN })
   })
 
-  it("aborts another career's curriculum with 404 and answers the router 404 for a non-UUID path", async () => {
-    expect(await read(await curriculumBuilder(get(`/api/v1/coordination/academic/curriculum/${OTHER}`), OTHER, deps()))).toEqual({ status: 404, text: '{"message":""}' })
+  it("aborts a malla of another career, and the career id itself, with 404 and answers the router 404 for a non-UUID path", async () => {
+    expect(await read(await curriculumBuilder(get(`/api/v1/coordination/academic/curriculum/${OTHER_MALLA}`), OTHER_MALLA, deps()))).toEqual({ status: 404, text: '{"message":""}' })
+    expect(await read(await curriculumBuilder(get(`/api/v1/coordination/academic/curriculum/${CAREER}`), CAREER, deps()))).toEqual({ status: 404, text: '{"message":""}' })
     expect(await read(await curriculumBuilder(get("/api/v1/coordination/academic/curriculum/abc"), "abc", deps()))).toEqual({ status: 404, text: '{"message":"The route api/v1/coordination/academic/curriculum/abc could not be found."}' })
   })
 
@@ -193,7 +210,7 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
     expect(await read(await curriculumBuilder(apiRequest(path), CAREER, deps()))).toEqual({ status: 401, text: '{"message":"Unauthenticated."}' })
     world.assignments = [makeAssignment({ role: "coordinador" }), makeAssignment({ id: "other-role", role: "docente" })]
     world.sessions.set(SESSION_ID, { payload: sessionPayload(loggedInAttributes({ active_role_assignment_id: "missing" })), lastActivity: NOW - 60 })
-    const response = await read(await curriculumBuilder(get(path), CAREER, deps()))
+    const response = await read(await curriculumBuilder(get(path), MALLA, deps()))
     expect(response.status).toBe(409)
     expect(response.text).toContain("Seleccione un rol vigente.")
   })
@@ -267,22 +284,22 @@ describe("reads through /api/v1/admin/careers/{career}/academic", () => {
 
   it("gives the administrator the curriculum and teacher assignments of the requested career", async () => {
     asRole("administrador", null)
-    const curriculum = await curriculumBuilder(get(`/api/v1/admin/careers/${OTHER}/academic/curriculum/${OTHER}`), OTHER, deps(), OTHER)
+    const curriculum = await curriculumBuilder(get(`/api/v1/admin/careers/${OTHER}/academic/curriculum/${OTHER_MALLA}`), OTHER_MALLA, deps(), OTHER)
     expect(curriculum.status).toBe(200)
     expect(((await curriculum.json()) as { career: { id: string; name: string } }).career).toMatchObject({ id: OTHER, name: "Redes" })
     const staff = await teacherAssignments(get(`/api/v1/admin/careers/${OTHER}/academic/teacher-assignments`), deps(), OTHER)
     expect(((await staff.json()) as { career: { id: string } }).career.id).toBe(OTHER)
   })
 
-  it("answers 404 for a curriculum that is not the requested career and for an unknown career", async () => {
+  it("answers 404 for a malla that is not of the requested career and for an unknown career", async () => {
     asRole("administrador", null)
-    expect((await curriculumBuilder(get(`/api/v1/admin/careers/${OTHER}/academic/curriculum/${CAREER}`), CAREER, deps(), OTHER)).status).toBe(404)
+    expect((await curriculumBuilder(get(`/api/v1/admin/careers/${OTHER}/academic/curriculum/${MALLA}`), MALLA, deps(), OTHER)).status).toBe(404)
     const unknown = "01a1c5bc-79cf-7000-8000-000000000009"
     expect((await teacherAssignments(get(`/api/v1/admin/careers/${unknown}/academic/teacher-assignments`), deps(), unknown)).status).toBe(404)
   })
 
   it("refuses a coordinator who requests another career", async () => {
-    expect(await read(await curriculumBuilder(get(`/api/v1/admin/careers/${OTHER}/academic/curriculum/${OTHER}`), OTHER, deps(), OTHER))).toEqual({ status: 403, text: FORBIDDEN })
+    expect(await read(await curriculumBuilder(get(`/api/v1/admin/careers/${OTHER}/academic/curriculum/${OTHER_MALLA}`), OTHER_MALLA, deps(), OTHER))).toEqual({ status: 403, text: FORBIDDEN })
     expect(await read(await teacherAssignments(get(`/api/v1/admin/careers/${OTHER}/academic/teacher-assignments`), deps(), OTHER))).toEqual({ status: 403, text: FORBIDDEN })
   })
 })

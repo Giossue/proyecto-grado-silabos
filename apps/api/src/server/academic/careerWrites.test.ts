@@ -25,6 +25,14 @@ const PARALLEL = "01a1c5bc-7cf9-725c-957d-66e06c001a2d"
 const OTHER_PARALLEL = "01a1c5bc-7f04-72c7-897e-c6e503b03fb2"
 const TEACHER = "01a1c5bc-7b37-718f-861d-a86a8e7fe350"
 const TEACHER_ROLE = "01a1c5bc-7ca5-7009-83f0-4ebc012572d5"
+const MALLA = "01a1c5bc-9000-7000-8000-000000000001"
+const OLD_MALLA = "01a1c5bc-9000-7000-8000-000000000002"
+const OTHER_MALLA = "01a1c5bc-9000-7000-8000-000000000003"
+const MALLAS: Record<string, { careerId: string; cycleCount: number; state: string }> = {
+  [MALLA]: { careerId: "01a1c5bc-79ca-7331-8f0f-66d63f61c699", cycleCount: 4, state: "vigente" },
+  [OLD_MALLA]: { careerId: "01a1c5bc-79ca-7331-8f0f-66d63f61c699", cycleCount: 9, state: "en_transicion" },
+  [OTHER_MALLA]: { careerId: "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9", cycleCount: 4, state: "vigente" },
+}
 const CURRENT_ASSIGNMENT = "01a1c5bc-7d03-7162-95e7-db49fd8d2773"
 const PURGE_STARTED =
   "El sílabo de este paralelo ya tiene trabajo del docente. Cambiar el docente lo elimina con todo su contenido (borrador, revisiones, aprobación, firmas y análisis de IA) y el nuevo docente lo empieza de cero."
@@ -52,10 +60,11 @@ function nextId(): string {
   return `01a2aaaa-0000-7000-8000-00000000000${sequence}`
 }
 
-function subjectRow(id: string, careerId: string, overrides: Partial<SubjectRow["columns"]> = {}): SubjectRow & { active: boolean } {
+function subjectRow(id: string, careerId: string, overrides: Partial<SubjectRow["columns"]> = {}, mallaId = careerId === CAREER ? MALLA : OTHER_MALLA): SubjectRow & { active: boolean } {
   return {
     id,
     careerId,
+    mallaId,
     active: true,
     columns: {
       codigo_asignatura: "SW-B1-001",
@@ -78,10 +87,14 @@ function deps(): CareerWriteDeps {
   return {
     bridge: fakeDeps(world),
     careerActive: async (id) => id === CAREER || id === OTHER_CAREER,
-    subjectInCareer: async (id, careerId) => subjects.get(id)?.careerId === careerId,
-    activeSubjectInCareer: async (id, careerId) => subjects.get(id)?.careerId === careerId && subjects.get(id)?.active === true,
-    subjectCodeTaken: async (careerId, code, except) =>
-      [...subjects.values()].some((subject) => subject.careerId === careerId && subject.columns.codigo_asignatura === code && subject.id !== except),
+    mallaInCareer: async (mallaId, careerId) => MALLAS[mallaId]?.careerId === careerId,
+    subjectMalla: async (id, careerId) => (subjects.get(id)?.careerId === careerId ? (subjects.get(id)?.mallaId ?? null) : null),
+    activeSubjectInCareer: async (id, careerId) => {
+      const subject = subjects.get(id)
+      return subject?.careerId === careerId && subject.active && MALLAS[subject.mallaId]?.state !== "cerrada"
+    },
+    subjectCodeTaken: async (mallaId, code, except) =>
+      [...subjects.values()].some((subject) => subject.mallaId === mallaId && subject.columns.codigo_asignatura === code && subject.id !== except),
     eligibleUserExists: async (id) => users.has(id),
     parallelInCareer: async (id, careerId) => {
       const parallel = parallels.get(id)
@@ -92,14 +105,14 @@ function deps(): CareerWriteDeps {
       try {
         const result = await work({
           careerLocked: async () => locked,
-          lockCareer: async (id) => (id === CAREER || id === OTHER_CAREER ? { id, cycleCount: 4 } : null),
-          lastPosition: async (careerId, cycle) => {
-            const positions = [...subjects.values()].filter((subject) => subject.careerId === careerId && subject.columns.ciclo_asignatura === cycle).map((subject) => Number(subject.columns.orden_asignatura_en_ciclo))
+          lockMalla: async (careerId, mallaId) => (MALLAS[mallaId]?.careerId === careerId ? { id: mallaId, cycleCount: MALLAS[mallaId].cycleCount } : null),
+          lastPosition: async (mallaId, cycle) => {
+            const positions = [...subjects.values()].filter((subject) => subject.mallaId === mallaId && subject.columns.ciclo_asignatura === cycle).map((subject) => Number(subject.columns.orden_asignatura_en_ciclo))
             return positions.length === 0 ? null : Math.max(...positions)
           },
-          insertSubject: async (careerId, columns) => {
+          insertSubject: async (careerId, mallaId, columns) => {
             const id = nextId()
-            log.push(`insert-subject:${careerId}:${JSON.stringify(columns)}`)
+            log.push(`insert-subject:${careerId}:${mallaId}:${JSON.stringify(columns)}`)
             return id
           },
           subjectGeneratesSyllabus: async (id) => (subjects.get(id)?.columns.genera_silabo_asignatura as boolean | undefined) ?? null,
@@ -153,7 +166,10 @@ function deps(): CareerWriteDeps {
             log.push(`unassign:${id}`)
             assignments = assignments.filter((assignment) => assignment.id !== id)
           },
-          lockActiveSubject: async (id, careerId) => (subjects.get(id)?.careerId === careerId && subjects.get(id)?.active ? id : null),
+          lockActiveSubject: async (id, careerId) => {
+            const subject = subjects.get(id)
+            return subject?.careerId === careerId && subject.active && MALLAS[subject.mallaId]?.state !== "cerrada" ? id : null
+          },
           existingParallelCodes: async (subjectId, codes) =>
             [...parallels.values()].filter((parallel) => parallel.subjectId === subjectId && codes.includes(parallel.code.toUpperCase())).map((parallel) => parallel.code),
           insertParallel: async (subjectId, code, shift) => {
@@ -210,7 +226,7 @@ const storeParallels = (body: unknown) => send("POST", "/api/v1/coordination/aca
 const editParallel = (id: string, body: unknown) => send("PATCH", `/api/v1/coordination/academic/parallels/${id}`, body, (request) => updateParallel(request, id, deps()))
 const replaceTeacher = (id: string, body: unknown) =>
   send("PUT", `/api/v1/coordination/academic/parallels/${id}/teacher`, body, (request) => replaceParallelTeacher(request, id, deps()))
-const subjectBody = { code: "SW-701", nombre: "Arquitectura Empresarial", cycle: 1, organization_unit: "profesional", horas_ac: 48, horas_pae: 32, horas_aa: 64, creditos: 4 }
+const subjectBody = { malla_id: MALLA, code: "SW-701", nombre: "Arquitectura Empresarial", cycle: 1, organization_unit: "profesional", horas_ac: 48, horas_pae: 32, horas_aa: 64, creditos: 4 }
 
 beforeEach(() => {
   world = {
@@ -249,7 +265,7 @@ describe("POST /api/v1/coordination/academic/asignatura", () => {
     expect(response.text).toBe(CREATED)
     expect(log).toEqual([
       "begin",
-      `insert-subject:${CAREER}:${JSON.stringify({
+      `insert-subject:${CAREER}:${MALLA}:${JSON.stringify({
         codigo_asignatura: "SW-701",
         nombre_asignatura: "Arquitectura Empresarial",
         ciclo_asignatura: 1,
@@ -277,7 +293,7 @@ describe("POST /api/v1/coordination/academic/asignatura", () => {
   })
 
   it("rejects missing fields, a repeated code, a fractional total of hours and a cycle beyond the curriculum", async () => {
-    expect((await create("asignatura", { nombre: "X", cycle: 1, organization_unit: "otra", horas_ac: 1 })).json?.errors).toEqual({
+    expect((await create("asignatura", { malla_id: MALLA, nombre: "X", cycle: 1, organization_unit: "otra", horas_ac: 1 })).json?.errors).toEqual({
       code: ["El campo código es obligatorio."],
       organization_unit: ["El valor seleccionado en unidad de organización curricular no es válido."],
       creditos: ["El campo creditos es obligatorio."],
@@ -290,6 +306,21 @@ describe("POST /api/v1/coordination/academic/asignatura", () => {
     expect(exceeded.status).toBe(422)
     expect(exceeded.json?.errors).toEqual({ cycle: ["El ciclo excede la configuración de esta malla."] })
     expect(log).toEqual(["begin", "rollback"])
+  })
+
+  it("inserts the subject in the malla it names, with the code unique per malla and the cycles of that malla", async () => {
+    const old = await create("asignatura", { ...subjectBody, malla_id: OLD_MALLA, code: "SW-B1-001", cycle: 7 })
+    expect(old.text).toBe(CREATED)
+    expect(log.find((line) => line.startsWith("insert-subject"))).toMatch(new RegExp(`^insert-subject:${CAREER}:${OLD_MALLA}:`))
+    expect((await create("asignatura", { ...subjectBody, cycle: 7 })).json?.errors).toEqual({ cycle: ["El ciclo excede la configuración de esta malla."] })
+  })
+
+  it("requires the malla and refuses a malla of another career, writing nothing", async () => {
+    const withoutMalla: Record<string, unknown> = { ...subjectBody }
+    delete withoutMalla.malla_id
+    expect((await create("asignatura", withoutMalla)).json?.errors).toEqual({ malla_id: ["El campo malla es obligatorio."] })
+    expect((await create("asignatura", { ...subjectBody, malla_id: OTHER_MALLA })).json?.errors).toEqual({ malla_id: ["El valor seleccionado en malla no es válido."] })
+    expect(log).toEqual([])
   })
 
   it("refuses while a convocation of the career is open and is forbidden for an administrator", async () => {
@@ -462,6 +493,19 @@ describe("POST /api/v1/coordination/academic/parallels", () => {
     expect(log.at(-1)).toBe("rollback")
   })
 
+  it("a subject of a closed malla receives no parallels", async () => {
+    MALLAS[OLD_MALLA].state = "cerrada"
+    subjects.set(OTHER_SUBJECT, subjectRow(OTHER_SUBJECT, CAREER, {}, OLD_MALLA))
+    try {
+      expect((await storeParallels({ subject_id: OTHER_SUBJECT, codes: ["B"], shift: "matutina", user_id: TEACHER })).json?.errors).toEqual({
+        subject_id: ["El valor seleccionado en materia no es válido."],
+      })
+      expect(log).toEqual([])
+    } finally {
+      MALLAS[OLD_MALLA].state = "en_transicion"
+    }
+  })
+
   it("only a subject of the coordinator's career receives parallels", async () => {
     expect((await storeParallels({ subject_id: OTHER_SUBJECT, codes: ["B"], shift: "matutina", user_id: TEACHER })).json?.errors).toEqual({
       subject_id: ["El valor seleccionado en materia no es válido."],
@@ -622,8 +666,8 @@ describe("the administrator works on any career through /api/v1/admin/careers/{c
   })
 
   it("creates and edits subjects, creates parallels with their teacher, edits them and replaces their teacher in the requested career", async () => {
-    expect((await send("POST", adminPath(OTHER_CAREER, "asignatura"), subjectBody, (request) => createCareerRecord(request, "asignatura", deps(), OTHER_CAREER))).text).toBe(CREATED)
-    expect(log.some((entry) => entry.startsWith(`insert-subject:${OTHER_CAREER}:`))).toBe(true)
+    expect((await send("POST", adminPath(OTHER_CAREER, "asignatura"), { ...subjectBody, malla_id: OTHER_MALLA }, (request) => createCareerRecord(request, "asignatura", deps(), OTHER_CAREER))).text).toBe(CREATED)
+    expect(log.some((entry) => entry.startsWith(`insert-subject:${OTHER_CAREER}:${OTHER_MALLA}:`))).toBe(true)
     log = []
     expect((await send("PATCH", adminPath(OTHER_CAREER, `asignatura/${OTHER_SUBJECT}`), { ...subjectBody, code: "SW-B1-001" }, (request) => updateCareerRecord(request, "asignatura", OTHER_SUBJECT, deps(), OTHER_CAREER))).status).toBe(200)
     expect(log).toContain(`keep:false:${OTHER_CAREER}`)

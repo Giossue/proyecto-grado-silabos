@@ -61,8 +61,10 @@ beforeEach(() => {
 })
 
 describe("GET admin/template/{template}/teacher-preview", () => {
-  it("uses the same sample identification card as Laravel", () => {
-    expect(IDENTIFICATION_SAMPLE).toEqual(goldenSample)
+  it("uses the same sample identification card as Laravel, plus the malla of the subject", () => {
+    const { curriculum, ...laravel } = IDENTIFICATION_SAMPLE
+    expect(laravel).toEqual(goldenSample)
+    expect(curriculum).toBe("Malla 2022")
   })
 
   it("shows the administrator the teacher form with the initial content and the sample identification", async () => {

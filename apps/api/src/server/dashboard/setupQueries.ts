@@ -1,9 +1,12 @@
 import { Prisma } from "../../generated/prisma/client"
 import type { Db } from "../../prisma/db"
 import { hasRows } from "../../prisma/sql"
+import { openCurriculum } from "../syllabus/syllabusSql"
 import type { CareerReadinessFacts, SetupRepository } from "./setupChecklist"
 
-const SCHEDULED_SUBJECT = Prisma.sql`asignaturas.asignatura_activa = true and asignaturas.genera_silabo_asignatura = true`
+// Readiness looks at the subjects of every malla of the career that is not closed.
+const OPEN_CURRICULUM = openCurriculum("asignaturas")
+const SCHEDULED_SUBJECT = Prisma.sql`asignaturas.asignatura_activa = true and asignaturas.genera_silabo_asignatura = true and ${OPEN_CURRICULUM}`
 const ACTIVE_CAREER = Prisma.sql`carreras.carrera_activa = true`
 const PROCESS_ALIVE = Prisma.sql`exists (select convocatorias_universidad.convocatoria_universidad_id from convocatorias_universidad
   where convocatorias_universidad.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)`
@@ -60,7 +63,7 @@ export function setupRepositoryOn(db: Db): SetupRepository {
             where convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid and ${PROCESS_ALIVE})`,
       ),
     async careerReadiness(careerId): Promise<CareerReadinessFacts | null> {
-      const [career] = await db.$queryRaw<CareerRow[]>`select (select count(*) from asignaturas where asignaturas.carrera_id = carreras.carrera_id)::int as subjects,
+      const [career] = await db.$queryRaw<CareerRow[]>`select (select count(*) from asignaturas where asignaturas.carrera_id = carreras.carrera_id and ${OPEN_CURRICULUM})::int as subjects,
           facultades.facultad_id::text as "facultyId", archivos.archivo_id is not null as "hasLogo", archivos.disco as disk,
           archivos.ruta_archivo as path, archivos.categoria as classification
         from carreras

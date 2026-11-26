@@ -20,7 +20,7 @@ const renderForm = (value: CurriculumBuilderSubject | null) =>
     <CurriculumVisualSubjectForm
       career={{ id: "c1", name: "Software", modality: null }}
       modalityOptions={[]}
-      curriculum={{} as never}
+      curriculum={{ id: "malla-2" } as never}
       fixedFields={fixedFields}
       subject={value}
       cycle={8}
@@ -60,6 +60,14 @@ describe("CurriculumVisualSubjectForm", () => {
     await submit()
 
     expect(createCareerRecord).toHaveBeenCalledWith("asignatura", expect.objectContaining({ generates_syllabus: "0" }))
+  })
+
+  it("una materia nueva se crea en la malla que se está viendo", async () => {
+    renderForm(null)
+    await fillNew()
+    await submit()
+
+    expect(createCareerRecord).toHaveBeenCalledWith("asignatura", expect.objectContaining({ malla_id: "malla-2", code: "SW-801" }))
   })
 
   it("al editar conserva el valor de la materia", async () => {

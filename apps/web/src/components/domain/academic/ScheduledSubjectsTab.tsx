@@ -8,6 +8,7 @@ import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { StatusBadge } from "@/components/domain/StatusBadge"
 import { TablePagination } from "@/components/domain/TablePagination"
 import { SortableHead, SortStatus } from "@/components/domain/TableSort"
+import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -19,7 +20,8 @@ import { shiftLabel } from "@/lib/parallelShifts"
 import { activateRow, rowButtonClass } from "@/lib/rowActivation"
 import { cn } from "@/lib/utils"
 
-type ScheduledRow = ScheduledSubjects["scheduledSubjects"][number]
+// `malla_name` comes with each subject since careers can have several mallas (S8).
+type ScheduledRow = ScheduledSubjects["scheduledSubjects"][number] & { malla_name?: string | null }
 type CheckState = boolean | "indeterminate"
 
 type ScheduledSubjectsTabProps = {
@@ -33,7 +35,9 @@ type ScheduledSubjectsTabProps = {
 const cycleKey = (item: ScheduledRow): string => (item.subject_cycle === null ? "none" : String(item.subject_cycle))
 const shiftKey = (shift: string | null | undefined): string => shift ?? "none"
 const searchable = (item: ScheduledRow) => [item.subject_name]
+const mallaOf = (item: ScheduledRow): string => item.malla_name ?? ""
 const filters: Record<string, ClientFilterDefinition<ScheduledRow>> = {
+  malla: { matches: (item, value) => mallaOf(item) === value },
   ciclo: { matches: (item, value) => cycleKey(item) === value },
   paralelo: { matches: (item, value) => item.parallels.some((parallel) => parallel.code === value) },
   jornada: { matches: (item, value) => item.parallels.some((parallel) => shiftKey(parallel.shift) === value) },
@@ -46,7 +50,7 @@ const canPlan = (item: ScheduledRow): boolean => item.editable
 const selectableParallels = (item: ScheduledRow) => item.parallels.filter((parallel) => parallel.editable !== false)
 
 export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChanged, onFailed }: ScheduledSubjectsTabProps) {
-  const rows = data.scheduledSubjects
+  const rows: ScheduledRow[] = data.scheduledSubjects
   const shiftOptions = data.options.shiftOptions
   const filter = useClientFilter(rows, searchable, filters)
   const sort = useTableSort(filter.items, sortColumns)
@@ -71,6 +75,8 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
       ]),
     ).values(),
   ].sort((a, b) => a.order - b.order)
+  const mallas = [...new Set(rows.map(mallaOf).filter((name) => name !== ""))].sort((a, b) => a.localeCompare(b, "es", { numeric: true }))
+  const severalMallas = mallas.length > 1
   const parallelOptions = [...new Set(rows.flatMap((item) => item.parallels.map((parallel) => parallel.code)))].sort((a, b) => a.localeCompare(b, "es", { numeric: true }))
   const shiftChoices = [
     ...new Map(rows.flatMap((item) => item.parallels).map((parallel) => [shiftKey(parallel.shift), { value: shiftKey(parallel.shift), label: shiftLabel(parallel.shift, shiftOptions) }])).values(),
@@ -146,6 +152,16 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
         sort={sort}
         filters={
           <>
+            {severalMallas
+              ? filterSelect(
+                  "malla",
+                  "scheduled-subject-malla",
+                  "Malla",
+                  "Todas las mallas",
+                  "Todas las mallas",
+                  mallas.map((name) => ({ value: name, label: name })),
+                )
+              : null}
             {filterSelect("ciclo", "scheduled-subject-cycle", "Ciclo", "Todos los ciclos", "Todos los ciclos", cycleOptions)}
             {filterSelect(
               "paralelo",
@@ -208,6 +224,7 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
                     ) : (
                       item.subject_name
                     )}
+                    {severalMallas && mallaOf(item) !== "" ? <Badge variant="outline">{mallaOf(item)}</Badge> : null}
                     {item.generates_syllabus === false ? <StatusBadge label="Sin sílabo" tone="info" /> : null}
                   </span>
                 </TableCell>

@@ -27,6 +27,7 @@ import { recipientsOn } from "../notifications/queries"
 import { scheduleWorkflowNotification, storeInternalNotifications, type NotificationScope } from "../notifications/store"
 import { sameStructure, fieldResponseNormalize, documentIsEmpty } from "../configuration/templateRehearsal"
 import { dataGet } from "./identificationCard"
+import { openCurriculum } from "./syllabusSql"
 import { DOCUMENT_PATHS, GenerationRejected, purgeRequired, SENT_STATES, type GenerateOptions, type WorkScope, type WorkSyllabus } from "./inProgressWorkHelpers"
 import { carryTeacherFields, fieldFingerprint } from "./teacherFields"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
@@ -39,7 +40,7 @@ type ParallelRow = { id: string; subject_id: string; code: string; shift: string
 export const CONFIRMATION_FIELD = "confirm_purge"
 export const DEFAULT_REASON = "cambió la base institucional (malla, período académico o plantilla)"
 export const BACK_TO_DRAFT_EVENT = "silabo.devuelto_borrador"
-const SILENT_PATHS = ["subject.position", "curriculum.cycle_count", "career.code"]
+const SILENT_PATHS = ["subject.position", "curriculum.id", "curriculum.name", "curriculum.cycle_count", "career.code"]
 
 type PendingChange = { syllabus: WorkSyllabus; context: PhpRecord; documents: Map<string, unknown>; backToDraft: boolean }
 
@@ -745,7 +746,12 @@ export class InProgressWork {
 
   async generateConvocation(convocationId: string, options: GenerateOptions = {}): Promise<number> {
     const { careerId, periodId } = await this.convocationPeriod(convocationId)
-    const filters = [Prisma.sql`asignatura.carrera_id = ${careerId}::uuid`, Prisma.sql`asignatura.asignatura_activa = true`, Prisma.sql`asignatura.genera_silabo_asignatura = true`]
+    const filters = [
+      Prisma.sql`asignatura.carrera_id = ${careerId}::uuid`,
+      Prisma.sql`asignatura.asignatura_activa = true`,
+      Prisma.sql`asignatura.genera_silabo_asignatura = true`,
+      openCurriculum("asignatura"),
+    ]
     if (options.subjectId != null) filters.push(Prisma.sql`paralelo.asignatura_id = ${options.subjectId}::uuid`)
     if (options.subjectIds != null) filters.push(options.subjectIds.length === 0 ? Prisma.sql`false` : Prisma.sql`paralelo.asignatura_id in (${uuidList(options.subjectIds)})`)
     if (options.parallelId != null) filters.push(Prisma.sql`paralelo.paralelo_id = ${options.parallelId}::uuid`)

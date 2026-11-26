@@ -58,6 +58,25 @@ describe("Proyecto de carrera", () => {
     expect(document.body.textContent).not.toContain("Materia sin sílabo")
   })
 
+  it("con dos mallas abiertas cada tarjeta muestra la malla de la materia", async () => {
+    vi.mocked(getScheduledSubjects).mockResolvedValue(
+      scheduled([subject("m1", "Cálculo", 1, { malla_name: "Malla SW-9" }), subject("m2", "Cálculo", 1, { malla_name: "Malla SW-8" })]),
+    )
+    await mountPage()
+    await openCycles()
+
+    const cards = [...document.querySelectorAll('ul[aria-label="Materias del ciclo 1"] [data-slot="card"]')]
+    expect(cards.map((card) => card.textContent)).toEqual(["CálculoMalla SW-9Completa", "CálculoMalla SW-8Completa"])
+  })
+
+  it("con una sola malla no repite su nombre en las tarjetas", async () => {
+    vi.mocked(getScheduledSubjects).mockResolvedValue(scheduled([subject("m1", "Cálculo", 1, { malla_name: "Malla SW-9" }), subject("m2", "Redes", 1, { malla_name: "Malla SW-9" })]))
+    await mountPage()
+    await openCycles()
+
+    expect(document.body.textContent).not.toContain("Malla SW-9")
+  })
+
   it("cada tarjeta es un enlace con el nombre de la materia hacia la página de su proyecto de carrera", async () => {
     await mountPage()
     await openCycles()

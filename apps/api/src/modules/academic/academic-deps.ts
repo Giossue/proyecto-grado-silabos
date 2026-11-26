@@ -8,7 +8,9 @@ import type { GovernanceDeps } from "../../server/academic/governance"
 import type { GovernanceWriteDeps } from "../../server/academic/governanceWrites"
 import { createGovernanceWriteDeps } from "../../server/academic/governanceWriteStore"
 import type { ScheduledSubjectsDeps } from "../../server/academic/scheduledSubjects"
-import type { AcademicStructureDeps } from "../../server/academic/structure"
+import type { CurriculumReadDeps } from "../../server/academic/structure"
+import type { MallaDeps } from "../../server/academic/mallas"
+import { createMallaDeps } from "../../server/academic/mallaWriteStore"
 import type { StructureImportDeps } from "../../server/academic/structureImports"
 import { createStructureImportTransactions } from "../../server/academic/structureImportStore"
 import type { SupportDocumentDeps } from "../../server/academic/supportDocuments"
@@ -64,8 +66,12 @@ export class AcademicDeps {
     return { bridge: this.bridge, limiter: this.limiter, store: this.structureImportStore, ...createStructureImportTransactions(this.prisma) }
   }
 
-  structure(): AcademicStructureDeps {
-    return { bridge: this.bridge, academic: this.structureRepository }
+  structure(): CurriculumReadDeps {
+    return { bridge: this.bridge, academic: this.structureRepository, mallas: this.structureRepository }
+  }
+
+  mallas(): MallaDeps {
+    return { ...createMallaDeps(this.prisma, this.structureRepository), bridge: this.bridge }
   }
 
   scheduled(): ScheduledSubjectsDeps {

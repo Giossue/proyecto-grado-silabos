@@ -5,17 +5,14 @@ import { useState, type FormEvent } from "react"
 import { createAcademicRecord } from "@/api/academic"
 import { createProcess } from "@/api/processes"
 import { DatePicker } from "@/components/DatePicker"
-import { ConfirmPhrase } from "@/components/domain/ConfirmPhrase"
 import { FormDialogFooter } from "@/components/domain/FormDialogActions"
 import { FormModal } from "@/components/domain/FormModal"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
 import { useFormSteps } from "@/composables/useFormSteps"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
 import { useInstitutionToday } from "@/composables/useInstitutionDate"
-import { matchesPhrase } from "@/lib/confirmPhrase"
 import { applyApiErrors, errorMessages, useSchemaForm } from "@/lib/forms"
 import { periodSchema } from "@silabos/shared/schemas/academic"
 import { processCreationSchema } from "@silabos/shared/schemas/syllabus"
@@ -34,7 +31,6 @@ const PERIOD_FIELDS = ["starts_on", "ends_on"] as const
 const schema = periodSchema({ startsOn: null, creating: true })
   .pick({ starts_on: true, ends_on: true })
   .extend(processCreationSchema().pick({ starts_at: true, due_at: true }).shape)
-const OPEN_PHRASE = "abrir periodo"
 
 const monday = (iso: string): number => {
   const date = new Date(`${iso}T00:00:00Z`)
@@ -44,8 +40,6 @@ const monday = (iso: string): number => {
 export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, onSaved }: ConvocationPeriodDialogProps) {
   const [isOpen, setOpen] = useModelOpen(open, onOpenChange)
   const [processing, setProcessing] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [openingTyped, setOpeningTyped] = useState("")
   const schemaForm = useSchemaForm(schema, { defaultValues: EMPTY_FORM })
   const watched = schemaForm.watch()
   const form: Form = { starts_on: String(watched.starts_on ?? ""), ends_on: String(watched.ends_on ?? ""), starts_at: String(watched.starts_at ?? ""), due_at: String(watched.due_at ?? "") }
@@ -59,11 +53,9 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
   }
   const [createdPeriodId, setCreatedPeriodId] = useState<string | null>(null)
   const { step, goTo, reset: resetStep, stepClassName } = useFormSteps<1 | 2>(1)
-  useOpened(confirmOpen, () => setOpeningTyped(""))
   useOpened(isOpen, () => {
     schemaForm.reset(EMPTY_FORM)
     setCreatedPeriodId(null)
-    setConfirmOpen(false)
     resetStep()
   })
 
@@ -81,27 +73,24 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
     if (key === "starts_on" && value && form.ends_on && form.ends_on < value) schemaForm.setValue("ends_on", "")
   }
 
-  const confirmOrReturn = schemaForm.handleSubmit(
-    () => {
-      if (!disabled) setConfirmOpen(true)
-    },
+  const submitOrReturn = schemaForm.handleSubmit(
+    () => submit(),
     (invalid) => {
       if (PERIOD_FIELDS.some((key) => invalid[key])) goTo(1)
     },
   )
 
-  const askConfirmation = (event: FormEvent<HTMLFormElement>): void => {
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault()
     if (step === 1) {
       if (periodComplete) goTo(2)
       return
     }
-    if (processComplete) void confirmOrReturn(event)
+    if (processComplete) void submitOrReturn(event)
   }
 
   const submit = async (): Promise<void> => {
     if (disabled) return
-    setConfirmOpen(false)
     setProcessing(true)
     schemaForm.clearErrors()
     try {
@@ -132,115 +121,89 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
   return (
     <FormModal open={isOpen} onOpenChange={setOpen} disabled={disabled} triggerLabel="Nuevo periodo académico" title="Nuevo periodo académico" description="Primero el periodo lectivo y después las fechas de los sílabos">
       {({ close }) => (
-        <>
-          <form onSubmit={askConfirmation} noValidate>
-            <FieldGroup>
-              {errors.process ? (
-                <Field data-invalid>
-                  <FieldError errors={errors.process} />
-                </Field>
-              ) : null}
-              <div className="relative overflow-hidden">
-                {step === 1 ? (
-                  <FieldSet key="period" className={stepClassName}>
-                    <FieldLegend>Periodo lectivo</FieldLegend>
-                    <FieldDescription>{description("Fechas de inicio y fin de clases; la etiqueta se genera con el rango de meses y año")}</FieldDescription>
-                    <div className="grid grid-cols-2 items-start gap-4">
-                      <Field data-invalid={Boolean(errors.starts_on)}>
-                        <FieldLabel htmlFor="convocation-period-starts" required>
-                          Inicio de clases
-                        </FieldLabel>
-                        <DatePicker id="convocation-period-starts" value={form.starts_on} onValueChange={(value) => update("starts_on", value)} disabled={periodCreated} required ariaInvalid={Boolean(errors.starts_on)} />
-                        <FieldError errors={errors.starts_on} />
-                      </Field>
-                      <Field data-invalid={Boolean(errors.ends_on)}>
-                        <FieldLabel htmlFor="convocation-period-ends" required>
-                          Fin de clases
-                        </FieldLabel>
-                        <DatePicker id="convocation-period-ends" value={form.ends_on} onValueChange={(value) => update("ends_on", value)} minValue={periodEndMinimum} disabled={periodCreated} required ariaInvalid={Boolean(errors.ends_on)} />
-                        <FieldError errors={errors.ends_on} />
-                      </Field>
-                    </div>
-                    {calendarWeeks ? (
-                      <p className="text-sm text-muted-foreground">
-                        Serían {calendarWeeks} {calendarWeeks === 1 ? "semana" : "semanas"} de clase entre las fechas
-                      </p>
-                    ) : null}
-                  </FieldSet>
-                ) : (
-                  <FieldSet key="syllabus" className={stepClassName}>
-                    <FieldLegend>Elaboración de sílabos</FieldLegend>
-                    <FieldDescription>{description("Elija cuándo empieza la elaboración y hasta cuándo se entrega")}</FieldDescription>
-                    <div className="grid grid-cols-2 items-start gap-4">
-                      <Field data-invalid={Boolean(errors.starts_at)}>
-                        <FieldLabel htmlFor="convocation-starts" required>
-                          Inicio de la elaboración
-                        </FieldLabel>
-                        <DatePicker id="convocation-starts" value={form.starts_at} onValueChange={(value) => update("starts_at", value)} minValue={todayIso} maxValue={periodEnd} required ariaInvalid={Boolean(errors.starts_at)} />
-                        <FieldError errors={errors.starts_at} />
-                      </Field>
-                      <Field data-invalid={Boolean(errors.due_at)}>
-                        <FieldLabel htmlFor="convocation-due" required>
-                          Fecha límite de entrega
-                        </FieldLabel>
-                        <DatePicker id="convocation-due" value={form.due_at} onValueChange={(value) => update("due_at", value)} minValue={dueMinimum} maxValue={periodEnd} required ariaInvalid={Boolean(errors.due_at)} />
-                        <FieldError errors={errors.due_at} />
-                      </Field>
-                    </div>
-                  </FieldSet>
-                )}
-              </div>
-              <FormDialogFooter>
-                {step === 1 ? (
-                  <Button type="button" variant="outline" onClick={close}>
-                    Cancelar
-                  </Button>
-                ) : (
-                  <Button type="button" variant="outline" onClick={() => goTo(1)}>
-                    <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-                    Atrás
-                  </Button>
-                )}
-                {step === 1 ? (
-                  <Button type="submit" disabled={!periodComplete}>
-                    Siguiente
-                    <ArrowRight data-icon="inline-end" aria-hidden="true" />
-                  </Button>
-                ) : (
-                  <Button type="submit" disabled={processing || disabled || !processComplete}>
-                    {processing ? <Spinner data-icon="inline-start" /> : <CalendarPlus data-icon="inline-start" aria-hidden="true" />}
-                    Abrir periodo académico
-                  </Button>
-                )}
-              </FormDialogFooter>
-            </FieldGroup>
-          </form>
-          <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Abrir periodo académico</DialogTitle>
-                <DialogDescription>Al abrirlo:</DialogDescription>
-                <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
-                  <li>El periodo y sus fechas ya no se pueden editar</li>
-                  <li>Cada Coordinación abre después el periodo académico de su carrera</li>
-                  <li>Los sílabos parten del proyecto de carrera de cada materia</li>
-                </ul>
-              </DialogHeader>
-              <ConfirmPhrase id="convocation-open-confirm" value={openingTyped} onValueChange={setOpeningTyped} phrase={OPEN_PHRASE} />
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="outline">
-                    Cancelar
-                  </Button>
-                </DialogClose>
-                <Button type="button" disabled={processing || !matchesPhrase(openingTyped, OPEN_PHRASE)} onClick={() => void submit()}>
+        <form onSubmit={handleFormSubmit} noValidate>
+          <FieldGroup>
+            {errors.process ? (
+              <Field data-invalid>
+                <FieldError errors={errors.process} />
+              </Field>
+            ) : null}
+            <div className="relative overflow-hidden">
+              {step === 1 ? (
+                <FieldSet key="period" className={stepClassName}>
+                  <FieldLegend>Periodo lectivo</FieldLegend>
+                  <FieldDescription>{description("Fechas de inicio y fin de clases; la etiqueta se genera con el rango de meses y año")}</FieldDescription>
+                  <div className="grid grid-cols-2 items-start gap-4">
+                    <Field data-invalid={Boolean(errors.starts_on)}>
+                      <FieldLabel htmlFor="convocation-period-starts" required>
+                        Inicio de clases
+                      </FieldLabel>
+                      <DatePicker id="convocation-period-starts" value={form.starts_on} onValueChange={(value) => update("starts_on", value)} disabled={periodCreated} required ariaInvalid={Boolean(errors.starts_on)} />
+                      <FieldError errors={errors.starts_on} />
+                    </Field>
+                    <Field data-invalid={Boolean(errors.ends_on)}>
+                      <FieldLabel htmlFor="convocation-period-ends" required>
+                        Fin de clases
+                      </FieldLabel>
+                      <DatePicker id="convocation-period-ends" value={form.ends_on} onValueChange={(value) => update("ends_on", value)} minValue={periodEndMinimum} disabled={periodCreated} required ariaInvalid={Boolean(errors.ends_on)} />
+                      <FieldError errors={errors.ends_on} />
+                    </Field>
+                  </div>
+                  {calendarWeeks ? (
+                    <p className="text-sm text-muted-foreground">
+                      Serían {calendarWeeks} {calendarWeeks === 1 ? "semana" : "semanas"} de clase entre las fechas
+                    </p>
+                  ) : null}
+                </FieldSet>
+              ) : (
+                <FieldSet key="syllabus" className={stepClassName}>
+                  <FieldLegend>Elaboración de sílabos</FieldLegend>
+                  <FieldDescription>{description("Elija cuándo empieza la elaboración y hasta cuándo se entrega")}</FieldDescription>
+                  <div className="grid grid-cols-2 items-start gap-4">
+                    <Field data-invalid={Boolean(errors.starts_at)}>
+                      <FieldLabel htmlFor="convocation-starts" required>
+                        Inicio de la elaboración
+                      </FieldLabel>
+                      <DatePicker id="convocation-starts" value={form.starts_at} onValueChange={(value) => update("starts_at", value)} minValue={todayIso} maxValue={periodEnd} required ariaInvalid={Boolean(errors.starts_at)} />
+                      <FieldError errors={errors.starts_at} />
+                    </Field>
+                    <Field data-invalid={Boolean(errors.due_at)}>
+                      <FieldLabel htmlFor="convocation-due" required>
+                        Fecha límite de entrega
+                      </FieldLabel>
+                      <DatePicker id="convocation-due" value={form.due_at} onValueChange={(value) => update("due_at", value)} minValue={dueMinimum} maxValue={periodEnd} required ariaInvalid={Boolean(errors.due_at)} />
+                      <FieldError errors={errors.due_at} />
+                    </Field>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Al abrirlo, el periodo y sus fechas ya no se pueden editar</p>
+                </FieldSet>
+              )}
+            </div>
+            <FormDialogFooter>
+              {step === 1 ? (
+                <Button type="button" variant="outline" onClick={close}>
+                  Cancelar
+                </Button>
+              ) : (
+                <Button type="button" variant="outline" onClick={() => goTo(1)}>
+                  <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+                  Atrás
+                </Button>
+              )}
+              {step === 1 ? (
+                <Button type="submit" disabled={!periodComplete}>
+                  Siguiente
+                  <ArrowRight data-icon="inline-end" aria-hidden="true" />
+                </Button>
+              ) : (
+                <Button type="submit" disabled={processing || disabled || !processComplete}>
                   {processing ? <Spinner data-icon="inline-start" /> : <CalendarPlus data-icon="inline-start" aria-hidden="true" />}
                   Abrir periodo académico
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </>
+              )}
+            </FormDialogFooter>
+          </FieldGroup>
+        </form>
       )}
     </FormModal>
   )

@@ -78,6 +78,7 @@ export function buildIdentification(context: unknown, parallels: string[], teach
   return {
     faculty: get("career.faculty"),
     career: get("career.name"),
+    curriculum: get("curriculum.name"),
     modality: scheduled(context, "modality"),
     teacher_campus: input("campus_universitario") || scheduled(context, "campus"),
     subject: get("subject.name"),

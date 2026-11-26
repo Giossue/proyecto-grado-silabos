@@ -1,6 +1,8 @@
 import {
   curriculumConfigurationSchema,
   facultySchema,
+  mallaSchema,
+  mallaTargetSchema,
   parallelSchema,
   parallelsSchema,
   parallelTeacherSchema,
@@ -25,7 +27,11 @@ export class RequirementDto extends createZodDto(requirementSchema({ subjectId: 
 
 export class SubjectLayoutDto extends createZodDto(subjectLayoutSchema) {}
 
-export class SubjectDto extends createZodDto(subjectSchema()) {}
+export class SubjectDto extends createZodDto(subjectSchema().extend(mallaTargetSchema().shape)) {}
+
+export class MallaDto extends createZodDto(mallaSchema({ updating: false })) {}
+
+export class MallaUpdateDto extends createZodDto(mallaSchema({ updating: true })) {}
 
 export class TeacherAssignmentDto extends createZodDto(teacherAssignmentSchema()) {}
 

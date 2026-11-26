@@ -71,6 +71,7 @@ const career = (overrides: Partial<GovernanceCareer> = {}): GovernanceCareer => 
   modality: "presencial",
   code: "SW-8",
   name: "Software",
+  cycleCount: 9,
   active: true,
   ...overrides,
 })
@@ -104,7 +105,7 @@ beforeEach(() => {
     { id: FACULTY, name: "Ciencias Administrativas", libraries: ["BIB-1"], active: true, logo: { disk: "private", path: `logos/facultades/${FACULTY}/logo.png`, classification: "logo_facultad" } },
     { id: OTHER_FACULTY, name: "Ciencias Agropecuarias", libraries: [], active: true, logo: null },
   ]
-  careers = [career(), career({ id: IDLE_CAREER, facultyId: OTHER_FACULTY, coordinator: null, modality: null, code: "AG-1", name: "Agronomía", active: false })]
+  careers = [career(), career({ id: IDLE_CAREER, facultyId: OTHER_FACULTY, coordinator: null, modality: null, code: "AG-1", name: "Agronomía", cycleCount: null, active: false })]
   periods = [
     { id: PERIOD, code: "Noviembre-Marzo 2026-2027", startsOn: "2026-11-02", endsOn: "2027-03-12", teachingWeeks: 16 },
     { id: OLD_PERIOD, code: "Mayo-Septiembre 2026", startsOn: "2026-05-04", endsOn: "2026-09-11", teachingWeeks: null },
@@ -165,12 +166,13 @@ describe("GET admin/academic/{section?}", () => {
       modality_label: "Presencial",
       code: "SW-8",
       name: "Software",
+      cycle_count: 9,
       active: true,
       deactivate_block: "La carrera participa en un periodo académico en curso. Espere a que se cierre.",
       deactivate_users: { coordinators: 1, teachers: 3 },
       lock_reason: null,
     })
-    expect(body.catalogs.careers[1]).toMatchObject({ coordinator: null, modality: null, modality_label: null, deactivate_block: null, deactivate_users: { coordinators: 0, teachers: 0 } })
+    expect(body.catalogs.careers[1]).toMatchObject({ coordinator: null, modality: null, modality_label: null, cycle_count: null, deactivate_block: null, deactivate_users: { coordinators: 0, teachers: 0 } })
   })
 
   it("locks a period with an open process as «Periodo académico activo» and with a closed one as «Periodo académico cerrado»", async () => {

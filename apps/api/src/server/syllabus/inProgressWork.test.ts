@@ -149,6 +149,67 @@ describe("InProgressWork generation", () => {
   })
 })
 
+describe("InProgressWork generation across mallas", () => {
+  const CURRENT = "0195e7a0-0000-7000-8000-0000000000a1"
+  const TRANSITION = "0195e7a0-0000-7000-8000-0000000000a2"
+  const subjectRow = (id: string, malla: string, name: string) => ({
+    id, code: id.slice(-2), name, cycle: 1, position: 1, unit: null, credits: "2.00", hours_ac: "1.00", hours_pae: "1.00", hours_aa: "1.00",
+    career_id: CAREER, career_code: "SW", career_name: "Software", curriculum_id: `${malla}-id`, curriculum_name: malla, cycle_count: 4, faculty_id: null, faculty: null, faculty_logo: null,
+  })
+
+  function generationDb(parallels: { id: string; subject_id: string; subject: string }[]) {
+    const queries: string[] = []
+    const syllabi: Prisma.Sql[] = []
+    const subjects: Record<string, unknown> = { [CURRENT]: subjectRow(CURRENT, "Malla SW-9", "Redes"), [TRANSITION]: subjectRow(TRANSITION, "Malla SW-8", "Cálculo") }
+    const reply = (query: Prisma.Sql): unknown[] => {
+      const text = query.text.replace(/\s+/g, " ").trim()
+      queries.push(text)
+      if (text.startsWith("select convocatoria.carrera_id::text as career_id")) return [{ career_id: CAREER, period_id: PERIOD }]
+      if (text.startsWith("select paralelo.paralelo_id::text as id")) return parallels.map((row) => ({ ...row, code: "A", shift: "matutina", modality: "presencial", teachers: 1 }))
+      if (text.startsWith("select asignatura.asignatura_id::text as id")) return [subjects[String(query.values[0])]]
+      if (text.startsWith("select codigo_periodo_academico as code")) return [{ code: "2026-1", weeks: 16 }]
+      return []
+    }
+    const toSql = (query: TemplateStringsArray | Prisma.Sql, values: unknown[]) => (query instanceof Prisma.Sql ? query : Prisma.sql(query, ...values))
+    const db = {
+      $queryRaw: async (query: TemplateStringsArray | Prisma.Sql, ...values: unknown[]) => reply(toSql(query, values)),
+      $executeRaw: async (query: TemplateStringsArray | Prisma.Sql, ...values: unknown[]) => {
+        const sql = toSql(query, values)
+        if (sql.text.includes("insert into silabos")) syllabi.push(sql)
+        return 1
+      },
+    } as unknown as Db
+    const work = new InProgressWork(db, () => {})
+    Reflect.set(work, "template", withFormation())
+    return { work, queries, syllabi }
+  }
+
+  it("generates syllabi for the subjects of the vigente and the en_transicion mallas, recording each one's malla", async () => {
+    const { work, queries, syllabi } = generationDb([
+      { id: "0195e7a0-0000-7000-8000-0000000000b1", subject_id: CURRENT, subject: "Redes" },
+      { id: "0195e7a0-0000-7000-8000-0000000000b2", subject_id: TRANSITION, subject: "Cálculo" },
+    ])
+    expect(await work.generateConvocation(CONVOCATION)).toBe(2)
+    const parallels = queries.find((text) => text.startsWith("select paralelo.paralelo_id::text as id")) ?? ""
+    expect(parallels).toMatch(/exists \(select 1 from mallas malla_abierta where malla_abierta\.malla_id = asignatura\.malla_id and malla_abierta\.estado_malla <> 'cerrada'\)/)
+    expect(parallels).not.toMatch(/estado_malla = 'vigente'/)
+    const stored = syllabi.map((sql) => JSON.parse(String(sql.values[3])) as { curriculum: { name: string } })
+    expect(stored.map((context) => context.curriculum.name)).toEqual(["Malla SW-9", "Malla SW-8"])
+  })
+
+  it("asks for no parallel of a closed malla, so a career whose only malla is closed has nothing to generate", async () => {
+    const { work, queries } = generationDb([])
+    await expect(work.generateConvocation(CONVOCATION)).rejects.toMatchObject({ errors: { convocation: ["No existen paralelos de la carrera."] } })
+    expect(queries.find((text) => text.startsWith("select paralelo.paralelo_id::text as id"))).toContain("malla_abierta.estado_malla <> 'cerrada'")
+  })
+
+  it("still generates one syllabus per parallel for a career with a single malla", async () => {
+    const { work, syllabi } = generationDb([{ id: "0195e7a0-0000-7000-8000-0000000000b1", subject_id: CURRENT, subject: "Redes" }])
+    expect(await work.generateConvocation(CONVOCATION)).toBe(1)
+    expect(syllabi).toHaveLength(1)
+  })
+})
+
 describe("InProgressWork academic context", () => {
   it("leaves the campus and the corequisites for the teacher: it neither reads nor stores them", async () => {
     const queries: string[] = []

@@ -144,6 +144,18 @@ beforeEach(() => {
 })
 
 describe("GET teacher/syllabi/{syllabus}", () => {
+  it("names the malla of the subject recorded when the syllabus was generated", async () => {
+    syllabus = draft({ context: { ...identificationSource().context, curriculum: { id: "m-1", name: "Malla SW-8", cycle_count: 4 } } })
+    expect((await show()).json!.syllabus.malla_name).toBe("Malla SW-8")
+  })
+
+  it("still shows a syllabus generated before mallas existed, without a malla", async () => {
+    const { status, json } = await show()
+    expect(status).toBe(200)
+    expect(json!.syllabus.malla_name).toBeNull()
+    expect(json!.syllabus).toMatchObject({ subject: "Biología", code: "C2" })
+  })
+
   it("shows an editable draft built from the institutional template, the stored answers and the logo addresses", async () => {
     const template = goldenTemplate()
     const definition = template.definition!
@@ -154,7 +166,7 @@ describe("GET teacher/syllabi/{syllabus}", () => {
     const identification = identificationOf(identificationSource())
     const payload = json!.syllabus
     expect(Object.keys(payload)).toEqual([
-      "id", "subject", "code", "convocation", "period", "state", "iniciado_en", "version_bloqueo", "guardado_en", "editable", "edit_block_reason",
+      "id", "subject", "code", "convocation", "period", "malla_name", "state", "iniciado_en", "version_bloqueo", "guardado_en", "editable", "edit_block_reason",
       "edit_blocked_by_convocation", "parallels", "copy_sources", "teachers", "approved_revision_id", "presentation", "template_variables", "definition",
       "sections", "revisions", "review_stage", "review_comments", "signatures", "teacher_signature_required", "unchanged_since_correction",
     ])

@@ -23,6 +23,7 @@ import { unmatchedRoute } from "../http/router"
 export type FacultyRow = { id: string; name: string; libraries: string | null }
 export type CareerRow = { id: string; facultyId: string; code: string; name: string; modality: string | null }
 export type PeriodRow = { id: string; code: string; startsOn: string; endsOn: string; weeks: number | null }
+/** `cycleCount` seeds the career's first, vigente malla; afterwards cycles are edited per malla. */
 export type CareerData = { facultyId: string; modality: string; code: string; name: string; cycleCount: number }
 export type PeriodData = { code: string; startsOn: string; endsOn: string; weeks: number }
 export type FacultyData = { name: string; libraries: PhpValue[] }

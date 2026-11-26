@@ -1,4 +1,4 @@
-import { getCurriculum, getScheduledSubjects, getTeacherAssignments } from "@/api/career-academics"
+import { getCurriculum, getMallas, getScheduledSubjects, getTeacherAssignments } from "@/api/career-academics"
 import { getSession } from "@/api/session"
 
 const scoped = (scope: string | null) => (scope === null ? [] : ["career", scope])
@@ -8,7 +8,8 @@ export const careerAcademicKeys = {
   careerScope: (scope: string | null = null) => ["career-academics", "career-scope", ...scoped(scope)] as const,
   scheduledSubjects: (scope: string | null = null) => ["career-academics", "scheduled-subjects", ...scoped(scope)] as const,
   teacherAssignments: (scope: string | null = null) => ["career-academics", "teacher-assignments", ...scoped(scope)] as const,
-  curriculum: (careerId: string, scope: string | null = null) => ["career-academics", "curriculum", careerId, ...scoped(scope)] as const,
+  curriculum: (mallaId: string, scope: string | null = null) => ["career-academics", "curriculum", mallaId, ...scoped(scope)] as const,
+  mallas: (scope: string | null = null) => ["career-academics", "mallas", ...scoped(scope)] as const,
   subjectProfile: (subjectId: string) => ["career-academics", "subject-profile", subjectId] as const,
   subjectProfilePreview: (subjectId: string) => ["career-academics", "subject-profile", subjectId, "preview"] as const,
 }
@@ -28,4 +29,6 @@ export const scheduledSubjectsQuery = (scope: string | null = null) => ({ queryK
 
 export const teacherAssignmentsQuery = (scope: string | null = null) => ({ queryKey: careerAcademicKeys.teacherAssignments(scope), queryFn: () => getTeacherAssignments(scope) })
 
-export const curriculumQuery = (careerId: string, scope: string | null = null) => ({ queryKey: careerAcademicKeys.curriculum(careerId, scope), queryFn: () => getCurriculum(careerId, scope) })
+export const curriculumQuery = (mallaId: string, scope: string | null = null) => ({ queryKey: careerAcademicKeys.curriculum(mallaId, scope), queryFn: () => getCurriculum(mallaId, scope) })
+
+export const mallasQuery = (scope: string | null = null) => ({ queryKey: careerAcademicKeys.mallas(scope), queryFn: () => getMallas(scope) })

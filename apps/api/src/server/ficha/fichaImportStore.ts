@@ -18,7 +18,7 @@ export function fichaReader(db: Db): FichaReader {
     },
     async subjects(careerId) {
       const rows = await db.asignaturas.findMany({
-        where: { carrera_id: careerId, asignatura_activa: true, genera_silabo_asignatura: true },
+        where: { carrera_id: careerId, asignatura_activa: true, genera_silabo_asignatura: true, mallas: { estado_malla: { not: "cerrada" } } },
         select: { asignatura_id: true, codigo_asignatura: true, nombre_asignatura: true, ciclo_asignatura: true },
         orderBy: [{ ciclo_asignatura: "asc" }, { orden_asignatura_en_ciclo: "asc" }, { codigo_asignatura: "asc" }, { asignatura_id: "asc" }],
       })

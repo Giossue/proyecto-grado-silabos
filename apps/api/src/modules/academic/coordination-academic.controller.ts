@@ -7,6 +7,7 @@ import { createCareerRecord, createParallels, replaceParallelTeacher, updateCare
 import { createSubjectRequirement, deleteCurriculumSubject, deleteSubjectRequirement, updateCurriculumConfiguration, updateSubjectLayout } from "../../server/academic/curriculumWrites"
 import { deleteCareerRecord, deleteParallel } from "../../server/academic/deletions"
 import { scheduledSubjects } from "../../server/academic/scheduledSubjects"
+import { createMalla, listMallas, updateMalla } from "../../server/academic/mallas"
 import { curriculumBuilder, teacherAssignments } from "../../server/academic/structure"
 import { curriculumImportTemplate, importCurriculum } from "../../server/academic/structureImports"
 import { destroyCareerTeacher, resendCareerTeacherActivation, storeCareerTeacher } from "../../server/identity/careerTeachers"
@@ -15,6 +16,8 @@ import { handled, SessionInHandler, unmatched, UnmatchedMethods } from "./academ
 import { AcademicDeps } from "./academic-deps"
 import {
   CurriculumConfigurationDto,
+  MallaDto,
+  MallaUpdateDto,
   ParallelDto,
   ParallelsDto,
   ParallelTeacherDto,
@@ -27,6 +30,9 @@ import {
 const VALIDATION = { description: "Errores por campo.", type: ValidationErrorDto }
 const CONFIRM = "Si el cambio toca sílabos en curso, responde 422 con «confirm_purge» hasta que se confirme."
 const SPREADSHEET = { schema: { type: "object", properties: { file: { type: "string", format: "binary" }, confirm: { type: "boolean" } } } }
+const CURRICULUM_SPREADSHEET = {
+  schema: { type: "object", properties: { file: { type: "string", format: "binary" }, confirm: { type: "boolean" }, malla_id: { type: "string", format: "uuid", description: "Malla de la carrera que recibe las materias." } } },
+}
 const CAREER_RECORD_BODY = { schema: { oneOf: [{ $ref: getSchemaPath(SubjectDto) }, { $ref: getSchemaPath(TeacherAssignmentDto) }] } }
 
 @ApiTags("Estructura académica (coordinación)")
@@ -35,6 +41,42 @@ const CAREER_RECORD_BODY = { schema: { oneOf: [{ $ref: getSchemaPath(SubjectDto)
 @Controller("coordination/academic")
 export class CoordinationAcademicController {
   constructor(@Inject(AcademicDeps) private readonly deps: AcademicDeps) {}
+
+  @Get("mallas")
+  @ApiOperation({ summary: "Mallas de la carrera: vigente, en transición y cerradas, con ciclos y número de materias." })
+  mallas(@Req() request: ApiRequest): Promise<WebReply> {
+    return handled(request, (web) => listMallas(web, this.deps.mallas()))
+  }
+
+  @Post("mallas")
+  @ApiOperation({ summary: "Crea una malla; si se crea vigente, la malla vigente anterior pasa a en transición." })
+  @ApiBody({ type: MallaDto })
+  @ApiUnprocessableEntityResponse(VALIDATION)
+  createMalla(@Req() request: ApiRequest): Promise<WebReply> {
+    return handled(request, (web) => createMalla(web, this.deps.mallas()))
+  }
+
+  @UnmatchedMethods("mallas")
+  mallasOthers(@Req() request: ApiRequest): Promise<WebReply> {
+    return unmatched(request)
+  }
+
+  @Patch("mallas/:malla")
+  @ApiOperation({
+    summary: "Edita nombre, resolución o estado de la malla.",
+    description: "Hacerla vigente pasa la vigente anterior a en transición. No se cierra si sus materias tienen sílabos en un periodo académico abierto.",
+  })
+  @ApiParam({ name: "malla", format: "uuid" })
+  @ApiBody({ type: MallaUpdateDto })
+  @ApiUnprocessableEntityResponse(VALIDATION)
+  updateMalla(@Req() request: ApiRequest, @Param("malla") malla: string): Promise<WebReply> {
+    return handled(request, (web) => updateMalla(web, malla, this.deps.mallas()))
+  }
+
+  @UnmatchedMethods("mallas/:malla")
+  mallaOthers(@Req() request: ApiRequest): Promise<WebReply> {
+    return unmatched(request)
+  }
 
   @Get("curriculum/:curriculum")
   @ApiOperation({ summary: "Malla de la carrera: asignaturas, requisitos y bloqueo por periodo académico." })
@@ -92,9 +134,9 @@ export class CoordinationAcademicController {
   }
 
   @Post("curriculum-import")
-  @ApiOperation({ summary: "Importa la malla desde una hoja .xlsx (10 por minuto)." })
+  @ApiOperation({ summary: "Importa materias desde una hoja .xlsx a la malla «malla_id» (10 por minuto)." })
   @ApiConsumes("multipart/form-data")
-  @ApiBody(SPREADSHEET)
+  @ApiBody(CURRICULUM_SPREADSHEET)
   @ApiUnprocessableEntityResponse(VALIDATION)
   importCurriculum(@Req() request: ApiRequest): Promise<WebReply> {
     return handled(request, (web) => importCurriculum(web, this.deps.structureImports()))

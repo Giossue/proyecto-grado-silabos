@@ -17,10 +17,13 @@ import { deletionTx } from "./deletions"
 
 type SubjectLock = { id: string; careerId: string } & Record<SubjectColumn, SubjectValue>
 
+const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i
+const OPEN_MALLA = Prisma.sql`exists (select mallas.malla_id from mallas where mallas.malla_id = asignaturas.malla_id and mallas.estado_malla <> ${"cerrada"})`
+
 const ACTIVE_ASSIGNMENT = (parallelId: string) => Prisma.sql`asignaciones_paralelo.paralelo_id = ${parallelId}::uuid and asignaciones_paralelo.asignacion_paralelo_activa = true`
 const ELIGIBLE_USER = Prisma.sql`usuarios.usuario_activo = true and usuarios.correo_verificado_en is not null`
-const SUBJECT_IN_CAREER = (subject: Prisma.Sql, careerId: string) =>
-  Prisma.sql`exists (select asignaturas.asignatura_id from asignaturas where asignaturas.asignatura_id = ${subject} and asignaturas.carrera_id = ${careerId}::uuid)`
+const SUBJECT_IN_MALLA = (subject: Prisma.Sql, mallaId: string) =>
+  Prisma.sql`exists (select asignaturas.asignatura_id from asignaturas where asignaturas.asignatura_id = ${subject} and asignaturas.malla_id = ${mallaId}::uuid)`
 const SUBJECT_SELECTION = Prisma.sql`asignaturas.codigo_asignatura, asignaturas.nombre_asignatura, asignaturas.ciclo_asignatura,
   asignaturas.creditos_asignatura::text as creditos_asignatura, asignaturas.horas_docencia::text as horas_docencia,
   asignaturas.horas_practicas::text as horas_practicas, asignaturas.horas_autonomas::text as horas_autonomas,
@@ -44,11 +47,12 @@ function work(db: Db, afterCommit: AfterCommit, now: number, options: WriteOptio
   return { work: progress, notice: new FinalizedChangeNotice(progress, now) }
 }
 
-async function lockCareer(db: Db, careerId: string, curriculumId: string = careerId): Promise<{ id: string; cycleCount: number } | null> {
+async function lockMalla(db: Db, careerId: string, mallaId: string): Promise<{ id: string; cycleCount: number } | null> {
+  if (!UUID.test(mallaId)) return null
   const row = await first<{ id: string; cycle_count: number }>(
     db,
-    Prisma.sql`select carreras.carrera_id::text as id, carreras.numero_ciclos as cycle_count from carreras
-      where carreras.carrera_id = ${careerId}::uuid and carreras.carrera_id = ${curriculumId}::uuid limit 1 for update`,
+    Prisma.sql`select mallas.malla_id::text as id, mallas.numero_ciclos as cycle_count from mallas
+      where mallas.malla_id = ${mallaId}::uuid and mallas.carrera_id = ${careerId}::uuid limit 1 for update`,
   )
   return row ? { id: row.id, cycleCount: Number(row.cycle_count) } : null
 }
@@ -58,18 +62,26 @@ export function careerWriteTx(db: Db, afterCommit: AfterCommit, now: number, opt
   const deletions = deletionTx(db)
   return {
     careerLocked: (careerId) => careerDataLocked(db, careerId),
-    lockCareer: (careerId) => lockCareer(db, careerId),
-    async lastPosition(careerId, cycle) {
+    lockMalla: (careerId, mallaId) => lockMalla(db, careerId, mallaId),
+    async lastPosition(mallaId, cycle) {
       const row = await first<{ position: number | null }>(
         db,
         Prisma.sql`select max(asignaturas.orden_asignatura_en_ciclo) as position from asignaturas
-          where asignaturas.carrera_id = ${careerId}::uuid and asignaturas.ciclo_asignatura = ${cycle}`,
+          where asignaturas.malla_id = ${mallaId}::uuid and asignaturas.ciclo_asignatura = ${cycle}`,
       )
       return nullableNumber(row?.position)
     },
-    async insertSubject(careerId, columns) {
+    async insertSubject(careerId, mallaId, columns) {
       const id = uuid7()
-      await db.$executeRaw(insertColumns(SUBJECTS_TABLE, { ...columns, asignatura_id: Prisma.sql`${id}::uuid`, carrera_id: Prisma.sql`${careerId}::uuid`, asignatura_activa: true }))
+      await db.$executeRaw(
+        insertColumns(SUBJECTS_TABLE, {
+          ...columns,
+          asignatura_id: Prisma.sql`${id}::uuid`,
+          carrera_id: Prisma.sql`${careerId}::uuid`,
+          malla_id: Prisma.sql`${mallaId}::uuid`,
+          asignatura_activa: true,
+        }),
+      )
       return id
     },
     async subjectGeneratesSyllabus(subjectId) {
@@ -80,15 +92,15 @@ export function careerWriteTx(db: Db, afterCommit: AfterCommit, now: number, opt
       return row ? row.value : null
     },
     async lockSubject(subjectId, careerId) {
-      const row = await first<SubjectLock & { career_id: string }>(
+      const row = await first<SubjectLock & { career_id: string; malla_id: string }>(
         db,
-        Prisma.sql`select asignaturas.asignatura_id::text as id, asignaturas.carrera_id::text as career_id,
+        Prisma.sql`select asignaturas.asignatura_id::text as id, asignaturas.carrera_id::text as career_id, asignaturas.malla_id::text as malla_id,
             ${SUBJECT_SELECTION}
           from asignaturas where asignaturas.asignatura_id = ${subjectId}::uuid and asignaturas.carrera_id = ${careerId}::uuid limit 1 for update`,
       )
       if (!row) return null
       const columns = Object.fromEntries(SUBJECT_COLUMNS.map((name) => [name, row[name]])) as Record<SubjectColumn, SubjectValue>
-      return { id: row.id, careerId: row.career_id, columns }
+      return { id: row.id, careerId: row.career_id, mallaId: row.malla_id, columns }
     },
     async updateSubject(subjectId, columns) {
       await db.$executeRaw(updateColumns(SUBJECTS_TABLE, columns, Prisma.sql`"asignaturas"."asignatura_id" = ${subjectId}::uuid`))
@@ -181,7 +193,8 @@ export function careerWriteTx(db: Db, afterCommit: AfterCommit, now: number, opt
         db,
         Prisma.sql`select asignaturas.asignatura_id::text as id from asignaturas
           where asignaturas.asignatura_id = ${subjectId}::uuid and asignaturas.asignatura_activa = true and asignaturas.carrera_id = ${careerId}::uuid
-          limit 1 for update`,
+            and ${OPEN_MALLA}
+          limit 1 for update of asignaturas`,
       )
       return row?.id ?? null
     },
@@ -224,24 +237,24 @@ export function curriculumTx(db: Db, afterCommit: AfterCommit, now: number, opti
   const { work: progress, notice } = work(db, afterCommit, now, options)
   return {
     careerLocked: (careerId) => careerDataLocked(db, careerId),
-    lockCareer: (careerId, curriculumId) => lockCareer(db, careerId, curriculumId),
-    async maxCycle(careerId) {
-      const row = await first<{ cycle: number | null }>(db, Prisma.sql`select max(asignaturas.ciclo_asignatura) as cycle from asignaturas where asignaturas.carrera_id = ${careerId}::uuid`)
+    lockMalla: (careerId, mallaId) => lockMalla(db, careerId, mallaId),
+    async maxCycle(mallaId) {
+      const row = await first<{ cycle: number | null }>(db, Prisma.sql`select max(asignaturas.ciclo_asignatura) as cycle from asignaturas where asignaturas.malla_id = ${mallaId}::uuid`)
       return nullableNumber(row?.cycle)
     },
-    async updateCycleCount(careerId, cycleCount) {
-      await db.$executeRaw`update carreras set numero_ciclos = ${cycleCount} where carreras.carrera_id = ${careerId}::uuid`
+    async updateCycleCount(mallaId, cycleCount) {
+      await db.$executeRaw`update mallas set numero_ciclos = ${cycleCount} where mallas.malla_id = ${mallaId}::uuid`
     },
-    async lockSubjects(careerId, subjectIds) {
+    async lockSubjects(mallaId, subjectIds) {
       if (subjectIds.length === 0) return []
       const rows = await db.$queryRaw<{ id: string; cycle: number | null }[]>`select asignaturas.asignatura_id::text as id, asignaturas.ciclo_asignatura as cycle from asignaturas
-        where asignaturas.carrera_id = ${careerId}::uuid and asignaturas.asignatura_id in (${Prisma.join(subjectIds.map((id) => Prisma.sql`${id}::uuid`))}) for update`
+        where asignaturas.malla_id = ${mallaId}::uuid and asignaturas.asignatura_id in (${Prisma.join(subjectIds.map((id) => Prisma.sql`${id}::uuid`))}) for update`
       return rows.map((row) => ({ id: row.id, cycle: nullableNumber(row.cycle) }))
     },
-    prerequisites: (careerId) =>
+    prerequisites: (mallaId) =>
       db.$queryRaw<{ subjectId: string; requirementId: string }[]>`select requisitos_asignatura.asignatura_id::text as "subjectId", requisitos_asignatura.requisito_id::text as "requirementId"
         from requisitos_asignatura
-        where ${SUBJECT_IN_CAREER(Prisma.sql`requisitos_asignatura.asignatura_id`, careerId)}`,
+        where ${SUBJECT_IN_MALLA(Prisma.sql`requisitos_asignatura.asignatura_id`, mallaId)}`,
     findRequirement: (subjectId, requirementId) =>
       first(
         db,
@@ -254,23 +267,23 @@ export function curriculumTx(db: Db, afterCommit: AfterCommit, now: number, opti
         values (${id}::uuid, ${subjectId}::uuid, ${requirementId}::uuid)`
       return id
     },
-    lockRequirement: (requirementId, careerId) =>
+    lockRequirement: (requirementId, mallaId) =>
       first(
         db,
         Prisma.sql`select ${REQUIREMENT} from requisitos_asignatura
-          where ${SUBJECT_IN_CAREER(Prisma.sql`requisitos_asignatura.asignatura_id`, careerId)} and ${SUBJECT_IN_CAREER(Prisma.sql`requisitos_asignatura.requisito_id`, careerId)}
+          where ${SUBJECT_IN_MALLA(Prisma.sql`requisitos_asignatura.asignatura_id`, mallaId)} and ${SUBJECT_IN_MALLA(Prisma.sql`requisitos_asignatura.requisito_id`, mallaId)}
             and requisitos_asignatura.requisito_asignatura_id = ${requirementId}::uuid
           limit 1 for update`,
       ),
     async deleteRequirement(requirementId) {
       await db.$executeRaw`delete from requisitos_asignatura where requisitos_asignatura.requisito_asignatura_id = ${requirementId}::uuid`
     },
-    async lockSubject(subjectId, careerId) {
+    async lockSubject(subjectId, mallaId) {
       const row = await first<{ id: string; code: string; name: string; cycle: number | null; position: number }>(
         db,
         Prisma.sql`select asignaturas.asignatura_id::text as id, asignaturas.codigo_asignatura as code, asignaturas.nombre_asignatura as name,
             asignaturas.ciclo_asignatura as cycle, asignaturas.orden_asignatura_en_ciclo as position
-          from asignaturas where asignaturas.carrera_id = ${careerId}::uuid and asignaturas.asignatura_id = ${subjectId}::uuid limit 1 for update`,
+          from asignaturas where asignaturas.malla_id = ${mallaId}::uuid and asignaturas.asignatura_id = ${subjectId}::uuid limit 1 for update`,
       )
       return row ? { ...row, cycle: nullableNumber(row.cycle), position: Number(row.position) } : null
     },
@@ -285,9 +298,9 @@ export function curriculumTx(db: Db, afterCommit: AfterCommit, now: number, opti
       await db.$executeRaw`delete from requisitos_asignatura where requisitos_asignatura.asignatura_id = ${subjectId}::uuid or requisitos_asignatura.requisito_id = ${subjectId}::uuid`
       await db.$executeRaw`delete from asignaturas where asignaturas.asignatura_id = ${subjectId}::uuid`
     },
-    async lockCycleSubjects(careerId, cycle) {
+    async lockCycleSubjects(mallaId, cycle) {
       const rows = await db.$queryRaw<{ id: string; position: number }[]>`select asignaturas.asignatura_id::text as id, asignaturas.orden_asignatura_en_ciclo as position from asignaturas
-        where asignaturas.carrera_id = ${careerId}::uuid and asignaturas.ciclo_asignatura = ${cycle}
+        where asignaturas.malla_id = ${mallaId}::uuid and asignaturas.ciclo_asignatura = ${cycle}
         order by asignaturas.orden_asignatura_en_ciclo asc, asignaturas.nombre_asignatura asc for update`
       return rows.map((row) => ({ id: row.id, position: Number(row.position) }))
     },
@@ -314,20 +327,29 @@ export function createCareerWriteDeps(prisma: PrismaService, options: WriteOptio
   const now = options.now ?? systemNow
   return {
     careerActive: careerActive(prisma),
-    subjectInCareer: (subjectId, careerId) => subjectExists(prisma, Prisma.sql`asignaturas.asignatura_id = ${subjectId}::uuid`, Prisma.sql`asignaturas.carrera_id = ${careerId}::uuid`),
+    mallaInCareer: (mallaId, careerId) =>
+      found(prisma, Prisma.sql`select mallas.malla_id from mallas where mallas.malla_id = ${mallaId}::uuid and mallas.carrera_id = ${careerId}::uuid limit 1`),
+    async subjectMalla(subjectId, careerId) {
+      const row = await first<{ id: string }>(
+        prisma,
+        Prisma.sql`select asignaturas.malla_id::text as id from asignaturas where asignaturas.asignatura_id = ${subjectId}::uuid and asignaturas.carrera_id = ${careerId}::uuid limit 1`,
+      )
+      return row?.id ?? null
+    },
     activeSubjectInCareer: (subjectId, careerId) =>
       subjectExists(
         prisma,
         Prisma.sql`asignaturas.asignatura_id = ${subjectId}::uuid`,
         Prisma.sql`asignaturas.asignatura_activa = true`,
         Prisma.sql`asignaturas.carrera_id = ${careerId}::uuid`,
+        OPEN_MALLA,
       ),
-    subjectCodeTaken: (careerId, code, except) =>
+    subjectCodeTaken: (mallaId, code, except) =>
       subjectExists(
         prisma,
         ...[
           Prisma.sql`asignaturas.codigo_asignatura = ${code}`,
-          Prisma.sql`asignaturas.carrera_id = ${careerId}::uuid`,
+          Prisma.sql`asignaturas.malla_id = ${mallaId}::uuid`,
           ...(except === null ? [] : [Prisma.sql`asignaturas.asignatura_id <> ${except}::uuid`]),
         ],
       ),

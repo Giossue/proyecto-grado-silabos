@@ -62,10 +62,6 @@ const chooseDate = async (value: string): Promise<void> => {
   fireEvent.change(document.body.querySelector<HTMLInputElement>("#extension-due")!, { target: { value } })
   await flush()
 }
-const typePhrase = async (value: string): Promise<void> => {
-  fireEvent.change(document.body.querySelector<HTMLInputElement>("#extension-template-confirm")!, { target: { value } })
-  await flush()
-}
 
 const mountDialog = (value = process()) => {
   const onSaved = vi.fn()
@@ -173,7 +169,7 @@ describe("DeadlineExtensionDialog", () => {
     unmount()
   })
 
-  it("si la plantilla cambió tras finalizar, pide confirmar con los conteos y la frase y reenvía con confirmar_rehacer", async () => {
+  it("si la plantilla cambió tras finalizar, reenvía directo con confirmar_rehacer, sin frase", async () => {
     vi.mocked(extendProcessDeadline)
       .mockRejectedValueOnce(new ApiError("La plantilla cambió después de finalizar el periodo académico.", 422, {}, {
         code: "plantilla_cambiada",
@@ -185,29 +181,14 @@ describe("DeadlineExtensionDialog", () => {
     await chooseDate("2027-02-15")
     await submit()
 
-    expect(onSaved).not.toHaveBeenCalled()
-    expect(document.body.textContent).toContain("Al reabrirlo, sus sílabos se adaptan a la plantilla nueva")
-    expect([...document.body.querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual(["Sin iniciar1", "Borrador2", "En revisión1", "Corrección solicitada0", "Aprobado3"])
-    expect(submitButton().textContent).toContain("Prorrogar y adaptar sílabos")
-    expect(submitButton().dataset.variant).toBe("destructive")
-    expect(submitButton().disabled).toBe(true)
-
-    await typePhrase("otra cosa")
-    expect(submitButton().disabled).toBe(true)
-    await submit()
-    expect(extendProcessDeadline).toHaveBeenCalledTimes(1)
-
-    await typePhrase("adaptar silabos")
-    expect(submitButton().disabled).toBe(false)
-    await submit()
-
+    expect(document.body.querySelector("#extension-template-confirm")).toBeNull()
     expect(extendProcessDeadline).toHaveBeenNthCalledWith(1, "process-1", { due_at: "2027-02-15" })
     expect(extendProcessDeadline).toHaveBeenNthCalledWith(2, "process-1", { due_at: "2027-02-15", confirmar_rehacer: true })
     expect(onSaved.mock.calls).toEqual([["Plazo prorrogado. El periodo académico se volvió a abrir."]])
     unmount()
   })
 
-  it("si hay cambios pendientes que devuelven sílabos, pide confirmar con los conteos y reenvía con confirmar_cambios", async () => {
+  it("si hay cambios pendientes, reenvía directo con confirmar_cambios", async () => {
     vi.mocked(extendProcessDeadline)
       .mockRejectedValueOnce(new ApiError("Hubo cambios.", 422, {}, {
         code: "cambios_pendientes",
@@ -219,24 +200,12 @@ describe("DeadlineExtensionDialog", () => {
     await chooseDate("2027-02-15")
     await submit()
 
-    expect(onSaved).not.toHaveBeenCalled()
-    expect([...document.body.querySelectorAll("li")].map((item) => item.textContent)).toEqual([
-      "Vuelven a borrador, sin su historial ni sus firmas2",
-      "Vuelven a Coordinación, sin sus aprobaciones1",
-    ])
-    expect(submitButton().textContent).toContain("Prorrogar y aplicar cambios")
-    expect(submitButton().dataset.variant).toBe("destructive")
-    expect(submitButton().disabled).toBe(true)
-
-    await typePhrase("aplicar cambios")
-    await submit()
-
     expect(extendProcessDeadline).toHaveBeenNthCalledWith(2, "process-1", { due_at: "2027-02-15", confirmar_cambios: true })
     expect(onSaved.mock.calls).toEqual([["Plazo prorrogado. El periodo académico se volvió a abrir."]])
     unmount()
   })
 
-  it("si cambiaron la plantilla y otros datos, una sola confirmación manda las dos marcas", async () => {
+  it("si cambiaron la plantilla y otros datos, un solo reenvío manda las dos marcas", async () => {
     vi.mocked(extendProcessDeadline)
       .mockRejectedValueOnce(new ApiError("La plantilla cambió.", 422, {}, {
         code: "plantilla_cambiada",
@@ -249,35 +218,23 @@ describe("DeadlineExtensionDialog", () => {
     await chooseDate("2027-02-15")
     await submit()
 
-    expect(document.body.textContent).toContain("Al reabrirlo, sus sílabos se adaptan a la plantilla nueva")
-    expect(document.body.textContent).toContain("Se rehacen o se quitan, sin su contenido")
-    expect(submitButton().textContent).toContain("Prorrogar y adaptar sílabos")
-    await typePhrase("adaptar sílabos")
-    await submit()
-
+    expect(extendProcessDeadline).toHaveBeenCalledTimes(2)
     expect(extendProcessDeadline).toHaveBeenNthCalledWith(2, "process-1", { due_at: "2027-02-15", confirmar_rehacer: true, confirmar_cambios: true })
     unmount()
   })
 
-  it("el aviso de la plantilla se borra al volver a abrir, no al cerrar", async () => {
-    vi.mocked(extendProcessDeadline).mockRejectedValueOnce(new ApiError("La plantilla cambió.", 422, {}, {
-      code: "plantilla_cambiada",
-      counts: { sin_iniciar: 0, borrador: 1, en_revision: 0, correccion_solicitada: 0, aprobado: 0 },
+  it("si el servidor sigue pidiendo confirmación, no reenvía sin fin", async () => {
+    vi.mocked(extendProcessDeadline).mockRejectedValue(new ApiError("Hubo cambios.", 422, {}, {
+      code: "cambios_pendientes",
+      counts: { to_draft: 1, restarted: 0, to_coordination: 0 },
     }))
-    stubs.sliding = true
-    const { unmount, setOpen } = mountControlled(process(0, "cerrado"))
+    const { unmount, onSaved } = mountDialog(process(0, "cerrado"))
     await flush()
     await chooseDate("2027-02-15")
     await submit()
-    expect(document.body.querySelector("#extension-template-confirm")).not.toBeNull()
 
-    setOpen(false)
-    await flush()
-    expect(document.body.querySelector("#extension-template-confirm")).not.toBeNull()
-    setOpen(true)
-    await flush()
-    expect(document.body.querySelector("#extension-template-confirm")).toBeNull()
-    expect(document.body.textContent).not.toContain("se adaptan a la plantilla nueva")
+    expect(extendProcessDeadline).toHaveBeenCalledTimes(3)
+    expect(onSaved).not.toHaveBeenCalled()
     unmount()
   })
 })

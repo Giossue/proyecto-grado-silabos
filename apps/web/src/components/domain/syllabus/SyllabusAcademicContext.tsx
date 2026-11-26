@@ -24,6 +24,8 @@ export function SyllabusAcademicContext({ variables }: { variables: Record<strin
         { label: "Nombre", value: value("nombre_asignatura") },
         { label: "Código", value: value("codigo_asignatura") },
         { label: "Carrera", value: value("nombre_carrera") },
+        // Templates that place the malla use the `identification.curriculum` source; syllabi stored before mallas existed have none.
+        ...(variables.nombre_malla?.trim() ? [{ label: "Malla", value: variables.nombre_malla.trim() }] : []),
         { label: "Facultad", value: value("nombre_facultad") },
         { label: "Unidad de organización curricular", value: curricularUnit },
         { label: "Prerrequisitos", value: value("prerrequisitos_asignatura") },

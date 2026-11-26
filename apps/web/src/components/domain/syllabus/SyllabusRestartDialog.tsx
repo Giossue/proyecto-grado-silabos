@@ -1,10 +1,8 @@
 "use client"
 
 import { RotateCcw } from "lucide-react"
-import { useState } from "react"
 import { ApiError } from "@/api/client"
 import { resetSyllabus, type ReviewDetail } from "@/api/reviews"
-import { ConfirmPhrase } from "@/components/domain/ConfirmPhrase"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
@@ -29,14 +27,9 @@ export function SyllabusRestartDialog({ syllabusId, subject, impact, open, onOpe
   const reason = String(form.watch("reason") ?? "")
   const errors = form.formState.errors as Record<string, unknown>
   const processing = form.formState.isSubmitting
-  const [typedName, setTypedName] = useState("")
-  useOpened(isOpen, () => {
-    form.reset({ reason: "" })
-    setTypedName("")
-  })
+  useOpened(isOpen, () => form.reset({ reason: "" }))
 
-  const needsName = impact.erases_history === true
-  const ready = reason.trim().length >= REASON_MIN && (!needsName || typedName.trim() === subject.trim())
+  const ready = reason.trim().length >= REASON_MIN
   const losses = ["Lo escrito por el docente"]
   if ((impact.signatures ?? 0) > 0) losses.push(`${impact.signatures} firma(s)`)
   if (impact.erases_history) losses.push(`${impact.revisions ?? 0} revisión(es), la aprobación y el PDF`)
@@ -73,7 +66,6 @@ export function SyllabusRestartDialog({ syllabusId, subject, impact, open, onOpe
             <Textarea id="restart-reason" value={reason} rows={3} maxLength={500} aria-required="true" onChange={(event) => form.setValue("reason", event.target.value)} />
             <FieldError errors={errorMessages(errors.reason)} />
           </Field>
-          {needsName ? <ConfirmPhrase id="restart-name" phrase={subject} value={typedName} onValueChange={setTypedName} /> : null}
           <FieldError errors={errorMessages(errors.syllabus)} />
           <DialogFooter>
             <DialogClose asChild>

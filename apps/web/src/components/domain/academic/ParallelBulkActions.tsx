@@ -31,10 +31,10 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
-import { FINALIZED_NOTICE, requestPurgeConfirmation } from "@/composables/usePurgeConfirmation"
 import { afterDialogExit } from "@/lib/dialogExit"
 import { SERVER_ERROR, serverMessage, useSchemaForm } from "@/lib/forms"
 import { nextParallelCode } from "@/lib/parallelCodes"
+import { announcePurge } from "@/lib/purgeNotice"
 import { NEW_PARALLELS_INCOMPLETE, newParallelsSchema } from "@silabos/shared/schemas/academic"
 import { deadlineState } from "@/state/deadline"
 
@@ -54,38 +54,30 @@ type ParallelBulkActionsProps = {
 
 const NO_TEACHER = "none"
 const FINALIZED_MESSAGE =
-  "El periodo académico de su carrera ya finalizó. Estos cambios no afectan sus sílabos: conservan los datos que tenían. Se aplicarán en el próximo periodo académico, o en este si lo reabre con una prórroga. Si cancela, no se cambia nada."
+  "El periodo académico de su carrera ya finalizó. Estos cambios no afectan sus sílabos: conservan los datos que tenían. Se aplicarán en el próximo periodo académico, o en este si lo reabre con una prórroga"
 
 const shiftMessage = (count: number): string =>
   count === 1
-    ? "El sílabo de 1 paralelo seleccionado ya está en revisión o aprobado. Cambiar la jornada lo elimina con todo su contenido (revisiones, aprobación, firmas y análisis de IA) y el docente lo empieza de nuevo. Si cancela, no se cambia ningún paralelo."
-    : `Los sílabos de ${count} paralelos seleccionados ya están en revisión o aprobados. Cambiar la jornada los elimina con todo su contenido (revisiones, aprobación, firmas y análisis de IA) y los docentes los empiezan de nuevo. Si cancela, no se cambia ningún paralelo.`
+    ? "El sílabo de 1 paralelo seleccionado ya está en revisión o aprobado. Cambiar la jornada lo elimina con todo su contenido (revisiones, aprobación, firmas y análisis de IA) y el docente lo empieza de nuevo"
+    : `Los sílabos de ${count} paralelos seleccionados ya están en revisión o aprobados. Cambiar la jornada los elimina con todo su contenido (revisiones, aprobación, firmas y análisis de IA) y los docentes los empiezan de nuevo`
 
 const teacherMessage = (count: number): string =>
   count === 1
-    ? "El sílabo de 1 paralelo seleccionado ya tiene trabajo del docente. Cambiar el docente lo elimina con todo su contenido (borrador, revisiones, aprobación, firmas y análisis de IA) y el nuevo docente lo empieza de cero. Si cancela, no se cambia ningún paralelo."
-    : `Los sílabos de ${count} paralelos seleccionados ya tienen trabajo de sus docentes. Cambiar el docente los elimina con todo su contenido (borrador, revisiones, aprobación, firmas y análisis de IA) y el nuevo docente los empieza de cero. Si cancela, no se cambia ningún paralelo.`
-
-const ask = (message: string, count: number, mode?: string): Promise<boolean> =>
-  new Promise((resolve) => {
-    requestPurgeConfirmation(
-      message,
-      count,
-      () => resolve(true),
-      () => resolve(false),
-      mode,
-    )
-  })
+    ? "El sílabo de 1 paralelo seleccionado ya tiene trabajo del docente. Cambiar el docente lo elimina con todo su contenido (borrador, revisiones, aprobación, firmas y análisis de IA) y el nuevo docente lo empieza de cero"
+    : `Los sílabos de ${count} paralelos seleccionados ya tienen trabajo de sus docentes. Cambiar el docente los elimina con todo su contenido (borrador, revisiones, aprobación, firmas y análisis de IA) y el nuevo docente los empieza de cero`
 
 const addSchema = newParallelsSchema()
 
 const finalized = (): boolean => deadlineState.deadline.value?.state === "closed"
 
-const confirmBatch = async (affected = 0, message: (count: number) => string = shiftMessage): Promise<PurgeHandling | null> => {
-  if (finalized()) return (await ask(FINALIZED_MESSAGE, 0, FINALIZED_NOTICE)) ? "confirmed" : null
+const purgeHandling = (affected = 0, message: (count: number) => string = shiftMessage): PurgeHandling => {
+  if (finalized()) {
+    announcePurge(FINALIZED_MESSAGE)
+    return "confirmed"
+  }
   if (affected === 0) return "unconfirmed"
-
-  return (await ask(message(affected), affected)) ? "confirmed" : null
+  announcePurge(message(affected))
+  return "confirmed"
 }
 
 export function ParallelBulkActions({ items, parallelIds, shiftOptions, teacherUsers, assignments, onChanged, onFailed, onClear }: ParallelBulkActionsProps) {
@@ -142,8 +134,7 @@ export function ParallelBulkActions({ items, parallelIds, shiftOptions, teacherU
     async ({ shift, user_id: userId }) => {
       if (busy) return
       setAddOpen(false)
-      const purge = await confirmBatch()
-      if (purge === null) return
+      const purge = purgeHandling()
       await run(
         items.map((item) => () => createParallels({ subject_id: item.subject_id, codes: [nextParallelCode(item.parallels)], shift: String(shift), user_id: String(userId) }, purge)),
         `Paralelo agregado a ${items.length} ${items.length === 1 ? "materia" : "materias"}`,
@@ -161,8 +152,7 @@ export function ParallelBulkActions({ items, parallelIds, shiftOptions, teacherU
       return
     }
     const sent = targets.filter((parallel) => parallel.sent_syllabus)
-    const purge = await confirmBatch(sent.length)
-    if (purge === null) return
+    const purge = purgeHandling(sent.length)
     const closed = finalized()
     await run(
       targets.map(
@@ -182,8 +172,7 @@ export function ParallelBulkActions({ items, parallelIds, shiftOptions, teacherU
       return
     }
     const started = userId === NO_TEACHER ? [] : targets.filter((parallel) => parallel.started_syllabus)
-    const purge = await confirmBatch(started.length, teacherMessage)
-    if (purge === null) return
+    const purge = purgeHandling(started.length, teacherMessage)
     const closed = finalized()
     const handling = (parallel: Parallel): PurgeHandling => (purge === "confirmed" && (closed || parallel.started_syllabus) ? "confirmed" : "unconfirmed")
     await run(

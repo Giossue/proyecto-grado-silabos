@@ -35,7 +35,7 @@ const schema = subjectSchema().pick({ code: true, nombre: true, organization_uni
 
 const errorKey = (field: FixedSubjectField): string => field.system_key
 
-export function CurriculumVisualSubjectForm({ career, modalityOptions, fixedFields, subject, cycle, position, organizationUnits, onCancel, onSaved }: CurriculumVisualSubjectFormProps) {
+export function CurriculumVisualSubjectForm({ career, modalityOptions, curriculum, fixedFields, subject, cycle, position, organizationUnits, onCancel, onSaved }: CurriculumVisualSubjectFormProps) {
   const [modality, setModality] = useState(subject?.modality ?? INHERITED_MODALITY)
   const [generatesSyllabus, setGeneratesSyllabus] = useState(subject?.generates_syllabus ?? true)
   const form = useSchemaForm(schema, { defaultValues: { code: subject?.code ?? "", nombre: subject?.name ?? "", organization_unit: subject?.organization_unit ?? "" } })
@@ -57,7 +57,7 @@ export function CurriculumVisualSubjectForm({ career, modalityOptions, fixedFiel
 
     return form.handleSubmit(async () => {
       try {
-        const result = subject ? await updateCareerRecord("asignatura", subject.id, payload) : await createCareerRecord("asignatura", payload)
+        const result = subject ? await updateCareerRecord("asignatura", subject.id, payload) : await createCareerRecord("asignatura", { ...payload, malla_id: curriculum.id })
         onSaved(result.message)
       } catch (reason) {
         if (!(reason instanceof ApiError)) {

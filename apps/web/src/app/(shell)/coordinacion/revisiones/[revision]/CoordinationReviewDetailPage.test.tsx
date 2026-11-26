@@ -260,7 +260,7 @@ describe("CoordinationReviewDetailPage", () => {
     await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/coordinacion/revisiones"))
   })
 
-  it("reinicia un sílabo aprobado desde «Más»: motivo y nombre de la materia, sin cuenta regresiva, y vuelve a la cola", async () => {
+  it("reinicia un sílabo aprobado desde «Más» solo con el motivo, sin escribir la materia, y vuelve a la cola", async () => {
     vi.mocked(getReview).mockResolvedValue({ ...detail(), reset: { allowed: true, erases_history: true, revisions: 2, signatures: 3, has_pdf: true } })
     vi.mocked(resetSyllabus).mockResolvedValue({ message: "Sílabo reiniciado" })
     await mountPage()
@@ -276,12 +276,8 @@ describe("CoordinationReviewDetailPage", () => {
     expect(confirm().textContent?.trim()).toBe("Reiniciar")
     expect(confirm().disabled).toBe(true)
     type("#restart-reason", "Error en la ficha de la materia")
-    type("#restart-name", "Álgebra")
     await flush()
-    expect(confirm().disabled).toBe(true)
-
-    type("#restart-name", "Arquitectura de Software")
-    await flush()
+    expect(document.body.querySelector("#restart-name")).toBeNull()
     expect(confirm().disabled).toBe(false)
     fireEvent.click(confirm())
     await flush()

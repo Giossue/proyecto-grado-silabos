@@ -12,24 +12,25 @@ import { phpIntCast } from "./governanceWrites"
 import { CONVOCATION_LOCK_REASON } from "./structure"
 import { unmatchedRoute, routeAllows } from "../http/router"
 
-type CurriculumCareer = { id: string; cycleCount: number }
+/** The malla addressed by `curriculum/:curriculum`, locked for the change. */
+type CurriculumMalla = { id: string; cycleCount: number }
 type CurriculumSubject = { id: string; code: string; name: string; cycle: number | null; position: number }
 
 export interface CurriculumTx {
   careerLocked(careerId: string): Promise<boolean>
-  lockCareer(careerId: string, curriculumId: string): Promise<CurriculumCareer | null>
-  maxCycle(careerId: string): Promise<number | null>
-  updateCycleCount(careerId: string, cycleCount: number): Promise<void>
-  lockSubjects(careerId: string, subjectIds: string[]): Promise<{ id: string; cycle: number | null }[]>
-  prerequisites(careerId: string): Promise<{ subjectId: string; requirementId: string }[]>
+  lockMalla(careerId: string, mallaId: string): Promise<CurriculumMalla | null>
+  maxCycle(mallaId: string): Promise<number | null>
+  updateCycleCount(mallaId: string, cycleCount: number): Promise<void>
+  lockSubjects(mallaId: string, subjectIds: string[]): Promise<{ id: string; cycle: number | null }[]>
+  prerequisites(mallaId: string): Promise<{ subjectId: string; requirementId: string }[]>
   findRequirement(subjectId: string, requirementId: string): Promise<{ id: string } | null>
   insertRequirement(subjectId: string, requirementId: string): Promise<string>
-  lockRequirement(requirementId: string, careerId: string): Promise<{ id: string } | null>
+  lockRequirement(requirementId: string, mallaId: string): Promise<{ id: string } | null>
   deleteRequirement(requirementId: string): Promise<void>
-  lockSubject(subjectId: string, careerId: string): Promise<CurriculumSubject | null>
+  lockSubject(subjectId: string, mallaId: string): Promise<CurriculumSubject | null>
   subjectUsage(subjectId: string): Promise<{ parallels: number; syllabi: number }>
   deleteSubject(subjectId: string): Promise<void>
-  lockCycleSubjects(careerId: string, cycle: number): Promise<{ id: string; position: number }[]>
+  lockCycleSubjects(mallaId: string, cycle: number): Promise<{ id: string; position: number }[]>
   setPosition(subjectId: string, position: number): Promise<void>
   sync(confirmed: boolean, careerId: string): Promise<void>
   guard<T>(confirmed: boolean, careerId: string, change: () => Promise<T>): Promise<T>
@@ -41,7 +42,7 @@ export type CurriculumDeps = {
   transaction<T>(work: (tx: CurriculumTx) => Promise<T>): Promise<T>
 }
 
-type Mutation = (tx: CurriculumTx, career: CurriculumCareer, context: CareerContext, input: PhpArray) => Promise<string>
+type Mutation = (tx: CurriculumTx, malla: CurriculumMalla, context: CareerContext, input: PhpArray) => Promise<string>
 
 async function curriculumChange(
   request: Request,
@@ -74,11 +75,11 @@ export function updateCurriculumConfiguration(request: Request, curriculumId: st
     [curriculumId],
     deps,
     () => curriculumConfigurationSchema,
-    async (tx, career, context, input) => {
+    async (tx, malla, context, input) => {
       const cycleCount = phpIntCast(input.cycle_count)
-      const lastUsed = (await tx.maxCycle(career.id)) ?? 0
+      const lastUsed = (await tx.maxCycle(malla.id)) ?? 0
       if (lastUsed > cycleCount) throw invalid("cycle_count", `Existen materias en el ciclo ${lastUsed}. Muévalas antes de reducir la malla.`)
-      await tx.updateCycleCount(career.id, cycleCount)
+      await tx.updateCycleCount(malla.id, cycleCount)
       await confirmedSync(tx, context, input)
       return "Configuración de la malla actualizada."
     },
@@ -99,15 +100,15 @@ function createsCycle(relations: { subjectId: string; requirementId: string }[],
   return false
 }
 
-export async function addRequirement(tx: CurriculumTx, career: CurriculumCareer, context: CareerContext, input: PhpArray): Promise<string> {
+export async function addRequirement(tx: CurriculumTx, malla: CurriculumMalla, context: CareerContext, input: PhpArray): Promise<string> {
   const subjectId = input.subject_id as string
   const requirementId = input.requirement_id as string
-  const subjects = await tx.lockSubjects(career.id, [subjectId, requirementId])
+  const subjects = await tx.lockSubjects(malla.id, [subjectId, requirementId])
   if (subjects.length !== 2) throw invalid("requirement_id", "Ambas materias deben pertenecer a la malla actual.")
   const subjectCycle = subjects.find((subject) => subject.id === subjectId)?.cycle ?? 0
   const requirementCycle = subjects.find((subject) => subject.id === requirementId)?.cycle ?? 0
   if (requirementCycle >= subjectCycle) throw invalid("requirement_id", "Un prerrequisito debe estar en un ciclo anterior.")
-  if (createsCycle(await tx.prerequisites(career.id), subjectId, requirementId)) {
+  if (createsCycle(await tx.prerequisites(malla.id), subjectId, requirementId)) {
     throw invalid("requirement_id", "La relación produciría un ciclo de prerrequisitos.")
   }
   const message = "Prerrequisito agregado."
@@ -120,9 +121,9 @@ export async function addRequirement(tx: CurriculumTx, career: CurriculumCareer,
 export async function curriculumMutation(tx: CurriculumTx, context: CareerContext, curriculumId: string, input: PhpArray, mutate: Mutation): Promise<string> {
   return tx.guard(requestBoolean(input.confirm_purge), context.careerId, async () => {
     if (await tx.careerLocked(context.careerId)) throw invalid("process", CONVOCATION_LOCK_REASON)
-    const career = await tx.lockCareer(context.careerId, curriculumId)
-    if (career === null) throw new Missing(MODELS.career, curriculumId)
-    return mutate(tx, career, context, input)
+    const malla = await tx.lockMalla(context.careerId, curriculumId)
+    if (malla === null) throw new Missing(MODELS.career, curriculumId)
+    return mutate(tx, malla, context, input)
   })
 }
 
@@ -138,8 +139,8 @@ export function createSubjectRequirement(request: Request, curriculumId: string,
 }
 
 export function deleteSubjectRequirement(request: Request, curriculumId: string, requirementId: string, deps: CurriculumDeps, requestedCareerId: string | null = null): Promise<Response> {
-  return curriculumChange(request, [curriculumId, requirementId], deps, null, async (tx, career, context, input) => {
-    const requirement = await tx.lockRequirement(requirementId, career.id)
+  return curriculumChange(request, [curriculumId, requirementId], deps, null, async (tx, malla, context, input) => {
+    const requirement = await tx.lockRequirement(requirementId, malla.id)
     if (requirement === null) throw new Missing(MODELS.requirement, requirementId)
     await tx.deleteRequirement(requirement.id)
     await confirmedSync(tx, context, input)
@@ -148,8 +149,8 @@ export function deleteSubjectRequirement(request: Request, curriculumId: string,
 }
 
 export function deleteCurriculumSubject(request: Request, curriculumId: string, subjectId: string, deps: CurriculumDeps, requestedCareerId: string | null = null): Promise<Response> {
-  return curriculumChange(request, [curriculumId, subjectId], deps, null, async (tx, career, context, input) => {
-    const subject = await tx.lockSubject(subjectId, career.id)
+  return curriculumChange(request, [curriculumId, subjectId], deps, null, async (tx, malla, context, input) => {
+    const subject = await tx.lockSubject(subjectId, malla.id)
     if (subject === null) throw new Missing(MODELS.subject, subjectId)
     const { parallels, syllabi } = await tx.subjectUsage(subject.id)
     if (parallels > 0 || syllabi > 0) {
@@ -173,13 +174,13 @@ export function updateSubjectLayout(request: Request, curriculumId: string, deps
     [curriculumId],
     deps,
     () => subjectLayoutSchema,
-    async (tx, career, context, input) => {
+    async (tx, malla, context, input) => {
       const cycle = phpIntCast(input.cycle)
-      if (cycle > career.cycleCount) throw invalid("cycle", "El ciclo excede la configuración de la malla.")
-      const subject = await tx.lockSubject(input.subject_id as string, career.id)
+      if (cycle > malla.cycleCount) throw invalid("cycle", "El ciclo excede la configuración de la malla.")
+      const subject = await tx.lockSubject(input.subject_id as string, malla.id)
       if (subject === null) throw new Missing(MODELS.subject)
       if (cycle !== subject.cycle) throw invalid("cycle", "Una materia solo puede reordenarse dentro de su ciclo.")
-      const ordered = (await tx.lockCycleSubjects(career.id, cycle)).filter((item) => item.id !== subject.id)
+      const ordered = (await tx.lockCycleSubjects(malla.id, cycle)).filter((item) => item.id !== subject.id)
       const position = Math.min(phpIntCast(input.position), ordered.length)
       const moving = { id: subject.id, position: subject.position }
       ordered.splice(position, 0, moving)

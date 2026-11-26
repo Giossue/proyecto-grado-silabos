@@ -5,7 +5,7 @@ import { ROLE_COMBINATION_MESSAGE, roleCombinationConflicts } from "../identity/
 import { isJsonRequest, isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { forbidden, apiJson, validationError } from "../http/responses"
 import { phpIsNumeric } from "@silabos/shared/schemas/php"
-import { parallelSchema, parallelsSchema, parallelTeacherSchema, subjectSchema, teacherAssignmentSchema } from "@silabos/shared/schemas/academic"
+import { mallaTargetSchema, parallelSchema, parallelsSchema, parallelTeacherSchema, subjectSchema, teacherAssignmentSchema } from "@silabos/shared/schemas/academic"
 import { validateSchema } from "../http/schemaValidation"
 import { requestBoolean, type WorkScope } from "../syllabus/inProgressWorkHelpers"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
@@ -30,15 +30,16 @@ export const SUBJECT_COLUMNS = [
 
 export type SubjectColumn = (typeof SUBJECT_COLUMNS)[number]
 export type SubjectValue = string | number | boolean | null
-export type SubjectRow = { id: string; careerId: string; columns: Record<SubjectColumn, SubjectValue> }
+export type SubjectRow = { id: string; careerId: string; mallaId: string; columns: Record<SubjectColumn, SubjectValue> }
 export type ParallelRow = { id: string; subjectId: string; code: string; shift: string }
 export type CareerConvocation = { id: string; state: string; processState: string }
 
 export interface CareerWriteTx {
   careerLocked(careerId: string): Promise<boolean>
-  lockCareer(careerId: string): Promise<{ id: string; cycleCount: number } | null>
-  lastPosition(careerId: string, cycle: PhpValue): Promise<number | null>
-  insertSubject(careerId: string, columns: Record<SubjectColumn, PhpValue>): Promise<string>
+  /** Locks a malla of the career; subjects are created and edited inside the cycles of their malla. */
+  lockMalla(careerId: string, mallaId: string): Promise<{ id: string; cycleCount: number } | null>
+  lastPosition(mallaId: string, cycle: PhpValue): Promise<number | null>
+  insertSubject(careerId: string, mallaId: string, columns: Record<SubjectColumn, PhpValue>): Promise<string>
   subjectGeneratesSyllabus(subjectId: string): Promise<boolean | null>
   lockSubject(subjectId: string, careerId: string): Promise<SubjectRow | null>
   updateSubject(subjectId: string, columns: Partial<Record<SubjectColumn, PhpValue>>): Promise<void>
@@ -75,9 +76,12 @@ export interface CareerWriteTx {
 export type CareerWriteDeps = {
   bridge: BridgeDeps
   careerActive(careerId: string): Promise<boolean>
-  subjectInCareer(subjectId: string, careerId: string): Promise<boolean>
+  mallaInCareer(mallaId: string, careerId: string): Promise<boolean>
+  /** The malla of a subject of the career, or null when the subject is not in the career. */
+  subjectMalla(subjectId: string, careerId: string): Promise<string | null>
+  /** An active subject of the career whose malla is not closed. */
   activeSubjectInCareer(subjectId: string, careerId: string): Promise<boolean>
-  subjectCodeTaken(careerId: string, code: string, except: string | null): Promise<boolean>
+  subjectCodeTaken(mallaId: string, code: string, except: string | null): Promise<boolean>
   eligibleUserExists(userId: string): Promise<boolean>
   parallelInCareer(parallelId: string, careerId: string): Promise<boolean>
   transaction<T>(work: (tx: CareerWriteTx) => Promise<T>): Promise<T>
@@ -147,9 +151,18 @@ function totalHours(input: PhpArray): number {
   return total
 }
 
-async function validateSubject(input: PhpArray, deps: CareerWriteDeps, careerId: string, except: string | null): Promise<Record<string, string[]> | null> {
+const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i
+
+async function validateSubject(input: PhpArray, deps: CareerWriteDeps, mallaId: unknown, except: string | null): Promise<Record<string, string[]> | null> {
   input.horas_totales = totalHours(input)
-  return (await validateSchema(subjectSchema(async (value) => !(await deps.subjectCodeTaken(careerId, String(value), except))), input)).errors
+  const codeAvailable = async (value: unknown) => typeof mallaId !== "string" || !UUID.test(mallaId) || !(await deps.subjectCodeTaken(mallaId, String(value), except))
+  return (await validateSchema(subjectSchema(codeAvailable), input)).errors
+}
+
+async function validateNewSubject(input: PhpArray, deps: CareerWriteDeps, careerId: string): Promise<Record<string, string[]> | null> {
+  const target = (await validateSchema(mallaTargetSchema({ mallaExists: (value) => deps.mallaInCareer(String(value), careerId) }), input)).errors
+  const subject = await validateSubject(input, deps, target === null ? input.malla_id : null, null)
+  return target === null && subject === null ? null : { ...(target ?? {}), ...(subject ?? {}) }
 }
 
 function subjectModality(input: PhpArray): string | null {
@@ -249,7 +262,7 @@ export async function createCareerRecord(request: Request, entity: string, deps:
       return apiJson({ message: CREATED })
     })
   }
-  const errors = await validateSubject(input, deps, careerId, null)
+  const errors = await validateNewSubject(input, deps, careerId)
   if (errors !== null) return validationError(errors)
   return settle(original, deps, async () => {
     await deps.transaction((tx) => insertCareerSubject(tx, context, input))
@@ -257,15 +270,16 @@ export async function createCareerRecord(request: Request, entity: string, deps:
   })
 }
 
+/** Inserts a subject in the malla `input.malla_id` of the context career (already validated to belong to it). */
 export async function insertCareerSubject(tx: CareerWriteTx, context: CareerContext, input: PhpArray): Promise<string> {
   const careerId = context.careerId
   if (await tx.careerLocked(careerId)) throw invalid("process", CONVOCATION_LOCK_REASON)
-  const career = await tx.lockCareer(careerId)
-  if (career === null) throw new Missing(MODELS.career)
-  if (phpIntCast(input.cycle) > career.cycleCount) throw invalid("cycle", "El ciclo excede la configuración de esta malla.")
-  const last = await tx.lastPosition(career.id, input.cycle)
+  const malla = await tx.lockMalla(careerId, String(input.malla_id))
+  if (malla === null) throw new Missing(MODELS.career)
+  if (phpIntCast(input.cycle) > malla.cycleCount) throw invalid("cycle", "El ciclo excede la configuración de esta malla.")
+  const last = await tx.lastPosition(malla.id, input.cycle)
   const position = "position" in input ? phpIntCast(input.position) : last === null ? 0 : last + 1
-  const id = await tx.insertSubject(career.id, {
+  const id = await tx.insertSubject(careerId, malla.id, {
     codigo_asignatura: input.code,
     nombre_asignatura: input.nombre,
     ciclo_asignatura: input.cycle ?? null,
@@ -288,8 +302,9 @@ export async function updateCareerRecord(request: Request, entity: string, recor
   if (ready instanceof Response) return ready
   const { context, input } = ready
   const careerId = context.careerId
-  if (!(await deps.subjectInCareer(recordId, careerId))) return forbidden()
-  const errors = await validateSubject(input, deps, careerId, recordId)
+  const mallaId = await deps.subjectMalla(recordId, careerId)
+  if (mallaId === null) return forbidden()
+  const errors = await validateSubject(input, deps, mallaId, recordId)
   if (errors !== null) return validationError(errors)
   const confirmed = requestBoolean(input.confirm_purge)
   const attributes = subjectAttributes(input)
@@ -301,8 +316,8 @@ export async function updateCareerRecord(request: Request, entity: string, recor
         const subject = await tx.lockSubject(recordId, careerId)
         if (subject === null) throw new Missing(MODELS.subject)
         if (input.cycle !== undefined && input.cycle !== null) {
-          const career = await tx.lockCareer(subject.careerId)
-          if (phpIntCast(input.cycle) > (career?.cycleCount ?? 0)) throw invalid("cycle", "El ciclo excede la configuración de esta malla.")
+          const malla = await tx.lockMalla(subject.careerId, subject.mallaId)
+          if (phpIntCast(input.cycle) > (malla?.cycleCount ?? 0)) throw invalid("cycle", "El ciclo excede la configuración de esta malla.")
         }
         const dirty = SUBJECT_COLUMNS.filter((column) => column in attributes && !equivalent(column, attributes[column] as PhpValue, subject.columns[column]))
         if (dirty.length === 0) return

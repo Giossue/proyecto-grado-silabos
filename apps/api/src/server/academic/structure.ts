@@ -30,7 +30,15 @@ const SYSTEM_LABELS: Record<string, string> = {
   horas_totales: "Horas totales",
 }
 
+/** `cycleCount` is the cycle count of the career's vigente malla (0 when it has none). */
 export type CareerRecord = { id: string; name: string; modality: string | null; cycleCount: number }
+
+export type MallaRecord = { id: string; careerId: string; name: string; resolution: string | null; cycleCount: number; state: string; subjectCount: number }
+
+export interface MallaReadRepository {
+  mallas(careerId: string): Promise<MallaRecord[]>
+  malla(careerId: string, mallaId: string): Promise<MallaRecord | null>
+}
 
 export type CareerLock = { period: string | null; institutionalPause: boolean; deliveryOn: string }
 
@@ -71,7 +79,7 @@ export type PersonRecord = { id: string; name: string; email: string }
 export interface AcademicStructureRepository {
   activeCareer(careerId: string): Promise<CareerRecord | null>
   careerLock(careerId: string): Promise<CareerLock | null>
-  curriculumSubjects(careerId: string): Promise<SubjectRecord[]>
+  curriculumSubjects(mallaId: string): Promise<SubjectRecord[]>
   requirements(subjectIds: string[]): Promise<RequirementRecord[]>
   teacherAssignments(careerId: string): Promise<TeacherAssignmentRecord[]>
   careerTeachers(careerId: string): Promise<CareerTeacherRecord[]>
@@ -81,6 +89,8 @@ export interface AcademicStructureRepository {
 }
 
 export type AcademicStructureDeps = { bridge: BridgeDeps; academic: AcademicStructureRepository }
+
+export type CurriculumReadDeps = AcademicStructureDeps & { mallas: MallaReadRepository }
 
 export function isUuid(value: string): boolean {
   return UUID.test(value)
@@ -176,16 +186,17 @@ export async function authorizedCareer(request: Request, deps: AcademicStructure
 export async function curriculumBuilder(
   request: Request,
   curriculumId: string,
-  deps: AcademicStructureDeps,
+  deps: CurriculumReadDeps,
   requestedCareerId: string | null = null,
 ): Promise<Response> {
   if (!routeAllows(request)) return unmatchedRoute(request)
   const career = await authorizedCareer(request, deps, requestedCareerId)
   if (career instanceof Response) return career
-  if (curriculumId !== career.id) return fromController(aborted(404))
+  const malla = isUuid(curriculumId) ? await deps.mallas.malla(career.id, curriculumId) : null
+  if (malla === null) return fromController(aborted(404))
 
   const lock = await deps.academic.careerLock(career.id)
-  const subjects = await deps.academic.curriculumSubjects(career.id)
+  const subjects = await deps.academic.curriculumSubjects(malla.id)
   const requirements = await deps.academic.requirements(subjects.map((subject) => subject.id))
 
   return apiJson({
@@ -194,9 +205,10 @@ export async function curriculumBuilder(
       name: career.name,
       modality: career.modality === null ? null : { value: career.modality, label: studyModalityLabel(career.modality) as string },
     },
+    malla: { id: malla.id, name: malla.name, state: malla.state },
     curriculum: {
-      id: career.id,
-      cycle_count: career.cycleCount,
+      id: malla.id,
+      cycle_count: malla.cycleCount,
       editable: lock === null,
       lock_reason: lock === null ? null : CONVOCATION_LOCK_REASON,
       lock: lockPayload(lock),

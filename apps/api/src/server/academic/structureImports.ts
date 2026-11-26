@@ -7,7 +7,9 @@ import { importRows, importSession, spreadsheetUpload, type CheckedRow, type Imp
 import type { ImportRow } from "../excel/spreadsheetReader"
 import { xlsxDownload } from "../excel/workbook"
 import type { PhpArray } from "../http/input"
-import { apiJson } from "../http/responses"
+import { apiJson, validationError } from "../http/responses"
+import { validateSchema } from "../http/schemaValidation"
+import { mallaTargetSchema } from "@silabos/shared/schemas/academic"
 import { settle } from "../syllabus/reviewDecisions"
 import type { CareerContext, CareerWriteTx } from "./careerWrites"
 import { insertCareerSubject } from "./careerWrites"
@@ -46,8 +48,9 @@ const CAREER_NOTES = [
 
 const CURRICULUM_NOTES = [
   "Una fila por materia; no deje filas vacías entre registros.",
+  "Las materias se cargan en la malla elegida en la pantalla antes de subir el archivo.",
   "Código: único en la malla, por ejemplo SW-B1-001.",
-  "Ciclo: un número entre 1 y el número de ciclos de la carrera.",
+  "Ciclo: un número entre 1 y el número de ciclos de la malla.",
   "Unidad de organización y Modalidad: elija una opción de la lista (la modalidad es opcional).",
   "Genera sílabo: Sí o No. Si la materia no lleva sílabo, elija No; si la deja vacía se toma Sí.",
   "Horas y créditos: números; las horas totales se calculan solas.",
@@ -62,9 +65,11 @@ export type StructureImportStore = {
   facultiesForImport(): Promise<{ id: string; name: string }[]>
   careerCodes(): Promise<string[]>
   careerActive(careerId: string): Promise<boolean>
-  career(careerId: string): Promise<{ id: string; cycleCount: number } | null>
-  careerSubjects(careerId: string): Promise<{ id: string; code: string; cycle: number | null }[]>
+  malla(careerId: string, mallaId: string): Promise<ImportMalla | null>
+  mallaSubjects(mallaId: string): Promise<{ id: string; code: string; cycle: number | null }[]>
 }
+
+type ImportMalla = { id: string; cycleCount: number }
 
 export type CurriculumImportTx = { subjects: CareerWriteTx; requirements: CurriculumTx }
 
@@ -82,13 +87,28 @@ function mayImportCareers(session: AppSession): boolean {
   return session.activeRole?.role === "administrador"
 }
 
-function curriculumCareer(session: AppSession, deps: StructureImportDeps, requestedCareerId: string | null): Promise<{ id: string; cycleCount: number } | Response> {
+function curriculumCareer(session: AppSession, deps: StructureImportDeps, requestedCareerId: string | null): Promise<{ id: string } | Response> {
   return resolveCareerScope(
     session,
     requestedCareerId,
-    async (careerId) => ((await deps.store.careerActive(careerId)) ? deps.store.career(careerId) : null),
+    async (careerId) => ((await deps.store.careerActive(careerId)) ? { id: careerId } : null),
     () => forbiddenWith(CURRICULUM_FORBIDDEN),
   )
+}
+
+/** The malla of the scoped career that receives the imported subjects (`malla_id` form field). */
+async function importMalla(input: PhpArray, careerId: string, deps: StructureImportDeps): Promise<ImportMalla | Response> {
+  let malla: ImportMalla | null = null
+  const { errors } = await validateSchema(
+    mallaTargetSchema({
+      mallaExists: async (value) => {
+        malla = await deps.store.malla(careerId, String(value))
+        return malla !== null
+      },
+    }),
+    input,
+  )
+  return errors !== null || malla === null ? validationError(errors ?? {}) : malla
 }
 
 const MODALITY_LABELS = STUDY_MODALITIES.map((modality) => studyModalityLabel(modality) as string)
@@ -224,12 +244,8 @@ export async function importCareers(request: Request, deps: StructureImportDeps)
 
 type CurriculumPayload = { key: string; relations: { code: string }[]; data: PhpArray }
 
-async function checkCurriculum(
-  rows: ImportRow[],
-  career: { id: string; cycleCount: number },
-  deps: StructureImportDeps,
-): Promise<{ checked: CheckedRow[]; payloads: CurriculumPayload[]; existing: PhpMap<string> }> {
-  const stored = await deps.store.careerSubjects(career.id)
+async function checkCurriculum(rows: ImportRow[], malla: ImportMalla, deps: StructureImportDeps): Promise<{ checked: CheckedRow[]; payloads: CurriculumPayload[]; existing: PhpMap<string> }> {
+  const stored = await deps.store.mallaSubjects(malla.id)
   const existing = new PhpMap<string>()
   const storedCycles = new PhpMap<number>()
   for (const subject of stored) {
@@ -259,7 +275,7 @@ async function checkCurriculum(
     const name = values.nombre.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, "")
     if (name === "" || phpLength(name) > 180) errors.push("El nombre es obligatorio y admite hasta 180 caracteres.")
     const cycle = values.ciclo.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, "")
-    if (!ctypeDigit(cycle) || phpIntValue(cycle) < 1 || phpIntValue(cycle) > career.cycleCount) errors.push(`El ciclo debe estar entre 1 y ${career.cycleCount}.`)
+    if (!ctypeDigit(cycle) || phpIntValue(cycle) < 1 || phpIntValue(cycle) > malla.cycleCount) errors.push(`El ciclo debe estar entre 1 y ${malla.cycleCount}.`)
     const unit = unitFromText(values.unidad)
     if (unit === null) errors.push("La unidad de organización no es válida.")
     const modalityText = values.modalidad.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, "")
@@ -292,6 +308,7 @@ async function checkCurriculum(
       key: codeKey,
       relations,
       data: {
+        malla_id: malla.id,
         code,
         nombre: name,
         cycle: phpIntValue(cycle),
@@ -317,9 +334,11 @@ export async function importCurriculum(request: Request, deps: StructureImportDe
   if (upload instanceof Response) return finish(upload)
   const career = await curriculumCareer(session, deps, requestedCareerId)
   if (career instanceof Response) return finish(career)
+  const malla = await importMalla(upload.input, career.id, deps)
+  if (malla instanceof Response) return finish(malla)
   const rows = importRows(upload.file, CURRICULUM_COLUMNS, CURRICULUM_OPTIONAL)
   if (rows instanceof Response) return finish(rows)
-  const { checked, payloads, existing } = await checkCurriculum(rows, career, deps)
+  const { checked, payloads, existing } = await checkCurriculum(rows, malla, deps)
   const valid = checked.every((row) => row.errors.length === 0)
   if (!upload.confirm || !valid) return finish(apiJson({ rows: checked, valid, created: 0 } satisfies ImportResult))
   const context: CareerContext = { session, careerId: career.id }
@@ -338,7 +357,7 @@ export async function importCurriculum(request: Request, deps: StructureImportDe
             await curriculumMutation(
               requirements,
               context,
-              career.id,
+              malla.id,
               { subject_id: ids.get(payload.key) as string, requirement_id: ids.get(relation.code) as string, confirm_purge: upload.input.confirm_purge ?? null },
               addRequirement,
             )
