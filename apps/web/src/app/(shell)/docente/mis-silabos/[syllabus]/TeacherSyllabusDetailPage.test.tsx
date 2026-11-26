@@ -349,6 +349,29 @@ describe("TeacherSyllabusDetailPage", () => {
     expect(buttonNamed(page, "Enviar")!.disabled).toBe(false)
   })
 
+  it("una sección bloqueada se abre desde su pestaña y muestra sus campos", async () => {
+    const detail = syllabus("borrador")
+    detail.sections.push({
+      id: "section-ethics",
+      key: "conducta",
+      title: "Conducta ética",
+      description: null,
+      orientation: "portrait",
+      fields: [field("ethics-field", "institucional", { key: "conducta_etica", label: "Conducta", value: doc("Texto institucional") })],
+    })
+    vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: detail })
+    const page = mountPage()
+    await flush()
+
+    const tab = [...page.container.querySelectorAll('[role="tab"]')].find((item) => item.textContent === "Conducta ética")!
+    await act(async () => {
+      fireEvent.mouseDown(tab, { button: 0 })
+    })
+    expect(page.container.querySelector('[data-locked-field="ethics-field"]')!.textContent).toContain("Bloqueado")
+    expect(page.container.querySelector("#field-ethics-field")!.textContent).toContain("Texto institucional")
+    page.unmount()
+  })
+
   it("al reenviar sin cambios desde la corrección, la confirmación lo advierte sin impedir el envío", async () => {
     vi.useFakeTimers()
     const detail = { ...syllabus("correccion_solicitada"), unchanged_since_correction: true }
@@ -496,7 +519,7 @@ describe("TeacherSyllabusDetailPage", () => {
     page.unmount()
   })
 
-  it("muestra la revisión final como sección bloqueada, oculta el botón de validación y muestra los errores vigentes", async () => {
+  it("deja las firmas fuera del formulario, oculta el botón de validación y muestra los errores vigentes", async () => {
     const draft = syllabus("borrador")
     draft.sections.push({
       id: "section-review",
@@ -504,7 +527,7 @@ describe("TeacherSyllabusDetailPage", () => {
       title: "Revisión y aprobación",
       description: "Complete los campos aplicables",
       orientation: "portrait",
-      fields: [field("review-field", "institucional", { key: "firmas", label: "Firmas", value: doc("Firma del coordinador") })],
+      fields: [field("review-field", "institucional", { key: "firmas", label: "Firmas", value: { type: "doc", content: [{ type: "paragraph", content: [{ type: "variable", attrs: { id: "firma_coordinador" } }] }] } })],
     })
     draft.validation = {
       version_bloqueo: draft.version_bloqueo,
@@ -522,17 +545,10 @@ describe("TeacherSyllabusDetailPage", () => {
     await flush()
 
     expect(page.container.textContent).toContain("Descripción")
-    expect(page.container.textContent).toContain("Revisión y aprobación")
-    expect(page.container.querySelector('[data-locked-field="review-field"]')).toBeNull()
+    expect(page.container.textContent).not.toContain("Revisión y aprobación")
     expect(page.container.textContent).not.toContain("Resultados de validación")
     expect(page.container.textContent).toContain("está vacío")
     expect([...page.container.querySelectorAll("button")].some((button) => button.textContent === "Validar sílabo")).toBe(false)
-
-    const reviewTab = [...page.container.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent === "Revisión y aprobación")!
-    await act(async () => {
-      fireEvent.mouseDown(reviewTab, { button: 0 })
-    })
-    expect(page.container.querySelector('[data-locked-field="review-field"]')!.textContent).toContain("Firma del coordinador")
     page.unmount()
   })
 

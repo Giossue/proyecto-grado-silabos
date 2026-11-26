@@ -45,7 +45,7 @@ import { goBack } from "@/lib/goBack"
 import { openRevisionPdf } from "@/lib/openPdf"
 import { syllabusConditions, visibleSections as withoutHiddenParts } from "@/lib/responseConditions"
 import { paths } from "@/lib/routes"
-import { isTeacherField } from "@/lib/syllabusForm"
+import { isTeacherField, teacherFormFields } from "@/lib/syllabusForm"
 import { drawnInDocument, shownInCard } from "@silabos/shared/lib/teacherFormation"
 import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { toast } from "@/lib/toast"
@@ -185,7 +185,7 @@ export default function TeacherSyllabusDetailPage() {
           ? `Faltan ${emptyParts} campos por completar`
           : ""
   const copySources = canEdit && (syllabus?.state === "borrador" || syllabus?.state === "sin_iniciar") ? (syllabus.copy_sources ?? []) : []
-  const visibleSections = (syllabus?.sections ?? []).filter((section) => section.fields.length > 0)
+  const visibleSections = (syllabus?.sections ?? []).filter((section) => teacherFormFields(section.fields).length > 0)
   const activeSectionId = visibleSections.find((section) => section.id === chosenSectionId)?.id ?? visibleSections[0]?.id ?? ""
   const previewSections = useMemo(() => {
     const sections = (syllabus?.sections ?? []).map((section) => ({ ...section, fields: section.fields.filter(drawnInDocument) }))

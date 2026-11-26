@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { counterLabel, fieldCharacters } from "@/lib/fieldLimits"
 import { responseDocument } from "@/lib/fieldResponses"
 import { syllabusConditions } from "@/lib/responseConditions"
-import { fieldTitle, isTeacherField } from "@/lib/syllabusForm"
+import { fieldTitle, isTeacherField, teacherFormFields } from "@/lib/syllabusForm"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { cn } from "@/lib/utils"
 import { responsibleLabel } from "@/types/configuration"
@@ -63,7 +63,7 @@ export function SyllabusTeacherForm({
   }
 
   const conditions = syllabusConditions(sections, documentOf)
-  const shownFields = (section: Section): SyllabusField[] => section.fields.filter((field) => !conditions.hidden.has(field.key))
+  const shownFields = (section: Section): SyllabusField[] => teacherFormFields(section.fields).filter((field) => !conditions.hidden.has(field.key))
   const visibleSections = sections.filter((section) => shownFields(section).length > 0)
   const currentId = visibleSections.find((section) => section.id === activeSectionId)?.id ?? visibleSections[0]?.id ?? ""
   const shownSections = visibleSections.filter((section) => section.id === currentId)
