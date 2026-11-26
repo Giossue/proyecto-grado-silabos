@@ -265,6 +265,7 @@ export function FreeTextEditor({
             <>
               <Separator />
               <TemplateResponseTool
+                advanced={false}
                 editor={editor}
                 disabled={disabled}
                 label="Espacio para el docente"

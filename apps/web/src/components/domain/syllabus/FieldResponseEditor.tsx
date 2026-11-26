@@ -133,6 +133,7 @@ export function FieldResponseEditor({
   )
   const spaceTool = (path: number[]): ReactNode => (
     <TemplateResponseTool
+      advanced={false}
       label="Espacio para el docente"
       hint="El docente solo responde: no cambia el tipo ni las opciones"
       optionsHint="Escriba las opciones que podrá elegir el docente"
@@ -174,6 +175,7 @@ export function FieldResponseEditor({
             </Badge>
           )}
           <TemplateResponseTool
+            advanced={false}
             label="Opciones de la respuesta"
             current={attrs}
             fixed

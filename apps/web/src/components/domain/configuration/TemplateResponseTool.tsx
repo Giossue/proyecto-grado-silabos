@@ -46,6 +46,7 @@ type TemplateResponseToolProps = {
   requireOptions?: boolean
   current?: ResponseAttrs | null
   fixed?: boolean
+  advanced?: boolean
   fixedReason?: string
   templateOptions?: ResponseOption[] | null
   sources?: ConditionSource[] | null
@@ -95,7 +96,8 @@ export function TemplateResponseTool({
   requireOptions = false,
   current = null,
   fixed = false,
-  fixedReason = "El tipo y Más opciones los fija Administración: aquí solo cambia las opciones",
+  advanced = true,
+  fixedReason = "El tipo lo fija Administración: aquí solo cambia las opciones",
   templateOptions = null,
   sources = null,
   usedIds = NO_IDS,
@@ -232,6 +234,7 @@ export function TemplateResponseTool({
                   {!fixed ? <FieldDescription>{optionsHint}</FieldDescription> : null}
                 </Field>
               ) : null}
+              {advanced ? (
               <Collapsible open={more} onOpenChange={setMore}>
                 <CollapsibleTrigger asChild>
                   <Button type="button" variant="ghost" size="sm" className="w-fit" data-response-more>
@@ -316,6 +319,7 @@ export function TemplateResponseTool({
                   </FieldGroup>
                 </CollapsibleContent>
               </Collapsible>
+              ) : null}
               {showsCondition && more ? (
                 <Controller
                   control={form.control}
