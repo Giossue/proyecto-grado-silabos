@@ -1,10 +1,13 @@
 import { createHash } from "node:crypto"
-import { defineBlock } from "../configuration/blockDefinition"
+import { defineBlock, given } from "../configuration/blockDefinition"
 import { documentFromHtml, documentLines } from "../configuration/documentHtml"
 import { formatLimit } from "../configuration/fieldLimit"
-import { isPhpArray, isRecord, list, mbStrlen, phpEquals, phpIdentical, phpString, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
-import { buildTable, designWithKeys } from "../configuration/repeatableTable"
-import { conditionProblems, contentForField, RESPONSIBLES, responsibleOf } from "../configuration/templateDraft"
+import { isPhpArray, isRecord, list, mbStrlen, phpEquals, phpIdentical, phpShape, phpString, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
+import { buildTable, designWithKeys, drawnLayout, guardTable, readTable } from "../configuration/repeatableTable"
+import { conditionProblems, contentForField, exportedBlock, RESPONSIBLES, responsibleOf, toRuntime } from "../configuration/templateDraft"
+import { defineAnyBlock, isShortBlock } from "../configuration/templateShortForm"
+import { definitionError } from "../configuration/templateStyle"
+import { canonicalJson } from "../documents/canonicalJson"
 import { withBlocks } from "../configuration/templateDefinition"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
 import {
@@ -106,6 +109,24 @@ function documentBlocks(value: unknown): PhpRecord[] {
   return isPhpArray(content) ? list(content).filter((node): node is PhpRecord => isPhpArray(node)).map(record) : []
 }
 
+function drawn(kind: string, raw: PhpRecord): PhpRecord {
+  if (!isShortBlock(raw) || Object.prototype.hasOwnProperty.call(raw, "diseño")) return raw
+  const where = `blocks.${kind}.campos`
+  const lists = isRecord(raw.campos) ? Object.entries(raw.campos) : []
+  const only = lists.length === 1 && isRecord(lists[0][1]) && isRecord(lists[0][1].columnas) ? lists[0] : null
+  if (only === null) definitionError(`${where}: sin «diseño» el sistema solo dibuja una tabla con una lista de filas y sus «columnas»; para otra forma escriba el «diseño».`)
+  const [listKey, rows] = only
+  if (typeof given(rows, "titulo") !== "string" || phpTrim(phpString(given(rows, "titulo"))) === "") {
+    definitionError(`${where}.${listKey}.titulo: escriba cómo se llama cada fila, en singular; sin «diseño» el sistema dibuja la tabla del editor.`)
+  }
+  const columns = Object.entries(record(given(rows, "columnas"))).map(([key, column]) => {
+    const title = given(column, "titulo")
+    if (typeof title !== "string" || phpTrim(title) === "") definitionError(`${where}.${listKey}.columnas.${key}.titulo: escriba el título de la columna; sin «diseño» el sistema dibuja la tabla con esos títulos.`)
+    return { key, title }
+  })
+  return { ...raw, diseño: drawnLayout(listKey, columns) }
+}
+
 const WHITESPACE = /[\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/gu
 
 export class AssistantDraft {
@@ -173,6 +194,48 @@ export class AssistantDraft {
     this.tables = { ...this.tables, [kind]: table }
     this.withTables = null
     return kind
+  }
+
+  table(kind: string): PhpRecord {
+    const block = Object.prototype.hasOwnProperty.call(this.definition().blocks, kind) ? this.definition().blocks[kind] : null
+    if (block === null || block === undefined) throw new TemplateDraftError(`No existe la tabla «${kind}». Las claves de las tablas aparecen en ver_plantilla.`)
+    const variables = Object.keys(this.base_.variables)
+    const shown = exportedBlock(kind, record(block), variables)
+    return { clave: kind, se_puede_cambiar: readTable(kind, record(block), variables).design !== null, tabla: this.withoutDrawnLayout(kind, shown) }
+  }
+
+  hasTable(kind: string): boolean {
+    return Object.prototype.hasOwnProperty.call(this.definition().blocks, kind)
+  }
+
+  writeTable(kind: string, raw: PhpRecord): string {
+    const variables = Object.keys(this.base_.variables)
+    const stored = Object.prototype.hasOwnProperty.call(this.base_.blocks, kind) ? record(this.base_.blocks[kind]) : null
+    let table: PhpRecord
+    try {
+      table = defineAnyBlock(kind, drawn(kind, raw), variables)
+      guardTable(kind, stored, table, variables)
+    } catch (error) {
+      if (error instanceof TemplateValidationError) throw new TemplateDraftError(`La tabla no es válida: ${flatten(error).join(" ")}`)
+      throw error
+    }
+    this.tables = { ...this.tables, [kind]: table }
+    this.withTables = null
+    return kind
+  }
+
+  private withoutDrawnLayout(kind: string, shown: PhpRecord): PhpRecord {
+    if (!isShortBlock(shown)) return shown
+    const { diseño: _layout, ...implied } = shown
+    void _layout
+    const variables = Object.keys(this.base_.variables)
+    const asSent = (value: PhpRecord) => record(toRuntime(JSON.parse(JSON.stringify(phpShape(value)))))
+    try {
+      return canonicalJson(defineAnyBlock(kind, drawn(kind, asSent(implied)), variables)) === canonicalJson(defineAnyBlock(kind, asSent(shown), variables)) ? implied : shown
+    } catch (error) {
+      if (error instanceof TemplateValidationError) return shown
+      throw error
+    }
   }
 
   overview(): PhpRecord[] {
@@ -478,7 +541,9 @@ export class AssistantDraft {
   }
 
   changes(): string[] {
-    const changes: string[] = Object.values(this.tables).map((table) => `Nueva tabla repetible «${phpString(table.label)}».`)
+    const changes: string[] = Object.entries(this.tables).map(([kind, table]) =>
+      Object.prototype.hasOwnProperty.call(this.base_.blocks, kind) ? `Cambia la tabla «${phpString(table.label)}».` : `Nueva tabla repetible «${phpString(table.label)}».`,
+    )
     const baseSections = keyed(this.base)
     const draftSections = keyed(this.sections)
     for (const section of this.sections) {
@@ -568,7 +633,7 @@ export class AssistantDraft {
         const kind = phpString(record(node.attrs).kind ?? "")
         const block = this.definition().blocks[kind]
         const label = block !== undefined && block !== null && record(block).label !== undefined && record(block).label !== null ? record(block).label : kind
-        return `[bloque «${phpString(label)}»]`
+        return `[tabla «${phpString(label)}», clave ${kind}]`
       }
     }
     const text = phpTrim(plainText(document, this.base_).replace(WHITESPACE, " "))

@@ -90,7 +90,7 @@
                 "funcion": "cambiar_contenido_campo",
                 "argumentos": {
                   "clave": "tutorias",
-                  "contenido_html": "<table><tr><th style=\"background:#C3D4EA;font-weight:bold\">Día</th><th style=\"background:#C3D4EA;font-weight:bold\">Hora</th><th style=\"background:#C3D4EA;font-weight:bold\">Lugar</th></tr><tr><td></td><td></td><td></td></tr></table>"
+                  "contenido_html": "<table><tr><th>Día</th><th>Hora</th><th>Lugar</th></tr><tr><td></td><td></td><td></td></tr></table>"
                 }
               }
             ],
@@ -281,7 +281,7 @@
                   "seccion": "evaluacion",
                   "nombre": "Rúbrica",
                   "quien_llena": "carrera",
-                  "contenido_html": "<table><tr><th style=\"background:#C3D4EA;font-weight:bold\">Criterio</th><th style=\"background:#C3D4EA;font-weight:bold\">Excelente</th><th style=\"background:#C3D4EA;font-weight:bold\">Bueno</th><th style=\"background:#C3D4EA;font-weight:bold\">Regular</th></tr><tr><td></td><td></td><td></td><td></td></tr></table>",
+                  "contenido_html": "<table><tr><th>Criterio</th><th>Excelente</th><th>Bueno</th><th>Regular</th></tr><tr><td></td><td></td><td></td><td></td></tr></table>",
                   "despues_de": "(final)"
                 }
               }
@@ -356,7 +356,7 @@
                 "funcion": "cambiar_contenido_campo",
                 "argumentos": {
                   "clave": "rubrica",
-                  "contenido_html": "<table><tr><th style=\"background:#C3D4EA;font-weight:bold\">Criterio</th><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Excelente</th><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Bueno</th><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Regular</th></tr><tr><td></td><td></td><td></td><td></td></tr></table>"
+                  "contenido_html": "<table><tr><th>Criterio</th><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Excelente</th><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Bueno</th><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Regular</th></tr><tr><td></td><td></td><td></td><td></td></tr></table>"
                 }
               }
             ],
@@ -2219,6 +2219,80 @@
                 "funcion": "responder",
                 "argumentos": {
                   "mensaje": "La descripción admitirá hasta 500 caracteres del docente."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Tabla repetible en forma corta, leída y cambiada",
+    "turnos": [
+      {
+        "mensaje": "En metodología agrega una tabla de prácticas de laboratorio con tema, modalidad presencial o virtual y horas, de una a diez, y también el lugar",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "escribir_tabla",
+            "ver_tabla",
+            "agregar_campo"
+          ],
+          "cambios": [
+            "Nueva tabla repetible «Prácticas de laboratorio»"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "escribir_tabla",
+                "argumentos": {
+                  "clave": "tabla_practicas",
+                  "tabla": "{\"titulo\": \"Prácticas de laboratorio\", \"campos\": {\"filas\": {\"titulo\": \"práctica\", \"filas\": \"1-10\", \"columnas\": {\"tema\": {\"titulo\": \"Tema\"}, \"modalidad\": {\"titulo\": \"Modalidad\", \"opciones\": {\"presencial\": \"Presencial\", \"virtual\": \"Virtual\"}}, \"horas\": {\"tipo\": \"horas\", \"titulo\": \"Horas\"}}}}}"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "ver_tabla",
+                "argumentos": {
+                  "clave": "tabla_practicas"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "escribir_tabla",
+                "argumentos": {
+                  "clave": "tabla_practicas",
+                  "tabla": "{\"titulo\": \"Prácticas de laboratorio\", \"campos\": {\"filas\": {\"titulo\": \"práctica\", \"filas\": \"1-10\", \"columnas\": {\"tema\": {\"titulo\": \"Tema\"}, \"modalidad\": {\"titulo\": \"Modalidad\", \"opciones\": {\"presencial\": \"Presencial\", \"virtual\": \"Virtual\"}}, \"horas\": {\"tipo\": \"horas\", \"titulo\": \"Horas\"}, \"lugar\": {\"titulo\": \"Lugar\"}}}}}"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "metodologia",
+                  "nombre": "7.6 Prácticas de laboratorio",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<div data-block=\"tabla_practicas\"></div>",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo la tabla de prácticas con tema, modalidad, horas y lugar."
                 }
               }
             ]

@@ -198,9 +198,11 @@ describe("POST admin/template/{template}/blocks/design", () => {
     expect(((definition.catalog as PhpRecord).map as PhpRecord).format).toBe("codigo")
   })
 
-  it("designs an untouched table back to the same definition", async () => {
+  it("designs an untouched table back to the same definition, with plain headers that take the document colour", async () => {
     const { body } = await json(await design(await booksDesign()))
-    expect(JSON.stringify(phpShape(body.definition))).toBe(JSON.stringify(phpShape(goldenTemplate().definition!.blocks.bibliografia)))
+    const styled = JSON.stringify(phpShape(goldenTemplate().definition!.blocks.bibliografia))
+    expect(styled).toContain('"backgroundColor":"#C3D4EA","textColor":null,"textAlign":null,"bold":true')
+    expect(JSON.stringify(phpShape(body.definition))).toBe(styled.replaceAll('"backgroundColor":"#C3D4EA","textColor":null,"textAlign":null,"bold":true', '"backgroundColor":null,"textColor":null,"textAlign":null,"bold":null'))
   })
 
   it("says in Spanish what is wrong with a design", async () => {

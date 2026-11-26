@@ -60,6 +60,11 @@ Goal: the template JSON (Admin → Plantilla → Opciones avanzadas → Editar J
   ```
   Renames: `sections`→`secciones`, `fields`→`campos`, `blocks`→`tablas`; `variables` stays. Values: `letter`→`carta`, `portrait`→`vertical`, `center`→`centro`, and so on. Import also accepts the English version, so old JSON files keep working. Nothing changes internally and there is no DB migration: only the export/import presentation changes. User (2026-11-26): «espera, pq esto está en inglés?» → «sí».
 - S10 — The seed file `apps/api/src/server/configuration/officialTemplate.json` is itself written in the new format: Spanish and short-form tables, the same as the export, so that it reads in Spanish on GitHub. The internal definition it produces must stay identical. User (2026-11-26), with a screenshot of officialTemplate.json on GitHub: «porque lo veo en inglés?».
+- S11 — The template AI assistant takes advantage of the new format. User (2026-11-26): «como cambiamos cosas, para la IA será más fácil editar?» → «quiero la más completa». Both options:
+  - (1) the AI writes and reads the special tables in the short form (rules by name, defaults implied) instead of the long form, so it writes less with fewer errors;
+  - (2) its examples and knowledge (`templateKnowledge.json`, `escenarios.json`) use the new format and drop the repeated header styles, and the admin table designer (`repeatableTable.ts` HEADER_STYLE) stops writing the repeated style.
+
+  What the AI produces must still pass the same validation, and existing proposals and history keep working.
 
 ## Tasks
 
@@ -69,6 +74,7 @@ Goal: the template JSON (Admin → Plantilla → Opciones avanzadas → Editar J
 - [x] T3 (S8) delegated writer (context backstop); Risk item 1 (stored data migrated) and item 6 (Word output of plain headers) → independent verifier — commit: pending. RED: the DOCX plain-header test failed (no `<w:b w:val="1"/>`), the official export test failed (it still had `style=\"background:#C3D4EA;font-weight:bold\"`) and the web fixture test failed against the old fixture; GREEN: all pass (see L9).
 - [x] T4 (S9) delegated writer (context backstop); Risk: item 3 (exported format; English still accepted) — commit: pending. RED: 11 of 19 in `templateShortForm.test.ts` failed (the 8 tests that read `tablas` plus the 3 new Spanish export, limit and mixed-language tests), and the new Spanish import test in `templateProvisioner.test.ts` and the updated golden export test in `templateReads.test.ts` failed; GREEN: all pass (see L11).
 - [x] T5 (S10) delegated writer (context backstop); Risk: none (only the seed format changes; fixtures pin the internal definition and sections byte for byte) — commit: pending. RED: the new seed test in `officialTemplate.test.ts` failed (the seed had no `$schema` and was in English full form) while the two baseline fixture tests passed; GREEN: all 3 pass (see L13).
+- [x] T6 (S11) delegated writer (context backstop); Risk: item 3 (the designer output and the AI tool contract change; old styled tables and long-form tables stay accepted) — commit: pending. RED: 10 of 10 new tests in `ai/templateTables.test.ts` and the plain-header test in `blockDefinition.test.ts` failed; GREEN: all pass (see L16).
 
 ## Log
 
@@ -149,3 +155,12 @@ Goal: the template JSON (Admin → Plantilla → Opciones avanzadas → Editar J
   - JSON files carrying `versión: 2` keep importing, and 3 is still rejected;
   - the schema no longer requires it.
   RED: 3 tests; GREEN: API 2369/2369.
+- L15 (2026-11-26) — `versión` removed from every template JSON (93910cf, 68e148f). User asked for S11: «quiero la más completa».
+- L16 (2026-11-26, T6 writer) — Done (S11):
+  - Finding: the AI never wrote block JSON. It created tables only through `crear_tabla_repetible` (a designer-like column list) and saw a table only as `[bloque «…»]`. `block_changes` always held the internal definition.
+  - New tools in `templateTools.ts`. `ver_tabla` (read-only) shows a table in the export's short form (`exportedBlock`, now in `templateDraft.ts`), with rules by name, without `diseño` when it is the standard drawn table, and with `se_puede_cambiar`. `escribir_tabla` (`clave`, `tabla` as JSON text or object) creates or replaces a table in short or full form. Without `diseño` it draws the designer layout from the column titles (the list and each column need `titulo`). It goes through `defineAnyBlock`, then `guardTable` against the base template, so the same validation as saving runs at once. Errors come back as «La tabla no es válida: blocks.<clave>.…» with the short path.
+  - `ver_plantilla` names a table `[tabla «Título», clave CLAVE]`. `changes()` says «Cambia la tabla «…».» for an existing kind. `crear_tabla_repetible` and stored proposals and history are unchanged, since `block_changes` keeps the internal shape.
+  - `repeatableTable.ts` writes plain `<th>`. `readTable` also accepts the old `background:#C3D4EA;font-weight:bold` headers, so old proposals and old JSON tables stay editable in the designer. Side effect: after T3 the plain-header `bibliografia` no longer rebuilt as a designer table (it was locked). It is readable again (`se_puede_cambiar: true`). The knowledge still tells the AI not to change it.
+  - Goldens: the 36 header attributes of the 18 `build` cases in `block-golden.json` are now plain. `templateBuilder.test.ts`: an untouched legacy table comes back the same apart from plain headers.
+  - Knowledge: `templateKnowledge.json` explains the short form, the six rule names, `ver_tabla`/`escribir_tabla`, and plain `<th>` (6 → 0 redundant styles). It grew from 35863 to 38308 bytes because of the new explanation. `escenarios.json` has 8 → 0 redundant styles (−360 bytes) and a new scenario «Tabla repetible en forma corta, leída y cambiada» (60625 → 63057 bytes). `ver_tabla` and `escribir_tabla` were added to the scenario capabilities.
+  - Checks: api vitest 161 files/2380 tests; api tsc 0 errors; web configuration and admin/plantilla 12 files/103 tests; web tsc 0 errors.

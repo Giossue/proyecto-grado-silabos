@@ -1,6 +1,6 @@
 import { FIELD_LIMIT_INVALID, KEY_PATTERN, RESPONSIBLES, templateDraftSchema } from "@silabos/shared/schemas/template"
 import { validateSchema } from "../http/schemaValidation"
-import { isList, isPhpArray, isRecord, list, phpCount, phpIntCast, phpString, phpTrim, record, type PhpRecord } from "./phpValues"
+import { isList, isPhpArray, isRecord, list, phpCount, phpIntCast, phpShape, phpString, phpTrim, record, type PhpRecord } from "./phpValues"
 import {
   CAREER,
   defineCondition,
@@ -15,7 +15,10 @@ import {
   type TemplateDefinition,
 } from "./templateRuntime"
 import { defineDocumentStyle, documentWithLayout } from "./templateStyle"
-import { documentFromHtml } from "./documentHtml"
+import { documentFromHtml, documentLines } from "./documentHtml"
+import { defineBlock } from "./blockDefinition"
+import { canonicalJson } from "../documents/canonicalJson"
+import { defineAnyBlock, shortBlock } from "./templateShortForm"
 import { DEFINITION_KEYS, defineTemplate, listLimitsOf, withBlocks, withListLimits } from "./templateDefinition"
 import { legacyUnitsDocument } from "./legacyUnits"
 import { templateFromAnyLanguage } from "./templateSpanish"
@@ -443,4 +446,27 @@ export async function draftProblems(payload: PhpRecord, current: TemplateDefinit
     })
   })
   return problems
+}
+
+export function exportedBlock(kind: string, block: PhpRecord, variables: string[]): PhpRecord {
+  const full = {
+    label: block.label,
+    ...(phpCount(block.props ?? []) !== 0 ? { props: block.props } : {}),
+    ...(phpCount(block.value ?? []) !== 0 ? { value: block.value } : {}),
+    ...(phpCount(block.rules ?? []) !== 0 ? { rules: block.rules } : {}),
+    ...(block.catalog !== undefined && block.catalog !== null ? { catalog: block.catalog } : {}),
+    layout: documentLines({ type: "doc", content: block.layout }),
+  }
+  const short = shortBlock(block)
+  return importsAlike(kind, short, full, variables) ? short : full
+}
+
+function importsAlike(kind: string, short: PhpRecord, full: PhpRecord, variables: string[]): boolean {
+  const asImported = (value: unknown) => toRuntime(JSON.parse(JSON.stringify(phpShape(value))))
+  try {
+    return canonicalJson(defineAnyBlock(kind, asImported(short), variables)) === canonicalJson(defineBlock(kind, asImported(full), variables))
+  } catch (error) {
+    if (error instanceof TemplateValidationError) return false
+    throw error
+  }
 }

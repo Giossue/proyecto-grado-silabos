@@ -4,7 +4,7 @@ import { schemaDigits, TemplateValidationError, type TemplateDefinition } from "
 import { definitionError } from "./templateStyle"
 
 export { COLUMN_TYPES } from "@silabos/shared/schemas/template"
-const HEADER_STYLE = "background:#C3D4EA;font-weight:bold"
+const LEGACY_HEADER_STYLE = "background:#C3D4EA;font-weight:bold"
 const JSON_POINTER = "Para cambiarla use Opciones avanzadas → Editar JSON."
 const KEY = /^[a-z][a-z0-9_]{0,40}$/
 const UNSUPPORTED_PIECES = "El diseño usa piezas que este editor no maneja (celdas combinadas, totales, contadores, condiciones o filas extra). "
@@ -127,20 +127,25 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&apos;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
-function tableLayout(design: PhpRecord): string[] {
+function tableLayout(design: PhpRecord, legacyHeaders = false): string[] {
+  const style = legacyHeaders ? ` style="${LEGACY_HEADER_STYLE}"` : ""
   let headers = ""
   let cells = ""
   for (const raw of list(design.columns)) {
     const column = record(raw)
     const width = isInt(column.width) ? ` data-width="${column.width}"` : ""
-    headers += `<th${width} style="${HEADER_STYLE}">${escapeHtml(phpString(column.title))}</th>`
+    headers += `<th${width}${style}>${escapeHtml(phpString(column.title))}</th>`
     cells += `<td${width}><span data-slot='{"value":"${phpString(column.key)}"}'></span></td>`
   }
   const band = typeof design.band === "string" && design.band !== "" ? ` data-band="${design.band.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#039;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}"` : ""
   return ["<table>", `<tr>${headers}</tr>`, `<tr data-repeat='{"value":"${phpString(design.list)}"}'${band}>${cells}</tr>`, "</table>"]
 }
 
-export function buildTable(raw: PhpRecord): PhpRecord {
+export function drawnLayout(listKey: string, columns: { key: string; title: string }[]): string[] {
+  return tableLayout({ list: listKey, columns, band: null })
+}
+
+export function buildTable(raw: PhpRecord, legacyHeaders = false): PhpRecord {
   const design = designWithKeys(raw)
   const listKey = phpString(design.list)
   const extras = isPhpArray(design.extras) ? record(design.extras) : {}
@@ -164,7 +169,7 @@ export function buildTable(raw: PhpRecord): PhpRecord {
     value: { [listKey]: array },
     rules: tableRules(design, extras),
     ...(isPhpArray(extras.catalog) ? { catalog: extras.catalog } : {}),
-    layout: tableLayout(design),
+    layout: tableLayout(design, legacyHeaders),
   }
 }
 
@@ -306,14 +311,15 @@ export function readTable(kind: string, definition: PhpRecord, variables: string
   const reason = unsupported(definition)
   if (reason !== null) return { design: null, reason: `${reason} ${JSON_POINTER}` }
   const design = extract(kind, definition)
-  let rebuilt: PhpRecord | null
-  try {
-    rebuilt = defineBlock(kind, buildTable(design), variables)
-  } catch (error) {
-    if (!(error instanceof TemplateValidationError)) throw error
-    rebuilt = null
+  const rebuildsAs = (legacyHeaders: boolean): boolean => {
+    try {
+      return phpIdentical(defineBlock(kind, buildTable(design, legacyHeaders), variables), comparable(definition))
+    } catch (error) {
+      if (!(error instanceof TemplateValidationError)) throw error
+      return false
+    }
   }
-  if (rebuilt === null || !phpIdentical(rebuilt, comparable(definition))) return { design: null, reason: `${UNSUPPORTED_PIECES}${JSON_POINTER}` }
+  if (!rebuildsAs(false) && !rebuildsAs(true)) return { design: null, reason: `${UNSUPPORTED_PIECES}${JSON_POINTER}` }
   return { design, reason: null }
 }
 

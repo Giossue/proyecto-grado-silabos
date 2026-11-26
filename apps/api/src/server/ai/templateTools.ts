@@ -1,6 +1,7 @@
 import { isRecord, list, phpShape, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
 import { RESPONSIBLES } from "../configuration/templateDraft"
 import { variableCatalog } from "../configuration/templatePresentation"
+import { toRuntime } from "../configuration/templateDraft"
 import { AssistantDraft, TemplateDraftError } from "./assistantDraft"
 import type { AiToolCall, AiToolSpec } from "./gateway"
 import { phpJson } from "./php"
@@ -11,7 +12,7 @@ export const QUESTION = "preguntar"
 
 const CELL_TYPES: Record<string, string> = { texto: "text", opcion: "choice", numero: "number" }
 
-const READ_ONLY = ["ver_plantilla", "ver_campo", "listar_presets", "listar_variables", "ver_estado", "responder", "preguntar"]
+const READ_ONLY = ["ver_plantilla", "ver_campo", "ver_tabla", "listar_presets", "listar_variables", "ver_estado", "responder", "preguntar"]
 
 export type ProcessNotice = { estado: string; aviso: string }
 
@@ -71,6 +72,20 @@ function messageArg(args: PhpRecord, name: string): string {
   const value = phpTrim(stringArg(args, name))
   if (value === "") throw new TemplateDraftError(`El parámetro «${name}» no puede quedar vacío.`)
   return [...value].slice(0, MAX_MESSAGE).join("")
+}
+
+function tableArg(args: PhpRecord): PhpRecord {
+  const wrong = () => new TemplateDraftError("«tabla» no es un JSON válido: escriba la tabla en forma corta como un objeto JSON.")
+  let value: unknown = args.tabla
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value)
+    } catch {
+      throw wrong()
+    }
+  }
+  if (!isRecord(value)) throw wrong()
+  return record(toRuntime(value))
 }
 
 function mbLength(value: string): number {
@@ -217,6 +232,23 @@ export class TemplateTools {
         },
       ),
       spec(
+        "ver_tabla",
+        "Muestra una tabla (bloque) en forma corta: titulo, campos con sus columnas, reglas por nombre, catalogo y diseño. Si no trae «diseño», el sistema la dibuja con los títulos de sus columnas. «se_puede_cambiar» indica si escribir_tabla puede cambiarla.",
+        { clave: { type: "string", description: "Clave de la tabla, como la nombra ver_plantilla («clave …») o como la devolvió crear_tabla_repetible." } },
+      ),
+      spec(
+        "escribir_tabla",
+        'Crea una tabla repetible nueva o reemplaza una existente, escrita en forma corta. Para cambiar una tabla, léala antes con ver_tabla, cambie lo pedido y envíela completa. Una tabla nueva se pone después en un campo Carrera con <div data-block="CLAVE"></div>.',
+        {
+          clave: { type: "string", description: "Clave de la tabla: la de ver_tabla para cambiarla, o una nueva en minúsculas, números y _ (por ejemplo «tabla_salidas_de_campo»)." },
+          tabla: {
+            type: "string",
+            description:
+              'La tabla como objeto JSON en forma corta, por ejemplo {"titulo":"Salidas de campo","campos":{"filas":{"titulo":"salida","filas":"0-10","columnas":{"lugar":{"titulo":"Lugar"},"fecha":{"titulo":"Fecha","max":20},"horas":{"tipo":"horas","titulo":"Horas"},"transporte":{"tipo":"sí/no","titulo":"¿Transporte?"}}}}}. Tipos: «texto» (por defecto, hasta 1000 caracteres; «max» cambia el límite), «texto largo», «número», «horas» (hasta 999,99) y «sí/no»; para elegir use "opciones":{"clave":"Texto"}. «filas» es "mínimo-máximo" y «al_empezar» las filas iniciales (por defecto el mínimo). «reglas» lleva reglas por su nombre o completas, como las devuelve ver_tabla. Sin «diseño» el sistema dibuja la tabla con los títulos de las columnas.',
+          },
+        },
+      ),
+      spec(
         "mostrar_solo_si",
         'Muestra un campo solo si una respuesta anterior de elegir una o varias tiene alguna de las opciones dadas (si no, el docente no lo ve, no se le exige y no se imprime). Con «respuesta» vacía quita la condición. Para una sola respuesta use "showIf" en su data-response.',
         {
@@ -294,6 +326,14 @@ export class TemplateTools {
           return apply("Contenido listo aplicado.", () => draft.applyPreset(stringArg(args, "clave"), stringArg(args, "preset")))
         case "crear_tabla_repetible":
           return apply('Tabla repetible creada. Póngala en un campo con <div data-block="CLAVE"></div>.', () => draft.createTable(tableDesign(args)))
+        case "ver_tabla":
+          return toolOk(draft.table(stringArg(args, "clave")))
+        case "escribir_tabla": {
+          const kind = stringArg(args, "clave")
+          const message = draft.hasTable(kind) ? "Tabla cambiada." : 'Tabla nueva lista. Póngala en un campo con <div data-block="CLAVE"></div>.'
+          const table = tableArg(args)
+          return apply(message, () => draft.writeTable(kind, table))
+        }
         case "mostrar_solo_si":
           return apply("Condición actualizada.", () => draft.showFieldIf(stringArg(args, "clave"), stringArg(args, "respuesta"), stringsArg(args, "opciones")))
         case "limite_caracteres":

@@ -16,6 +16,8 @@ const CAPABILITIES = [
   "duplicar_seccion",
   "mover_campo",
   "crear_tabla_repetible",
+  "ver_tabla",
+  "escribir_tabla",
   "mostrar_solo_si",
   "limite_caracteres",
   "cambiar_responsable_campo",
