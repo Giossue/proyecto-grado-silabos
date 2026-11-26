@@ -21,12 +21,11 @@ export function AppSidebarHeader({ sidebar = true }: AppSidebarHeaderProps) {
   const { toggleSidebar } = useSidebar()
 
   return (
-    <header className="sticky top-0 z-30 flex h-(--app-header-height) shrink-0 items-center gap-2 border-b border-border bg-card px-4 pt-[env(safe-area-inset-top)] transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--app-header-compact-height) max-sm:fixed max-sm:scroll-lock-offset max-sm:inset-x-0 max-sm:top-auto max-sm:bottom-0 max-sm:h-(--mobile-nav-height) max-sm:justify-around max-sm:border-t max-sm:border-b-0 max-sm:pt-0 max-sm:pb-[env(safe-area-inset-bottom)] max-sm:shadow-menu">
+    <header data-app-header className="sticky top-0 z-30 flex h-(--app-header-height) shrink-0 items-center gap-2 border-b border-sidebar-border bg-sidebar px-4 text-sidebar-foreground pt-[env(safe-area-inset-top)] transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--app-header-compact-height) max-sm:fixed max-sm:scroll-lock-offset max-sm:inset-x-0 max-sm:top-auto max-sm:bottom-0 max-sm:h-(--mobile-nav-height) max-sm:justify-around max-sm:border-t max-sm:border-b-0 max-sm:pt-0 max-sm:pb-[env(safe-area-inset-bottom)] max-sm:shadow-menu">
       <div className="flex min-w-0 flex-1 items-center gap-2 max-sm:contents">
         {!sidebar ? (
           <div className="flex items-center max-sm:hidden" data-app-logo>
-            <Image src="/logo-ueb-horizontal-claro.webp" width={600} height={164} unoptimized loading="eager" decoding="async" alt="Universidad Estatal de Bolívar" className="h-12 w-auto dark:hidden" />
-            <Image src="/logo-ueb-horizontal.webp" width={600} height={164} unoptimized decoding="async" alt="" aria-hidden="true" className="hidden h-12 w-auto dark:block" />
+            <Image src="/logo-ueb-horizontal.webp" width={600} height={164} unoptimized loading="eager" decoding="async" alt="Universidad Estatal de Bolívar" className="h-12 w-auto" />
           </div>
         ) : null}
         {sidebar ? <SidebarTrigger className="-ml-1 max-sm:hidden" /> : null}

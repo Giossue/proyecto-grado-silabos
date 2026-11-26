@@ -67,6 +67,7 @@ export function ManagedUserDetailDialog({ user, roles, careers, canEdit, open, o
   useOpened(isOpen, () => setEditing(false))
   const status = managedUserStatus(user)
   const currentAssignments = user.assignments.filter((assignment) => assignment.active)
+  const accountActions = actionsFor(user, canEdit)
 
   const runAction = (key: string): void => {
     setOpen(false)
@@ -83,6 +84,7 @@ export function ManagedUserDetailDialog({ user, roles, careers, canEdit, open, o
       open={isOpen}
       onOpenChange={setOpen}
       showTrigger={false}
+      medium
       triggerLabel={editing ? "Editar usuario" : "Datos de la cuenta"}
       title={editing ? "Editar usuario" : "Datos de la cuenta"}
       description={editing ? "Cambie los datos y guarde" : "Datos, roles y estado de la cuenta"}
@@ -128,7 +130,7 @@ export function ManagedUserDetailDialog({ user, roles, careers, canEdit, open, o
             </section>
           </div>
           <FormDialogFooter>
-            <DialogActions actions={actionsFor(user, canEdit)} onSelect={runAction} />
+            <DialogActions actions={accountActions} onSelect={runAction} />
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cerrar
             </Button>

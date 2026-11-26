@@ -256,7 +256,6 @@
     --curriculum-cycle-chrome: color-mix(in srgb, var(--primary) 10%, var(--card));
     --curriculum-canvas-background: var(--background);
     --curriculum-prerequisite: var(--destructive);
-    --curriculum-corequisite: var(--primary);
 }
 
 .dark {
@@ -1261,4 +1260,14 @@ html[data-contrast='high'] :focus-visible {
     --sidebar-accent-foreground: #ffffff;
     --sidebar-border: #bfbfbf;
     --sidebar-ring: #ffffff;
+}
+
+/* The app header shares the sidebar color, so its controls use the sidebar palette. */
+[data-app-header] [data-slot='button']:hover {
+    background-color: var(--sidebar-accent);
+    color: var(--sidebar-accent-foreground);
+}
+
+[data-app-header] .text-muted-foreground:not([data-slot='avatar-fallback']) {
+    color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
 }

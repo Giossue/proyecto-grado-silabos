@@ -17,6 +17,7 @@ type FormModalProps = {
   disabled?: boolean
   fullScreen?: boolean
   wide?: boolean
+  medium?: boolean
   narrow?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -32,6 +33,7 @@ export function FormModal({
   disabled = false,
   fullScreen = false,
   wide = false,
+  medium = false,
   narrow = false,
   open,
   onOpenChange,
@@ -60,8 +62,9 @@ export function FormModal({
         className={cn("flex flex-col gap-0 overflow-hidden p-0", {
           "top-0 left-0 h-dvh max-h-none w-full max-w-none translate-x-0 translate-y-0 rounded-none border-0 sm:max-w-none": fullScreen,
           "sm:max-w-4xl": wide && !fullScreen,
-          "sm:max-w-sm": narrow && !wide && !fullScreen,
-          "sm:max-w-lg": !narrow && !wide && !fullScreen,
+          "sm:max-w-2xl": medium && !wide && !fullScreen,
+          "sm:max-w-sm": narrow && !medium && !wide && !fullScreen,
+          "sm:max-w-lg": !narrow && !medium && !wide && !fullScreen,
         })}
       >
         {title ? (
