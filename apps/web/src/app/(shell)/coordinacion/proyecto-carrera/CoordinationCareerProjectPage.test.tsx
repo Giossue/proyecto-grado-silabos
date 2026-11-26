@@ -71,7 +71,7 @@ describe("Proyecto de carrera", () => {
   it("los documentos de apoyo son una pestaña con su propio botón para subir y sin el aviso de edición bloqueada", async () => {
     vi.mocked(getScheduledSubjects).mockResolvedValue({
       ...scheduled([subject("m2", "Matemática Discreta", 1)]),
-      career: { lock_reason: "Convocatoria abierta", lock: { label: "Edición bloqueada", reason: "Convocatoria abierta" } },
+      career: { lock_reason: "Periodo académico abierto", lock: { label: "Edición bloqueada", reason: "Periodo académico abierto" } },
     } as unknown as ScheduledSubjects)
     await mountPage()
     expect(document.querySelector('[data-testid="process-lock"]')).not.toBeNull()

@@ -23,13 +23,13 @@ const shell = {
 };
 const basics = [shell.menu, shell.notifications, shell.theme, shell.accessibility, shell.user];
 
-const checklist = step(CHECKLIST, 'Antes de empezar', 'Lo que falta preparar antes de abrir una convocatoria. Pulse un paso y le mostramos dónde se hace', 'left');
+const checklist = step(CHECKLIST, 'Antes de empezar', 'Lo que falta preparar antes de abrir un periodo académico. Pulse un paso y le mostramos dónde se hace', 'left');
 
 /** Guía por pantalla, con la ruta del frontend como clave. Después de estos pasos, la guía cierra sola. */
 export const screenTours: Record<string, TourStep[]> = {
-  '/admin/convocatorias': [
-    step(METRICS, 'Resumen', 'Cómo va la convocatoria: avance, días que faltan y carreras que aún no empiezan', 'bottom'),
-    step(ACTIONS, 'Nueva convocatoria', 'Ponga las fechas de clases y de entrega de sílabos. Se activa al terminar «Antes de empezar». Solo puede haber una a la vez', 'left'),
+  '/admin/periodos': [
+    step(METRICS, 'Resumen', 'Cómo va el periodo académico: avance, días que faltan y carreras que aún no empiezan', 'bottom'),
+    step(ACTIONS, 'Nuevo periodo académico', 'Ponga las fechas de clases y de entrega de sílabos. Se activa al terminar «Antes de empezar». Solo puede haber uno a la vez', 'left'),
     step(FILTERS, 'Buscar', 'Busque un período o filtre por estado', 'bottom'),
     step(TABLE, 'Períodos', 'Pulse un período para ver qué puede hacer: abrir, pausar, dar más plazo, finalizar o eliminar', 'top'),
     checklist,
@@ -47,7 +47,7 @@ export const screenTours: Record<string, TourStep[]> = {
     step(TABLE, 'Cuentas', 'Pulse una persona para ver sus datos, cambiar sus roles o quitarle el acceso', 'top'),
   ],
   '/admin/plantilla': [
-    step('[data-tour="template-edit"]', 'Editar', 'Abre la plantilla para cambiarla. Si hay una convocatoria abierta, primero páusela', 'left'),
+    step('[data-tour="template-edit"]', 'Editar', 'Abre la plantilla para cambiarla. Si hay un periodo académico abierto, primero páuselo', 'left'),
     // Pasos del editor: solo aparecen mientras se edita.
     step('[data-tour="template-back"]', 'Volver', 'Sale del editor. Si no guardó, le avisa antes', 'bottom'),
     step('[aria-label="Formato del texto"]', 'Formato', 'Negrita, colores, listas y tablas. Escriba dentro de un campo para usarlo', 'bottom'),
@@ -64,7 +64,7 @@ export const screenTours: Record<string, TourStep[]> = {
   ],
   '/coordinacion/revisiones': [
     step(DEADLINE, 'Plazo', 'Hasta cuándo pueden entregar los docentes', 'bottom'),
-    step(ACTIONS, 'Convocatoria de su carrera', 'Ábrala cuando termine «Antes de empezar». También puede pausarla y reanudarla', 'left'),
+    step(ACTIONS, 'Periodo académico de su carrera', 'Ábralo cuando termine «Antes de empezar». También puede pausarlo y reanudarlo', 'left'),
     step(TABS, 'Por revisar y seguimiento', '«Cola de revisión» es lo que le toca revisar. «Seguimiento» muestra cómo va cada sílabo', 'bottom'),
     step(FILTERS, 'Buscar', 'Busque una materia por nombre o código', 'bottom'),
     step(TABLE, 'Sílabos', 'Llegan con la bibliografía ya verificada por Biblioteca. Pulse uno para revisarlo: puede pedir correcciones o firmarlo y aprobarlo', 'top'),

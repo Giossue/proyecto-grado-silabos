@@ -91,7 +91,7 @@ export default function AcademicGovernancePage() {
               banner
               hideAction
               icon={TriangleAlert}
-              title="Hay una convocatoria en curso"
+              title="Hay un periodo académico en curso"
               message="Si cambia una facultad o carrera, sus sílabos enviados o aprobados vuelven a Borrador"
               why="Los sílabos llevan datos de la facultad y de la carrera, como el logo, el nombre, el código y la modalidad. Si alguno cambia, los sílabos enviados o aprobados vuelven a Borrador para actualizarse con los datos nuevos."
             />

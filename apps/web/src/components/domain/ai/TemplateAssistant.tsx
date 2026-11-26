@@ -131,7 +131,7 @@ export function TemplateAssistant({ refresh, draftVersion, snapshot, busy, onApp
             </Alert>
           ) : chat?.locked ? (
             <Alert>
-              <AlertDescription>Con la convocatoria abierta solo puede hacer consultas</AlertDescription>
+              <AlertDescription>Con el periodo académico abierto solo puede hacer consultas</AlertDescription>
             </Alert>
           ) : null}
           {chat && !messages.length ? (

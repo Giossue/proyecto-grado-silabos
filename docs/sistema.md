@@ -150,7 +150,7 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 | `authentication` | 11 | Ingreso y salida, activación de cuenta, recuperar y restablecer contraseña por correo, perfil, accesibilidad, sesiones abiertas |
 | `session`, `active-role` | 2 | Sesión actual y cambio de rol o carrera activa |
 | `admin` | 43 | Facultades, carreras y períodos (con importación desde Excel), usuarios y roles (con importación), procesos del período (abrir, pausar, reanudar, prórroga, impacto, finalizar), ajustes del sistema (correo, IA, catálogo, firmas), plantilla (estructura, campos, bloques, formato, logo, vista previa del docente, JSON) y asistente de IA |
-| `coordination` | 35 | Malla (asignaturas, requisitos, disposición, configuración, importación), materias programadas, paralelos y asignación docente, docentes (con importación), convocatoria de la carrera, proyecto de carrera (ficha en Excel), revisiones (comparar versiones, pedir corrección, aprobar con firma), historial y documentos de apoyo |
+| `coordination` | 35 | Malla (asignaturas, requisitos, disposición, configuración, importación), materias programadas, paralelos y asignación docente, docentes (con importación), periodo académico de la carrera, proyecto de carrera (ficha en Excel), revisiones (comparar versiones, pedir corrección, aprobar con firma), historial y documentos de apoyo |
 | `teacher` | 12 | Mis sílabos (iniciar, guardar campo, validar, copiar desde otro paralelo, declaración de firma, enviar), historial, documentos de apoyo y búsqueda en el catálogo de Biblioteca |
 | `library` | 5 | Revisiones de Biblioteca (observaciones y verificación con firma) e historial |
 | `notifications` | 5 | Listado, marcar como leída, abrir y preferencias de correo |
@@ -328,4 +328,3 @@ Lee `STORAGE_PATH` (carpetas `private` y `public`) y usa las variables `S3_*`; e
   - cierre automático de los procesos vencidos;
   - limpieza de enlaces de restablecimiento de contraseña.
 - **Integración con los sistemas académicos de la UEB:** por definir con TICs.
-- **Nombre institucional del proceso:** hoy se llama «convocatoria» y se evalúa cambiarlo según la revisión.

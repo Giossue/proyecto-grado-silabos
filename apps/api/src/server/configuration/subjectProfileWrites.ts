@@ -37,7 +37,7 @@ export function defaultSubjectProfileWriteDeps(prisma: PrismaService): SubjectPr
 }
 
 const FIELD_GONE = "El proyecto de carrera incluye un campo que ya no existe en la plantilla."
-const CONVOCATION_LOCK = "Convocatoria activa"
+const CONVOCATION_LOCK = "Periodo académico activo"
 
 function rejectWith(errors: Record<string, string[]>): never {
   throw new Rejected(validationError(errors))

@@ -90,5 +90,5 @@ export async function closeBoundProcess(session: AppSession, process: ProcessRow
     if (error instanceof HttpFailure) return error.response
     throw error
   }
-  return apiJson({ message: "Convocatoria cerrada. Sus sílabos quedan solo para consulta." })
+  return apiJson({ message: "Periodo académico cerrado. Sus sílabos quedan solo para consulta." })
 }

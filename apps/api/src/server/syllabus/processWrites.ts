@@ -78,7 +78,7 @@ const PAUSE_TEMPLATE_CHANGED =
 const CLOSED_TEMPLATE_CHANGED =
   "La plantilla cambió después de finalizar. Confirme para adaptar los sílabos del período: se conserva lo escrito y los enviados o aprobados vuelven a borrador."
 const PENDING_CHANGES =
-  "Hubo cambios mientras la convocatoria estuvo finalizada. Confirme para aplicarlos: hay sílabos que volverán a borrador, volverán a Coordinación o perderán su contenido."
+  "Hubo cambios mientras el periodo académico estuvo finalizado. Confirme para aplicarlos: hay sílabos que volverán a borrador, volverán a Coordinación o perderán su contenido."
 
 function reject(errors: Record<string, string[]>): never {
   throw new Rejected(validationError(errors))
@@ -119,7 +119,7 @@ export async function deleteBoundProcess(original: Request, session: AppSession,
     await deps.transaction(async (tx) => {
       const locked = await tx.lockProcess(process.id)
       if (locked === null) throw new Missing(MODELS.process, process.id)
-      if (locked.state === "cerrado") reject({ process: ["Una convocatoria cerrada no se elimina: queda como historial."] })
+      if (locked.state === "cerrado") reject({ process: ["Un periodo académico cerrado no se elimina: queda como historial."] })
       const convocations = await tx.lockConvocations(locked.id)
       const syllabi = await tx.lockSyllabi(convocations)
       const people = [...new Set([...(await tx.teachersForProcess(locked.id)), ...(await tx.coordinatorsForProcess(locked.id)), ...(await tx.librarians())])]
@@ -130,14 +130,14 @@ export async function deleteBoundProcess(original: Request, session: AppSession,
         eventType: "proceso.eliminado",
         deduplicationKey: `proceso.eliminado:${locked.id}`,
         recipientIds: recipients,
-        title: "Convocatoria eliminada",
+        title: "Periodo académico eliminado",
         message: `Se borraron todos los sílabos de ${locked.period}. Mensaje de Administración: ${notice}`,
         resourceType: "periodo_academico",
         resourceId: locked.periodId,
         periodId: locked.periodId,
       })
     })
-    return apiJson({ message: "Convocatoria institucional eliminada." })
+    return apiJson({ message: "Periodo académico eliminado." })
   })
 }
 
@@ -156,7 +156,7 @@ async function notifyProcessResumed(tx: ProcessWriteTx, process: LockedSyllabusP
       eventType: "proceso.reanudado",
       deduplicationKey: `proceso.reanudado:${process.id}:${person}:${at}`,
       recipientIds: [person],
-      title: "Administración reanudó la convocatoria",
+      title: "Administración reanudó el periodo académico",
       message: `Se retoman la edición y las revisiones de los sílabos del período ${process.period}.`,
       resourceType: "proceso_silabos",
       resourceId: process.id,
@@ -276,6 +276,6 @@ export async function extendBoundProcessDeadline(original: Request, session: App
         422,
       )
     }
-    return apiJson({ message: outcome.reopened ? "Plazo prorrogado. La convocatoria se volvió a abrir." : "Plazo prorrogado para todas las convocatorias del proceso." })
+    return apiJson({ message: outcome.reopened ? "Plazo prorrogado. El periodo académico se volvió a abrir." : "Plazo prorrogado para todas los periodos académicos del proceso." })
   })
 }

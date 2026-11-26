@@ -34,9 +34,9 @@ async function convocationState(): Promise<string | undefined> {
 }
 
 async function convocationOption(page: Page, action: RegExp): Promise<void> {
-  await page.goto("/admin/convocatorias")
+  await page.goto("/admin/periodos")
   await rowNamed(page, /\S/, "button").first().getByRole("button").click()
-  await page.getByRole("dialog", { name: /^Convocatoria / }).getByRole("button", { name: action }).click()
+  await page.getByRole("dialog", { name: /^Periodo académico / }).getByRole("button", { name: action }).click()
 }
 
 async function enterEditMode(page: Page): Promise<void> {
@@ -151,7 +151,7 @@ test.describe.serial("template editing during a paused convocation", () => {
     await expect(page.getByRole("button", { name: "Editar", exact: true })).toBeDisabled()
 
     await convocationOption(page, /^Pausar/)
-    const dialog = page.getByRole("dialog", { name: "Pausar la convocatoria" })
+    const dialog = page.getByRole("dialog", { name: "Pausar el periodo académico" })
     await dialog.getByRole("button", { name: "Pausar", exact: true }).click()
     await expect(dialog).toBeHidden()
     await expect(rowNamed(page, /\S/, "button").first()).toContainText(/Pausad/)
@@ -299,7 +299,7 @@ test.describe.serial("template editing during a paused convocation", () => {
     const saved = page.waitForResponse((response) => /\/admin\/template\/[^/]+\/json$/.test(response.url()) && response.request().method() === "PUT")
     await page.getByRole("button", { name: "Guardar", exact: true }).click()
     const impact = page.getByRole("dialog", { name: "Sílabos afectados" })
-    await expect(impact).toContainText("Al reanudar la convocatoria en pausa:")
+    await expect(impact).toContainText("Al reanudar el periodo académico en pausa:")
     await expect(impact.locator("[data-impact-lines]")).toContainText("conserva")
     await impact.getByRole("button", { name: "Guardar", exact: true }).click()
     expect((await saved).ok()).toBe(true)
@@ -346,7 +346,7 @@ test.describe.serial("template editing during a paused convocation", () => {
 
   test("admin resumes the convocation and confirms that syllabi adapt to the template", async ({ page, issues }) => {
     await convocationOption(page, /^Reanudar/)
-    const dialog = page.getByRole("dialog", { name: "Reanudar la convocatoria" })
+    const dialog = page.getByRole("dialog", { name: "Reanudar el periodo académico" })
     await dialog.getByRole("button", { name: "Reanudar", exact: true }).click()
     await expect(dialog.getByRole("table", { name: "Cantidad de sílabos que se adaptan, por estado" })).toBeVisible()
     const confirm = dialog.getByRole("button", { name: "Reanudar y adaptar sílabos" })
@@ -361,35 +361,35 @@ test.describe.serial("template editing during a paused convocation", () => {
     await expect(page.getByRole("button", { name: "Editar", exact: true })).toBeDisabled()
     await expect(page.getByText("Plantilla modificada durante la pausa")).toHaveCount(0)
     expect(await templateState()).toEqual(before)
-    issues.expectClean([/^http 422: POST .*\/admin\/processes\/[^/]+\/reanudar$/, /^console: Failed to load resource: the server responded with a status of 422 .* @ .*\/admin\/convocatorias$/])
+    issues.expectClean([/^http 422: POST .*\/admin\/processes\/[^/]+\/reanudar$/, /^console: Failed to load resource: the server responded with a status of 422 .* @ .*\/admin\/periodos$/])
   })
 
   test("admin finalizes the convocation and opens a new period with its convocation", async ({ page, issues }) => {
     const snapshot = snapshotDatabase("before-new-period")
     try {
-      await page.goto("/admin/convocatorias")
-      await expect(page.getByRole("button", { name: "Nueva convocatoria" })).toBeDisabled()
+      await page.goto("/admin/periodos")
+      await expect(page.getByRole("button", { name: "Nuevo periodo académico" })).toBeDisabled()
       await convocationOption(page, /^Finalizar/)
-      const finalize = page.getByRole("dialog", { name: "Finalizar la convocatoria" })
-      await finalize.getByRole("textbox", { name: /Escriba «finalizar convocatoria»/ }).fill("finalizar convocatoria")
+      const finalize = page.getByRole("dialog", { name: "Finalizar el periodo académico" })
+      await finalize.getByRole("textbox", { name: /Escriba «finalizar periodo»/ }).fill("finalizar periodo")
       await finalize.getByRole("button", { name: "Finalizar", exact: true }).click()
       await expect(finalize).toBeHidden()
       await expect(rowNamed(page, /\S/, "button").first()).toContainText(/Finalizad/)
       expect(await convocationState()).toBeUndefined()
 
       const periodsBefore = await query<{ code: string }>("select codigo_periodo_academico as code from periodos_academicos")
-      await page.getByRole("button", { name: "Nueva convocatoria" }).click()
-      const dialog = page.getByRole("dialog", { name: "Nueva convocatoria" })
+      await page.getByRole("button", { name: "Nuevo periodo académico" }).click()
+      const dialog = page.getByRole("dialog", { name: "Nuevo periodo académico" })
       await pickDate(page, "convocation-period-starts", new Date(Date.UTC(2027, 3, 5)))
       await pickDate(page, "convocation-period-ends", new Date(Date.UTC(2027, 7, 27)))
       await dialog.getByRole("button", { name: "Siguiente" }).click()
       await pickDate(page, "convocation-starts", new Date(Date.UTC(2027, 2, 22)))
       await pickDate(page, "convocation-due", new Date(Date.UTC(2027, 3, 12)))
-      await dialog.getByRole("button", { name: "Abrir convocatoria" }).click()
-      const opening = page.getByRole("dialog", { name: "Abrir convocatoria" })
-      await opening.getByRole("textbox", { name: /Escriba «abrir convocatoria»/ }).fill("abrir convocatoria")
-      await opening.getByRole("button", { name: "Abrir convocatoria" }).click()
-      await expect(toast(page, "Convocatoria institucional abierta. Las coordinaciones ya pueden iniciar sus convocatorias")).toBeVisible()
+      await dialog.getByRole("button", { name: "Abrir periodo académico" }).click()
+      const opening = page.getByRole("dialog", { name: "Abrir periodo académico" })
+      await opening.getByRole("textbox", { name: /Escriba «abrir periodo»/ }).fill("abrir periodo")
+      await opening.getByRole("button", { name: "Abrir periodo académico" }).click()
+      await expect(toast(page, "Periodo académico abierto. Cada coordinación ya puede abrir el de su carrera")).toBeVisible()
       await expect(page.getByRole("dialog")).toHaveCount(0)
 
       const periods = await query<{ code: string; starts: string; ends: string; state: string }>(

@@ -69,7 +69,7 @@ export function ConvocationRowActions({ row, menu = true, onChanged, ref }: Conv
           {!row.lock_reason ? (
             <DropdownMenuItem onSelect={() => setProcessOpen(true)}>
               <CalendarPlus aria-hidden="true" />
-              Abrir convocatoria
+              Abrir periodo académico
             </DropdownMenuItem>
           ) : null}
           {row.lock_reason ? (
@@ -95,7 +95,7 @@ export function ConvocationRowActions({ row, menu = true, onChanged, ref }: Conv
           periods={[]}
           period={{ id: row.id, codigo: row.code, starts_on: row.starts_on, ends_on: row.ends_on }}
           display="menu"
-          triggerLabel="Abrir convocatoria"
+          triggerLabel="Abrir periodo académico"
           onSaved={(message) => void changedAfterExit(message)}
         />
       ) : null}
@@ -105,7 +105,7 @@ export function ConvocationRowActions({ row, menu = true, onChanged, ref }: Conv
           <DialogHeader>
             <DialogTitle>Eliminar periodo</DialogTitle>
             <DialogDescription>
-              Se eliminará el período «{row.code}»: sus fechas y sus semanas lectivas. Las materias, los paralelos y los docentes de las carreras no se borran. Si el período ya tiene una convocatoria, el sistema no permitirá eliminarlo. Esta acción no se puede deshacer
+              Se eliminará el período «{row.code}»: sus fechas y sus semanas lectivas. Las materias, los paralelos y los docentes de las carreras no se borran. Si el periodo ya se abrió, el sistema no permitirá eliminarlo. Esta acción no se puede deshacer
             </DialogDescription>
           </DialogHeader>
           {error ? <FeedbackAlert message={error} /> : null}

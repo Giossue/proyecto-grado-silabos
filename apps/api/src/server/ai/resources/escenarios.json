@@ -1716,7 +1716,7 @@
     ]
   },
   {
-    "nombre": "Convocatoria abierta",
+    "nombre": "Periodo académico abierto",
     "convocatoria": "abierta",
     "turnos": [
       {
@@ -1745,13 +1745,13 @@
               {
                 "funcion": "responder",
                 "argumentos": {
-                  "mensaje": "La convocatoria está abierta: para cambiar la plantilla primero hay que pausarla."
+                  "mensaje": "El periodo académico está abierto: para cambiar la plantilla primero hay que pausarlo."
                 }
               }
             ]
           ],
           "errores": [
-            "La convocatoria está abierta"
+            "El periodo académico está abierto"
           ]
         }
       }

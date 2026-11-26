@@ -13,11 +13,11 @@ import { cn, withoutFinalPeriod } from "@/lib/utils"
 const EFFECTS: Record<string, string> = {
   abrir: "Fije las fechas de elaboración y entrega del período",
   "eliminar-periodo": "Borra el período y sus fechas",
-  pausar: "Nadie edita, envía ni revisa hasta que la reanude",
+  pausar: "Nadie edita, envía ni revisa hasta que lo reanude",
   reanudar: "Se vuelve a editar, enviar y revisar",
   prorrogar: "Mueve la fecha de entrega hacia adelante",
   cerrar: "Los sílabos quedan solo para consulta",
-  eliminar: "Borra la convocatoria y sus sílabos",
+  eliminar: "Borra el periodo académico y sus sílabos",
 }
 
 const actionsFor = (row: ConvocationRow): DialogAction[] => {
@@ -27,7 +27,7 @@ const actionsFor = (row: ConvocationRow): DialogAction[] => {
     const locked = Boolean(reason)
 
     return [
-      { key: "abrir", label: "Abrir convocatoria", icon: CalendarPlus, disabled: locked, disabledReason: reason },
+      { key: "abrir", label: "Abrir periodo académico", icon: CalendarPlus, disabled: locked, disabledReason: reason },
       { key: "eliminar-periodo", label: "Eliminar periodo", icon: Trash2, destructive: true, disabled: locked, disabledReason: reason },
     ]
   }
@@ -69,14 +69,14 @@ export function ConvocationOptionsDialog({ row, open, onOpenChange, onAction }: 
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Convocatoria {row.code}</DialogTitle>
-          <DialogDescription>Elija qué hacer con la convocatoria</DialogDescription>
+          <DialogTitle>Periodo académico {row.code}</DialogTitle>
+          <DialogDescription>Elija qué hacer con el periodo académico</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2">
           {groups.map((group, groupIndex) => (
             <Fragment key={groupIndex}>
               {groupIndex > 0 ? <Separator /> : null}
-              <ul className="flex flex-col gap-1" aria-label={groupIndex === 0 ? "Opciones de la convocatoria" : "Opciones delicadas"}>
+              <ul className="flex flex-col gap-1" aria-label={groupIndex === 0 ? "Opciones del periodo académico" : "Opciones delicadas"}>
                 {group.map((action) => {
                   const Icon = action.icon
 

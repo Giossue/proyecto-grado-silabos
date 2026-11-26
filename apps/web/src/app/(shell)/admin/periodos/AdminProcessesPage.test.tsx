@@ -75,7 +75,7 @@ const mountPage = () => renderWithProviders(<AdminProcessesPage />)
 const periodDialog = (container: HTMLElement) => container.querySelector("[data-period-dialog]")!
 
 beforeEach(() => {
-  navigation.reset("/admin/convocatorias")
+  navigation.reset("/admin/periodos")
   api.getDashboard.mockResolvedValue({ metrics: [], setup: null, deadline: null, coordination_convocation: null })
 })
 afterEach(() => {
@@ -87,7 +87,7 @@ afterEach(() => {
 })
 
 describe("AdminProcessesPage", () => {
-  it("muestra una fila por periodo, con o sin convocatoria", async () => {
+  it("muestra una fila por periodo, abierto o no", async () => {
     api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
     api.getAcademicGovernance.mockResolvedValue({ lock_reason: null, catalogs: { faculties: [], careers: [], periods: [
       period("p1", "Septiembre-Marzo 2026-2027", { id: "pr1", state: "abierto" }), period("p2", "Abril-Agosto 2027", null),
@@ -101,7 +101,7 @@ describe("AdminProcessesPage", () => {
     expect(rows[0]!.textContent).toContain("Abierto")
     expect(rows[1]!.textContent).toContain("Sin iniciar")
     expect(rows[1]!.textContent).toContain("Sin fechas")
-    expect(container.textContent).not.toContain("Convocatoria en curso")
+    expect(container.textContent).not.toContain("Periodo académico en curso")
     expect(periodDialog(container).getAttribute("data-disabled")).toBe("true")
     unmount()
   })
@@ -125,38 +125,38 @@ describe("AdminProcessesPage", () => {
     unmount()
   })
 
-  it("muestra arriba los indicadores y deja «Nueva convocatoria» deshabilitada", async () => {
+  it("muestra arriba los indicadores y deja «Nuevo periodo académico» deshabilitada", async () => {
     api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
     api.getAcademicGovernance.mockResolvedValue({ lock_reason: null, catalogs: { faculties: [], careers: [], periods: [] }, options: {} })
     api.getProcesses.mockResolvedValue({ processes: [], template: null, periods: [], active_process: null })
     const step = (key: string, done: boolean) => ({ key, label: `Paso ${key}`, hint: `Pista ${key}`, done, action: null })
     api.getDashboard.mockResolvedValue({
-      metrics: [{ key: "careers_without_convocation", label: "Carreras sin convocar", value: 3, suffix: null, hint: "Pista" }],
+      metrics: [{ key: "careers_without_convocation", label: "Carreras sin abrir", value: 3, suffix: null, hint: "Pista" }],
       setup: { title: "Antes de empezar", intro: "", done: 1, total: 6, steps: [step("faculties", true), step("careers", false), step("accounts", false), step("coordinators", false), step("template", false), step("process", false)] },
       deadline: null, coordination_convocation: null,
     })
     const { container } = mountPage()
     await flush()
 
-    expect(container.textContent).toContain("Carreras sin convocar")
+    expect(container.textContent).toContain("Carreras sin abrir")
     expect(periodDialog(container).getAttribute("data-disabled")).toBe("true")
   })
 
-  it("con todo finalizado permite abrir una nueva convocatoria", async () => {
+  it("con todo finalizado permite abrir una nuevo periodo académico", async () => {
     api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
-    api.getAcademicGovernance.mockResolvedValue({ lock_reason: "Convocatoria cerrada", catalogs: { faculties: [], careers: [], periods: [period("p1", "Septiembre-Marzo 2026-2027", { id: "pr1", state: "cerrado" })] }, options: {} })
+    api.getAcademicGovernance.mockResolvedValue({ lock_reason: "Periodo académico cerrado", catalogs: { faculties: [], careers: [], periods: [period("p1", "Septiembre-Marzo 2026-2027", { id: "pr1", state: "cerrado" })] }, options: {} })
     api.getProcesses.mockResolvedValue({ processes: [closedProcess], template: null, periods: [], active_process: null })
     const { container, unmount } = mountPage()
     await flush()
 
     expect(container.querySelector("tbody tr")!.textContent).toContain("Finalizado")
     expect(container.textContent).not.toContain("Cerrado")
-    expect(container.textContent).not.toContain("Convocatoria en curso")
+    expect(container.textContent).not.toContain("Periodo académico en curso")
     expect(periodDialog(container).getAttribute("data-disabled")).toBe("false")
     unmount()
   })
 
-  it("el filtro de estado llama «Finalizados» a las convocatorias cerradas", async () => {
+  it("el filtro de estado llama «Finalizados» a los periodos académicos cerrados", async () => {
     stubs.inlineSelect = true
     api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
     api.getAcademicGovernance.mockResolvedValue({ lock_reason: null, catalogs: { faculties: [], careers: [], periods: [period("p1", "Septiembre-Marzo 2026-2027", { id: "pr1", state: "cerrado" })] }, options: {} })
@@ -169,7 +169,7 @@ describe("AdminProcessesPage", () => {
     unmount()
   })
 
-  it("al prorrogar una convocatoria finalizada avisa con el mensaje del servidor y vuelve a cargar la lista", async () => {
+  it("al prorrogar un periodo académico finalizado avisa con el mensaje del servidor y vuelve a cargar la lista", async () => {
     stubs.stubOptions = true
     api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
     api.getAcademicGovernance.mockResolvedValue({ lock_reason: null, catalogs: { faculties: [], careers: [], periods: [period("p1", "Septiembre-Marzo 2026-2027", { id: "pr1", state: "cerrado" })] }, options: {} })
@@ -180,11 +180,11 @@ describe("AdminProcessesPage", () => {
     fireEvent.click(container.querySelector("tbody tr")!)
     await flush()
     await act(async () => {
-      stubs.rowChanged?.("Plazo prorrogado. La convocatoria se volvió a abrir.")
+      stubs.rowChanged?.("Plazo prorrogado. El periodo académico se volvió a abrir.")
     })
     await flush()
 
-    expect(toast.success).toHaveBeenCalledWith("Plazo prorrogado. La convocatoria se volvió a abrir.")
+    expect(toast.success).toHaveBeenCalledWith("Plazo prorrogado. El periodo académico se volvió a abrir.")
     expect(api.getProcesses).toHaveBeenCalledTimes(2)
     unmount()
   })

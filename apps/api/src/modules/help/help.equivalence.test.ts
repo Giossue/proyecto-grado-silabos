@@ -78,14 +78,14 @@ beforeEach(() => {
 
 describe("screen help served by Nest answers exactly like the route handlers it replaces", () => {
   it.each([
-    ["a known screen", "/api/v1/help?screen=/admin/convocatorias"],
+    ["a known screen", "/api/v1/help?screen=/admin/periodos"],
     ["a screen without help", "/api/v1/help?screen=/admin/nada"],
     ["no screen", "/api/v1/help"],
     ["a blank screen", "/api/v1/help?screen=%20"],
     ["a screen with forbidden characters", "/api/v1/help?screen=/Admin%20x"],
     ["a screen sent as a list", "/api/v1/help?screen[]=/admin"],
     ["a screen too long", `/api/v1/help?screen=/${"a".repeat(160)}`],
-    ["a screen sent in a JSON body", "/api/v1/help?screen=/admin/convocatorias"],
+    ["a screen sent in a JSON body", "/api/v1/help?screen=/admin/periodos"],
   ])("answers %s the same way", async (name, path) => {
     const call: Call = name.includes("JSON") ? { method: "GET", path, headers: { "content-type": "application/json" } } : { method: "GET", path }
     await expectSame(call)

@@ -64,28 +64,28 @@ describe("DeadlineBanner", () => {
   })
 
   it("finalizada dice que los sílabos quedan para consulta, sin conteo", () => {
-    expect(banner({ state: "closed", days_until_due: 0 }).textContent).toBe("La convocatoria finalizóSus sílabos quedan solo para consulta")
-    expect(banner({ state: "closed" }, "coordinador").textContent).toBe("La convocatoria finalizóLos sílabos de la carrera quedan solo para consulta")
-    expect(banner({ state: "closed" }, "bibliotecario").textContent).toBe("La convocatoria finalizóLos sílabos quedan solo para consulta")
+    expect(banner({ state: "closed", days_until_due: 0 }).textContent).toBe("El periodo académico finalizóSus sílabos quedan solo para consulta")
+    expect(banner({ state: "closed" }, "coordinador").textContent).toBe("El periodo académico finalizóLos sílabos de la carrera quedan solo para consulta")
+    expect(banner({ state: "closed" }, "bibliotecario").textContent).toBe("El periodo académico finalizóLos sílabos quedan solo para consulta")
   })
 
-  it("Administración sabe qué puede hacer con la convocatoria finalizada", () => {
-    expect(banner({ state: "closed", classes_ended: false }, "administrador").textContent).toBe("La convocatoria finalizóPuede reabrirla con una prórroga o abrir una nueva")
-    expect(banner({ state: "closed", classes_ended: true }, "administrador").textContent).toBe("La convocatoria finalizóPuede abrir una nueva")
+  it("Administración sabe qué puede hacer con el periodo académico finalizado", () => {
+    expect(banner({ state: "closed", classes_ended: false }, "administrador").textContent).toBe("El periodo académico finalizóPuede reabrirlo con una prórroga o abrir uno nuevo")
+    expect(banner({ state: "closed", classes_ended: true }, "administrador").textContent).toBe("El periodo académico finalizóPuede abrir uno nuevo")
   })
 
-  it("Coordinación ve que aún no abre la convocatoria de su carrera", () => {
-    expect(banner({ state: "active", career_pending: true }, "coordinador").textContent).toContain("Aún no abre la convocatoria de su carrera")
+  it("Coordinación ve que aún no abre el periodo académico de su carrera", () => {
+    expect(banner({ state: "active", career_pending: true }, "coordinador").textContent).toContain("Aún no abre el periodo académico de su carrera")
     expect(banner({ state: "paused", paused_by: "administracion", career_pending: true }, "coordinador").textContent).not.toContain("Aún no abre")
   })
 
   it.each([
-    ["docente", "administracion", "La convocatoria está en pausaLe avisaremos cuando se reanude para que siga con sus sílabos"],
-    ["docente", "coordinacion", "La convocatoria está en pausaLe avisaremos cuando se reanude para que siga con sus sílabos"],
-    ["coordinador", "administracion", "La convocatoria está en pausaAdministración pausó la convocatoria institucional. Las revisiones se retoman cuando la reanude; le avisaremos"],
-    ["coordinador", "coordinacion", "La convocatoria de su carrera está en pausaMientras tanto no se edita ni se revisa. Puede reanudarla desde Revisión"],
-    ["administrador", "administracion", "La convocatoria institucional está en pausaPuede reanudarla desde Convocatorias"],
-    ["bibliotecario", "administracion", "La convocatoria está en pausaAdministración pausó la convocatoria institucional. Las revisiones se retoman cuando la reanude; le avisaremos"],
+    ["docente", "administracion", "El periodo académico está en pausaLe avisaremos cuando se reanude para que siga con sus sílabos"],
+    ["docente", "coordinacion", "El periodo académico está en pausaLe avisaremos cuando se reanude para que siga con sus sílabos"],
+    ["coordinador", "administracion", "El periodo académico está en pausaAdministración pausó el periodo académico. Las revisiones se retoman cuando lo reanude; le avisaremos"],
+    ["coordinador", "coordinacion", "El periodo académico de su carrera está en pausaMientras tanto no se edita ni se revisa. Puede reanudarlo desde Revisión"],
+    ["administrador", "administracion", "El periodo académico está en pausaPuede reanudarlo desde Periodos académicos"],
+    ["bibliotecario", "administracion", "El periodo académico está en pausaAdministración pausó el periodo académico. Las revisiones se retoman cuando lo reanude; le avisaremos"],
   ] as const)("en pausa, a %s (pausó %s) le dice lo que le toca", (audience, pausedBy, expected) => {
     expect(banner({ state: "paused", days_until_due: 0, paused_by: pausedBy }, audience).textContent).toBe(expected)
   })

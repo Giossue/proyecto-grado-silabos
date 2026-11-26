@@ -21,7 +21,7 @@ describe("Auditoría y Reportes ya no forman parte del sistema", () => {
   it("el menú de Administración no muestra Auditoría ni Reportes", () => {
     const items = mainNavItemsFor(administrator)
 
-    expect(items.map((item) => item.title)).toEqual(["Facultades y carreras", "Usuarios y roles", "Plantilla", "Convocatorias"])
+    expect(items.map((item) => item.title)).toEqual(["Facultades y carreras", "Usuarios y roles", "Plantilla", "Periodos académicos"])
     expect(items.map((item) => item.href)).not.toEqual(expect.arrayContaining(REMOVED))
   })
 
@@ -34,7 +34,7 @@ describe("Auditoría y Reportes ya no forman parte del sistema", () => {
   })
 
   it("las demás pantallas de Administración siguen existiendo", () => {
-    for (const path of ["/admin/convocatorias", "/admin/usuarios", "/admin/estructura-academica", "/admin/plantilla", "/admin/configuracion/sistema"]) {
+    for (const path of ["/admin/periodos", "/admin/usuarios", "/admin/estructura-academica", "/admin/plantilla", "/admin/configuracion/sistema"]) {
       expect(matchRoute(path).record.path, path).toBe(path)
       expect(existsSync(appPage(path)), path).toBe(true)
     }

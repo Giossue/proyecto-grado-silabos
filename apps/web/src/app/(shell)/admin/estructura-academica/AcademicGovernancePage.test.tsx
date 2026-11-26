@@ -18,13 +18,13 @@ afterEach(() => {
 })
 
 describe("AcademicGovernancePage", () => {
-  it("la ruta antigua de Periodos redirige a Convocatorias", async () => {
+  it("la ruta antigua de Periodos redirige a Periodos académicos", async () => {
     api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
     api.params = { section: "periodos-academicos" }
     renderWithProviders(<AcademicGovernancePage />)
     await flush()
 
-    expect(navigation.replace).toHaveBeenCalledWith("/admin/convocatorias")
+    expect(navigation.replace).toHaveBeenCalledWith("/admin/periodos")
     expect(api.getAcademicGovernance).not.toHaveBeenCalled()
   })
 
@@ -55,10 +55,10 @@ describe("AcademicGovernancePage", () => {
     expect(document.querySelector('[data-skeleton="table-tabs"]')).toBeNull()
   })
 
-  it("el aviso de cambios solo sale con una convocatoria en curso, no con una finalizada", async () => {
+  it("el aviso de cambios solo sale con un periodo académico en curso, no con uno finalizado", async () => {
     api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
     api.params = {}
-    const base = { ...governance, lock_reason: "Convocatoria cerrada" }
+    const base = { ...governance, lock_reason: "Periodo académico cerrado" }
     api.getAcademicGovernance.mockResolvedValue({ ...base, convocation_in_progress: false })
     const finalized = renderWithProviders(<AcademicGovernancePage />)
     await flush()
@@ -68,7 +68,7 @@ describe("AcademicGovernancePage", () => {
     api.getAcademicGovernance.mockResolvedValue({ ...base, convocation_in_progress: true })
     renderWithProviders(<AcademicGovernancePage />)
     await flush()
-    expect(document.body.textContent).toContain("Hay una convocatoria en curso")
+    expect(document.body.textContent).toContain("Hay un periodo académico en curso")
     expect(document.body.textContent).toContain("vuelven a Borrador")
   })
 })

@@ -46,7 +46,7 @@ const TEACHER = "a1000000-0000-4000-8000-000000000001"
 const OTHER_LIBRARIAN = "b1000000-0000-4000-8000-000000000001"
 const FINGERPRINT = "cd".repeat(32)
 const STATEMENT = `silabos-ueb|silabo:${SYLLABUS}|accion:aprobacion_biblioteca|huella:${FINGERPRINT}`
-const PAUSED = "La convocatoria de la carrera está en pausa: las revisiones se retoman cuando se reanude."
+const PAUSED = "El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude."
 const HEADERS = ["content-type", "cache-control", "allow", "x-ratelimit-limit", "x-ratelimit-remaining", "retry-after", "x-content-type-options", "x-frame-options", "referrer-policy", "permissions-policy", "content-security-policy", "cross-origin-resource-policy"]
 
 const template = goldenTemplate()

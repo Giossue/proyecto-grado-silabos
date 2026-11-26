@@ -56,7 +56,7 @@ function notice(overrides: Partial<Stored> = {}): Stored {
     resourceId: "conv-1",
     readAt: null,
     visible: true,
-    title: "Convocatoria abierta",
+    title: "Periodo académico abierto",
     notifiedAt: "2026-11-23T15:04:05+00:00",
     ...overrides,
   }

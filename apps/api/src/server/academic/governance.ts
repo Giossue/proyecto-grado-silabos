@@ -35,11 +35,11 @@ export interface GovernanceRepository {
 export type GovernanceDeps = { bridge: BridgeDeps; governance: GovernanceRepository; today: () => string }
 
 const SECTIONS: Record<string, string> = { facultades: "faculties", carreras: "careers", "periodos-academicos": "academic-periods" }
-const CLOSED_CONVOCATION_LOCK_REASON = "Convocatoria cerrada"
+const CLOSED_CONVOCATION_LOCK_REASON = "Periodo académico cerrado"
 const PROCESS_CLOSED = "cerrado"
 const IN_PROGRESS = ["abierto", "pausado"]
 const FACULTY_BLOCK = "Desactive primero las carreras activas de esta facultad."
-const CAREER_BLOCK = "La carrera participa en una convocatoria en curso. Espere a que se cierre."
+const CAREER_BLOCK = "La carrera participa en un periodo académico en curso. Espere a que se cierre."
 const CAMPUS_LOCATIONS = [
   "Campus Matriz Dr. Gabriel Galarza López",
   "Campus Laguacoto",

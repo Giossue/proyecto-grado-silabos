@@ -71,9 +71,9 @@ const submitForm = async (): Promise<void> => {
 }
 const confirmSubmit = async (): Promise<void> => {
   await submitForm()
-  typeConfirmation("convocation-open-confirm", "abrir convocatoria")
+  typeConfirmation("convocation-open-confirm", "abrir periodo")
   await flush()
-  const confirm = [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].reverse().find((button) => button.textContent?.includes("Abrir convocatoria"))
+  const confirm = [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].reverse().find((button) => button.textContent?.includes("Abrir periodo académico"))
   fireEvent.click(confirm!)
   await flush()
 }
@@ -144,7 +144,7 @@ describe("ConvocationPeriodDialog", () => {
 
   it("si la apertura falla, el reintento no vuelve a crear el periodo", async () => {
     api.createAcademicRecord.mockResolvedValue({ message: "Registro institucional creado.", id: "p1" })
-    api.createProcess.mockRejectedValueOnce(new ApiError("Error", 422, { process: ["Ya hay una convocatoria en curso."] })).mockResolvedValueOnce({ message: "Convocatoria institucional abierta." })
+    api.createProcess.mockRejectedValueOnce(new ApiError("Error", 422, { process: ["Ya hay un periodo académico en curso."] })).mockResolvedValueOnce({ message: "Periodo académico abierto." })
     const { unmount, onSaved } = await mountDialog()
     await fillSteps()
     await confirmSubmit()
@@ -153,25 +153,25 @@ describe("ConvocationPeriodDialog", () => {
 
     expect(api.createAcademicRecord).toHaveBeenCalledTimes(1)
     expect(api.createProcess).toHaveBeenCalledTimes(2)
-    expect(onSaved.mock.calls[0]).toEqual(["Convocatoria institucional abierta."])
+    expect(onSaved.mock.calls[0]).toEqual(["Periodo académico abierto."])
     unmount()
   })
 
-  it("crea el periodo y abre la convocatoria con el id devuelto", async () => {
+  it("crea el periodo y abre el periodo académico con el id devuelto", async () => {
     api.createAcademicRecord.mockResolvedValue({ message: "Registro institucional creado.", id: "p1" })
-    api.createProcess.mockResolvedValue({ message: "Convocatoria institucional abierta." })
+    api.createProcess.mockResolvedValue({ message: "Periodo académico abierto." })
     const { unmount, onSaved } = await mountDialog()
     await fillSteps()
     await confirmSubmit()
 
     expect(api.createProcess).toHaveBeenCalledWith({ period_id: "p1", starts_at: "2026-10-06", due_at: "2026-10-30" })
-    expect(onSaved.mock.calls[0]).toEqual(["Convocatoria institucional abierta."])
+    expect(onSaved.mock.calls[0]).toEqual(["Periodo académico abierto."])
     unmount()
   })
 
   it("muestra las semanas entre las fechas sin permitir editarlas", async () => {
     api.createAcademicRecord.mockResolvedValue({ message: "Registro institucional creado.", id: "p1" })
-    api.createProcess.mockResolvedValue({ message: "Convocatoria institucional abierta." })
+    api.createProcess.mockResolvedValue({ message: "Periodo académico abierto." })
     const { unmount } = await mountDialog()
     const [starts, ends] = pickers()
     choose(starts!, "2026-10-05")
@@ -193,13 +193,13 @@ describe("ConvocationPeriodDialog", () => {
     const modal = [...container.querySelectorAll("[data-modal]")].at(-1)!
     emitOpen(modal, true)
     await flush()
-    typeConfirmation("convocation-open-confirm", "abrir convocatoria")
+    typeConfirmation("convocation-open-confirm", "abrir periodo")
     await flush()
     emitOpen(modal, false)
     await flush()
 
     expect(modal.getAttribute("data-state")).toBe("closed")
-    expect(document.body.querySelector<HTMLInputElement>("#convocation-open-confirm")!.value).toBe("abrir convocatoria")
+    expect(document.body.querySelector<HTMLInputElement>("#convocation-open-confirm")!.value).toBe("abrir periodo")
     emitOpen(modal, true)
     await flush()
     expect(document.body.querySelector<HTMLInputElement>("#convocation-open-confirm")!.value).toBe("")

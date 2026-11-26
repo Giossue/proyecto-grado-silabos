@@ -174,9 +174,9 @@ export async function pauseConvocationFor(session: AppSession, convocation: Conv
       await tx.updateState(convocation.id, "pausada")
     })
   } catch (error) {
-    if (error instanceof StateChanged) return validationError({ convocation: ["Solo una convocatoria abierta puede pausarse."] })
+    if (error instanceof StateChanged) return validationError({ convocation: ["Solo un periodo académico abierto puede pausarse."] })
     if (error instanceof HttpFailure) return error.response
     throw error
   }
-  return apiJson({ message: "Convocatoria en pausa. Los docentes de la carrera no editan ni envían; la malla queda editable." })
+  return apiJson({ message: "Periodo académico en pausa. Los docentes de la carrera no editan ni envían; la malla queda editable." })
 }

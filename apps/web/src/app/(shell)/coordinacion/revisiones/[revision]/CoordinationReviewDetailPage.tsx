@@ -200,7 +200,7 @@ export default function CoordinationReviewDetailPage() {
 
   const closedBanner =
     data?.convocation_closed && deadline?.state !== "closed" ? (
-      <ProcessLockAlert banner title="Convocatoria finalizada" message="Este sílabo queda solo para consulta" hideAction />
+      <ProcessLockAlert banner title="Periodo académico finalizado" message="Este sílabo queda solo para consulta" hideAction />
     ) : null
 
   if (data && !loadError) {

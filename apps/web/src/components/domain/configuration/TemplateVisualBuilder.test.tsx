@@ -269,11 +269,11 @@ describe("TemplateVisualBuilder", () => {
   })
 
   it("muestra el mensaje del servidor cuando no se pudo guardar y sigue en edición", async () => {
-    vi.mocked(templateApi.importTemplateJson).mockRejectedValue(new ApiError("Hay un proceso abierto: pause la convocatoria", 409))
+    vi.mocked(templateApi.importTemplateJson).mockRejectedValue(new ApiError("Hay un proceso abierto: pause el periodo académico", 409))
     await mountBuilder({ template, presets })
     await typeInto("Nombre del campo Primero", "X")
     await save()
-    expect(body().textContent).toContain("Hay un proceso abierto: pause la convocatoria")
+    expect(body().textContent).toContain("Hay un proceso abierto: pause el periodo académico")
     expect(byText("button", "Guardar")).toBeTruthy()
   })
 

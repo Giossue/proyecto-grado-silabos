@@ -103,7 +103,7 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
 
     expect(response.status).toBe(200)
     expect(response.text).toBe(
-      `{"career":{"id":"${CAREER}","name":"Software","lock_reason":"Convocatoria activa","lock":{"scope":"convocation","period":"2026-1","institutional_pause":true,"delivery_on":"2026-08-14"}},` +
+      `{"career":{"id":"${CAREER}","name":"Software","lock_reason":"Periodo académico activo","lock":{"scope":"convocation","period":"2026-1","institutional_pause":true,"delivery_on":"2026-08-14"}},` +
         `"scheduledSubjects":[` +
         `{"subject_id":"${ALGORITHMS}","label":"SW-B1-001 · Algoritmos","subject_code":"SW-B1-001","subject_name":"Algoritmos","subject_cycle":1,"profile_complete":false,"generates_syllabus":true,"campus_name":"Campus Laguacoto","modality_name":"Presencial","parallels":[` +
         `{"id":"p-a","code":"A","shift":"matutina","editable":true,"deletable":false,"sent_syllabus":true,"started_syllabus":true},` +

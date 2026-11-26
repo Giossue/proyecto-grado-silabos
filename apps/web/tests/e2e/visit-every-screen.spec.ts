@@ -41,9 +41,9 @@ const roleScreens: Record<string, { key: AccountKey; visits: () => Visit[] }> = 
       ...ownRoutes("/admin/"),
       { path: "/admin/estructura-academica/facultades" },
       { path: "/admin/estructura-academica/carreras" },
-      { path: "/admin/panel", landsOn: /\/admin\/convocatorias$/ },
-      { path: "/admin/puesta-en-marcha", landsOn: /\/admin\/convocatorias$/ },
-      { path: "/panel", landsOn: /\/admin\/convocatorias$/ },
+      { path: "/admin/panel", landsOn: /\/admin\/periodos$/ },
+      { path: "/admin/puesta-en-marcha", landsOn: /\/admin\/periodos$/ },
+      { path: "/panel", landsOn: /\/admin\/periodos$/ },
       { path: "/notificaciones", landsOn: /\/admin\/notificaciones$/ },
       { path: "/configuracion/perfil", landsOn: /\/admin\/configuracion\/perfil$/ },
       { path: "/configuracion/seguridad", landsOn: /\/admin\/configuracion\/seguridad$/ },
@@ -99,7 +99,7 @@ test.describe("screens reached from data", () => {
       const issues = watchPage(page)
       await page.goto("/docente/mis-silabos")
       const listed = page.getByRole("list", { name: "Mis sílabos" }).getByRole("heading").first()
-      const noConvocation = page.getByText("Todavía no hay una convocatoria abierta")
+      const noConvocation = page.getByText("Todavía no hay un periodo académico abierto")
       await expect(listed.or(noConvocation)).toBeVisible()
       if (await listed.isVisible()) await listed.click()
       else await page.goto(`/docente/mis-silabos/${await latestSyllabusOf(accounts.teacher.email)}`)
@@ -124,9 +124,9 @@ test.describe("screens reached from data", () => {
       await expect(page.getByRole("heading", { level: 1 })).toContainText("Proyecto de carrera de")
 
       await page.goto("/coordinacion/revisiones?tab=seguimiento")
-      await expect(page.getByRole("table", { name: "Seguimiento de la convocatoria" })).toBeVisible()
+      await expect(page.getByRole("table", { name: "Seguimiento del periodo académico" })).toBeVisible()
       await page.waitForLoadState("networkidle")
-      const reviewed = page.getByRole("table", { name: "Seguimiento de la convocatoria" }).getByRole("row").getByRole("link")
+      const reviewed = page.getByRole("table", { name: "Seguimiento del periodo académico" }).getByRole("row").getByRole("link")
       if ((await reviewed.count()) > 0) {
         await reviewed.first().click()
       } else {
@@ -175,8 +175,8 @@ test.describe("removed screens", () => {
   test.use({ storageState: storageStateOf("admin") })
 
   test("Auditoría and Reportes are gone from the menu and answer not found", async ({ page }) => {
-    await page.goto("/admin/convocatorias")
-    const menu = page.getByRole("list").filter({ has: page.getByRole("link", { name: "Convocatorias" }) }).first()
+    await page.goto("/admin/periodos")
+    const menu = page.getByRole("list").filter({ has: page.getByRole("link", { name: "Periodos académicos" }) }).first()
     await expect(menu.getByRole("link", { name: "Usuarios y roles" })).toBeVisible()
     await expect(page.getByRole("link", { name: /Auditoría|Reportes/ })).toHaveCount(0)
     for (const path of ["/admin/auditoria", "/admin/reportes"]) {

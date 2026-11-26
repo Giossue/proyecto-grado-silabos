@@ -133,7 +133,7 @@ export class AdminAcademicController {
   }
 
   @Delete("academic/:entity/:record")
-  @ApiOperation({ summary: "Elimina un período sin convocatoria; las facultades y carreras se desactivan." })
+  @ApiOperation({ summary: "Elimina un período sin periodo académico; las facultades y carreras se desactivan." })
   @ApiParam(ENTITY)
   @ApiParam({ name: "record", format: "uuid" })
   remove(@Req() request: ApiRequest, @Param("entity") entity: string, @Param("record") record: string): Promise<WebReply> {

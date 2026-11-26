@@ -179,7 +179,7 @@ describe("PUT academic/asignaturas/{asignatura}/ficha", () => {
 
   it("an open convocation of the career locks its career project", async () => {
     lockedCareers.add(CAREER)
-    expect((await put({ values: { [DESCRIPCION]: text("x") } })).json?.errors).toEqual({ process: ["Convocatoria activa"] })
+    expect((await put({ values: { [DESCRIPCION]: text("x") } })).json?.errors).toEqual({ process: ["Periodo académico activo"] })
     expect(templates.values).toEqual([])
   })
 

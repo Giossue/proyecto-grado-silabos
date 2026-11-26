@@ -112,7 +112,7 @@ describe("DELETE /api/v1/admin/academic/{entity}/{record}", () => {
   it("keeps a period with a convocation and answers Laravel's 422", async () => {
     asRole("administrador", null)
     periods.set(PERIOD, { code: "Abril-Agosto 2027", hasProcess: true })
-    const message = "Este período ya tiene una convocatoria con su historial, por eso no se puede eliminar."
+    const message = "Este periodo ya se abrió y tiene historial, por eso no se puede eliminar."
     expect(await read(await deleteGovernanceRecord(remove(path), "periodo", PERIOD, deps()))).toEqual({
       status: 422,
       text: `{"message":"${message}","errors":{"record":["${message}"]}}`,

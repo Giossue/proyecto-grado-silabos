@@ -37,7 +37,7 @@ export class CoordinationAcademicController {
   constructor(@Inject(AcademicDeps) private readonly deps: AcademicDeps) {}
 
   @Get("curriculum/:curriculum")
-  @ApiOperation({ summary: "Malla de la carrera: asignaturas, requisitos y bloqueo por convocatoria." })
+  @ApiOperation({ summary: "Malla de la carrera: asignaturas, requisitos y bloqueo por periodo académico." })
   @ApiParam({ name: "curriculum", format: "uuid" })
   curriculum(@Req() request: ApiRequest, @Param("curriculum") curriculum: string): Promise<WebReply> {
     return handled(request, (web) => curriculumBuilder(web, curriculum, this.deps.structure()))
@@ -118,7 +118,7 @@ export class CoordinationAcademicController {
   }
 
   @Post("parallels")
-  @ApiOperation({ summary: "Crea paralelos; si la convocatoria está abierta y tienen docente, genera sus sílabos y avisa al docente." })
+  @ApiOperation({ summary: "Crea paralelos; si el periodo académico está abierto y tienen docente, genera sus sílabos y avisa al docente." })
   @ApiBody({ type: ParallelsDto })
   @ApiUnprocessableEntityResponse(VALIDATION)
   createParallels(@Req() request: ApiRequest): Promise<WebReply> {
@@ -131,7 +131,7 @@ export class CoordinationAcademicController {
   }
 
   @Put("parallels/:parallel/teacher")
-  @ApiOperation({ summary: "Asigna o cambia el docente del paralelo; con convocatoria abierta genera el sílabo y avisa al docente." })
+  @ApiOperation({ summary: "Asigna o cambia el docente del paralelo; con periodo académico abierto genera el sílabo y avisa al docente." })
   @ApiParam({ name: "parallel", format: "uuid" })
   @ApiBody({ type: ParallelTeacherDto })
   @ApiUnprocessableEntityResponse(VALIDATION)

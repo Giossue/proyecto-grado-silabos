@@ -24,7 +24,7 @@ export const mainNavItemsFor = (session: Session | null): NavItem[] => {
                   { title: 'Facultades y carreras', href: paths.admin.academic, icon: Building2 },
                   { title: 'Usuarios y roles', href: paths.admin.users, icon: UsersRound },
                   { title: 'Plantilla', href: paths.admin.template, icon: FileStack },
-                  { title: 'Convocatorias', href: paths.admin.convocations, icon: CalendarRange },
+                  { title: 'Periodos académicos', href: paths.admin.convocations, icon: CalendarRange },
               ]
             : []),
         ...(code === 'coordinador'

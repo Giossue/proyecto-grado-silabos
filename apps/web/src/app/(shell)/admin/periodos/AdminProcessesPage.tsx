@@ -60,7 +60,7 @@ export default function AdminProcessesPage() {
   const processData = query.data?.processes ?? null
   const summary = summaryQuery.data ?? null
   const loading = query.isFetching
-  const error = queryErrorMessage(query, "No se pudieron cargar las convocatorias")
+  const error = queryErrorMessage(query, "No se pudieron cargar los periodos académicos")
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const rowActions = useRef<ConvocationRowActionsHandle>(null)
@@ -106,7 +106,7 @@ export default function AdminProcessesPage() {
 
   return (
     <PageFrame
-      title="Convocatorias"
+      title="Periodos académicos"
       description="Periodos lectivos y sus fechas de clases y de elaboración de sílabos"
       size="wide"
       loading={!loaded && !error}
@@ -119,7 +119,7 @@ export default function AdminProcessesPage() {
                 <ConvocationPeriodDialog disabled onSaved={(message) => void changed(message)} />
               </span>
             </TooltipTrigger>
-            <TooltipContent>Complete «Antes de empezar» para abrir una convocatoria</TooltipContent>
+            <TooltipContent>Complete «Antes de empezar» para abrir un periodo académico</TooltipContent>
           </Tooltip>
         ) : loaded && inProgress ? (
           <Tooltip>
@@ -128,7 +128,7 @@ export default function AdminProcessesPage() {
                 <ConvocationPeriodDialog disabled onSaved={(message) => void changed(message)} />
               </span>
             </TooltipTrigger>
-            <TooltipContent>Hay una convocatoria abierta o pausada. Finalícela o elimínela antes de abrir otra</TooltipContent>
+            <TooltipContent>Hay un periodo académico abierto o pausado. Finalícelo o elimínelo antes de abrir otro</TooltipContent>
           </Tooltip>
         ) : loaded ? (
           <ConvocationPeriodDialog onSaved={(message) => void changed(message)} />
@@ -172,7 +172,7 @@ export default function AdminProcessesPage() {
             }
           />
 
-          <Table label="Convocatorias">
+          <Table label="Periodos académicos">
             <TableHeader>
               <TableRow>
                 <SortableHead sort={sort} column="period">Período</SortableHead>
@@ -183,7 +183,7 @@ export default function AdminProcessesPage() {
             </TableHeader>
             <TableBody>
               {page.length === 0 ? (
-                <TableEmpty colSpan={4}>{filter.active ? "Ningún período coincide con los filtros" : "No hay periodos registrados. Cree el primero con «Nueva convocatoria»"}</TableEmpty>
+                <TableEmpty colSpan={4}>{filter.active ? "Ningún período coincide con los filtros" : "No hay periodos registrados. Cree el primero con «Nuevo periodo académico»"}</TableEmpty>
               ) : (
                 page.map((row) => (
                   <TableRow
@@ -216,7 +216,7 @@ export default function AdminProcessesPage() {
             </TableBody>
           </Table>
           <SortStatus sort={sort} />
-          <TablePagination meta={meta} label="Paginación de convocatorias" onPageChange={setPage} />
+          <TablePagination meta={meta} label="Paginación de periodos académicos" onPageChange={setPage} />
         </div>
       ) : null}
       {current ? (

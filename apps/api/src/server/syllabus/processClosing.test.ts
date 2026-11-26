@@ -77,7 +77,7 @@ beforeEach(() => {
 
 describe("POST admin/processes/{p}/cerrar", () => {
   it("freezes the unsent syllabi, closes the convocations and the process", async () => {
-    expect(await close()).toMatchObject({ status: 200, json: { message: "Convocatoria cerrada. Sus sílabos quedan solo para consulta." } })
+    expect(await close()).toMatchObject({ status: 200, json: { message: "Periodo académico cerrado. Sus sílabos quedan solo para consulta." } })
     expect(log).toEqual([
       "begin",
       `lock:process:${PROCESS}`,

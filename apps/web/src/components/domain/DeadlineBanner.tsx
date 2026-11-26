@@ -24,18 +24,18 @@ const overdueNotice: Record<Audience, (due: string) => { headline: string; detai
 }
 
 const pausedNotice = (audience: Audience, pausedBy: DashboardDeadline["paused_by"]): Notice => {
-  if (audience === "docente") return { headline: "La convocatoria está en pausa", detail: "Le avisaremos cuando se reanude para que siga con sus sílabos" }
-  if (audience === "administrador") return { headline: "La convocatoria institucional está en pausa", detail: "Puede reanudarla desde Convocatorias" }
-  if (audience === "coordinador" && pausedBy === "coordinacion") return { headline: "La convocatoria de su carrera está en pausa", detail: "Mientras tanto no se edita ni se revisa. Puede reanudarla desde Revisión" }
+  if (audience === "docente") return { headline: "El periodo académico está en pausa", detail: "Le avisaremos cuando se reanude para que siga con sus sílabos" }
+  if (audience === "administrador") return { headline: "El periodo académico está en pausa", detail: "Puede reanudarlo desde Periodos académicos" }
+  if (audience === "coordinador" && pausedBy === "coordinacion") return { headline: "El periodo académico de su carrera está en pausa", detail: "Mientras tanto no se edita ni se revisa. Puede reanudarlo desde Revisión" }
 
-  return { headline: "La convocatoria está en pausa", detail: "Administración pausó la convocatoria institucional. Las revisiones se retoman cuando la reanude; le avisaremos" }
+  return { headline: "El periodo académico está en pausa", detail: "Administración pausó el periodo académico. Las revisiones se retoman cuando lo reanude; le avisaremos" }
 }
 
 const closedNotice: Record<Audience, string> = {
   docente: "Sus sílabos quedan solo para consulta",
   coordinador: "Los sílabos de la carrera quedan solo para consulta",
   bibliotecario: "Los sílabos quedan solo para consulta",
-  administrador: "Puede reabrirla con una prórroga o abrir una nueva",
+  administrador: "Puede reabrirlo con una prórroga o abrir uno nuevo",
 }
 
 export const noticeFor = (deadline: DashboardDeadline, audience: Audience): Notice => {
@@ -43,8 +43,8 @@ export const noticeFor = (deadline: DashboardDeadline, audience: Audience): Noti
   const { task, upcoming, until } = tasks[audience]
   const due = formatDate(deadline.due_at)
   if (state === "paused") return pausedNotice(audience, deadline.paused_by)
-  if (state === "closed") return { headline: "La convocatoria finalizó", detail: audience === "administrador" && deadline.classes_ended ? "Puede abrir una nueva" : closedNotice[audience] }
-  if (audience === "coordinador" && deadline.career_pending) return { headline: "Aún no abre la convocatoria de su carrera", detail: until(due) }
+  if (state === "closed") return { headline: "El periodo académico finalizó", detail: audience === "administrador" && deadline.classes_ended ? "Puede abrir uno nuevo" : closedNotice[audience] }
+  if (audience === "coordinador" && deadline.career_pending) return { headline: "Aún no abre el periodo académico de su carrera", detail: until(due) }
   if (state === "overdue") return overdueNotice[audience](due)
   if (state === "upcoming") {
     const when = toStart === 0 ? "hoy" : toStart === 1 ? "mañana" : `en ${toStart} días`

@@ -18,7 +18,7 @@ const TEACHER = "a0000000-0000-4000-8000-0000000000aa"
 const COORDINATOR = "a0000000-0000-4000-8000-0000000000cc"
 const LIBRARIAN = "a0000000-0000-4000-8000-0000000000dd"
 const SYLLABI = ["50000000-0000-4000-8000-000000000001", "50000000-0000-4000-8000-000000000002"]
-const NOTICE = "Se repite la convocatoria con la malla corregida."
+const NOTICE = "Se repite el periodo académico con la malla corregida."
 
 let world: FakeWorld
 let notices: NotificationWorld
@@ -172,13 +172,13 @@ beforeEach(() => {
 describe("DELETE /api/v1/admin/processes/{process}", () => {
   it("erases the process with all its work and tells everyone involved except the administrator", async () => {
     const response = await destroy({ mensaje: `  ${NOTICE}  ` })
-    expect(response.text).toBe(JSON.stringify({ message: "Convocatoria institucional eliminada." }))
+    expect(response.text).toBe(JSON.stringify({ message: "Periodo académico eliminado." }))
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, "lock:convocations", "lock:syllabi", "purge:2", `delete:${PROCESS}:${CONVOCATION}`, "commit"])
     const message = `Se borraron todos los sílabos de 2026-2. Mensaje de Administración: ${NOTICE}`
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType, item.resourceId, item.periodId])).toEqual([
-      [TEACHER, `flujo:proceso.eliminado:${PROCESS}`, "Convocatoria eliminada", message, "periodo_academico", PERIOD, PERIOD],
-      [COORDINATOR, `flujo:proceso.eliminado:${PROCESS}`, "Convocatoria eliminada", message, "periodo_academico", PERIOD, PERIOD],
-      [LIBRARIAN, `flujo:proceso.eliminado:${PROCESS}`, "Convocatoria eliminada", message, "periodo_academico", PERIOD, PERIOD],
+      [TEACHER, `flujo:proceso.eliminado:${PROCESS}`, "Periodo académico eliminado", message, "periodo_academico", PERIOD, PERIOD],
+      [COORDINATOR, `flujo:proceso.eliminado:${PROCESS}`, "Periodo académico eliminado", message, "periodo_academico", PERIOD, PERIOD],
+      [LIBRARIAN, `flujo:proceso.eliminado:${PROCESS}`, "Periodo académico eliminado", message, "periodo_academico", PERIOD, PERIOD],
     ])
     expect(notices.mails).toHaveLength(3)
   })
@@ -202,7 +202,7 @@ describe("DELETE /api/v1/admin/processes/{process}", () => {
 
   it("leaves a process closed under the lock untouched", async () => {
     locked = { ...(locked as LockedSyllabusProcess), state: "cerrado" }
-    expect((await destroy({ mensaje: NOTICE })).json?.errors).toEqual({ process: ["Una convocatoria cerrada no se elimina: queda como historial."] })
+    expect((await destroy({ mensaje: NOTICE })).json?.errors).toEqual({ process: ["Un periodo académico cerrado no se elimina: queda como historial."] })
     expect(log).not.toContain("purge:2")
     expect(notices.notifications).toEqual([])
   })
@@ -220,16 +220,16 @@ describe("POST /api/v1/admin/processes/{process}/reanudar", () => {
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, "template-change:pause", `state:${PROCESS}:abierto`, "commit"])
     const at = "20270115080000007"
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
-      [TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${TEACHER}:${at}`, "Se reanudó la convocatoria", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
+      [TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${TEACHER}:${at}`, "Se reanudó el periodo académico", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
       [
         COORDINATOR,
         `flujo:proceso.reanudado:${PROCESS}:${COORDINATOR}:${at}`,
-        "Administración reanudó la convocatoria",
+        "Administración reanudó el periodo académico",
         "Se retoman la edición y las revisiones de los sílabos del período 2026-2.",
         "proceso_silabos",
       ],
-      [TEACHER, `flujo:proceso.reanudado:${PROCESS}:${TEACHER}:${at}`, "Administración reanudó la convocatoria", "Se retoman la edición y las revisiones de los sílabos del período 2026-2.", "proceso_silabos"],
-      [LIBRARIAN, `flujo:proceso.reanudado:${PROCESS}:${LIBRARIAN}:${at}`, "Administración reanudó la convocatoria", "Se retoman la edición y las revisiones de los sílabos del período 2026-2.", "proceso_silabos"],
+      [TEACHER, `flujo:proceso.reanudado:${PROCESS}:${TEACHER}:${at}`, "Administración reanudó el periodo académico", "Se retoman la edición y las revisiones de los sílabos del período 2026-2.", "proceso_silabos"],
+      [LIBRARIAN, `flujo:proceso.reanudado:${PROCESS}:${LIBRARIAN}:${at}`, "Administración reanudó el periodo académico", "Se retoman la edición y las revisiones de los sílabos del período 2026-2.", "proceso_silabos"],
     ])
   })
 
@@ -295,7 +295,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
 
   it("moves the deadline to the end of the chosen day, counts the extension and tells teachers with pending work", async () => {
     const response = await extend({ due_at: "2026-12-20" })
-    expect(response.text).toBe(JSON.stringify({ message: "Plazo prorrogado para todas las convocatorias del proceso." }))
+    expect(response.text).toBe(JSON.stringify({ message: "Plazo prorrogado para todas los periodos académicos del proceso." }))
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, `deadline:${PROCESS}:2026-12-21T04:59:59+00:00:1`, "commit"])
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
       [
@@ -323,7 +323,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
     expect((await extend({ due_at: "2026-12-10" })).json?.errors).toEqual({ due_at: ["La nueva fecha debe ser posterior a la vigente, que es el 10/12/2026."] })
     expect((await extend({ due_at: "2027-03-13" })).json?.errors).toEqual({ due_at: ["La nueva fecha no puede pasar del último día de clases (12/03/2027)."] })
     locked = { ...(locked as LockedSyllabusProcess), extensions: 2 }
-    expect((await extend({ due_at: "2026-12-20" })).json?.errors).toEqual({ process: ["Ya se usaron las 2 prórrogas de esta convocatoria."] })
+    expect((await extend({ due_at: "2026-12-20" })).json?.errors).toEqual({ process: ["Ya se usaron las 2 prórrogas de este periodo académico."] })
   })
 
   describe("reopening a closed process", () => {
@@ -334,7 +334,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
 
     it("reopens the process, catches up the changes and generates the missing syllabi", async () => {
       const response = await extend({ due_at: "2026-12-20" })
-      expect(response.text).toBe(JSON.stringify({ message: "Plazo prorrogado. La convocatoria se volvió a abrir." }))
+      expect(response.text).toBe(JSON.stringify({ message: "Plazo prorrogado. El periodo académico se volvió a abrir." }))
       expect(log).toEqual([
         "begin",
         `lock:process:${PROCESS}`,
@@ -376,7 +376,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
       expect(response.text).toBe(
         JSON.stringify({
           message:
-            "Hubo cambios mientras la convocatoria estuvo finalizada. Confirme para aplicarlos: hay sílabos que volverán a borrador, volverán a Coordinación o perderán su contenido.",
+            "Hubo cambios mientras el periodo académico estuvo finalizado. Confirme para aplicarlos: hay sílabos que volverán a borrador, volverán a Coordinación o perderán su contenido.",
           code: "cambios_pendientes",
           counts: { to_draft: 0, restarted: 3, to_coordination: 0 },
         }),
@@ -389,7 +389,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
 
     it("refuses while another process is in progress", async () => {
       otherInProgress = true
-      expect((await extend({ due_at: "2026-12-20" })).json?.errors).toEqual({ process: ["Hay otra convocatoria en curso; finalícela o elimínela antes de reabrir esta"] })
+      expect((await extend({ due_at: "2026-12-20" })).json?.errors).toEqual({ process: ["Hay otro periodo académico en curso; finalícelo o elimínelo antes de reabrir este"] })
       otherInProgress = false
       problem = "La sección «Datos» de la plantilla está vacía."
       expect((await extend({ due_at: "2026-12-20" })).json?.errors).toEqual({

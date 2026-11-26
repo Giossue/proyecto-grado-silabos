@@ -28,28 +28,28 @@ export type SyllabusProcessActionsHandle = { run: (key: ProcessActionKey) => voi
 
 const DIALOGS: Record<Transition, { title: string; description: string; label: string; icon: LucideIcon; destructive?: boolean }> = {
   pausar: {
-    title: "Pausar la convocatoria",
-    description: "Se detienen los envíos y la edición docente en todas las carreras hasta que la reanude",
+    title: "Pausar el periodo académico",
+    description: "Se detienen los envíos y la edición docente en todas las carreras hasta que lo reanude",
     label: "Pausar",
     icon: Pause,
   },
   reanudar: {
-    title: "Reanudar la convocatoria",
+    title: "Reanudar el periodo académico",
     description: "Los envíos vuelven a admitirse y la plantilla vuelve a quedar protegida",
     label: "Reanudar",
     icon: Play,
   },
   cerrar: {
-    title: "Finalizar la convocatoria",
+    title: "Finalizar el periodo académico",
     description:
-      "Los sílabos del período quedan guardados solo para consulta: ya no se editan, envían, revisan ni firman, y un cambio de docente no los borra. Puede volver a abrirla con una prórroga mientras no hayan terminado las clases",
+      "Los sílabos del período quedan guardados solo para consulta: ya no se editan, envían, revisan ni firman, y un cambio de docente no los borra. Puede volver a abrirlo con una prórroga mientras no hayan terminado las clases",
     label: "Finalizar",
     icon: Lock,
     destructive: true,
   },
 }
 
-const DELETE_PHRASE = "eliminar convocatoria"
+const DELETE_PHRASE = "eliminar periodo"
 
 type SyllabusProcessActionsProps = {
   process: SyllabusProcess
@@ -77,7 +77,7 @@ export function SyllabusProcessActions({ process, menu = true, onCompleted, chil
   const [impactError, setImpactError] = useState<string | null>(null)
   const [typed, setTyped] = useState("")
 
-  const phrase = shownPending === "cerrar" ? "finalizar convocatoria" : shownPending === "reanudar" && templateImpact ? "adaptar sílabos" : null
+  const phrase = shownPending === "cerrar" ? "finalizar periodo" : shownPending === "reanudar" && templateImpact ? "adaptar sílabos" : null
   const [phraseSeen, setPhraseSeen] = useState(phrase)
   if (phraseSeen !== phrase) {
     setPhraseSeen(phrase)
@@ -172,7 +172,7 @@ export function SyllabusProcessActions({ process, menu = true, onCompleted, chil
         setDeleteErrors(cause.errors)
         return
       }
-      setDeleteError(cause instanceof ApiError ? (cause.errors.process?.[0] ?? cause.message) : "No se pudo eliminar la convocatoria institucional")
+      setDeleteError(cause instanceof ApiError ? (cause.errors.process?.[0] ?? cause.message) : "No se pudo eliminar el periodo académico")
     } finally {
       setDeleting(false)
     }
@@ -252,7 +252,7 @@ export function SyllabusProcessActions({ process, menu = true, onCompleted, chil
                     </Alert>
                   ) : impact ? (
                     impact.total === 0 ? (
-                      <p>La convocatoria no tiene sílabos</p>
+                      <p>El periodo académico no tiene sílabos</p>
                     ) : unapprovedTotal === 0 ? (
                       <p>Todos los sílabos están aprobados</p>
                     ) : (
@@ -288,9 +288,9 @@ export function SyllabusProcessActions({ process, menu = true, onCompleted, chil
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Eliminar convocatoria institucional</DialogTitle>
+            <DialogTitle>Eliminar periodo académico</DialogTitle>
             <DialogDescription>
-              Se borran la convocatoria, las de cada carrera y todos sus sílabos, incluso los enviados y aprobados. El período queda libre para abrir otra convocatoria. Esta acción no se puede deshacer
+              Se borran el periodo académico, los de cada carrera y todos sus sílabos, incluso los enviados y aprobados. El período queda libre para abrir otro periodo académico. Esta acción no se puede deshacer
             </DialogDescription>
           </DialogHeader>
           {impactLoading ? (
@@ -332,7 +332,7 @@ export function SyllabusProcessActions({ process, menu = true, onCompleted, chil
             </DialogClose>
             <Button type="button" variant="destructive" disabled={!deleteReady} onClick={() => void remove()}>
               {deleting ? <Spinner data-icon="inline-start" /> : <Trash2 data-icon="inline-start" aria-hidden="true" />}
-              Eliminar convocatoria
+              Eliminar periodo académico
             </Button>
           </DialogFooter>
         </DialogContent>

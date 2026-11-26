@@ -25,7 +25,7 @@ export function PurgeConfirmationDialog() {
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) cancel() }}>
       <DialogContent layer="confirmation">
         <DialogHeader>
-          <DialogTitle>{finalizedNotice ? "La convocatoria ya finalizó" : "Este cambio afecta sílabos en curso"}</DialogTitle>
+          <DialogTitle>{finalizedNotice ? "El periodo académico ya finalizó" : "Este cambio afecta sílabos en curso"}</DialogTitle>
           <DialogDescription>{message}</DialogDescription>
         </DialogHeader>
         {finalizedNotice ? null : <ConfirmPhrase id="purge-confirm" phrase={PHRASE} value={typed} onValueChange={setTyped} />}

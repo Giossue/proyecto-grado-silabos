@@ -73,7 +73,7 @@ export async function openCoordinationReview(page: Page, subject: string): Promi
 
 export async function openTrackedReview(page: Page, subject: string, parallel = "A"): Promise<void> {
   await page.goto("/coordinacion/revisiones?tab=seguimiento")
-  await rowNamed(page.getByRole("table", { name: "Seguimiento de la convocatoria" }), subject)
+  await rowNamed(page.getByRole("table", { name: "Seguimiento del periodo académico" }), subject)
     .filter({ has: page.getByText(`Paralelo ${parallel}`, { exact: true }) })
     .getByRole("link", { name: subject, exact: true })
     .click()
@@ -279,7 +279,7 @@ export async function submitSampleSyllabus(page: Page, account: Account, subject
   trackAutosave(page)
   await page.goto("/docente/mis-silabos")
   const item = teacherListItem(page, subject)
-  await expect(item.or(page.getByText("Todavía no hay una convocatoria abierta"))).toBeVisible()
+  await expect(item.or(page.getByText("Todavía no hay un periodo académico abierto"))).toBeVisible()
   if (!(await item.isVisible()) || !/Sin iniciar|Borrador/.test(await item.innerText())) return false
   await openTeacherSyllabus(page, subject)
   const stamp = String(Date.now())

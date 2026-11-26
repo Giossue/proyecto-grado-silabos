@@ -12,7 +12,7 @@ export type Account = {
 }
 
 export const accounts: Record<AccountKey, Account> = {
-  admin: { key: "admin", email: "admin@email.com", home: "/admin/convocatorias", p12: "admin.p12" },
+  admin: { key: "admin", email: "admin@email.com", home: "/admin/periodos", p12: "admin.p12" },
   coordinator: {
     key: "coordinator",
     email: "coordinador@email.com",

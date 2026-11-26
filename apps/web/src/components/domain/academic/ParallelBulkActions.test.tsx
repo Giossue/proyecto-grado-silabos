@@ -178,7 +178,7 @@ describe("ParallelBulkActions", () => {
     expect(changed.mock.calls.at(-1)).toEqual(["Jornada actualizada en los paralelos seleccionados"])
   })
 
-  it("con la convocatoria finalizada, asignar docente avisa una sola vez antes de empezar; si cancela, no cambia nada", async () => {
+  it("con el periodo académico finalizado, asignar docente avisa una sola vez antes de empezar; si cancela, no cambia nada", async () => {
     deadline.state = "closed"
     const actor = userEvent.setup()
     mountBar()

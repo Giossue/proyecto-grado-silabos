@@ -162,7 +162,7 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
     careers.set(CAREER, { id: CAREER, name: "Software", modality: null, cycleCount: 9 })
     const text = await (await curriculumBuilder(get(path), CAREER, deps())).text()
     expect(text).toContain(
-      `"career":{"id":"${CAREER}","name":"Software","modality":null},"curriculum":{"id":"${CAREER}","cycle_count":9,"editable":false,"lock_reason":"Convocatoria activa",` +
+      `"career":{"id":"${CAREER}","name":"Software","modality":null},"curriculum":{"id":"${CAREER}","cycle_count":9,"editable":false,"lock_reason":"Periodo académico activo",` +
         '"lock":{"scope":"convocation","period":"Noviembre-Marzo 2026-2027","institutional_pause":true,"delivery_on":"2026-12-10"}}',
     )
     expect(text).toContain(
@@ -229,7 +229,7 @@ describe("GET /api/v1/coordination/academic/teacher-assignments", () => {
     expect(await read(await teacherAssignments(get(path), deps()))).toEqual({
       status: 200,
       text:
-        `{"career":{"id":"${CAREER}","name":"Software","lock_reason":"Convocatoria activa","lock":{"scope":"convocation","period":"2026-2027","institutional_pause":false,"delivery_on":"2026-12-10"}},` +
+        `{"career":{"id":"${CAREER}","name":"Software","lock_reason":"Periodo académico activo","lock":{"scope":"convocation","period":"2026-2027","institutional_pause":false,"delivery_on":"2026-12-10"}},` +
         '"teacherAssignments":[{"id":"a-1","user_id":"u-1","parallel_id":"p-1","user_name":"Ana","user_email":"ana@silabos.test","parallel_code":"A","subject_name":"Algoritmos","active":true,"editable":true}],' +
         '"careerTeachers":[{"id":"u-2","name":"Docente sin paralelo","email":"sin.paralelo@silabos.test","pending_activation":false,"invitation_expired":false},' +
         '{"id":"u-3","name":"Nuevo docente","email":"nuevo@silabos.test","pending_activation":true,"invitation_expired":false},' +

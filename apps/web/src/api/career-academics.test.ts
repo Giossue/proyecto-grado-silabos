@@ -18,12 +18,12 @@ const purgeError = () => new ApiError('purga', 422, {
 });
 
 const noticeError = () => new ApiError('aviso', 422, {
-  purge_required: ['La convocatoria 2026-2027 ya finalizó.'],
+  purge_required: ['El periodo académico 2026-2027 ya finalizó.'],
   purge_count: ['0'],
   purge_mode: [FINALIZED_NOTICE],
 });
 
-describe('aviso de convocatoria finalizada', () => {
+describe('aviso de periodo académico finalizado', () => {
   beforeEach(() => api.mockReset());
 
   it('crear paralelos abre el aviso sin frase y reenvía con confirm_purge', async () => {

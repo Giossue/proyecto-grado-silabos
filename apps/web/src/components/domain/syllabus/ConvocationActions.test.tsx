@@ -74,23 +74,23 @@ describe("ConvocationActions", () => {
 
     const modal = container.querySelector("[data-modal]")!
     expect(modal.getAttribute("data-state")).toBe("closed")
-    expect(modal.textContent).toContain("Pausar la convocatoria")
+    expect(modal.textContent).toContain("Pausar el periodo académico")
   })
 
-  it("avisa que abrió la convocatoria cuando el modal de apertura terminó de cerrarse", async () => {
+  it("avisa que abrió el periodo académico cuando el modal de apertura terminó de cerrarse", async () => {
     vi.useFakeTimers()
     stubs.fading = true
     const onChanged = vi.fn()
     render(<ConvocationActions convocation={{ process_id: "p-1", period: "2026-2027", convocation_id: null, can_open: true, state: null, process_open: true }} onChanged={onChanged} />)
 
     await act(async () => {
-      stubs.opened?.("Convocatoria abierta.", "c-1")
+      stubs.opened?.("Periodo académico abierto.", "c-1")
       await Promise.resolve()
     })
     expect(onChanged).not.toHaveBeenCalled()
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DIALOG_EXIT_MS)
     })
-    expect(onChanged.mock.calls).toEqual([["Convocatoria abierta."]])
+    expect(onChanged.mock.calls).toEqual([["Periodo académico abierto."]])
   })
 })

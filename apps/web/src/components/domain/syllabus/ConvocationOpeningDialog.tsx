@@ -37,11 +37,11 @@ export function ConvocationOpeningDialog({ open, processId, onOpenChange, onOpen
         onOpened?.(result.message, result.convocation_id)
       } catch (reason) {
         const messages = reason instanceof ApiError ? Object.values(reason.errors).flat() : []
-        const message = reason instanceof ApiError ? (messages.length > 1 ? "Todavía no puede abrir la convocatoria:" : (messages[0] ?? reason.message)) : "No se pudo abrir la convocatoria"
+        const message = reason instanceof ApiError ? (messages.length > 1 ? "Todavía no puede abrir el periodo académico:" : (messages[0] ?? reason.message)) : "No se pudo abrir el periodo académico"
         form.setError(SERVER_ERROR, { type: "server", message, types: Object.fromEntries(messages.map((text, index) => [`server${index}`, text])) })
       }
     },
-    (invalid) => form.setError(SERVER_ERROR, { type: "client", message: invalid.process_id?.message ?? "No se pudo abrir la convocatoria" }),
+    (invalid) => form.setError(SERVER_ERROR, { type: "client", message: invalid.process_id?.message ?? "No se pudo abrir el periodo académico" }),
   )
 
   return (
@@ -53,7 +53,7 @@ export function ConvocationOpeningDialog({ open, processId, onOpenChange, onOpen
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Abrir convocatoria de la carrera</DialogTitle>
+          <DialogTitle>Abrir periodo académico de la carrera</DialogTitle>
           <DialogDescription>Los docentes podrán elaborar sus sílabos hasta la fecha de entrega</DialogDescription>
         </DialogHeader>
         <form className="flex flex-col gap-4" onSubmit={(event) => void submit(event)} noValidate>
@@ -79,7 +79,7 @@ export function ConvocationOpeningDialog({ open, processId, onOpenChange, onOpen
             </DialogClose>
             <Button type="submit" disabled={processing}>
               {processing ? <Spinner data-icon="inline-start" /> : <Play data-icon="inline-start" aria-hidden="true" />}
-              Abrir convocatoria
+              Abrir periodo académico
             </Button>
           </DialogFooter>
         </form>

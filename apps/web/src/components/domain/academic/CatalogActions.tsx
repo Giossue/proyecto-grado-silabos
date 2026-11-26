@@ -83,7 +83,7 @@ export function CatalogActions({
 
   const sheetActions: DialogAction[] = []
   if (!lockReason) {
-    if (entity === "periodo" && !institutionalProcess) sheetActions.push({ key: "process", label: "Abrir convocatoria", icon: CalendarPlus })
+    if (entity === "periodo" && !institutionalProcess) sheetActions.push({ key: "process", label: "Abrir periodo académico", icon: CalendarPlus })
     if (statusEntity) {
       sheetActions.push(
         active
@@ -117,14 +117,14 @@ export function CatalogActions({
         ? `«${recordName}» no se podrá elegir para carreras nuevas. Su historial se conserva y podrá reactivarla después`
         : `«${recordName}» volverá a estar disponible`
     }
-    if (!active) return `«${recordName}» volverá a participar en las próximas convocatorias`
+    if (!active) return `«${recordName}» volverá a participar en los próximos periodos académicos`
     const { coordinators = 0, teachers = 0 } = deactivateUsers ?? {}
     const people = [coordinators && `${coordinators} ${coordinators === 1 ? "coordinador" : "coordinadores"}`, teachers && `${teachers} ${teachers === 1 ? "docente" : "docentes"}`]
       .filter(Boolean)
       .join(" y ")
     const retire = people ? `. Se retirarán ${people} de esta carrera; quien tenga rol en otra carrera lo conserva` : ""
 
-    return `«${recordName}» dejará de participar en nuevas convocatorias${retire}. Su historial se conserva y podrá reactivarla después`
+    return `«${recordName}» dejará de participar en nuevos periodos académicos${retire}. Su historial se conserva y podrá reactivarla después`
   }
 
   const changeStatus = async (): Promise<void> => {
@@ -166,7 +166,7 @@ export function CatalogActions({
           periods={[]}
           period={{ id: recordId, codigo: recordName, starts_on: startsOn ?? undefined, ends_on: endsOn ?? undefined }}
           display="menu"
-          triggerLabel="Abrir convocatoria"
+          triggerLabel="Abrir periodo académico"
           onSaved={(message) => void changedAfterExit(message)}
         />
       ) : null}
@@ -200,7 +200,7 @@ export function CatalogActions({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Eliminar período</DialogTitle>
-              <DialogDescription>Se eliminará «{recordName}». Se rechazará si ya tiene una convocatoria</DialogDescription>
+              <DialogDescription>Se eliminará «{recordName}». Se rechazará si ya tiene un periodo académico</DialogDescription>
             </DialogHeader>
             {error ? <FeedbackAlert message={error} /> : null}
             <DialogFooter>

@@ -413,7 +413,7 @@ export async function setGovernanceStatus(request: Request, entity: string, reco
                   ? "Desactive primero las carreras activas de esta facultad."
                   : null
                 : (await tx.careerInProgress(record.id))
-                  ? "La carrera participa en una convocatoria en curso. Espere a que se cierre."
+                  ? "La carrera participa en un periodo académico en curso. Espere a que se cierre."
                   : null
             if (blocked !== null) throw new Rejected(validationError({ record: [blocked] }))
             if (entity === "carrera") await tx.retireCareerUsers(record.id)

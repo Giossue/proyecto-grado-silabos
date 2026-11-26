@@ -65,7 +65,7 @@ export const transitionProcess = (
 
 export type DeadlineExtensionPayload = {
   due_at: string;
-  /** Reabrir una convocatoria finalizada cuya plantilla cambió: confirma que sus sílabos se adapten. */
+  /** Reabrir un periodo académico finalizado cuya plantilla cambió: confirma que sus sílabos se adapten. */
   confirmar_rehacer?: boolean;
   confirmar_cambios?: boolean;
 };

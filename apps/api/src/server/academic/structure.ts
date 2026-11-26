@@ -8,7 +8,7 @@ import { apiJson } from "../http/responses"
 import { unmatchedRoute, routeAllows } from "../http/router"
 
 export const FORBIDDEN = "No tiene permiso para hacer esto."
-export const CONVOCATION_LOCK_REASON = "Convocatoria activa"
+export const CONVOCATION_LOCK_REASON = "Periodo académico activo"
 const UUID = /^[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}$/
 
 export { CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES }

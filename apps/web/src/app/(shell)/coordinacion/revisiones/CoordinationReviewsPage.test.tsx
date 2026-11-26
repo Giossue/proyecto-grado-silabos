@@ -62,7 +62,7 @@ describe("CoordinationReviewsPage", () => {
     await flush()
 
     expect(container.textContent).not.toContain("Avance del proceso")
-    expect(container.querySelector(".actions")!.textContent).toContain("Pausar convocatoria")
+    expect(container.querySelector(".actions")!.textContent).toContain("Pausar periodo académico")
     expect(container.textContent).toContain("Álgebra Lineal")
     expect(container.textContent).toContain("27 oct 2026")
     expect(container.textContent).not.toContain("Por revisar")
@@ -80,12 +80,12 @@ describe("CoordinationReviewsPage", () => {
     unmount()
   })
 
-  it("sin todo listo, «Abrir convocatoria» queda deshabilitado y explica por qué", async () => {
+  it("sin todo listo, «Abrir periodo académico» queda deshabilitado y explica por qué", async () => {
     vi.mocked(getDashboard).mockResolvedValue({ ...summary(null), coordination_convocation: { ...summary(null).coordination_convocation!, can_open: false } })
     const { container, unmount } = mountPage()
     await flush()
 
-    const open = [...container.querySelectorAll<HTMLButtonElement>(".actions button")].find((button) => button.textContent?.includes("Abrir convocatoria"))!
+    const open = [...container.querySelectorAll<HTMLButtonElement>(".actions button")].find((button) => button.textContent?.includes("Abrir periodo académico"))!
     expect(open.disabled).toBe(true)
     unmount()
   })
@@ -105,22 +105,22 @@ describe("CoordinationReviewsPage", () => {
     unmount()
   })
 
-  it("sin convocatoria ofrece abrirla y el seguimiento se puede abrir y dice que aún no hay datos", async () => {
+  it("sin periodo académico ofrece abrirlo y el seguimiento se puede abrir y dice que aún no hay datos", async () => {
     vi.mocked(getDashboard).mockResolvedValue(summary(null))
     const first = mountPage()
     await flush()
 
-    expect(first.container.querySelector(".actions")!.textContent).toContain("Abrir convocatoria")
+    expect(first.container.querySelector(".actions")!.textContent).toContain("Abrir periodo académico")
     const seguimiento = [...first.container.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent === "Seguimiento")!
     expect(seguimiento.hasAttribute("data-disabled")).toBe(false)
-    expect(first.container.textContent).not.toContain("Disponible cuando abra la convocatoria")
+    expect(first.container.textContent).not.toContain("Disponible cuando abra el periodo académico")
     first.unmount()
 
     navigation.reset("/coordinacion/revisiones?tab=seguimiento")
     const tracking = mountPage()
     await flush()
     expect(tracking.container.querySelector('[role="tab"][data-state="active"]')!.textContent).toContain("Seguimiento")
-    expect(tracking.container.textContent).toContain("Aún no hay convocatoria abierta en su carrera")
+    expect(tracking.container.textContent).toContain("Aún no hay periodo académico abierto en su carrera")
     expect(tracking.container.querySelector("#convocation-syllabi-search-none")).not.toBeNull()
     expect(tracking.container.querySelector("#convocation-syllabi-search-state-none")).not.toBeNull()
     expect(tracking.container.querySelector("table")).not.toBeNull()
@@ -128,13 +128,13 @@ describe("CoordinationReviewsPage", () => {
     tracking.unmount()
   })
 
-  it("con convocatoria la pestaña Seguimiento recibe clics", async () => {
+  it("con periodo académico la pestaña Seguimiento recibe clics", async () => {
     const { container, unmount } = mountPage()
     await flush()
     const seguimiento = [...container.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent === "Seguimiento")!
 
     expect(seguimiento.hasAttribute("data-disabled")).toBe(false)
-    expect(container.textContent).not.toContain("Aún no hay convocatoria abierta")
+    expect(container.textContent).not.toContain("Aún no hay periodo académico abierto")
     unmount()
   })
 

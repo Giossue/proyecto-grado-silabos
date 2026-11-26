@@ -100,11 +100,11 @@ describe("ConvocationRowActions", () => {
     view.unmount()
   })
 
-  it("avisa que abrió la convocatoria cuando el formulario terminó de cerrarse", async () => {
+  it("avisa que abrió el periodo académico cuando el formulario terminó de cerrarse", async () => {
     vi.useFakeTimers()
     const view = mountActions()
     await act(async () => {
-      stubs.saved?.("Convocatoria abierta.")
+      stubs.saved?.("Periodo académico abierto.")
       await Promise.resolve()
     })
 
@@ -112,7 +112,7 @@ describe("ConvocationRowActions", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DIALOG_EXIT_MS)
     })
-    expect(view.onChanged.mock.calls).toEqual([["Convocatoria abierta."]])
+    expect(view.onChanged.mock.calls).toEqual([["Periodo académico abierto."]])
 
     view.unmount()
   })
@@ -127,15 +127,15 @@ describe("ConvocationRowActions", () => {
     const text = view.container.querySelector("[data-dialog]")!.textContent
     expect(text).toContain("sus fechas y sus semanas lectivas")
     expect(text).toContain("no se borran")
-    expect(text).toContain("Si el período ya tiene una convocatoria, el sistema no permitirá eliminarlo")
+    expect(text).toContain("Si el periodo ya se abrió, el sistema no permitirá eliminarlo")
 
     view.unmount()
   })
 
-  it("un período con convocatoria muestra el motivo y no ofrece eliminarlo", () => {
-    const view = mountActions(period("Convocatoria cerrada"))
+  it("un periodo ya abierto muestra el motivo y no ofrece eliminarlo", () => {
+    const view = mountActions(period("Periodo académico cerrado"))
 
-    expect(view.container.textContent).toContain("Convocatoria cerrada")
+    expect(view.container.textContent).toContain("Periodo académico cerrado")
     expect(menuItem(view, "Eliminar periodo")).toBeUndefined()
 
     view.unmount()
@@ -143,8 +143,8 @@ describe("ConvocationRowActions", () => {
 
   it("avisa cuando el servidor rechaza la eliminación", async () => {
     vi.mocked(deleteAcademicRecord).mockRejectedValue(
-      new ApiError("Este período ya tiene una convocatoria con su historial, por eso no se puede eliminar.", 422, {
-        record: ["Este período ya tiene una convocatoria con su historial, por eso no se puede eliminar."],
+      new ApiError("Este periodo ya se abrió y tiene historial, por eso no se puede eliminar.", 422, {
+        record: ["Este periodo ya se abrió y tiene historial, por eso no se puede eliminar."],
       }),
     )
     const view = mountActions()
@@ -154,7 +154,7 @@ describe("ConvocationRowActions", () => {
     fireEvent.click(confirmButton(view, "Eliminar periodo")!)
     await flush()
 
-    expect(view.container.textContent).toContain("ya tiene una convocatoria con su historial")
+    expect(view.container.textContent).toContain("ya se abrió y tiene historial")
     expect(deleteAcademicRecord).toHaveBeenCalledWith("periodo", "period-1")
 
     view.unmount()

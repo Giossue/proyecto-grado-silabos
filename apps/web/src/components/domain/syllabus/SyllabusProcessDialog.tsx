@@ -32,7 +32,7 @@ type SyllabusProcessDialogProps = {
   onSaved?: (message: string) => void
 }
 
-const OPEN_PHRASE = "abrir convocatoria"
+const OPEN_PHRASE = "abrir periodo"
 const schema = processCreationSchema()
 
 export function SyllabusProcessDialog({
@@ -79,7 +79,7 @@ export function SyllabusProcessDialog({
       setOpen(false)
       onSaved?.(result.message)
     } catch (reason) {
-      applyApiErrors(form.setError, reason, { fallback: "No se pudo abrir la convocatoria" })
+      applyApiErrors(form.setError, reason, { fallback: "No se pudo abrir el periodo académico" })
     } finally {
       setProcessing(false)
     }
@@ -91,7 +91,7 @@ export function SyllabusProcessDialog({
       onOpenChange={setOpen}
       disabled={disabled}
       triggerLabel={triggerLabel}
-      title="Abrir convocatoria institucional"
+      title="Abrir periodo académico"
       description={period ? `Elija las fechas de elaboración del período ${period.codigo}` : "Fechas de inicio y entrega de los sílabos para todas las carreras"}
       showTrigger={display !== "menu"}
     >
@@ -146,18 +146,18 @@ export function SyllabusProcessDialog({
                   Fecha límite de entrega
                 </FieldLabel>
                 <DatePicker id="process-due" value={values.due_at} onValueChange={(value) => update("due_at", value)} minValue={dueMinimum} maxValue={periodEnd} required ariaInvalid={Boolean(dueErrors)} />
-                <p className="text-sm text-muted-foreground">Esta fecha se heredará en la convocatoria de cada carrera</p>
+                <p className="text-sm text-muted-foreground">Esta fecha se heredará en el periodo académico de cada carrera</p>
                 <FieldError errors={dueErrors} />
               </Field>
-              <FormDialogActions close={close} processing={processing} icon={CalendarPlus} label="Abrir convocatoria" />
+              <FormDialogActions close={close} processing={processing} icon={CalendarPlus} label="Abrir periodo académico" />
             </FieldGroup>
           </form>
           <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Abrir convocatoria</DialogTitle>
+                <DialogTitle>Abrir periodo académico</DialogTitle>
                 <DialogDescription>
-                  Una vez abierta, sus fechas no se pueden editar. Cada Coordinación abre después la convocatoria de su carrera y los sílabos parten del proyecto de carrera de cada materia
+                  Una vez abierto, sus fechas no se pueden editar. Cada Coordinación abre después el periodo académico de su carrera y los sílabos parten del proyecto de carrera de cada materia
                 </DialogDescription>
               </DialogHeader>
               <ConfirmPhrase id="process-open-confirm" value={openingTyped} onValueChange={setOpeningTyped} phrase={OPEN_PHRASE} />
@@ -169,7 +169,7 @@ export function SyllabusProcessDialog({
                 </DialogClose>
                 <Button type="button" disabled={processing || !matchesPhrase(openingTyped, OPEN_PHRASE)} onClick={() => void submit()}>
                   {processing ? <Spinner data-icon="inline-start" /> : <CalendarPlus data-icon="inline-start" aria-hidden="true" />}
-                  Abrir convocatoria
+                  Abrir periodo académico
                 </Button>
               </DialogFooter>
             </DialogContent>

@@ -190,7 +190,7 @@ describe("GET coordination/reviews/{revision}", () => {
       correction_request: { justification: "Ajuste la bibliografía.", stage: "coordinacion", requested_by: "Coordinadora", requested_at: "2026-11-19T12:00:00+00:00" },
       decisions_allowed: false,
       convocation_closed: false,
-      decision_block: "La convocatoria de la carrera está en pausa: las revisiones se retoman cuando se reanude.",
+      decision_block: "El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude.",
     })
     expect(json!.timeline.map((event: { kind: string; previous_id: string | null }) => [event.kind, event.previous_id])).toEqual([
       ["enviado", FIRST],

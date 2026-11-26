@@ -124,7 +124,7 @@ describe("SyllabusProcessActions", () => {
   })
 
   beforeEach(() => {
-    vi.mocked(deleteProcess).mockReset().mockResolvedValue({ message: "Convocatoria institucional eliminada." })
+    vi.mocked(deleteProcess).mockReset().mockResolvedValue({ message: "Periodo académico eliminado." })
     vi.mocked(getProcessImpact).mockReset().mockResolvedValue({
       syllabi: { sin_iniciar: 12, borrador: 3, en_revision: 5, correccion_solicitada: 0, aprobado: 2 },
       total: 22,
@@ -148,9 +148,9 @@ describe("SyllabusProcessActions", () => {
     expect([...dialog(view).querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual(["Sin iniciar12", "Borrador3", "En revisión5", "Corrección solicitada0", "Aprobado2", "Total22"])
     expect(dialog(view).querySelector('label[for="process-delete-message"]')!.textContent).toContain("Mensaje para docentes, coordinación y biblioteca")
 
-    const confirm = (): HTMLButtonElement => buttonWith(view, "Eliminar convocatoria")!
+    const confirm = (): HTMLButtonElement => buttonWith(view, "Eliminar periodo académico")!
     expect(confirm().disabled).toBe(true)
-    fireEvent.change(document.querySelector("#process-delete-confirm")!, { target: { value: "eliminar convocatoria" } })
+    fireEvent.change(document.querySelector("#process-delete-confirm")!, { target: { value: "eliminar periodo" } })
     expect(confirm().disabled).toBe(true)
     fireEvent.change(document.querySelector("#process-delete-message")!, { target: { value: "   " } })
     expect(confirm().disabled).toBe(true)
@@ -166,7 +166,7 @@ describe("SyllabusProcessActions", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DIALOG_EXIT_MS)
     })
-    expect(view.onCompleted.mock.calls).toEqual([["Convocatoria institucional eliminada."]])
+    expect(view.onCompleted.mock.calls).toEqual([["Periodo académico eliminado."]])
   })
 
   it("al cerrar, el modal de pausar sigue mostrando su contenido mientras se desvanece", async () => {
@@ -179,7 +179,7 @@ describe("SyllabusProcessActions", () => {
     await flush()
 
     expect(transition.getAttribute("data-state")).toBe("closed")
-    expect(transition.textContent).toContain("Pausar la convocatoria")
+    expect(transition.textContent).toContain("Pausar el periodo académico")
     expect(transition.textContent).toContain("Se detienen los envíos")
   })
 
@@ -189,14 +189,14 @@ describe("SyllabusProcessActions", () => {
     view.run("eliminar")
     await flush()
     await type("#process-delete-message", "Fechas equivocadas")
-    await type("#process-delete-confirm", "eliminar convocatoria")
+    await type("#process-delete-confirm", "eliminar periodo")
     const removal = view.container.querySelectorAll("[data-modal]")[1]!
     emitOpen(removal, false)
     await flush()
 
     expect(removal.getAttribute("data-state")).toBe("closed")
     expect(document.querySelector<HTMLTextAreaElement>("#process-delete-message")!.value).toBe("Fechas equivocadas")
-    expect(document.querySelector<HTMLInputElement>("#process-delete-confirm")!.value).toBe("eliminar convocatoria")
+    expect(document.querySelector<HTMLInputElement>("#process-delete-confirm")!.value).toBe("eliminar periodo")
     expect(removal.querySelectorAll("tbody tr")).not.toHaveLength(0)
 
     view.run("eliminar")
@@ -212,8 +212,8 @@ describe("SyllabusProcessActions", () => {
     view.run("eliminar")
     await flush()
     await type("#process-delete-message", "Mensaje")
-    await type("#process-delete-confirm", "eliminar convocatoria")
-    fireEvent.click(buttonWith(view, "Eliminar convocatoria")!)
+    await type("#process-delete-confirm", "eliminar periodo")
+    fireEvent.click(buttonWith(view, "Eliminar periodo académico")!)
     await flush()
 
     expect(dialog(view).textContent).toContain("El mensaje no puede pasar de 1000 caracteres")
@@ -227,14 +227,14 @@ describe("SyllabusProcessActions", () => {
     view.run("eliminar")
     await flush()
     await type("#process-delete-message", "Mensaje")
-    await type("#process-delete-confirm", "eliminar convocatoria")
+    await type("#process-delete-confirm", "eliminar periodo")
 
     expect(dialog(view).textContent).toContain("No se pudo saber cuántos sílabos se borran")
-    expect(buttonWith(view, "Eliminar convocatoria")!.disabled).toBe(true)
+    expect(buttonWith(view, "Eliminar periodo académico")!.disabled).toBe(true)
   })
 
-  it("finaliza la convocatoria tras ver lo que queda sin aprobar y escribir la frase", async () => {
-    vi.mocked(transitionProcess).mockResolvedValue({ message: "Convocatoria cerrada." })
+  it("finaliza el periodo académico tras ver lo que queda sin aprobar y escribir la frase", async () => {
+    vi.mocked(transitionProcess).mockResolvedValue({ message: "Periodo académico cerrado." })
     const view = mountActions(openProcess())
 
     expect(menuItems(view).some((item) => item.textContent?.includes("Cerrar"))).toBe(false)
@@ -245,10 +245,10 @@ describe("SyllabusProcessActions", () => {
 
     expect(getProcessImpact).toHaveBeenCalledWith("process-1")
     const text = dialog(view).textContent
-    expect(text).toContain("Finalizar la convocatoria")
+    expect(text).toContain("Finalizar el periodo académico")
     expect(text).toContain("ya no se editan, envían, revisan ni firman")
     expect(text).toContain("un cambio de docente no los borra")
-    expect(text).toContain("Puede volver a abrirla con una prórroga mientras no hayan terminado las clases")
+    expect(text).toContain("Puede volver a abrirlo con una prórroga mientras no hayan terminado las clases")
     expect(text).not.toContain("no se deshace")
     expect(text).toContain("Lo que no esté aprobado quedará solo para consulta")
     expect([...dialog(view).querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual(["Sin iniciar12", "Borrador3", "En revisión5", "Total20"])
@@ -256,16 +256,16 @@ describe("SyllabusProcessActions", () => {
     const confirm = (): HTMLButtonElement => view.container.querySelector<HTMLButtonElement>('[data-dialog] button[type="submit"]')!
     expect(confirm().textContent).toContain("Finalizar")
     expect(confirm().disabled).toBe(true)
-    await type("#process-transition-confirm", "Cerrar convocatoria")
+    await type("#process-transition-confirm", "Cerrar periodo")
     expect(confirm().disabled).toBe(true)
     await submitDialog(view)
     expect(transitionProcess).not.toHaveBeenCalled()
-    await type("#process-transition-confirm", "Finalizar convocatoria")
+    await type("#process-transition-confirm", "Finalizar periodo")
     expect(confirm().disabled).toBe(false)
     await submitDialog(view)
 
     expect(transitionProcess).toHaveBeenCalledWith("process-1", "cerrar", undefined)
-    expect(view.onCompleted.mock.calls).toEqual([["Convocatoria cerrada."]])
+    expect(view.onCompleted.mock.calls).toEqual([["Periodo académico cerrado."]])
   })
 
   it("con todo aprobado lo dice al finalizar, sin tabla", async () => {
@@ -289,7 +289,7 @@ describe("SyllabusProcessActions", () => {
 
     view.run("cerrar")
     await flush()
-    await type("#process-transition-confirm", "finalizar convocatoria")
+    await type("#process-transition-confirm", "finalizar periodo")
 
     expect(view.container.querySelector<HTMLButtonElement>('[data-dialog] button[type="submit"]')!.disabled).toBe(true)
   })
@@ -300,24 +300,24 @@ describe("SyllabusProcessActions", () => {
 
     view.run("cerrar")
     await flush()
-    await type("#process-transition-confirm", "finalizar convocatoria")
+    await type("#process-transition-confirm", "finalizar periodo")
 
     expect(dialog(view).textContent).toContain("No se pudo saber cuántos sílabos quedan sin aprobar")
     expect(view.container.querySelector<HTMLButtonElement>('[data-dialog] button[type="submit"]')!.disabled).toBe(true)
   })
 
-  it("una convocatoria pausada también ofrece finalizar", () => {
+  it("un periodo académico pausado también ofrece finalizar", () => {
     const view = mountActions(pausedProcess())
     expect(menuItems(view).some((item) => item.textContent?.includes("Finalizar"))).toBe(true)
   })
 
-  it("una convocatoria cerrada no ofrece finalizar ni eliminar", () => {
+  it("un periodo académico cerrado no ofrece finalizar ni eliminar", () => {
     const view = mountActions()
     expect(menuItems(view).some((item) => item.textContent?.includes("Finalizar"))).toBe(false)
     expect(menuItems(view).some((item) => item.textContent?.includes("Eliminar"))).toBe(false)
   })
 
-  it("una convocatoria finalizada ofrece prorrogar el plazo para reabrirla", () => {
+  it("un periodo académico finalizado ofrece prorrogar el plazo para reabrirlo", () => {
     const view = mountActions()
     const extend = menuItem(view, "Prorrogar plazo")
 
@@ -328,12 +328,12 @@ describe("SyllabusProcessActions", () => {
     expect(stubs.extension!.process).toMatchObject({ id: "process-1", state: "cerrado" })
   })
 
-  it("una convocatoria finalizada que no se puede reabrir desactiva prorrogar y dice por qué", () => {
-    const view = mountActions({ ...process(), extension_block_reason: "Hay otra convocatoria en curso; finalícela o elimínela antes de reabrir esta." })
+  it("un periodo académico finalizado que no se puede reabrir desactiva prorrogar y dice por qué", () => {
+    const view = mountActions({ ...process(), extension_block_reason: "Hay otro periodo académico en curso; finalícelo o elimínelo antes de reabrir este." })
     const extend = menuItem(view, "Prorrogar plazo")
 
     expect(extend?.disabled).toBe(true)
-    expect(extend?.textContent).toContain("Hay otra convocatoria en curso; finalícela o elimínela antes de reabrir esta")
+    expect(extend?.textContent).toContain("Hay otro periodo académico en curso; finalícelo o elimínelo antes de reabrir este")
     expect(extend?.textContent).not.toContain("reabrir esta.")
   })
 
@@ -343,7 +343,7 @@ describe("SyllabusProcessActions", () => {
 
     view.run("prorrogar")
     await act(async () => {
-      stubs.extension!.onSaved?.("Plazo prorrogado. La convocatoria se volvió a abrir.")
+      stubs.extension!.onSaved?.("Plazo prorrogado. El periodo académico se volvió a abrir.")
       await Promise.resolve()
     })
 
@@ -351,7 +351,7 @@ describe("SyllabusProcessActions", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DIALOG_EXIT_MS)
     })
-    expect(view.onCompleted.mock.calls).toEqual([["Plazo prorrogado. La convocatoria se volvió a abrir."]])
+    expect(view.onCompleted.mock.calls).toEqual([["Plazo prorrogado. El periodo académico se volvió a abrir."]])
   })
 
   it("ofrece prorrogar mientras queden prórrogas", () => {
@@ -361,14 +361,14 @@ describe("SyllabusProcessActions", () => {
   })
 
   it("sin prórrogas disponibles desactiva prorrogar y dice por qué", () => {
-    const view = mountActions({ ...openProcess(), extensions_used: 2, extension_block_reason: "Ya se usaron las 2 prórrogas de esta convocatoria." })
+    const view = mountActions({ ...openProcess(), extensions_used: 2, extension_block_reason: "Ya se usaron las 2 prórrogas de este periodo académico." })
     const extend = menuItem(view, "Prorrogar plazo")
 
     expect(extend?.disabled).toBe(true)
-    expect(extend?.textContent).toContain("Ya se usaron las 2 prórrogas de esta convocatoria")
+    expect(extend?.textContent).toContain("Ya se usaron las 2 prórrogas de este periodo académico")
   })
 
-  it("una convocatoria en curso ofrece eliminar aunque tenga sílabos enviados", () => {
+  it("un periodo académico en curso ofrece eliminar aunque tenga sílabos enviados", () => {
     const view = mountActions(openProcess())
 
     expect(menuItems(view).some((item) => item.textContent?.includes("Eliminar"))).toBe(true)

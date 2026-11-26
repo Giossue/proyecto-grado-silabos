@@ -7,7 +7,7 @@ describe("CurriculumActions", () => {
   it("deshabilita la configuración mientras la malla está bloqueada", () => {
     const onConfigure = vi.fn()
     renderWithProviders(
-      <CurriculumActions curriculum={{ id: "curriculum-1", cycle_count: 8, editable: true, lock_reason: "Convocatoria activa" }} onConfigure={onConfigure} />,
+      <CurriculumActions curriculum={{ id: "curriculum-1", cycle_count: 8, editable: true, lock_reason: "Periodo académico activo" }} onConfigure={onConfigure} />,
     )
 
     const button = screen.getByRole("button", { name: "Configurar ciclos" })

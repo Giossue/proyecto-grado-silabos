@@ -160,7 +160,7 @@ describe("navegación por ámbito activo", () => {
   })
 
   it.each([
-    ["administrador", "/coordinacion/malla", "/admin/convocatorias"],
+    ["administrador", "/coordinacion/malla", "/admin/periodos"],
     ["coordinador", "/admin/usuarios", "/coordinacion/revisiones"],
     ["docente", "/admin/plantilla", "/docente/mis-silabos"],
     ["docente", "/biblioteca/revisiones", "/docente/mis-silabos"],
@@ -224,6 +224,6 @@ describe("navegación por ámbito activo", () => {
   it("lleva las direcciones antiguas del rol a su pantalla", async () => {
     await push("/admin/panel")
 
-    expect(navigation.fullPath).toBe("/admin/convocatorias")
+    expect(navigation.fullPath).toBe("/admin/periodos")
   })
 })

@@ -117,7 +117,7 @@ export async function deleteGovernanceRecord(
     async (tx) => {
       const period = await tx.lockPeriod(recordId)
       if (period === null) throw new Missing(MODELS.period, recordId)
-      if (await tx.periodHasProcess(period.id)) rejectWith("Este período ya tiene una convocatoria con su historial, por eso no se puede eliminar.")
+      if (await tx.periodHasProcess(period.id)) rejectWith("Este periodo ya se abrió y tiene historial, por eso no se puede eliminar.")
       await tx.deletePeriod(period.id)
     },
     "Registro institucional eliminado.",

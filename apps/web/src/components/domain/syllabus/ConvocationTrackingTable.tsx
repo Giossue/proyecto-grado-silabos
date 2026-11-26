@@ -44,7 +44,7 @@ export function ConvocationTrackingTable({ convocationId }: { convocationId: str
   const router = useRouter()
   const query = useQuery({ ...convocationQuery(convocationId ?? ""), enabled: convocationId !== null })
   const data = convocationId !== null ? (query.data ?? null) : null
-  const error = convocationId !== null ? queryErrorMessage(query, "No se pudo cargar el seguimiento de la convocatoria") : null
+  const error = convocationId !== null ? queryErrorMessage(query, "No se pudo cargar el seguimiento del periodo académico") : null
   const loading = convocationId !== null && data === null && error === null
   const scope = convocationId ?? "none"
 
@@ -94,7 +94,7 @@ export function ConvocationTrackingTable({ convocationId }: { convocationId: str
         }
       />
 
-      <Table label="Seguimiento de la convocatoria">
+      <Table label="Seguimiento del periodo académico">
         <TableHeader>
           <TableRow>
             <SortableHead sort={sort} column="subject">Asignatura</SortableHead>
@@ -105,7 +105,7 @@ export function ConvocationTrackingTable({ convocationId }: { convocationId: str
         <TableBody>
           {page.length === 0 ? (
             <TableEmpty colSpan={3}>
-              {filter.active ? "Ningún expediente coincide con los filtros" : convocationId === null ? "Aún no hay convocatoria abierta en su carrera" : "Los expedientes aparecerán después de abrir la convocatoria"}
+              {filter.active ? "Ningún expediente coincide con los filtros" : convocationId === null ? "Aún no hay periodo académico abierto en su carrera" : "Los expedientes aparecerán después de abrir el periodo académico"}
             </TableEmpty>
           ) : (
             page.map((syllabus) => (
@@ -146,7 +146,7 @@ export function ConvocationTrackingTable({ convocationId }: { convocationId: str
         </TableBody>
       </Table>
       <SortStatus sort={sort} />
-      <TablePagination meta={meta} label="Paginación del seguimiento de convocatoria" onPageChange={setPage} />
+      <TablePagination meta={meta} label="Paginación del seguimiento del periodo académico" onPageChange={setPage} />
     </div>
   )
 }

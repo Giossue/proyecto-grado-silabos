@@ -26,7 +26,7 @@ export const paths = {
     academic: '/admin/estructura-academica',
     academicWithSection: (section: string): string =>
       `/admin/estructura-academica?seccion=${encodeURIComponent(section)}`,
-    convocations: '/admin/convocatorias',
+    convocations: '/admin/periodos',
     template: '/admin/plantilla',
     profile: '/admin/configuracion/perfil',
     security: '/admin/configuracion/seguridad',
@@ -197,7 +197,7 @@ export const routeRegistry: readonly RouteDefinition[] = [
   { name: 'admin-users', path: paths.admin.users, component: 'AdminUsersPage', breadcrumb: 'Usuarios y roles', ...admin },
   { name: 'admin-academic', path: paths.admin.academic, component: 'AcademicGovernancePage', breadcrumb: 'Facultades y carreras', ...admin },
   { name: 'admin-academic-section', path: '/admin/estructura-academica/:section', component: 'AcademicGovernancePage', breadcrumb: 'Facultades y carreras', ...admin },
-  { name: 'admin-convocations', path: paths.admin.convocations, component: 'AdminProcessesPage', breadcrumb: 'Convocatorias', ...admin },
+  { name: 'admin-convocations', path: paths.admin.convocations, component: 'AdminProcessesPage', breadcrumb: 'Periodos académicos', ...admin },
   { name: 'admin-template', path: paths.admin.template, component: 'AdminTemplatePage', states: ['indice', 'lectura', 'edicion'], breadcrumb: 'Plantilla', ...admin },
   { name: 'admin-profile', path: paths.admin.profile, component: 'ProfilePage', shortcut: 'profile', ...admin },
   { name: 'admin-security', path: paths.admin.security, component: 'SecurityPage', shortcut: 'security', ...admin },

@@ -106,28 +106,28 @@ describe("TeacherSyllabiPage", () => {
     expect(container.querySelector('[aria-label="Paginación de mis sílabos"]')).not.toBeNull()
   })
 
-  it("sin convocatoria abierta explica por qué no hay sílabos", async () => {
+  it("sin periodo académico abierto explica por qué no hay sílabos", async () => {
     const empty = { ...syllabi.syllabi, data: [], total: 0, from: null, to: null }
     vi.mocked(getTeacherSyllabi).mockResolvedValue({ ...syllabi, syllabi: empty, convocation_open: false })
     const closed = await mountPage()
-    expect(closed.container.textContent).toContain("Todavía no hay una convocatoria abierta")
+    expect(closed.container.textContent).toContain("Todavía no hay un periodo académico abierto")
     expect(closed.container.textContent).not.toContain("No tiene sílabos asignados")
     closed.unmount()
 
     vi.mocked(getTeacherSyllabi).mockResolvedValue({ ...syllabi, syllabi: empty, convocation_open: true })
     const open = await mountPage()
     expect(open.container.textContent).toContain("No tiene sílabos asignados")
-    expect(open.container.textContent).not.toContain("Todavía no hay una convocatoria abierta")
+    expect(open.container.textContent).not.toContain("Todavía no hay un periodo académico abierto")
   })
 
-  it("con la convocatoria en pausa y sin sílabos dice que no tiene sílabos asignados", async () => {
+  it("con el periodo académico en pausa y sin sílabos dice que no tiene sílabos asignados", async () => {
     deadline.value = { state: "paused" } as DashboardDeadline
     vi.mocked(getTeacherSyllabi).mockResolvedValue({ ...syllabi, syllabi: { ...syllabi.syllabi, data: [], total: 0, from: null, to: null }, convocation_open: false })
     const { container } = await mountPage()
 
     expect(container.textContent).toContain("No tiene sílabos asignados")
     expect(container.textContent).not.toContain("Cuando se reanude")
-    expect(container.textContent).not.toContain("Todavía no hay una convocatoria abierta")
+    expect(container.textContent).not.toContain("Todavía no hay un periodo académico abierto")
   })
 
   it("vuelve a pedir los sílabos al filtrar", async () => {

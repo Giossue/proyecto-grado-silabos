@@ -153,7 +153,7 @@ export function NotificationsSheet() {
           <div className="flex items-center justify-between gap-2 border-b px-6 py-4">
             <div className="flex min-w-0 flex-col gap-0.5">
               <SheetTitle className="text-lg font-semibold">Notificaciones</SheetTitle>
-              <SheetDescription>Avisos sobre sus sílabos y convocatorias</SheetDescription>
+              <SheetDescription>Avisos sobre sus sílabos y periodos académicos</SheetDescription>
             </div>
             <TooltipProvider delayDuration={150}>
               <div className="flex items-center gap-1">

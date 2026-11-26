@@ -8,7 +8,7 @@ import { flush } from "@/test/render"
 vi.mock("@/api/convocations", () => ({ createConvocation: vi.fn() }))
 
 const submitButton = (): HTMLButtonElement | undefined =>
-  Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')).find((button) => button.textContent?.includes("Abrir convocatoria"))
+  Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')).find((button) => button.textContent?.includes("Abrir periodo académico"))
 
 const PROCESS_ID = "01a1c5ba-2222-7000-8000-999999999999"
 
@@ -16,7 +16,7 @@ describe("ConvocationOpeningDialog", () => {
   beforeEach(() => {
     document.body.innerHTML = ""
     vi.mocked(createConvocation).mockReset()
-    vi.mocked(createConvocation).mockResolvedValue({ message: "Convocatoria iniciada", convocation_id: "convocation-1" })
+    vi.mocked(createConvocation).mockResolvedValue({ message: "Periodo académico iniciado", convocation_id: "convocation-1" })
   })
 
   it("abre con el proceso institucional y los datos confirmados sin requerir fuentes", async () => {
@@ -33,7 +33,7 @@ describe("ConvocationOpeningDialog", () => {
     await flush()
 
     expect(createConvocation).toHaveBeenCalledWith(PROCESS_ID)
-    expect(onOpened.mock.calls).toEqual([["Convocatoria iniciada", "convocation-1"]])
+    expect(onOpened.mock.calls).toEqual([["Periodo académico iniciado", "convocation-1"]])
     expect(onOpenChange.mock.calls).toContainEqual([false])
     unmount()
   })

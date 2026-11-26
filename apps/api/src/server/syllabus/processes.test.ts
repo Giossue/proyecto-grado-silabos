@@ -173,11 +173,11 @@ describe("GET /api/v1/admin/processes", () => {
       rows = [process(row)]
       return (JSON.parse((await send((request) => syllabusProcesses(request, deps()), "/api/v1/admin/processes")).text).processes[0] as { extension_block_reason: unknown }).extension_block_reason
     }
-    expect(await reasons({ extensions: 2 })).toBe("Ya se usaron las 2 prórrogas de esta convocatoria.")
+    expect(await reasons({ extensions: 2 })).toBe("Ya se usaron las 2 prórrogas de este periodo académico.")
     expect(await reasons({ dueOn: "2027-03-20" })).toBe("El plazo ya llega al último día de clases (20/03/2027).")
     rows = [process({ state: "cerrado" }), process({ id: CLOSED, state: "pausado" })]
     const blocked = JSON.parse((await send((request) => syllabusProcesses(request, deps()), "/api/v1/admin/processes")).text)
-    expect(blocked.processes[0].extension_block_reason).toBe("Hay otra convocatoria en curso; finalícela o elimínela antes de reabrir esta")
+    expect(blocked.processes[0].extension_block_reason).toBe("Hay otro periodo académico en curso; finalícelo o elimínelo antes de reabrir este")
     expect(blocked.active_process).toEqual({ name: "2026-2", period: "2026-2", state: "pausado" })
     const template = goldenTemplate()
     template.sections[0].blocks[0].fields = []
@@ -247,7 +247,7 @@ describe("POST /api/v1/admin/processes", () => {
 
   it("opens the institutional process with whole institution days", async () => {
     const response = await store(payload())
-    expect(response).toMatchObject({ status: 201, text: '{"message":"Convocatoria institucional abierta. Las coordinaciones ya pueden iniciar sus convocatorias."}' })
+    expect(response).toMatchObject({ status: 201, text: '{"message":"Periodo académico abierto. Cada coordinación ya puede abrir el de su carrera."}' })
     expect(created).toEqual([{ periodId: PERIOD, startsAt: "2026-11-24T05:00:00+00:00", dueAt: "2026-12-16T04:59:59+00:00" }])
     expect(log).toEqual(["begin", "lock:in-progress", "create", "commit"])
   })
@@ -296,8 +296,8 @@ describe("POST /api/v1/admin/processes", () => {
   it("does not open without a usable template, active careers or an active coordination for each", async () => {
     templates.template = null
     expect((await store(payload())).json).toEqual({
-      message: "La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir la convocatoria.",
-      errors: { process: ["La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir la convocatoria."] },
+      message: "La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir el periodo académico.",
+      errors: { process: ["La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir el periodo académico."] },
     })
     templates.template = officialTemplate()
     templates.template.sections = templates.template.sections.filter((section) => section.key !== "revision")
@@ -315,11 +315,11 @@ describe("POST /api/v1/admin/processes", () => {
   it("keeps a single process in progress and one process per period", async () => {
     inProgress = { id: PROCESS, period: "2026-2" }
     expect((await store(payload())).json?.errors).toEqual({
-      process: ["La convocatoria «2026-2» sigue vigente. Finalícela o elimínela antes de abrir otra convocatoria institucional."],
+      process: ["El periodo académico «2026-2» sigue vigente. Finalícelo o elimínelo antes de abrir otro."],
     })
     inProgress = null
     periodsWithProcess.add(PERIOD)
-    expect((await store(payload())).json?.errors).toEqual({ period_id: ["Ya existe una convocatoria institucional para este período académico."] })
+    expect((await store(payload())).json?.errors).toEqual({ period_id: ["Este periodo académico ya se abrió."] })
     expect(created).toEqual([])
     expect(log.filter((entry) => entry === "rollback")).toHaveLength(2)
   })

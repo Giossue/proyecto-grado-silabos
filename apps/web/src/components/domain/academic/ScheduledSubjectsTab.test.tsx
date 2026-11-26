@@ -125,8 +125,8 @@ describe("ScheduledSubjectsTab", () => {
     expect(document.body.querySelector(".parallel-sheet")?.textContent).toBe("Bases de Datos")
   })
 
-  it("abre la hoja aunque la convocatoria esté abierta: paralelos y docentes no se bloquean", async () => {
-    mountTab({ ...data, career: { ...data.career, lock_reason: "Convocatoria activa" } })
+  it("abre la hoja aunque el periodo académico esté abierto: paralelos y docentes no se bloquean", async () => {
+    mountTab({ ...data, career: { ...data.career, lock_reason: "Periodo académico activo" } })
     fireEvent.click(rowOf("Bases de Datos").querySelectorAll("td")[1]!)
     await flush()
     expect(document.body.querySelector(".parallel-sheet")).not.toBeNull()

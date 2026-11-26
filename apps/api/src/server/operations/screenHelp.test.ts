@@ -33,7 +33,7 @@ describe("screen help", () => {
   it("keeps the help texts in code with the screens the Laravel test lists", () => {
     const screens = Object.keys(HELP)
     expect(screens.length).toBeGreaterThanOrEqual(30)
-    for (const screen of ["/admin/convocatorias", "/admin/configuracion/sistema", "/docente/mis-silabos/:syllabus", "/coordinacion/revisiones/:revision/historial", "/biblioteca/historial", "/coordinacion/historial"]) {
+    for (const screen of ["/admin/periodos", "/admin/configuracion/sistema", "/docente/mis-silabos/:syllabus", "/coordinacion/revisiones/:revision/historial", "/biblioteca/historial", "/coordinacion/historial"]) {
       expect(screens).toContain(screen)
     }
     for (const screen of ["/admin/ayuda", "/docente/panel", "/biblioteca/panel", "/coordinacion/panel"]) expect(screens).not.toContain(screen)

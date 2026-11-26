@@ -227,13 +227,13 @@ test.describe("administration: careers import", () => {
 
 test.describe.serial("administration: convocations, settings and template", () => {
   test("admin opens the impact view, pauses and resumes the convocation", async ({ page, issues }) => {
-    await page.goto("/admin/convocatorias")
+    await page.goto("/admin/periodos")
     const row = rowNamed(page, /\S/, "button").first()
-    const options = page.getByRole("dialog", { name: /^Convocatoria / })
+    const options = page.getByRole("dialog", { name: /^Periodo académico / })
 
     await row.getByRole("button").click()
     await options.getByRole("button", { name: /^Finalizar/ }).click()
-    const finalize = page.getByRole("dialog", { name: "Finalizar la convocatoria" })
+    const finalize = page.getByRole("dialog", { name: "Finalizar el periodo académico" })
     await expect(finalize.getByRole("table").first()).toBeVisible()
     await finalize.getByRole("button", { name: "Cancelar" }).click()
     await expect(finalize).toBeHidden()
@@ -241,7 +241,7 @@ test.describe.serial("administration: convocations, settings and template", () =
     for (const [action, state] of [["Pausar", /Pausad/], ["Reanudar", /Abiert/]] as const) {
       if (!(await options.isVisible())) await row.getByRole("button").click()
       await options.getByRole("button", { name: new RegExp(`^${action}`) }).click()
-      const dialog = page.getByRole("dialog", { name: `${action} la convocatoria` })
+      const dialog = page.getByRole("dialog", { name: `${action} el periodo académico` })
       await dialog.getByRole("button", { name: action, exact: true }).click()
       await expect(dialog).toBeHidden()
       await expect(row).toContainText(state)
@@ -256,9 +256,9 @@ test.describe.serial("administration: convocations, settings and template", () =
     try {
       await query("update convocatorias_universidad set cantidad_prorrogas = 0 where finalizada_en is null")
       const [before] = await query<{ due: Date }>("select fecha_entrega as due from convocatorias_universidad where finalizada_en is null order by fecha_inicio desc limit 1")
-      await page.goto("/admin/convocatorias")
+      await page.goto("/admin/periodos")
       await rowNamed(page, /\S/, "button").first().getByRole("button").click()
-      await page.getByRole("dialog", { name: /^Convocatoria / }).getByRole("button", { name: /^Prorrogar plazo/ }).click()
+      await page.getByRole("dialog", { name: /^Periodo académico / }).getByRole("button", { name: /^Prorrogar plazo/ }).click()
       const dialog = page.getByRole("dialog", { name: "Prorrogar el plazo de entrega" })
       await dialog.locator("#extension-due").click()
       const next = new Date(before!.due.getTime() + 2 * 86_400_000)
@@ -303,7 +303,7 @@ test.describe.serial("administration: convocations, settings and template", () =
     await expect(page.getByRole("heading", { name: "11. Bibliografía" })).toBeVisible()
     await expect(page.getByRole("button", { name: "Editar" })).toBeDisabled()
     await page.getByRole("button", { name: "¿Por qué?" }).click()
-    await expect(page.getByRole("dialog").filter({ hasText: "No puede editar la plantilla mientras siga abierta" })).toBeVisible()
+    await expect(page.getByRole("dialog").filter({ hasText: "No puede editar la plantilla mientras siga abierto" })).toBeVisible()
     await page.keyboard.press("Escape")
     await page.getByRole("button", { name: "Ver como docente" }).click()
     await expect(page.getByRole("button", { name: "Ver como docente" })).toHaveAttribute("aria-pressed", "true")

@@ -145,7 +145,7 @@ describe("CurriculumCanvas", () => {
     expect(nodes().some((item) => item.id === "add-subject-1")).toBe(true)
     expect(node("a").data.editable).toBe(true)
 
-    view.rerender(<CurriculumCanvas {...baseProps({ editing: true, curriculum: { id: "career", cycle_count: 1, editable: false, lock_reason: "Convocatoria activa" }, subjects: [subject("a", 0)] })} />)
+    view.rerender(<CurriculumCanvas {...baseProps({ editing: true, curriculum: { id: "career", cycle_count: 1, editable: false, lock_reason: "Periodo académico activo" }, subjects: [subject("a", 0)] })} />)
     expect(nodes().some((item) => item.id === "add-subject-1")).toBe(false)
     expect(node("a").data.editable).toBe(false)
   })

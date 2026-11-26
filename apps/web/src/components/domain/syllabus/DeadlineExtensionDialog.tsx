@@ -91,7 +91,7 @@ export function DeadlineExtensionDialog({ process, display = "button", open, onO
       triggerLabel="Prorrogar plazo"
       showTrigger={display !== "menu"}
       title="Prorrogar el plazo de entrega"
-      description="Mueve la fecha límite de entrega hacia adelante para todas las convocatorias"
+      description="Mueve la fecha límite de entrega hacia adelante para todas los periodos académicos"
       trigger={<Button variant="outline">Prorrogar plazo</Button>}
     >
       {({ close }) => (
@@ -101,7 +101,7 @@ export function DeadlineExtensionDialog({ process, display = "button", open, onO
             {finalized ? (
               <Alert>
                 <RefreshCcw aria-hidden="true" />
-                <AlertDescription>Al prorrogar, la convocatoria se vuelve a abrir con la nueva fecha</AlertDescription>
+                <AlertDescription>Al prorrogar, el periodo académico se vuelve a abrir con la nueva fecha</AlertDescription>
               </Alert>
             ) : null}
             <Field data-invalid={errors.due_at !== undefined}>
@@ -116,14 +116,14 @@ export function DeadlineExtensionDialog({ process, display = "button", open, onO
             {templateImpact ? (
               <>
                 <p className="text-sm">
-                  La plantilla cambió después de finalizar la convocatoria. Al reabrirla, los sílabos de este período se adaptan a la plantilla nueva: se conserva lo escrito en los campos que siguen encajando y los enviados o aprobados vuelven a borrador, sin su historial ni sus firmas
+                  La plantilla cambió después de finalizar el periodo académico. Al reabrirlo, sus sílabos se adaptan a la plantilla nueva: se conserva lo escrito en los campos que siguen encajando y los enviados o aprobados vuelven a borrador, sin su historial ni sus firmas
                 </p>
                 <SyllabusStateCountsTable counts={templateImpact} caption="Cantidad de sílabos que se adaptan, por estado" />
               </>
             ) : null}
             {pendingImpact ? (
               <>
-                <p className="text-sm">Mientras la convocatoria estuvo finalizada hubo cambios que ahora llegan a sus sílabos. Los demás se ponen al día sin cambiar de estado</p>
+                <p className="text-sm">Mientras el periodo académico estuvo finalizado hubo cambios que ahora llegan a sus sílabos. Los demás se ponen al día sin cambiar de estado</p>
                 <ul className="flex flex-col gap-1 text-sm">
                   {pendingLines.map((line) => (
                     <li key={line.label} className="flex justify-between gap-4">

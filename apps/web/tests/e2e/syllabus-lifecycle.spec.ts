@@ -290,7 +290,7 @@ test.describe.serial("syllabus lifecycle", () => {
     }
 
     await page.goto("/coordinacion/revisiones?tab=seguimiento")
-    await rowNamed(page.getByRole("table", { name: "Seguimiento de la convocatoria" }), subject)
+    await rowNamed(page.getByRole("table", { name: "Seguimiento del periodo académico" }), subject)
       .filter({ hasNot: page.getByText("Paralelo A", { exact: true }) })
       .filter({ hasText: "Aprobado" })
       .first()

@@ -53,13 +53,13 @@ function isCoordinatorOf(session: AppSession, careerId: string | null): boolean 
 
 const PROCESS_NOT_OPEN: Record<string, string> = {
   pausado: "El proceso institucional está en pausa. Podrá abrir cuando Administración lo reanude.",
-  cerrado: "El proceso institucional ya se cerró. Prepare la convocatoria sobre un proceso vigente.",
+  cerrado: "El proceso institucional ya se cerró. Prepare el periodo académico sobre un proceso vigente.",
 }
 
 async function openConvocation(tx: ConvocationWriteTx, convocationId: string): Promise<void> {
   const convocation = await tx.lockConvocation(convocationId)
   if (convocation === null) throw new Missing(MODELS.convocation, convocationId)
-  if (convocation.state !== "preparacion") reject({ convocation: ["Solo una convocatoria en preparación puede abrirse."] })
+  if (convocation.state !== "preparacion") reject({ convocation: ["Solo un periodo académico en preparación puede abrirse."] })
   if (convocation.processState !== "abierto") {
     reject({ convocation: [PROCESS_NOT_OPEN[convocation.processState] ?? "El proceso institucional todavía no se abre. Podrá abrir cuando Administración lo inicie."] })
   }
@@ -69,7 +69,7 @@ async function openConvocation(tx: ConvocationWriteTx, convocationId: string): P
   if (problem !== null) reject({ convocation: [problem] })
   await tx.generateConvocation(convocation.id)
   await tx.updateState(convocation.id, "abierta")
-  const message = `Se abrió la convocatoria de ${convocation.careerLabel}; la entrega vence el ${notificationDate(convocation.dueAt)}.`
+  const message = `Se abrió el periodo académico de ${convocation.careerLabel}; la entrega vence el ${notificationDate(convocation.dueAt)}.`
   for (const [teacherId, count] of await tx.teacherSyllabusCounts([convocation.id])) {
     await storeInternalNotifications(tx.notifications, {
       eventType: "convocatoria.abierta",
@@ -101,13 +101,13 @@ export async function createConvocationFor(request: Request, session: AppSession
     const id = await deps.transaction(async (tx) => {
       const process = await tx.lockProcess(processId)
       if (process === null) throw new Missing(MODELS.process, processId)
-      if (process.state !== "abierto") reject({ process_id: ["La convocatoria institucional todavía no está abierta."] })
-      if (await tx.careerHasConvocation(careerId, process.id)) reject({ process_id: ["Esta carrera ya tiene una convocatoria para el período institucional."] })
+      if (process.state !== "abierto") reject({ process_id: ["El periodo académico todavía no está abierto."] })
+      if (await tx.careerHasConvocation(careerId, process.id)) reject({ process_id: ["Esta carrera ya abrió este periodo académico."] })
       const convocationId = await tx.createConvocation(careerId, process.id)
       await openConvocation(tx, convocationId)
       return convocationId
     })
-    return apiJson({ message: "Convocatoria iniciada: se generó un sílabo por cada paralelo.", convocation_id: id }, 201)
+    return apiJson({ message: "Periodo académico iniciado: se generó un sílabo por cada paralelo.", convocation_id: id }, 201)
   })
 }
 
@@ -123,7 +123,7 @@ export async function notifyConvocationResumed(tx: Pick<ConvocationWriteTx, "not
       eventType: "convocatoria.reanudada",
       deduplicationKey: `convocatoria.reanudada:${convocation.id}:${teacherId}:${at}`,
       recipientIds: [teacherId],
-      title: "Se reanudó la convocatoria",
+      title: "Se reanudó el periodo académico",
       message: `Ya puede seguir con sus sílabos de ${convocation.careerLabel}.`,
       resourceType: "convocatoria",
       resourceId: convocation.id,
@@ -151,14 +151,14 @@ export async function resumeConvocationFor(request: Request, session: AppSession
     await deps.transaction(async (tx) => {
       const locked = await tx.lockConvocation(convocation.id)
       if (locked === null) throw new Missing(MODELS.convocation, convocation.id)
-      if (locked.state !== "pausada") reject({ convocation: ["Solo una convocatoria pausada puede reanudarse."] })
+      if (locked.state !== "pausada") reject({ convocation: ["Solo un periodo académico pausado puede reanudarse."] })
       if (locked.processState !== "abierto") {
-        reject({ convocation: ["El proceso institucional no está abierto; la convocatoria se reanudará cuando Administración lo reanude."] })
+        reject({ convocation: ["El proceso institucional no está abierto; el periodo académico se reanudará cuando Administración lo reanude."] })
       }
       await tx.generateConvocation(locked.id)
       await tx.updateState(locked.id, "abierta")
       await notifyConvocationResumed(tx, locked, timestampMs(deps.nowMs()))
     })
-    return apiJson({ message: "Convocatoria reanudada. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla queda protegida." })
+    return apiJson({ message: "Periodo académico reanudado. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla queda protegida." })
   })
 }

@@ -1,5 +1,5 @@
-import AdminProcessesPage from "@/app/(shell)/admin/convocatorias/AdminProcessesPage"
+import { redirect } from "next/navigation"
 
 export default function Page() {
-  return <AdminProcessesPage />
+  redirect("/admin/periodos")
 }

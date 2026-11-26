@@ -14,7 +14,7 @@ import { PhpInput, WebRequest } from "./web-request.decorator"
 const ADMIN = "administrador"
 const SESSION = { verified: true, activeRole: "required" } as const
 const BOUND = { ...SESSION, preload: TemplatePreloader }
-const VALIDATION = { description: "Errores por campo; también «Proceso activo» mientras hay una convocatoria abierta.", type: ValidationErrorDto }
+const VALIDATION = { description: "Errores por campo; también «Proceso activo» mientras hay un periodo académico abierto.", type: ValidationErrorDto }
 const MISSING = { description: "La plantilla, la sección o el campo no existe.", type: MessageDto }
 
 @ApiTags("Plantilla")

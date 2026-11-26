@@ -441,7 +441,7 @@ describe("institutional processes served by Nest answer exactly like the route h
 
   it("deletes a process with the same purge order and notices, and rejects a closed or unconfirmed one the same way", async () => {
     const answers = await expectSame(
-      { method: "DELETE", path: `${BASE}/${OPEN}`, body: { mensaje: "  Se repite la convocatoria.  " } },
+      { method: "DELETE", path: `${BASE}/${OPEN}`, body: { mensaje: "  Se repite el periodo académico.  " } },
       { method: "DELETE", path: `${BASE}/${PAUSED}`, body: {} },
       { method: "DELETE", path: `${BASE}/${PAUSED}`, body: { mensaje: "x".repeat(1001) } },
       { method: "DELETE", path: `${BASE}/${CLOSED}`, body: { mensaje: "x" } },

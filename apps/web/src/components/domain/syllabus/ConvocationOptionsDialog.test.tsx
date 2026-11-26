@@ -68,7 +68,7 @@ describe("ConvocationOptionsDialog", () => {
     const view = mountDialog("abierto")
 
     expect(labels(view)).toEqual(["Pausar", "Prorrogar plazo", "Finalizar", "Eliminar"])
-    expect(option(view, "Pausar")!.textContent).toContain("Nadie edita, envía ni revisa hasta que la reanude")
+    expect(option(view, "Pausar")!.textContent).toContain("Nadie edita, envía ni revisa hasta que lo reanude")
     expect(option(view, "Eliminar")!.className).toContain("text-destructive")
     expect(option(view, "Pausar")!.className).not.toContain("text-destructive")
     expect(footerButtons(view).map((item) => item.textContent)).toEqual(["Cancelar"])
@@ -78,12 +78,12 @@ describe("ConvocationOptionsDialog", () => {
     expect(view.onOpenChange.mock.calls).toEqual([[false]])
   })
 
-  it("ofrece eliminar con la convocatoria abierta o pausada", () => {
+  it("ofrece eliminar con el periodo académico abierto o pausado", () => {
     expect(labels(mountDialog("abierto"))).toContain("Eliminar")
     expect(labels(mountDialog("pausado"))).toContain("Eliminar")
   })
 
-  it("una convocatoria cerrada no ofrece eliminar", () => {
+  it("un periodo académico cerrado no ofrece eliminar", () => {
     expect(labels(mountDialog("cerrado"))).not.toContain("Eliminar")
   })
 
@@ -106,11 +106,11 @@ describe("ConvocationOptionsDialog", () => {
     expect(view.container.querySelector("#option-effect-prorrogar")!.textContent).toBe("El plazo ya llega al último día de clases (01/03/2027)")
   })
 
-  it("una convocatoria cerrada no ofrece finalizar", () => {
+  it("un periodo académico cerrado no ofrece finalizar", () => {
     expect(labels(mountDialog("cerrado"))).not.toContain("Finalizar")
   })
 
-  it("una convocatoria finalizada ofrece prorrogar el plazo para reabrirla", () => {
+  it("un periodo académico finalizado ofrece prorrogar el plazo para reabrirlo", () => {
     const view = mountDialog("cerrado")
     const extend = option(view, "Prorrogar plazo")!
 
@@ -120,10 +120,10 @@ describe("ConvocationOptionsDialog", () => {
     expect(view.onAction.mock.calls).toEqual([["prorrogar"]])
   })
 
-  it("una convocatoria finalizada que no se puede reabrir desactiva prorrogar y muestra el motivo", () => {
-    const view = mountDialog("cerrado", "Hay otra convocatoria en curso; finalícela o elimínela antes de reabrir esta.")
+  it("un periodo académico finalizado que no se puede reabrir desactiva prorrogar y muestra el motivo", () => {
+    const view = mountDialog("cerrado", "Hay otro periodo académico en curso; finalícelo o elimínelo antes de reabrir este.")
 
     expect(option(view, "Prorrogar plazo")!.disabled).toBe(true)
-    expect(view.container.querySelector("#option-effect-prorrogar")!.textContent).toBe("Hay otra convocatoria en curso; finalícela o elimínela antes de reabrir esta")
+    expect(view.container.querySelector("#option-effect-prorrogar")!.textContent).toBe("Hay otro periodo académico en curso; finalícelo o elimínelo antes de reabrir este")
   })
 })

@@ -68,7 +68,7 @@ export function mayReview(session: AppSession, facts: SyllabusFacts): boolean {
   return session.user.active && session.activeRole !== null && isReviewer(session, facts)
 }
 
-const DECISIONS_CLOSED = "La convocatoria está cerrada: la revisión queda solo para consulta y no admite decisiones."
+const DECISIONS_CLOSED = "El periodo académico está cerrado: la revisión queda solo para consulta y no admite decisiones."
 
 export function convocationAllowsDecisions(state: string): boolean {
   return state === CONVOCATION_OPEN || state === CONVOCATION_PAUSED
@@ -76,7 +76,7 @@ export function convocationAllowsDecisions(state: string): boolean {
 
 export function decisionBlock(facts: Pick<SyllabusFacts, "convocationState" | "processState">): string | null {
   if (!convocationAllowsDecisions(facts.convocationState)) return DECISIONS_CLOSED
-  if (facts.convocationState === CONVOCATION_PAUSED) return "La convocatoria de la carrera está en pausa: las revisiones se retoman cuando se reanude."
-  if (facts.processState === PROCESS_PAUSED) return "Administración pausó la convocatoria institucional: las revisiones se retoman cuando se reanude."
+  if (facts.convocationState === CONVOCATION_PAUSED) return "El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude."
+  if (facts.processState === PROCESS_PAUSED) return "Administración pausó el periodo académico: las revisiones se retoman cuando se reanude."
   return null
 }

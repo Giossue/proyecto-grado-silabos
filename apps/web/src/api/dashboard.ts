@@ -32,11 +32,11 @@ export type DashboardDeadline = {
   days_until_start: number;
   days_until_due: number;
   convocation_id: string | null;
-  /** Solo en pausa: Administración pausó la convocatoria institucional o Coordinación la de su carrera. */
+  /** Solo en pausa: Administración pausó el periodo académico o Coordinación el de su carrera. */
   paused_by: 'administracion' | 'coordinacion' | null;
   /** Ya pasó el último día de clases del período. */
   classes_ended: boolean;
-  /** Coordinación: la institucional sigue, pero la convocatoria de su carrera aún no se abre. */
+  /** Coordinación: la institucional sigue, pero el periodo académico de su carrera aún no se abre. */
   career_pending: boolean;
 };
 

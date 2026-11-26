@@ -148,7 +148,7 @@ describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/configurat
 
   it("refuses while a convocation is open, answers Laravel's model 404 for another curriculum and is forbidden for a teacher", async () => {
     locked = true
-    expect((await configure({ cycle_count: 5 })).json?.errors).toEqual({ process: ["Convocatoria activa"] })
+    expect((await configure({ cycle_count: 5 })).json?.errors).toEqual({ process: ["Periodo académico activo"] })
     locked = false
     expect(await configure({ cycle_count: 5 }, "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9")).toMatchObject({ status: 404, text: '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Career] 01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"}' })
     expect(await configure({ cycle_count: 5 }, "abc")).toMatchObject({ status: 404, text: '{"message":"The route api/v1/coordination/academic/curriculum/abc/configuration could not be found."}' })

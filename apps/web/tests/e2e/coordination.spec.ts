@@ -11,13 +11,13 @@ test.use({ storageState: storageStateOf("coordinator") })
 const requirementsOf = (code: string) =>
   query("select 1 from requisitos_asignatura r join asignaturas a on a.asignatura_id = r.asignatura_id where a.codigo_asignatura = $1", [code])
 
-const pausedStatus = "La convocatoria de su carrera está en pausa"
+const pausedStatus = "El periodo académico de su carrera está en pausa"
 
 async function setConvocation(page: import("@playwright/test").Page, action: "Pausar" | "Reanudar"): Promise<void> {
   await page.goto("/coordinacion/revisiones")
-  const button = page.getByRole("button", { name: `${action} convocatoria` })
+  const button = page.getByRole("button", { name: `${action} periodo académico` })
   await button.click()
-  const dialog = page.getByRole("dialog", { name: `${action} la convocatoria` })
+  const dialog = page.getByRole("dialog", { name: `${action} el periodo académico` })
   await expect(dialog.getByRole("button", { name: "Cancelar" })).toBeVisible()
   await dialog.getByRole("button", { name: action, exact: true }).click()
   await expect(dialog).toBeHidden()
@@ -31,8 +31,8 @@ test.describe.serial("coordination", () => {
     const context = await browser.newContext({ baseURL, storageState: storageStateOf("coordinator") })
     const page = await context.newPage()
     await page.goto("/coordinacion/revisiones")
-    const pause = page.getByRole("button", { name: "Pausar convocatoria" })
-    const resume = page.getByRole("button", { name: "Reanudar convocatoria" })
+    const pause = page.getByRole("button", { name: "Pausar periodo académico" })
+    const resume = page.getByRole("button", { name: "Reanudar periodo académico" })
     await expect(pause.or(resume)).toBeVisible()
     if (await resume.isVisible()) await setConvocation(page, "Reanudar")
     await expect(pause).toBeVisible()
@@ -44,12 +44,12 @@ test.describe.serial("coordination", () => {
 
   test("pause asks for confirmation and can be cancelled", async ({ page, issues }) => {
     await page.goto("/coordinacion/revisiones")
-    await page.getByRole("button", { name: "Pausar convocatoria" }).click()
-    const dialog = page.getByRole("dialog", { name: "Pausar la convocatoria" })
+    await page.getByRole("button", { name: "Pausar periodo académico" }).click()
+    const dialog = page.getByRole("dialog", { name: "Pausar el periodo académico" })
     await expect(dialog).toContainText("Durante la pausa puede corregir la malla y los datos curriculares")
     await dialog.getByRole("button", { name: "Cancelar" }).click()
     await expect(dialog).toBeHidden()
-    await expect(page.getByRole("button", { name: "Pausar convocatoria" })).toBeVisible()
+    await expect(page.getByRole("button", { name: "Pausar periodo académico" })).toBeVisible()
     issues.expectClean()
   })
 
@@ -60,7 +60,7 @@ test.describe.serial("coordination", () => {
     await page.getByRole("button", { name: "Plazo: En pausa" }).click()
     await expect(page.getByRole("dialog").getByText(pausedStatus)).toBeVisible()
     await page.keyboard.press("Escape")
-    await expect(page.getByRole("button", { name: "Reanudar convocatoria" })).toBeVisible()
+    await expect(page.getByRole("button", { name: "Reanudar periodo académico" })).toBeVisible()
     issues.expectClean()
   })
 
@@ -234,7 +234,7 @@ test.describe.serial("coordination", () => {
   test("coordinator resumes the convocation", async ({ page, issues }) => {
     await setConvocation(page, "Reanudar")
     await expect(page.getByRole("button", { name: "Plazo: En pausa" })).toBeHidden()
-    await expect(page.getByRole("button", { name: "Pausar convocatoria" })).toBeVisible()
+    await expect(page.getByRole("button", { name: "Pausar periodo académico" })).toBeVisible()
     await page.goto("/coordinacion/malla")
     await expect(page.getByRole("button", { name: "Editar malla" })).toBeDisabled()
     issues.expectClean()

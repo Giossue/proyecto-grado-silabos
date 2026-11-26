@@ -241,7 +241,7 @@ describe("GET /api/v1/notifications/email-preferences", () => {
       '{"options":[{"type":"biblioteca.resumen_diario","label":"Resumen diario","description":"Sílabos por revisar, de lunes a viernes, solo si hay pendientes","enabled":true},' +
         '{"type":"silabo.enviado","label":"Sílabo por revisar","description":"Un docente envió un sílabo y espera la revisión de biblioteca","enabled":true},' +
         '{"type":"silabo.reenviado_biblioteca","label":"Sílabo reenviado","description":"El docente corrigió la bibliografía y la reenvió","enabled":true},' +
-        '{"type":"proceso.reanudado","label":"Convocatoria reanudada por Administración","description":"Se retoman las revisiones tras una pausa institucional","enabled":true}]}',
+        '{"type":"proceso.reanudado","label":"Periodo académico reanudado por Administración","description":"Se retoman las revisiones tras una pausa institucional","enabled":true}]}',
     )
   })
 

@@ -12,7 +12,7 @@ vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock("@/layouts/settings/Layout", () => ({ SettingsLayout: ({ children }: { children?: ReactNode }) => <div>{children}</div> }))
 
 const options = [
-  { type: "convocatoria.abierta", label: "Convocatoria abierta", description: "Tiene sílabos por elaborar", enabled: true },
+  { type: "convocatoria.abierta", label: "Periodo académico abierto", description: "Tiene sílabos por elaborar", enabled: true },
   { type: "silabo.aprobado", label: "Sílabo aprobado", description: "Su sílabo quedó aprobado, con el PDF listo", enabled: true },
 ]
 const saveButton = () => [...document.body.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === "Guardar")
@@ -27,7 +27,7 @@ describe("Configuración › Notificaciones", () => {
     renderWithProviders(<EmailPreferencesPage />)
     await flush()
 
-    expect(document.body.textContent).toContain("Convocatoria abierta")
+    expect(document.body.textContent).toContain("Periodo académico abierto")
     expect(document.body.textContent).toContain("Su sílabo quedó aprobado, con el PDF listo")
     expect(saveButton()!.disabled).toBe(true)
 

@@ -22,8 +22,8 @@ const COORDINATOR = "c1000000-0000-4000-8000-000000000001"
 const TEACHER = "a1000000-0000-4000-8000-000000000001"
 const FINGERPRINT = "cd".repeat(32)
 const STATEMENT = `silabos-ueb|silabo:${SYLLABUS}|accion:aprobacion_biblioteca|huella:${FINGERPRINT}`
-const PAUSED = "La convocatoria de la carrera está en pausa: las revisiones se retoman cuando se reanude."
-const CLOSED = "La convocatoria está cerrada: la revisión queda solo para consulta y no admite decisiones."
+const PAUSED = "El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude."
+const CLOSED = "El periodo académico está cerrado: la revisión queda solo para consulta y no admite decisiones."
 
 let world: FakeWorld
 let notices: NotificationWorld

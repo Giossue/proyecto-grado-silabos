@@ -28,7 +28,7 @@ export function CareerTeacherEditDialog({ teacher, removeDisabled, open, onOpenC
       icon: UserMinus,
       destructive: true,
       disabled: removeDisabled,
-      disabledReason: "No se puede quitar mientras la convocatoria esté en curso",
+      disabledReason: "No se puede quitar mientras el periodo académico esté en curso",
     },
   ]
   const parts = splitName(teacher.name)

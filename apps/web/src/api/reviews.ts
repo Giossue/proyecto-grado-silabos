@@ -79,7 +79,7 @@ export type ReviewDetail = {
   timeline: ReviewTimelineEvent[];
   correction_request: { justification: string | null; requested_at: string; stage?: ReviewStage; requested_by?: string | null } | null;
   decisions_allowed: boolean;
-  /** Convocatoria cerrada: la revisión queda solo para consulta. La pausa la explica la franja. */
+  /** Periodo académico cerrado: la revisión queda solo para consulta. La pausa la explica la franja. */
   convocation_closed?: boolean;
   /** Por qué no se puede decidir ahora (cerrada o en pausa), o null. */
   decision_block?: string | null;

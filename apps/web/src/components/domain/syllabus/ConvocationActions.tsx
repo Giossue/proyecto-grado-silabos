@@ -20,13 +20,13 @@ type Transition = "pausar" | "reanudar"
 
 const DIALOGS: Record<Transition, { title: string; description: string; label: string }> = {
   pausar: {
-    title: "Pausar la convocatoria",
+    title: "Pausar el periodo académico",
     description:
-      "Hasta que la reanude, los docentes de su carrera no podrán editar ni enviar, y Coordinación y Biblioteca no podrán revisar sus sílabos. Los borradores se conservan. Durante la pausa puede corregir la malla y los datos curriculares",
+      "Hasta que lo reanude, los docentes de su carrera no podrán editar ni enviar, y Coordinación y Biblioteca no podrán revisar sus sílabos. Los borradores se conservan. Durante la pausa puede corregir la malla y los datos curriculares",
     label: "Pausar",
   },
   reanudar: {
-    title: "Reanudar la convocatoria",
+    title: "Reanudar el periodo académico",
     description: "Los docentes vuelven a trabajar, los paralelos creados durante la pausa reciben su sílabo y la malla y los datos curriculares de la carrera quedan protegidos de nuevo",
     label: "Reanudar",
   },
@@ -58,7 +58,7 @@ export function ConvocationActions({ convocation, blockedReason, onChanged }: Co
       setPending(null)
       onChanged?.(result.message)
     } catch (failure) {
-      form.setError(SERVER_ERROR, { type: "server", message: errorMessage(failure, "No se pudo cambiar la convocatoria") })
+      form.setError(SERVER_ERROR, { type: "server", message: errorMessage(failure, "No se pudo cambiar el periodo académico") })
     }
   })
 
@@ -75,7 +75,7 @@ export function ConvocationActions({ convocation, blockedReason, onChanged }: Co
             <span className="inline-flex" tabIndex={0}>
               <Button type="button" disabled>
                 <Play data-icon="inline-start" aria-hidden="true" />
-                Abrir convocatoria
+                Abrir periodo académico
               </Button>
             </span>
           </TooltipTrigger>
@@ -85,17 +85,17 @@ export function ConvocationActions({ convocation, blockedReason, onChanged }: Co
     ) : convocation.convocation_id === null ? (
       <Button type="button" disabled={!convocation.can_open} onClick={() => setOpeningOpen(true)}>
         <Play data-icon="inline-start" aria-hidden="true" />
-        Abrir convocatoria
+        Abrir periodo académico
       </Button>
     ) : convocation.state === "abierta" ? (
       <Button type="button" onClick={() => select("pausar")}>
         <Pause data-icon="inline-start" aria-hidden="true" />
-        Pausar convocatoria
+        Pausar periodo académico
       </Button>
     ) : convocation.state === "pausada" ? (
       <Button type="button" disabled={!convocation.process_open} onClick={() => select("reanudar")}>
         <Play data-icon="inline-start" aria-hidden="true" />
-        Reanudar convocatoria
+        Reanudar periodo académico
       </Button>
     ) : null
 

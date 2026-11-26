@@ -149,7 +149,7 @@ export class TemplateTools {
       spec("ver_campo", "Muestra el contenido completo de un campo como HTML.", { clave: key }),
       spec("listar_presets", "Lista los contenidos listos (tablas y bloques oficiales) que se ponen en un campo con usar_preset.", {}),
       spec("listar_variables", 'Lista los datos del sistema que se insertan con <span data-variable="clave"></span>.', {}),
-      spec("ver_estado", "Indica si la convocatoria está abierta, en pausa o no hay, y qué implica cambiar la plantilla.", {}),
+      spec("ver_estado", "Indica si el periodo académico está abierto, en pausa o no hay, y qué implica cambiar la plantilla.", {}),
       spec("agregar_seccion", "Agrega una sección vacía después de otra sección y devuelve su clave. Después agréguele al menos un campo.", {
         titulo: { type: "string" },
         orientacion: orientation,
@@ -239,7 +239,7 @@ export class TemplateTools {
 
   async execute(call: AiToolCall): Promise<ToolResult> {
     if (call.arguments === null) return toolError("Los argumentos no son un objeto JSON válido.")
-    if (this.locked() && !READ_ONLY.includes(call.name)) return toolError("La convocatoria está abierta: no se pueden proponer cambios a la plantilla.")
+    if (this.locked() && !READ_ONLY.includes(call.name)) return toolError("El periodo académico está abierto: no se pueden proponer cambios a la plantilla.")
     const args = call.arguments
     const draft = this.draft
     const apply = (message: string, change: () => string) => toolOk({ ok: true, mensaje: message, clave: change() })

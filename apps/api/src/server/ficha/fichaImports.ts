@@ -50,7 +50,7 @@ export type FichaImportDeps = ImportDeps & {
 }
 
 const CAREER_MODEL = "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
-const CONVOCATION_LOCK = "Convocatoria activa"
+const CONVOCATION_LOCK = "Periodo académico activo"
 const NO_BLOCKS = { document: {}, variables: {}, blocks: {} } as unknown as TemplateDefinition
 
 const FICHA_FILE: ImportFileRules = {

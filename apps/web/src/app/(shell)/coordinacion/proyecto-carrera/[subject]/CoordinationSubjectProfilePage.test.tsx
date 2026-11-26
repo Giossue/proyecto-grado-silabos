@@ -109,8 +109,8 @@ describe("Página del proyecto de carrera de una materia", () => {
     expect(button("Guardar proyecto de carrera")).toBeDisabled()
   })
 
-  it("con la convocatoria abierta muestra el bloqueo y no deja editar ni guardar", async () => {
-    vi.mocked(getScheduledSubjects).mockResolvedValue(scheduled("Convocatoria abierta"))
+  it("con el periodo académico abierto muestra el bloqueo y no deja editar ni guardar", async () => {
+    vi.mocked(getScheduledSubjects).mockResolvedValue(scheduled("Periodo académico abierto"))
     await mountPage()
 
     expect(document.querySelector('[data-testid="process-lock"]')).not.toBeNull()

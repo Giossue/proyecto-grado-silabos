@@ -27,13 +27,13 @@ describe("ProcessLockAlert", () => {
     expect(container.textContent).toContain("Edición bloqueada")
     expect(container.textContent).not.toContain("2026-I")
     expect(container.textContent).not.toContain("30 de octubre")
-    expect(container.textContent).toContain("Pause la convocatoria de su carrera para editar")
+    expect(container.textContent).toContain("Pause el periodo académico de su carrera para editar")
     const link = screen.getByRole("link")
     expect(link.textContent).toBe("Ir a Revisión")
     expect(link.getAttribute("href")).toBe(paths.coordination.reviews)
   })
 
-  it("a Administración le habla del proceso y la envía a Convocatorias", () => {
+  it("a Administración le habla del proceso y la envía a Periodos académicos", () => {
     signIn("administrador")
     const { container } = renderWithProviders(<ProcessLockAlert lock={{ scope: "process", period: "2026-I", institutional_pause: false, delivery_on: null }} />)
 
@@ -48,14 +48,14 @@ describe("ProcessLockAlert", () => {
 
     await user.click(screen.getByRole("button", { name: "¿Por qué?" }))
 
-    expect(document.body.textContent).toContain("Administración pausó la convocatoria institucional, pero la de su carrera sigue abierta")
+    expect(document.body.textContent).toContain("Administración pausó el periodo académico, pero el de su carrera sigue abierto")
     expect(document.body.textContent).toContain("volverán a Borrador")
   })
 
   it("un aviso propio puede traer su «¿Por qué?»", async () => {
     const user = userEvent.setup()
     renderWithProviders(
-      <ProcessLockAlert banner title="Hay una convocatoria abierta" message="Si cambia algo, vuelven a Borrador" why="Se pedirá confirmación antes de cambiar" hideAction />,
+      <ProcessLockAlert banner title="Hay un periodo académico abierto" message="Si cambia algo, vuelven a Borrador" why="Se pedirá confirmación antes de cambiar" hideAction />,
     )
 
     await user.click(screen.getByRole("button", { name: "¿Por qué?" }))
@@ -64,10 +64,10 @@ describe("ProcessLockAlert", () => {
   })
 
   it("sirve también para avisos propios sin acción ni detalle", () => {
-    const { container } = renderWithProviders(<ProcessLockAlert title="Edición no disponible" message="La convocatoria está en pausa" hideAction />)
+    const { container } = renderWithProviders(<ProcessLockAlert title="Edición no disponible" message="El periodo académico está en pausa" hideAction />)
 
     expect(container.textContent).toContain("Edición no disponible")
-    expect(container.textContent).toContain("La convocatoria está en pausa")
+    expect(container.textContent).toContain("El periodo académico está en pausa")
     expect(screen.queryByRole("link")).toBeNull()
     expect(container.textContent).not.toContain("¿Por qué?")
   })

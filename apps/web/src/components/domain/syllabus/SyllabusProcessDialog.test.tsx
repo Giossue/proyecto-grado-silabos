@@ -126,7 +126,7 @@ describe("syllabus process dates", () => {
   })
 
   it("confirma la apertura solo después de escribir la frase", async () => {
-    api.createProcess.mockReset().mockResolvedValue({ message: "Convocatoria abierta." })
+    api.createProcess.mockReset().mockResolvedValue({ message: "Periodo académico abierto." })
     const { unmount } = render(<SyllabusProcessDialog open onOpenChange={vi.fn()} template={null} periods={[]} period={{ id: PERIOD_ID, codigo: "2026-2027", starts_on: "2026-09-22", ends_on: "2027-01-02" }} />)
     await flush()
     act(() => stubs.pickers.get("process-starts")!.onValueChange!("2026-10-01"))
@@ -135,13 +135,13 @@ describe("syllabus process dates", () => {
     fireEvent.submit(document.querySelector("form")!)
     await flush()
 
-    const confirm = (): HTMLButtonElement => [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].reverse().find((button) => button.textContent?.includes("Abrir convocatoria"))!
+    const confirm = (): HTMLButtonElement => [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].reverse().find((button) => button.textContent?.includes("Abrir periodo académico"))!
     expect(document.body.textContent).toContain("los sílabos parten del proyecto de carrera de cada materia")
     expect(confirm().disabled).toBe(true)
     typeConfirmation("process-open-confirm", "abrir")
     await flush()
     expect(confirm().disabled).toBe(true)
-    typeConfirmation("process-open-confirm", "Abrir convocatoria")
+    typeConfirmation("process-open-confirm", "Abrir periodo")
     await flush()
     expect(confirm().disabled).toBe(false)
     fireEvent.click(confirm())
@@ -158,13 +158,13 @@ describe("syllabus process dates", () => {
     const modal = [...container.querySelectorAll("[data-modal]")].at(-1)!
     emitOpen(modal, true)
     await flush()
-    typeConfirmation("process-open-confirm", "abrir convocatoria")
+    typeConfirmation("process-open-confirm", "abrir periodo")
     await flush()
     emitOpen(modal, false)
     await flush()
 
     expect(modal.getAttribute("data-state")).toBe("closed")
-    expect(document.body.querySelector<HTMLInputElement>("#process-open-confirm")!.value).toBe("abrir convocatoria")
+    expect(document.body.querySelector<HTMLInputElement>("#process-open-confirm")!.value).toBe("abrir periodo")
     emitOpen(modal, true)
     await flush()
     expect(document.body.querySelector<HTMLInputElement>("#process-open-confirm")!.value).toBe("")

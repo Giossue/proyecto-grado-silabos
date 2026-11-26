@@ -15,11 +15,11 @@ import { WebRequest } from "./web-input.decorator"
 const ADMINISTRATOR = "administrador"
 const BOUND = { verified: true, activeRole: "required", preload: ProcessPreloader } as const
 const VALIDATION = { description: "Errores por campo.", type: ValidationErrorDto }
-const MISSING = { description: "La convocatoria no existe.", type: MessageDto }
+const MISSING = { description: "El periodo académico no existe.", type: MessageDto }
 const ROLE_REQUIRED = { description: "Falta elegir un rol vigente.", type: MessageDto }
-const PROCESS = { name: "process", format: "uuid", description: "Convocatoria institucional." }
+const PROCESS = { name: "process", format: "uuid", description: "Periodo académico." }
 
-@ApiTags("Convocatorias institucionales")
+@ApiTags("Periodos académicos")
 @Controller("admin/processes")
 export class ProcessesController {
   constructor(@Inject(ProcessesService) private readonly processes: ProcessesService) {}
@@ -27,7 +27,7 @@ export class ProcessesController {
   @Get()
   @Authenticated({ verified: true, activeRole: "required" })
   @Roles(ADMINISTRATOR)
-  @ApiOkResponse({ description: "Convocatorias institucionales con sus prórrogas, la plantilla, los períodos y la convocatoria vigente." })
+  @ApiOkResponse({ description: "Periodos académicos con sus prórrogas, la plantilla, los períodos y el periodo académico vigente." })
   @ApiConflictResponse(ROLE_REQUIRED)
   list() {
     return this.processes.list()
@@ -37,7 +37,7 @@ export class ProcessesController {
   @Authenticated({ verified: true, activeRole: "required" })
   @Roles(ADMINISTRATOR)
   @ApiBody({ type: ProcessCreationDto })
-  @ApiCreatedResponse({ description: "Abre la convocatoria institucional del período.", type: MessageDto })
+  @ApiCreatedResponse({ description: "Abre el periodo académico.", type: MessageDto })
   @ApiUnprocessableEntityResponse(VALIDATION)
   create(@CurrentSession() session: AppSession, @Body() input: PhpArray) {
     return this.processes.create(session, input)
@@ -48,7 +48,7 @@ export class ProcessesController {
   @Roles(ADMINISTRATOR)
   @ApiParam(PROCESS)
   @ApiBody({ type: ProcessDeletionDto })
-  @ApiOkResponse({ description: "Elimina la convocatoria abierta o en pausa con sus sílabos y avisa a docentes, coordinación y biblioteca.", type: MessageDto })
+  @ApiOkResponse({ description: "Elimina el periodo académico abierto o en pausa con sus sílabos y avisa a docentes, coordinación y biblioteca.", type: MessageDto })
   @ApiNotFoundResponse(MISSING)
   @ApiUnprocessableEntityResponse(VALIDATION)
   remove(@WebRequest() original: Request, @CurrentSession() session: AppSession, @Preloaded() process: ProcessRow, @Body() input: PhpArray) {
@@ -59,7 +59,7 @@ export class ProcessesController {
   @Authenticated(BOUND)
   @Roles(ADMINISTRATOR)
   @ApiParam(PROCESS)
-  @ApiOkResponse({ description: "Sílabos de la convocatoria por estado y su total." })
+  @ApiOkResponse({ description: "Sílabos del periodo académico por estado y su total." })
   @ApiNotFoundResponse(MISSING)
   impact(@Preloaded() process: ProcessRow) {
     return this.processes.impact(process)
@@ -70,7 +70,7 @@ export class ProcessesController {
   @Roles(ADMINISTRATOR)
   @ApiParam(PROCESS)
   @ApiBody({ type: DeadlineExtensionDto })
-  @ApiOkResponse({ description: "Prorroga el plazo; si la convocatoria estaba cerrada, la vuelve a abrir.", type: MessageDto })
+  @ApiOkResponse({ description: "Prorroga el plazo; si el periodo académico estaba cerrado, lo vuelve a abrir.", type: MessageDto })
   @ApiNotFoundResponse(MISSING)
   @ApiUnprocessableEntityResponse({ description: "Errores por campo o confirmación pendiente (code: plantilla_cambiada o cambios_pendientes)." })
   extendDeadline(@WebRequest() original: Request, @CurrentSession() session: AppSession, @Preloaded() process: ProcessRow, @Body() input: PhpArray) {
@@ -82,7 +82,7 @@ export class ProcessesController {
   @Roles(ADMINISTRATOR)
   @ApiParam(PROCESS)
   @ApiBody({ type: RedoConfirmationDto })
-  @ApiOkResponse({ description: "Pausa la convocatoria abierta.", type: MessageDto })
+  @ApiOkResponse({ description: "Pausa el periodo académico abierto.", type: MessageDto })
   @ApiNotFoundResponse(MISSING)
   @ApiUnprocessableEntityResponse(VALIDATION)
   pause(@CurrentSession() session: AppSession, @Preloaded() process: ProcessRow, @Body() input: PhpArray) {
@@ -94,7 +94,7 @@ export class ProcessesController {
   @Roles(ADMINISTRATOR)
   @ApiParam(PROCESS)
   @ApiBody({ type: RedoConfirmationDto })
-  @ApiOkResponse({ description: "Reanuda la convocatoria en pausa.", type: MessageDto })
+  @ApiOkResponse({ description: "Reanuda el periodo académico en pausa.", type: MessageDto })
   @ApiNotFoundResponse(MISSING)
   @ApiUnprocessableEntityResponse({ description: "Errores por campo o confirmación pendiente (code: plantilla_cambiada)." })
   resume(@WebRequest() original: Request, @CurrentSession() session: AppSession, @Preloaded() process: ProcessRow, @Body() input: PhpArray) {
@@ -106,7 +106,7 @@ export class ProcessesController {
   @Roles(ADMINISTRATOR)
   @ApiParam(PROCESS)
   @ApiBody({ type: RedoConfirmationDto })
-  @ApiOkResponse({ description: "Cierra la convocatoria y guarda el documento de los sílabos sin enviar.", type: MessageDto })
+  @ApiOkResponse({ description: "Cierra el periodo académico y guarda el documento de los sílabos sin enviar.", type: MessageDto })
   @ApiNotFoundResponse(MISSING)
   @ApiUnprocessableEntityResponse(VALIDATION)
   close(@CurrentSession() session: AppSession, @Preloaded() process: ProcessRow, @Body() input: PhpArray) {

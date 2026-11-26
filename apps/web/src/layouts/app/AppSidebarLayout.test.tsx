@@ -57,7 +57,7 @@ describe("AppSidebarLayout", () => {
   beforeEach(() => {
     localStorage.clear()
     initializeTheme()
-    navigation.reset("/admin/convocatorias")
+    navigation.reset("/admin/periodos")
     sessionState.replace(administratorSession)
     getDeadline.mockResolvedValue({ deadline: null })
     getDashboard.mockResolvedValue({ metrics: [], setup: null, deadline: null, coordination_convocation: null })
@@ -98,7 +98,7 @@ describe("AppSidebarLayout", () => {
     const sidebar = document.querySelector<HTMLElement>('[data-sidebar="sidebar"]')!
     expect(sidebar.textContent).not.toContain("Panel")
     expect(sidebar.querySelector('[data-sidebar="header"] img')?.getAttribute("src")).toContain("logo-ueb-horizontal")
-    const current = sidebar.querySelector('a[href="/admin/convocatorias"]')!
+    const current = sidebar.querySelector('a[href="/admin/periodos"]')!
     expect(current.getAttribute("data-active")).toBe("true")
     expect(current.getAttribute("aria-current")).toBe("page")
     expect(sidebar.textContent).not.toContain("Configuración")
@@ -231,7 +231,7 @@ describe("AppSidebarLayout", () => {
     await user.click(button("Cancelar")!)
     await waitFor(() => expect(dialog()).toBeNull())
     expect(logout).not.toHaveBeenCalled()
-    expect(navigation.pathname).toBe("/admin/convocatorias")
+    expect(navigation.pathname).toBe("/admin/periodos")
 
     await openLogout()
     await user.click(button("Cerrar sesión")!)
@@ -257,7 +257,7 @@ describe("AppSidebarLayout", () => {
 
       expect(assign).toHaveBeenCalledWith("https://auth.ueb.edu.ec/auth/realms/SAC/protocol/openid-connect/logout?id_token_hint=t")
       expect(sessionState.current.value).toBeNull()
-      expect(navigation.pathname).toBe("/admin/convocatorias")
+      expect(navigation.pathname).toBe("/admin/periodos")
     } finally {
       vi.unstubAllGlobals()
     }

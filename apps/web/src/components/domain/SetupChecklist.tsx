@@ -33,14 +33,14 @@ export function SetupChecklist() {
 
   const deadlineStatus = deadlineValue?.state
   const openedDescription = deadlineStatus === "paused"
-    ? "La convocatoria está en pausa"
+    ? "El periodo académico está en pausa"
     : deadlineStatus === "closed"
-      ? "La convocatoria finalizó"
-      : "La convocatoria ya está abierta"
+      ? "El periodo académico finalizó"
+      : "El periodo académico ya está abierto"
   const complete = start?.done
     ? { title: "Todo listo", description: openedDescription }
     : !start || start.action
-      ? { title: "Todo listo", description: "Ya puede abrir la convocatoria" }
+      ? { title: "Todo listo", description: "Ya puede abrir el periodo académico" }
       : { title: "Pasos completos", description: plain(start.hint) }
   const doneCount = steps.filter((step) => step.done).length
   const signature = JSON.stringify({ setup, role, complete })
@@ -73,7 +73,7 @@ export function SetupChecklist() {
     panel.current = checklist({
       id: `setup-${role}`,
       title: setup?.title,
-      description: "Complete estos pasos para poder abrir la convocatoria",
+      description: "Complete estos pasos para poder abrir el periodo académico",
       launcherText: "Antes de empezar",
       progressText: "{{done}} de {{total}}",
       launcherProgressText: "{{done}}/{{total}}",

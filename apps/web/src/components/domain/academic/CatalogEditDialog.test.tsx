@@ -158,11 +158,11 @@ describe("CatalogEditDialog · logo de la facultad", () => {
   })
 })
 
-describe("CatalogEditDialog · convocatoria activa", () => {
-  it("con la convocatoria activa deja los campos y el botón deshabilitados, sin aviso dentro del diálogo", async () => {
-    await editingDialog({ lockReason: "Convocatoria activa" })
+describe("CatalogEditDialog · periodo académico activo", () => {
+  it("con el periodo académico activo deja los campos y el botón deshabilitados, sin aviso dentro del diálogo", async () => {
+    await editingDialog({ lockReason: "Periodo académico activo" })
 
-    expect(document.body.textContent).not.toContain("Hay una convocatoria activa")
+    expect(document.body.textContent).not.toContain("Hay un periodo académico activo")
     expect([...document.body.querySelectorAll<HTMLInputElement>('input[id^="edit-"]')].every((input) => input.disabled)).toBe(true)
     expect(document.body.querySelector<HTMLButtonElement>('button[id^="edit-campus-"]')?.disabled).toBe(true)
     expect(buttonWithText("Editar")!.disabled).toBe(true)
@@ -170,9 +170,9 @@ describe("CatalogEditDialog · convocatoria activa", () => {
 })
 
 describe("CatalogEditDialog · cambios que devuelven sílabos enviados", () => {
-  it("con una convocatoria finalizada abre el aviso sin frase y reenvía con confirm_purge", async () => {
+  it("con un periodo académico finalizado abre el aviso sin frase y reenvía con confirm_purge", async () => {
     vi.mocked(updateAcademicRecord)
-      .mockRejectedValueOnce(new ApiError("Aviso", 422, { purge_required: ["La convocatoria 2026-2027 ya finalizó."], purge_count: ["0"], purge_mode: [FINALIZED_NOTICE] }))
+      .mockRejectedValueOnce(new ApiError("Aviso", 422, { purge_required: ["El periodo académico 2026-2027 ya finalizó."], purge_count: ["0"], purge_mode: [FINALIZED_NOTICE] }))
       .mockResolvedValueOnce({ message: "Actualizado" })
     await editingDialog()
     await rename("Facultad con otro nombre")

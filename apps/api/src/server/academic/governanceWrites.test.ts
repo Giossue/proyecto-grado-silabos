@@ -294,7 +294,7 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}", () => {
 
   it("locks a period while its convocation runs and asks before regenerating its syllabi", async () => {
     periods.set(PERIOD, { ...(periods.get(PERIOD) as PeriodRow & { running: boolean }), running: true })
-    expect((await update("periodo", PERIOD, { starts_on: "2026-11-02", ends_on: "2027-03-12" })).json?.errors).toEqual({ process: ["Convocatoria activa"] })
+    expect((await update("periodo", PERIOD, { starts_on: "2026-11-02", ends_on: "2027-03-12" })).json?.errors).toEqual({ process: ["Periodo académico activo"] })
     periods.set(PERIOD, { ...(periods.get(PERIOD) as PeriodRow & { running: boolean }), running: false })
     purge = purgeRequired(3)
     expect((await update("periodo", PERIOD, { starts_on: "2026-11-02", ends_on: "2027-03-12", teaching_weeks: 15 })).json?.errors).toEqual(purge)
@@ -315,7 +315,7 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}/status", () => {
   it("explains why a faculty with active careers or a career in a running convocation cannot be deactivated", async () => {
     expect((await status("facultad", FACULTY, { active: false })).json?.errors).toEqual({ record: ["Desactive primero las carreras activas de esta facultad."] })
     careers.set(CAREER, { ...(careers.get(CAREER) as CareerRow & { active: boolean; roles: boolean; inProgress: boolean }), inProgress: true })
-    expect((await status("carrera", CAREER, { active: false })).json?.errors).toEqual({ record: ["La carrera participa en una convocatoria en curso. Espere a que se cierre."] })
+    expect((await status("carrera", CAREER, { active: false })).json?.errors).toEqual({ record: ["La carrera participa en un periodo académico en curso. Espere a que se cierre."] })
   })
 
   it("retires the coordinator and teachers of a deactivated career, like SetAcademicRecordStatus::retireUsers, and forbids coordinators", async () => {

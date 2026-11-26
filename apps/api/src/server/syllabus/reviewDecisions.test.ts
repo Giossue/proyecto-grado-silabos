@@ -15,8 +15,8 @@ const CAREER = "c0000000-0000-4000-8000-000000000001"
 const SYLLABUS = "50000000-0000-4000-8000-000000000001"
 const REVISION = "70000000-0000-4000-8000-000000000001"
 const TEACHER = "a0000000-0000-4000-8000-0000000000aa"
-const PAUSED = "La convocatoria de la carrera está en pausa: las revisiones se retoman cuando se reanude."
-const CLOSED = "La convocatoria está cerrada: la revisión queda solo para consulta y no admite decisiones."
+const PAUSED = "El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude."
+const CLOSED = "El periodo académico está cerrado: la revisión queda solo para consulta y no admite decisiones."
 const FRESH = "50000000-0000-4000-8000-0000000000ff"
 const REASON = "El docente cambió de materia y debe empezar otra vez."
 const JUSTIFICATION = "Se requiere precisión académica antes de aprobar la revisión."
@@ -208,7 +208,7 @@ describe("POST /api/v1/coordination/reviews/{revision}/request-correction", () =
     expect((await post({ justification: JUSTIFICATION })).text).toBe(JSON.stringify({ message: CLOSED }))
     syllabus = { ...syllabus, convocationState: "abierta", processState: "pausado" }
     expect((await post({ justification: JUSTIFICATION })).json).toEqual({
-      message: "Administración pausó la convocatoria institucional: las revisiones se retoman cuando se reanude.",
+      message: "Administración pausó el periodo académico: las revisiones se retoman cuando se reanude.",
     })
     expect(log).toEqual([])
   })

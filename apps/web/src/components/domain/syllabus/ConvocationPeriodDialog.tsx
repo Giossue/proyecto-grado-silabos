@@ -34,7 +34,7 @@ const PERIOD_FIELDS = ["starts_on", "ends_on"] as const
 const schema = periodSchema({ startsOn: null, creating: true })
   .pick({ starts_on: true, ends_on: true })
   .extend(processCreationSchema().pick({ starts_at: true, due_at: true }).shape)
-const OPEN_PHRASE = "abrir convocatoria"
+const OPEN_PHRASE = "abrir periodo"
 
 const monday = (iso: string): number => {
   const date = new Date(`${iso}T00:00:00Z`)
@@ -120,17 +120,17 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
       setOpen(false)
       onSaved?.(message)
     } catch (reason) {
-      const next = applyApiErrors(schemaForm.setError, reason, { fallback: "No se pudo abrir la convocatoria" })
+      const next = applyApiErrors(schemaForm.setError, reason, { fallback: "No se pudo abrir el periodo académico" })
       if (next.starts_on || next.ends_on) goTo(1)
     } finally {
       setProcessing(false)
     }
   }
 
-  const description = (fallback: string): string => (periodCreated ? "El periodo ya quedó creado; solo falta abrir la convocatoria" : fallback)
+  const description = (fallback: string): string => (periodCreated ? "El periodo ya quedó creado; solo falta abrirlo" : fallback)
 
   return (
-    <FormModal open={isOpen} onOpenChange={setOpen} disabled={disabled} triggerLabel="Nueva convocatoria" title="Nueva convocatoria" description="Primero el periodo lectivo y después las fechas de los sílabos">
+    <FormModal open={isOpen} onOpenChange={setOpen} disabled={disabled} triggerLabel="Nuevo periodo académico" title="Nuevo periodo académico" description="Primero el periodo lectivo y después las fechas de los sílabos">
       {({ close }) => (
         <>
           <form onSubmit={askConfirmation} noValidate>
@@ -209,7 +209,7 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
                 ) : (
                   <Button type="submit" disabled={processing || disabled || !processComplete}>
                     {processing ? <Spinner data-icon="inline-start" /> : <CalendarPlus data-icon="inline-start" aria-hidden="true" />}
-                    Abrir convocatoria
+                    Abrir periodo académico
                   </Button>
                 )}
               </FormDialogFooter>
@@ -218,11 +218,11 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
           <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Abrir convocatoria</DialogTitle>
-                <DialogDescription>Al abrirla:</DialogDescription>
+                <DialogTitle>Abrir periodo académico</DialogTitle>
+                <DialogDescription>Al abrirlo:</DialogDescription>
                 <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
                   <li>El periodo y sus fechas ya no se pueden editar</li>
-                  <li>Cada Coordinación abre después la convocatoria de su carrera</li>
+                  <li>Cada Coordinación abre después el periodo académico de su carrera</li>
                   <li>Los sílabos parten del proyecto de carrera de cada materia</li>
                 </ul>
               </DialogHeader>
@@ -235,7 +235,7 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
                 </DialogClose>
                 <Button type="button" disabled={processing || !matchesPhrase(openingTyped, OPEN_PHRASE)} onClick={() => void submit()}>
                   {processing ? <Spinner data-icon="inline-start" /> : <CalendarPlus data-icon="inline-start" aria-hidden="true" />}
-                  Abrir convocatoria
+                  Abrir periodo académico
                 </Button>
               </DialogFooter>
             </DialogContent>

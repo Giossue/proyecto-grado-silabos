@@ -67,10 +67,10 @@ const cases: ModalCase[] = [
   },
   {
     name: "options dialog",
-    path: "/admin/convocatorias",
+    path: "/admin/periodos",
     open: async (page) => {
       await rowNamed(page, /\S/, "button").first().getByRole("button").click()
-      return page.getByRole("dialog", { name: /^Convocatoria / })
+      return page.getByRole("dialog", { name: /^Periodo académico / })
     },
     close: escape,
   },

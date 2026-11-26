@@ -34,12 +34,12 @@ describe("lockedDecisionBlock", () => {
     await lockedDecisionBlock(plain.db, SYLLABUS, false)
     expect(plain.queries).toHaveLength(2)
     expect(plain.queries.map(compact).join(" ")).not.toMatch(/for share/)
-    expect(await lockedDecisionBlock(fakeDb(decisionRows("cerrada")).db, SYLLABUS)).toBe("La convocatoria está cerrada: la revisión queda solo para consulta y no admite decisiones.")
-    expect(await lockedDecisionBlock(fakeDb(decisionRows("pausada")).db, SYLLABUS)).toBe("La convocatoria de la carrera está en pausa: las revisiones se retoman cuando se reanude.")
+    expect(await lockedDecisionBlock(fakeDb(decisionRows("cerrada")).db, SYLLABUS)).toBe("El periodo académico está cerrado: la revisión queda solo para consulta y no admite decisiones.")
+    expect(await lockedDecisionBlock(fakeDb(decisionRows("pausada")).db, SYLLABUS)).toBe("El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude.")
     expect(await lockedDecisionBlock(fakeDb(decisionRows("abierta", "pausado")).db, SYLLABUS)).toBe(
-      "Administración pausó la convocatoria institucional: las revisiones se retoman cuando se reanude.",
+      "Administración pausó el periodo académico: las revisiones se retoman cuando se reanude.",
     )
-    expect(await lockedDecisionBlock(fakeDb(() => []).db, SYLLABUS)).toBe("La convocatoria está cerrada: la revisión queda solo para consulta y no admite decisiones.")
+    expect(await lockedDecisionBlock(fakeDb(() => []).db, SYLLABUS)).toBe("El periodo académico está cerrado: la revisión queda solo para consulta y no admite decisiones.")
   })
 })
 

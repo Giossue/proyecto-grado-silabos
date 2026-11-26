@@ -15,7 +15,7 @@ export class DashboardController {
 
   @Get()
   @Authenticated({ verified: true, activeRole: "required" })
-  @ApiOkResponse({ description: "Indicadores, lista de preparación, plazo y convocatoria de coordinación según el rol activo." })
+  @ApiOkResponse({ description: "Indicadores, lista de preparación, plazo y periodo académico de coordinación según el rol activo." })
   @ApiConflictResponse(ROLE_REQUIRED)
   summary(@CurrentSession() session: AppSession) {
     return this.dashboard.summary(session)

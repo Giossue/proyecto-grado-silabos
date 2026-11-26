@@ -1218,7 +1218,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
             <DialogTitle>Editar la plantilla</DialogTitle>
             <DialogDescription>Si guarda cambios:</DialogDescription>
             <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
-              <li>Al reanudar una convocatoria en pausa, sus sílabos vuelven a borrador y conservan lo escrito en los campos que siguen igual</li>
+              <li>Al reanudar un periodo académico en pausa, sus sílabos vuelven a borrador y conservan lo escrito en los campos que siguen igual</li>
               <li>En el próximo período, los docentes no conservan lo que escribieron</li>
             </ul>
           </DialogHeader>

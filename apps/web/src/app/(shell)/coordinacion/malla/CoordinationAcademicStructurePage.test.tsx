@@ -24,12 +24,12 @@ vi.mock("@/components/domain/academic/curriculum/CurriculumCanvas", () => ({
   ),
 }))
 vi.mock("@/components/domain/academic/curriculum/CurriculumConfigurationDialog", () => ({ CurriculumConfigurationDialog: () => null }))
-vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: () => <div>Pause la convocatoria para editar</div> }))
+vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: () => <div>Pause el periodo académico para editar</div> }))
 
 const curriculum = (editable = true): Curriculum =>
   ({
     career: { id: "career-1", name: "Software", modality: null },
-    curriculum: { id: "career-1", cycle_count: 8, editable, lock_reason: editable ? null : "Convocatoria activa" },
+    curriculum: { id: "career-1", cycle_count: 8, editable, lock_reason: editable ? null : "Periodo académico activo" },
     fixedFields: [],
     fixedFieldTotals: [],
     subjects: [],
@@ -81,12 +81,12 @@ describe("CoordinationAcademicStructurePage, edición de malla", () => {
     view.unmount()
   })
 
-  it("impide editar cuando la convocatoria bloquea la malla", async () => {
+  it("impide editar cuando el periodo académico bloquea la malla", async () => {
     vi.mocked(getCurriculum).mockResolvedValue(curriculum(false))
     await mountPage()
     expect(editButton()).toBeDisabled()
     expect(canvasEditing()).toBe("false")
-    expect(document.body.textContent).toContain("Pause la convocatoria para editar")
+    expect(document.body.textContent).toContain("Pause el periodo académico para editar")
   })
 
   it("consulta el bloqueo actual antes de entrar al editor", async () => {
@@ -96,10 +96,10 @@ describe("CoordinationAcademicStructurePage, edición de malla", () => {
     await flush()
     expect(canvasEditing()).toBe("false")
     expect(editButton()).toBeDisabled()
-    expect(document.body.textContent).toContain("Pause la convocatoria para editar")
+    expect(document.body.textContent).toContain("Pause el periodo académico para editar")
   })
 
-  it("sale del editor si una recarga informa que la convocatoria se abrió", async () => {
+  it("sale del editor si una recarga informa que el periodo académico se abrió", async () => {
     vi.mocked(getCurriculum).mockResolvedValueOnce(curriculum()).mockResolvedValueOnce(curriculum()).mockResolvedValueOnce(curriculum(false))
     await mountPage()
     fireEvent.click(editButton())

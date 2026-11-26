@@ -113,7 +113,7 @@ export default function LibraryHistoryPage() {
   return (
     <PageFrame
       title="Historial"
-      description="Sílabos de convocatorias anteriores, en solo lectura"
+      description="Sílabos de periodos académicos anteriores, en solo lectura"
       size="wide"
       loading={!data && !error}
       eyebrow={
@@ -253,7 +253,7 @@ export default function LibraryHistoryPage() {
               ))}
               {data.reviews.data.length === 0 ? (
                 <TableEmpty colSpan={4}>
-                  {filters.who === "mine" ? "No hay sílabos revisados por usted con estos filtros" : "No hay sílabos de convocatorias anteriores con estos filtros"}
+                  {filters.who === "mine" ? "No hay sílabos revisados por usted con estos filtros" : "No hay sílabos de periodos académicos anteriores con estos filtros"}
                 </TableEmpty>
               ) : null}
             </TableBody>

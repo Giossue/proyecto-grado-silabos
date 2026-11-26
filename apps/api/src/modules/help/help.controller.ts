@@ -17,7 +17,7 @@ export class HelpController {
 
   @Get()
   @Authenticated({ verified: true, activeRole: "required" })
-  @ApiQuery({ name: "screen", required: true, type: String, description: "Ruta de la pantalla, por ejemplo /admin/convocatorias." })
+  @ApiQuery({ name: "screen", required: true, type: String, description: "Ruta de la pantalla, por ejemplo /admin/periodos." })
   @ApiOkResponse({ description: "Ayuda de la pantalla, o null si no tiene." })
   @ApiUnprocessableEntityResponse({ description: "Errores por campo.", type: ValidationErrorDto })
   @ApiConflictResponse(ROLE_REQUIRED)

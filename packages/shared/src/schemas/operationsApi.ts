@@ -3,7 +3,7 @@ import { z } from "zod"
 const confirmRedo = z.boolean().optional().describe("Confirma que los sílabos del período se adapten a la plantilla nueva.")
 
 export const processCreationBody = z.object({
-  period_id: z.string().describe("Período académico (UUID) sin convocatoria institucional."),
+  period_id: z.string().describe("Período académico (UUID) sin periodo académico."),
   starts_at: z.string().describe("Fecha de inicio (AAAA-MM-DD); no puede ser anterior a hoy."),
   due_at: z.string().describe("Fecha límite (AAAA-MM-DD); posterior al inicio y dentro del período."),
 })
@@ -17,7 +17,7 @@ export const redoConfirmationBody = z.object({ confirmar_rehacer: confirmRedo })
 export const deadlineExtensionBody = z.object({
   due_at: z.string().describe("Nueva fecha límite (AAAA-MM-DD); posterior a la vigente y no después del último día de clases."),
   confirmar_rehacer: confirmRedo,
-  confirmar_cambios: z.boolean().optional().describe("Confirma aplicar los cambios hechos mientras la convocatoria estuvo finalizada."),
+  confirmar_cambios: z.boolean().optional().describe("Confirma aplicar los cambios hechos mientras el periodo académico estuvo finalizado."),
 })
 
 const currentPassword = z.string().describe("Contraseña actual de quien guarda.")

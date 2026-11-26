@@ -15,7 +15,7 @@ import { CONVOCATION_DEPS, CONVOCATION_WRITE_DEPS } from "./syllabus.tokens"
 const VALIDATION = { description: "Errores por campo.", type: ValidationErrorDto }
 const ACTIVE_ROLE = { verified: true, activeRole: "required" } as const
 
-@ApiTags("Coordinación: convocatorias")
+@ApiTags("Coordinación: periodos académicos")
 @Controller("coordination/convocations")
 export class CoordinationConvocationsController {
   constructor(
@@ -28,7 +28,7 @@ export class CoordinationConvocationsController {
   @ApiQuery({ name: "q", required: false })
   @ApiQuery({ name: "state", required: false, enum: ["all", "sin_iniciar", "preparacion", "abierta", "pausada", "cerrada"] })
   @ApiQuery({ name: "page", required: false, type: Number })
-  @ApiOkResponse({ description: "Procesos institucionales con la convocatoria de la carrera del rol activo, de 20 en 20." })
+  @ApiOkResponse({ description: "Procesos institucionales con el periodo académico de la carrera del rol activo, de 20 en 20." })
   @ApiUnprocessableEntityResponse(VALIDATION)
   list(@Req() request: ApiRequest, @CurrentSession() session: AppSession) {
     return respond(request, (web) => convocationsFor(web, session, this.convocations))
@@ -37,7 +37,7 @@ export class CoordinationConvocationsController {
   @Post()
   @Authenticated(ACTIVE_ROLE)
   @ApiBody({ type: ConvocationDto })
-  @ApiCreatedResponse({ description: "Abre la convocatoria de la carrera y genera un sílabo por paralelo." })
+  @ApiCreatedResponse({ description: "Abre el periodo académico de la carrera y genera un sílabo por paralelo." })
   @ApiUnprocessableEntityResponse(VALIDATION)
   create(@Req() request: ApiRequest, @CurrentSession() session: AppSession) {
     return respond(request, (web) => createConvocationFor(web, session, this.writes))
@@ -46,8 +46,8 @@ export class CoordinationConvocationsController {
   @Get(":convocation")
   @Authenticated({ ...ACTIVE_ROLE, preload: ConvocationPreloader })
   @ApiParam({ name: "convocation", format: "uuid" })
-  @ApiOkResponse({ description: "Convocatoria con sus sílabos y conteos por estado." })
-  @ApiNotFoundResponse({ description: "La convocatoria no existe.", type: MessageDto })
+  @ApiOkResponse({ description: "Periodo académico con sus sílabos y conteos por estado." })
+  @ApiNotFoundResponse({ description: "El periodo académico no existe.", type: MessageDto })
   detail(@Req() request: ApiRequest, @CurrentSession() session: AppSession, @Preloaded() convocation: ConvocationRecord) {
     return respond(request, () => convocationDetailFor(session, convocation, this.convocations))
   }
@@ -55,8 +55,8 @@ export class CoordinationConvocationsController {
   @Post(":convocation/pausar")
   @Authenticated({ ...ACTIVE_ROLE, preload: ConvocationPreloader })
   @ApiParam({ name: "convocation", format: "uuid" })
-  @ApiOkResponse({ description: "Pausa la convocatoria abierta.", type: MessageDto })
-  @ApiForbiddenResponse({ description: "La convocatoria no es de su carrera o no está abierta.", type: MessageDto })
+  @ApiOkResponse({ description: "Pausa el periodo académico abierto.", type: MessageDto })
+  @ApiForbiddenResponse({ description: "El periodo académico no es de su carrera o no está abierto.", type: MessageDto })
   @ApiUnprocessableEntityResponse(VALIDATION)
   pause(@Req() request: ApiRequest, @CurrentSession() session: AppSession, @Preloaded() convocation: ConvocationRecord) {
     return respond(request, () => pauseConvocationFor(session, convocation, this.convocations))
@@ -65,7 +65,7 @@ export class CoordinationConvocationsController {
   @Post(":convocation/reanudar")
   @Authenticated({ ...ACTIVE_ROLE, preload: ResumableConvocationPreloader })
   @ApiParam({ name: "convocation", format: "uuid" })
-  @ApiOkResponse({ description: "Reanuda la convocatoria pausada y genera los sílabos de los paralelos nuevos.", type: MessageDto })
+  @ApiOkResponse({ description: "Reanuda el periodo académico pausado y genera los sílabos de los paralelos nuevos.", type: MessageDto })
   @ApiConflictResponse({ description: "Sin rol activo vigente." })
   @ApiUnprocessableEntityResponse(VALIDATION)
   resume(@Req() request: ApiRequest, @CurrentSession() session: AppSession, @Preloaded() convocation: ConvocationRecord) {

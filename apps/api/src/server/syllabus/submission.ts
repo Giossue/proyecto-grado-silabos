@@ -131,10 +131,10 @@ function slashDate(day: string): string {
 }
 
 function assertOpen(schedule: SubmissionSchedule, today: string): void {
-  if (schedule.convocationState === "pausada") reject("deadline", "La convocatoria está en pausa por decisión de la coordinación de su carrera. Podrá enviar cuando se reanude.")
+  if (schedule.convocationState === "pausada") reject("deadline", "El periodo académico está en pausa por decisión de la coordinación de su carrera. Podrá enviar cuando se reanude.")
   if (schedule.processState === "pausado") reject("deadline", "El proceso institucional está en pausa. Podrá enviar cuando Administración lo reanude.")
   if (schedule.processState === "cerrado") reject("deadline", "El proceso institucional ya se cerró y no admite más envíos.")
-  if (today < schedule.startsOn) reject("deadline", `La convocatoria todavía no inicia; podrá enviar a partir del ${slashDate(schedule.startsOn)}.`)
+  if (today < schedule.startsOn) reject("deadline", `El periodo académico todavía no inicia; podrá enviar a partir del ${slashDate(schedule.startsOn)}.`)
   if (today > schedule.dueOn) reject("deadline", `El plazo de entrega venció el ${slashDate(schedule.dueOn)}. Pida una prórroga a Administración.`)
 }
 

@@ -43,7 +43,7 @@ export type SyllabusPage = {
 export type SyllabiResponse = {
   filters: { q: string | null; state: string | null };
   syllabi: SyllabusPage;
-  /** La carrera tiene una convocatoria abierta o en pausa. */
+  /** La carrera tiene un periodo académico abierto o en pausa. */
   convocation_open?: boolean;
 };
 

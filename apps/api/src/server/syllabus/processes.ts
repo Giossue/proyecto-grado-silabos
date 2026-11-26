@@ -56,7 +56,7 @@ export type ProcessDeps = { bridge: BridgeDeps; processes: ProcessRepository; te
 export type ProcessCoreDeps = Omit<ProcessDeps, "bridge">
 
 const MAX_EXTENSIONS = 2
-const ANOTHER_IN_PROGRESS = "Hay otra convocatoria en curso; finalícela o elimínela antes de reabrir esta"
+const ANOTHER_IN_PROGRESS = "Hay otro periodo académico en curso; finalícelo o elimínelo antes de reabrir este"
 const TEMPLATE_NOT_READY = "La plantilla no está lista para usarse. Complétela; «Antes de empezar» indica qué falta."
 const IN_PROGRESS = [PROCESS_OPEN, PROCESS_PAUSED]
 const EMPTY_COUNTS = ["sin_iniciar", "borrador", "en_revision", "correccion_solicitada", "aprobado"]
@@ -99,7 +99,7 @@ export function templateUsable(template: SyllabusTemplate, definition: TemplateD
 }
 
 function blockReason(process: ProcessRow, all: ProcessRow[], template: SyllabusTemplate | null, today: string): string | null {
-  if (process.extensions >= MAX_EXTENSIONS) return `Ya se usaron las ${MAX_EXTENSIONS} prórrogas de esta convocatoria.`
+  if (process.extensions >= MAX_EXTENSIONS) return `Ya se usaron las ${MAX_EXTENSIONS} prórrogas de este periodo académico.`
   const limitOn = process.periodEndsOn
   if (process.dueOn >= limitOn) return `El plazo ya llega al último día de clases (${display(limitOn)}).`
   if (limitOn < today) return `Las clases del período terminaron el ${display(limitOn)}.`
@@ -298,7 +298,7 @@ async function assertInstitutionReady(deps: ProcessCoreDeps): Promise<SyllabusTe
   const structured =
     template !== null && template.sections.length > 0 && template.sections.some((section) => section.blocks.length > 0) && (await deps.processes.templateHasFields(template.id))
   if (template === null || !structured) {
-    throw new CreateRejected({ process: ["La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir la convocatoria."] })
+    throw new CreateRejected({ process: ["La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir el periodo académico."] })
   }
   const problem = templateProblem(template, template.definition, "process")
   if (problem !== null) throw new CreateRejected({ process: [problem] })
@@ -331,10 +331,10 @@ export async function createProcessFor(session: AppSession, input: PhpArray, dep
       const active = await tx.lockInProgress()
       if (active !== null) {
         throw new CreateRejected({
-          process: [`La convocatoria «${active.period ?? ""}» sigue vigente. Finalícela o elimínela antes de abrir otra convocatoria institucional.`],
+          process: [`El periodo académico «${active.period ?? ""}» sigue vigente. Finalícelo o elimínelo antes de abrir otro.`],
         })
       }
-      if (await tx.periodHasProcess(periodId)) throw new CreateRejected({ period_id: ["Ya existe una convocatoria institucional para este período académico."] })
+      if (await tx.periodHasProcess(periodId)) throw new CreateRejected({ period_id: ["Este periodo académico ya se abrió."] })
       await tx.createProcess(periodId, startsAt, dueAt)
     })
   } catch (error) {
@@ -342,5 +342,5 @@ export async function createProcessFor(session: AppSession, input: PhpArray, dep
     if (error instanceof HttpFailure) return error.response
     throw error
   }
-  return apiJson({ message: "Convocatoria institucional abierta. Las coordinaciones ya pueden iniciar sus convocatorias." }, 201)
+  return apiJson({ message: "Periodo académico abierto. Cada coordinación ya puede abrir el de su carrera." }, 201)
 }

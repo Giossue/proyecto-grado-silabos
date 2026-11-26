@@ -88,7 +88,7 @@ export async function administratorSetup(setup: SetupRepository, templates: Temp
       step(
         "faculties",
         "Registrar las facultades",
-        "Elija el campus y cargue el logo de cada facultad; Coordinación lo necesita para abrir su convocatoria.",
+        "Elija el campus y cargue el logo de cada facultad; Coordinación lo necesita para abrir su periodo académico.",
         await setup.activeFacultyExists(),
       ),
       step(
@@ -117,8 +117,8 @@ export async function administratorSetup(setup: SetupRepository, templates: Temp
     ],
     step(
       "process",
-      "Abrir la convocatoria institucional",
-      "Desde Convocatorias, indique las fechas del periodo lectivo y de elaboración y entrega; cada Coordinación abrirá después la de su carrera.",
+      "Abrir el periodo académico",
+      "Desde Periodos académicos, indique las fechas del periodo lectivo y de elaboración y entrega; cada Coordinación abrirá después el de su carrera.",
       await setup.processExists(),
     ),
     "open_process",
@@ -176,14 +176,14 @@ export async function coordinatorReadiness(
 
 function convocationHint(readiness: CoordinatorReadiness): string {
   const { process } = readiness
-  if (process === null) return "Espera a que Administración abra la convocatoria institucional."
-  if (process.state === "pausado") return "La convocatoria institucional está en pausa."
-  if (!readiness.deadlineOpen) return "El plazo institucional venció. Administración debe prorrogarlo antes de abrir la convocatoria."
+  if (process === null) return "Espera a que Administración abra el periodo académico."
+  if (process.state === "pausado") return "El periodo académico está en pausa."
+  if (!readiness.deadlineOpen) return "El plazo institucional venció. Administración debe prorrogarlo antes de abrir el periodo académico."
   if (!readiness.templateReady) return "Administración debe completar la plantilla institucional."
   if (!readiness.facultyLogoReady) return "Administración debe cargar el logo de la facultad."
   if (readiness.subjectsWithoutProfile > 0) return `Complete el proyecto de carrera de ${readiness.subjectsWithoutProfile} materia(s).`
-  if (readiness.canOpen) return "Todo está listo. Puede abrir la convocatoria."
-  return "Complete los pasos anteriores para poder abrirla."
+  if (readiness.canOpen) return "Todo está listo. Puede abrir el periodo académico."
+  return "Complete los pasos anteriores para poder abrirlo."
 }
 
 export async function coordinatorSetup(careerId: string | null, readiness: CoordinatorReadiness | null, setup: SetupRepository): Promise<SetupChecklist> {
@@ -192,7 +192,7 @@ export async function coordinatorSetup(careerId: string | null, readiness: Coord
   const { scheduledTotal, scheduledWithParallels, parallelTotal, parallelsWithTeacher, subjectsWithoutProfile } = readiness
   return build(
     "Antes de empezar",
-    "En este orden. Al abrir la convocatoria se crea un sílabo por paralelo con su docente.",
+    "En este orden. Al abrir el periodo académico se crea un sílabo por paralelo con su docente.",
     [
       step(
         "curriculum",
@@ -203,7 +203,7 @@ export async function coordinatorSetup(careerId: string | null, readiness: Coord
       step(
         "scheduled_subjects",
         "Programar las materias del período",
-        period === null ? "Espera a que Administración abra la convocatoria institucional para conocer el período." : `Registre las materias que se impartirán en ${period}.`,
+        period === null ? "Espera a que Administración abra el periodo académico para saber cuál es." : `Registre las materias que se impartirán en ${period}.`,
         scheduledTotal > 0,
       ),
       step(
@@ -233,7 +233,7 @@ export async function coordinatorSetup(careerId: string | null, readiness: Coord
         scheduledTotal > 0 && subjectsWithoutProfile === 0,
       ),
     ],
-    step("convocation", "Abrir la convocatoria de la carrera", convocationHint(readiness), readiness.convocation !== null, readiness.canOpen ? "open_convocation" : null),
+    step("convocation", "Abrir el periodo académico de la carrera", convocationHint(readiness), readiness.convocation !== null, readiness.canOpen ? "open_convocation" : null),
   )
 }
 
@@ -264,10 +264,10 @@ export async function administratorMetrics(process: ProcessRecord | null, setup:
     { key: "days_left", label: "Días para la entrega", value: days, suffix: "días", hint: daysHint },
     {
       key: "careers_without_convocation",
-      label: "Carreras sin convocar",
+      label: "Carreras sin abrir",
       value: process === null ? 0 : await setup.careersWithoutConvocation(process.id),
       suffix: null,
-      hint: process === null ? "Sin proceso en curso" : "Coordinaciones que aún no abren su convocatoria",
+      hint: process === null ? "Sin proceso en curso" : "Coordinaciones que aún no abren su periodo académico",
     },
     { key: "not_started", label: "Sílabos sin iniciar", value: counts.notStarted, suffix: null, hint: "Docentes que todavía no empiezan" },
   ]

@@ -330,8 +330,8 @@ describe("FichaImportTest", () => {
     const detail = await preview(file)
     locked = true
     expect(await (await previewFichaImport(post("/api/v1/coordination/ficha-imports/spreadsheet", file), deps())).json()).toEqual({
-      message: "Convocatoria activa",
-      errors: { process: ["Convocatoria activa"] },
+      message: "Periodo académico activo",
+      errors: { process: ["Periodo académico activo"] },
     })
     locked = false
     const stale = await apply(file, { ...detail, file_hash: "0".repeat(64) })

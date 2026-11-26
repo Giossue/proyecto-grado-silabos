@@ -169,7 +169,7 @@ describe("POST /api/v1/coordination/convocations/{convocation}/pausar", () => {
   it("pauses an open convocation under a row lock", async () => {
     const { status, text } = await pause()
     expect(status).toBe(200)
-    expect(text).toBe(JSON.stringify({ message: "Convocatoria en pausa. Los docentes de la carrera no editan ni envían; la malla queda editable." }))
+    expect(text).toBe(JSON.stringify({ message: "Periodo académico en pausa. Los docentes de la carrera no editan ni envían; la malla queda editable." }))
     expect(log).toEqual(["begin", `lock:${CONVOCATION}`, `state:${CONVOCATION}:pausada`, "commit"])
   })
 
@@ -186,7 +186,7 @@ describe("POST /api/v1/coordination/convocations/{convocation}/pausar", () => {
     lockedState = "cerrada"
     const { status, json } = await pause()
     expect(status).toBe(422)
-    expect(json).toEqual({ message: "Solo una convocatoria abierta puede pausarse.", errors: { convocation: ["Solo una convocatoria abierta puede pausarse."] } })
+    expect(json).toEqual({ message: "Solo un periodo académico abierto puede pausarse.", errors: { convocation: ["Solo un periodo académico abierto puede pausarse."] } })
     expect(log).toEqual(["begin", `lock:${CONVOCATION}`, "rollback"])
   })
 
