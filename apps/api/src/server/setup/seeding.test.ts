@@ -1,10 +1,26 @@
-import { drizzle } from "drizzle-orm/node-postgres"
 import { describe, expect, it } from "vitest"
-import * as schema from "@/db/schema"
-import { officialSections } from "./officialTemplate"
-import type { ProvisionTx } from "./templateProvisioner"
-import { provisionOfficialTemplate, provisionTx } from "./templateProvisionerStore"
-import type { DocumentSection, StoredField } from "./templateStructure"
+import { officialSections } from "../configuration/officialTemplate"
+import type { ProvisionTx } from "../configuration/templateProvisioner"
+import type { DocumentSection, StoredField } from "../configuration/templateStructure"
+import { provisionOfficialTemplate, seedOptions } from "./seeding"
+
+describe("seedOptions", () => {
+  it("requires the administrator email and password", () => {
+    expect(() => seedOptions({})).toThrow("Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD to seed the administrator")
+    expect(() => seedOptions({ SEED_ADMIN_EMAIL: "admin@example.test" })).toThrow("SEED_ADMIN_PASSWORD")
+    expect(() => seedOptions({ SEED_ADMIN_EMAIL: " ", SEED_ADMIN_PASSWORD: "secret" })).toThrow("SEED_ADMIN_EMAIL")
+  })
+
+  it("normalizes the email and applies the defaults", () => {
+    expect(seedOptions({ SEED_ADMIN_EMAIL: " Admin@Example.TEST ", SEED_ADMIN_PASSWORD: "secret" })).toEqual({
+      adminName: "Administrador",
+      adminEmail: "admin@example.test",
+      adminPassword: "secret",
+      bcryptRounds: 12,
+    })
+    expect(seedOptions({ SEED_ADMIN_EMAIL: "a@example.test", SEED_ADMIN_PASSWORD: "x", SEED_ADMIN_NAME: "Soporte", BCRYPT_ROUNDS: "10" })).toMatchObject({ adminName: "Soporte", bcryptRounds: 10 })
+  })
+})
 
 function sequence(prefix: string) {
   let next = 0
@@ -42,21 +58,5 @@ describe("provisionOfficialTemplate", () => {
   it("does nothing when a template already exists", async () => {
     const tx = { anyTemplate: async () => true } as unknown as ProvisionTx
     expect(await provisionOfficialTemplate(tx)).toBeNull()
-  })
-})
-
-describe("provisionTx.hasStructure", () => {
-  it("stops at the first missing part of the structure", async () => {
-    const statements: string[] = []
-    const client = {
-      query: async (query: { text: string }) => {
-        statements.push(query.text)
-        return { rows: [], rowCount: 0, fields: [] }
-      },
-    }
-    const db = drizzle({ client: client as never, schema })
-    expect(await provisionTx(db).hasStructure("01a1c5ba-10b4-7129-925f-c28a9489323c")).toBe(false)
-    expect(statements).toHaveLength(1)
-    expect(statements[0]).toContain('from "secciones_plantilla"')
   })
 })

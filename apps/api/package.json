@@ -18,8 +18,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:status": "prisma migrate status",
     "db:baseline": "prisma migrate resolve --applied 0_baseline",
-    "db:seed": "tsx --env-file-if-exists=../../.env.local src/db/seed.ts",
-    "db:migrate-auth": "tsx --env-file-if-exists=../../.env.local src/db/migrateAuth.ts",
+    "db:seed": "tsx scripts/seed.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -40,7 +39,6 @@
     "better-auth": "^1.7.28",
     "bullmq": "^6.7.8",
     "cookie-parser": "1.4.7",
-    "drizzle-orm": "^0.45.4",
     "entities": "^9.0.0",
     "exceljs": "^4.4.0",
     "express": "5.3.0",

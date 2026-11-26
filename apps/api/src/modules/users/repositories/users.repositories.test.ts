@@ -5,13 +5,13 @@ import type { Prisma } from "../../../generated/prisma/client"
 import type { ManagedUserFilters } from "../../../server/identity/managedUsers"
 import type { RawExecutor } from "../../auth/repositories/raw-executor"
 import { identityImportStoreOn } from "./identity-import.repository"
-import drizzleOracle from "./__fixtures__/users-drizzle.json"
+import recordedOracle from "./__fixtures__/users-oracle.json"
 import { managedUserOrder, managedUserRepositoryOn } from "./managed-users.repository"
 
 type Captured = { sql: string; params: unknown[] }
 type Oracle = Record<string, { queries: Captured[]; expected?: unknown; careers?: unknown; labels?: unknown }>
 
-const oracle = drizzleOracle as Oracle
+const oracle = recordedOracle as Oracle
 
 const squash = (text: string) => text.replace(/\s+/g, " ").replace(/;$/, "").trim()
 const unaliased = (text: string) => squash(text.replace(/ as "[A-Za-z]+"/g, ""))
@@ -63,7 +63,7 @@ async function samePage(name: string, filters: ManagedUserFilters, page: number,
 
 const NONE: ManagedUserFilters = { search: null, status: null, role: null, career: null }
 
-describe("account management repositories on Prisma send the same SQL and map the rows like the Drizzle ones", () => {
+describe("account management repositories on Prisma send the same SQL and map the rows like the recorded previous ones", () => {
   it("pages the accounts with their assignments, unfiltered and in the default order", async () => {
     const page = await samePage("unfiltered", NONE, 1, null)
     expect(page.total).toBe(2)

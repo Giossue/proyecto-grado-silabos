@@ -3,5 +3,5 @@ import tseslint from "typescript-eslint"
 
 export default defineConfig([
   ...tseslint.configs.recommended,
-  globalIgnores(["dist/**", "src/generated/**", "src/db/drizzle/**", "prisma/migrations/**"]),
+  globalIgnores(["dist/**", "src/generated/**", "prisma/migrations/**"]),
 ])

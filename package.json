@@ -18,7 +18,6 @@
     "db:migrate": "pnpm --filter @silabos/api run db:migrate",
     "db:status": "pnpm --filter @silabos/api run db:status",
     "db:baseline": "pnpm --filter @silabos/api run db:baseline",
-    "db:seed": "pnpm --filter @silabos/api run db:seed",
-    "db:migrate-auth": "pnpm --filter @silabos/api run db:migrate-auth"
+    "db:seed": "pnpm --filter @silabos/api run db:seed"
   }
 }

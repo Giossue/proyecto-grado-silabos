@@ -3,7 +3,7 @@ import type { ListSort, ManagedUserSort } from "@silabos/shared/schemas/listSort
 import { Prisma } from "../../../generated/prisma/client"
 import type { ManagedAssignment, ManagedUserFilters, ManagedUserRepository, ManagedUserRow } from "../../../server/identity/managedUsers"
 import { rowsOf, type RawExecutor } from "../../auth/repositories/raw-executor"
-import { careerLabelSql } from "./career-label"
+import { careerLabelSql } from "../../../server/syllabus/syllabusSql"
 
 const FOLD_FROM = "áéíóúüñÁÉÍÓÚÜÑ"
 const FOLD_TO = "aeiouunAEIOUUN"

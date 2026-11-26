@@ -1,7 +1,7 @@
 import { Prisma } from "../../../generated/prisma/client"
 import type { IdentityImportStore } from "../../../server/identity/imports"
 import { rowsOf, type RawExecutor } from "../../auth/repositories/raw-executor"
-import { careerLabelSql } from "./career-label"
+import { careerLabelSql } from "../../../server/syllabus/syllabusSql"
 
 export function identityImportStoreOn(executor: RawExecutor): IdentityImportStore {
   return {

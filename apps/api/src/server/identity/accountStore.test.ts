@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import { Prisma } from "../../generated/prisma/client"
 import type { Db } from "../../prisma/db"
-import drizzleStatements from "./__fixtures__/account-store-drizzle.json"
+import recordedStatements from "./__fixtures__/account-store-statements.json"
 import type { AccountRepository, AccountTx } from "./accounts"
 import { accountRepositoryOn, accountTx } from "./accountStore"
 
@@ -83,8 +83,8 @@ const CALLS: [string, (tx: AccountTx, repo: AccountRepository) => Promise<unknow
   ["repo.hasEffectiveRole", (_, repo) => repo.hasEffectiveRole(U, "docente", C), false],
 ]
 
-function drizzleOf(name: string): Statement[] {
-  return (drizzleStatements as Record<string, Statement[]>)[name].map((statement) => ({ text: withoutDefaults(squash(statement.text)), values: statement.values }))
+function recordedOf(name: string): Statement[] {
+  return (recordedStatements as Record<string, Statement[]>)[name].map((statement) => ({ text: withoutDefaults(squash(statement.text)), values: statement.values }))
 }
 
 describe("accountTx", () => {
@@ -110,39 +110,39 @@ describe("accountTx", () => {
     expect(statements[0]).toMatch(/for update of "asignaciones_rol"$/)
   })
 
-  it.each(CALLS)("sends the statements the Drizzle store sent for %s", async (name, call, expected) => {
+  it.each(CALLS)("sends the recorded statements of the previous store for %s", async (name, call, expected) => {
     const { db, recorded } = recordingDatabase()
     const result = await call(accountTx(db), accountRepositoryOn(db, async () => null as never))
-    expect(recorded.map((statement) => ({ text: unaliased(statement.text), values: statement.values }))).toEqual(drizzleOf(name))
+    expect(recorded.map((statement) => ({ text: unaliased(statement.text), values: statement.values }))).toEqual(recordedOf(name))
     expect(result).toEqual(expected)
   })
 
   it("labels the career of the invited role and the careers with syllabi in progress", async () => {
     const role = recordingDatabase([{ role: "docente", careerId: C, label: "Software · SW" }])
     expect(await accountTx(role.db).invitationRole(U)).toEqual({ role: "docente", careerLabel: "Software · SW" })
-    expect(role.recorded.map((statement) => ({ text: unaliased(statement.text), values: statement.values }))).toEqual(drizzleOf("invitationRole"))
+    expect(role.recorded.map((statement) => ({ text: unaliased(statement.text), values: statement.values }))).toEqual(recordedOf("invitationRole"))
     const syllabi = recordingDatabase([{ careerId: C, total: 3n, label: "Software · SW" }])
     expect(await accountTx(syllabi.db).syllabiInProgress(U)).toEqual([{ careerLabel: "Software · SW", total: 3 }])
-    expect(syllabi.recorded.map((statement) => ({ text: unaliased(statement.text), values: statement.values }))).toEqual(drizzleOf("syllabiInProgress"))
+    expect(syllabi.recorded.map((statement) => ({ text: unaliased(statement.text), values: statement.values }))).toEqual(recordedOf("syllabiInProgress"))
   })
 
   it("reads the issuer of the latest invitation as an account", async () => {
     const issuer = { issuerId: C, id: C, name: "Luis", email: "luis@x.ec", active: true, verified: true }
     const { db, recorded } = recordingDatabase([issuer])
     expect(await accountTx(db).latestInvitationIssuer(U)).toEqual(issuer)
-    expect(recorded.map((statement) => ({ text: unaliased(statement.text), values: statement.values }))).toEqual(drizzleOf("latestInvitationIssuer"))
+    expect(recorded.map((statement) => ({ text: unaliased(statement.text), values: statement.values }))).toEqual(recordedOf("latestInvitationIssuer"))
   })
 
-  it("counts taken emails and active careers like Drizzle $count", async () => {
+  it("counts taken emails and active careers like the previous store", async () => {
     const taken = recordingDatabase([{ count: 1n }])
     const repo = accountRepositoryOn(taken.db, async () => null as never)
     expect(await repo.emailTaken("ana@x.ec", null)).toBe(true)
     expect(await repo.emailTaken("ana@x.ec", U)).toBe(true)
     expect(await repo.activeCareer(C)).toBe(true)
     expect(taken.recorded.map((statement) => ({ text: squash(statement.text), values: statement.values }))).toEqual([
-      ...drizzleOf("repo.emailTaken"),
-      ...drizzleOf("repo.emailTakenIgnoring"),
-      ...drizzleOf("repo.activeCareer"),
+      ...recordedOf("repo.emailTaken"),
+      ...recordedOf("repo.emailTakenIgnoring"),
+      ...recordedOf("repo.activeCareer"),
     ])
     const free = recordingDatabase([{ count: 0n }])
     expect(await accountRepositoryOn(free.db, async () => null as never).emailTaken("ana@x.ec", null)).toBe(false)

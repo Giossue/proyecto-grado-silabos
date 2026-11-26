@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest"
 import type { Prisma } from "../../../generated/prisma/client"
 import type { PrismaService } from "../../../prisma/prisma.service"
-import drizzleOracle from "./__fixtures__/identity-drizzle.json"
+import oracle from "./__fixtures__/identity-oracle.json"
 import { activeSessionStoreOn } from "./active-sessions.repository"
 import { credentialStoreOn } from "./credentials.repository"
 import { profileRepositoryOn } from "./profile.repository"
@@ -29,17 +29,17 @@ function prismaFake(rows: unknown[], count = 0) {
 }
 
 async function same<T>(name: string, prismaRows: unknown[], after: (executor: RawExecutor) => Promise<T>, count = 0): Promise<T> {
-  const drizzle = (drizzleOracle as Oracle)[name]
+  const recorded = (oracle as Oracle)[name]
   const prisma = prismaFake(prismaRows, count)
   const actual = await after(prisma.executor)
-  expect(prisma.captured()).toEqual(drizzle.queries)
-  expect(actual).toEqual(drizzle.expected === "__undefined__" ? undefined : drizzle.expected)
+  expect(prisma.captured()).toEqual(recorded.queries)
+  expect(actual).toEqual(recorded.expected === "__undefined__" ? undefined : recorded.expected)
   return actual
 }
 
 const USER = "0193a3c2-1111-7000-8000-000000000001"
 
-describe("identity repositories on Prisma send the same SQL and map the rows like the Drizzle ones", () => {
+describe("identity repositories on Prisma send the same SQL and map the rows like the recorded previous ones", () => {
   it("finds the session user and the effective roles", async () => {
     const user = { usuario_id: USER, contrasena: "$2y$12$hash", usuario_activo: true, correo_verificado_en: "2026-01-01 00:00:00+00", preferencias_correo_usuario: { a: true } }
     expect(await same("findUser", [user], (executor) => sessionStoreOn(executor).findUser(USER))).toMatchObject({ id: USER, active: true })

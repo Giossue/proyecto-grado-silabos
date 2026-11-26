@@ -38,7 +38,7 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 | Malla visual | React Flow (@xyflow/react) | 13 |
 | Base de datos | PostgreSQL | 18 |
 | Archivos | Disco local o almacenamiento S3 (MinIO), según `STORAGE_DRIVER`; cliente `@aws-sdk/client-s3` | 3 |
-| ORM y migraciones | Prisma ORM y Prisma Migrate (Drizzle ORM convive en los módulos aún no portados) | 7.10 / 0.45 |
+| ORM y migraciones | Prisma ORM y Prisma Migrate (única capa de datos de la API) | 7.10 |
 | Colas, límites y bloqueos | Redis + BullMQ (ioredis) | 7 / 6.7 |
 | Autenticación | Better Auth (usuario y contraseña, 2FA TOTP) | 1.7 |
 | Correos | Nodemailer + React Email | 10.6 |
@@ -73,10 +73,9 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 │  · Swagger UI en /api/docs                   │
 │  · Sesión (Better Auth) y roles como guards  │
 │  · Validación (Zod + nestjs-zod)             │
-│  · Puente temporal a los route handlers      │
-│    que todavía no tienen controlador         │
+│  · 404/405 de rutas desconocidas (fallback)  │
 └───────┬───────────────────┬──────────────────┘
-        │ Prisma / Drizzle  │ encola trabajos
+        │ Prisma            │ encola trabajos
         ▼                   ▼
   ┌───────────┐       ┌───────────┐
   │PostgreSQL │       │  Redis    │  colas, límites de intentos y bloqueos
@@ -102,11 +101,9 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 - **Organización de la API** (`apps/api/src/`):
   - `main.ts`, `bootstrap.ts` y `app.module.ts`: arranque, prefijo global `api/v1`, CORS, `cookie-parser`, Swagger y los componentes globales.
   - `common/`: `decorators` (`@Authenticated()`, `@Roles()`, `@CurrentSession()`, `@QueryInput()`), `guards` (sesión y roles), `pipes` (`ZodValidationPipe`), `filters` (formato de errores), `interceptors` (respuesta JSON con las cabeceras de siempre), `middleware` (cuerpo crudo y entrada al estilo PHP), `dtos`.
-  - `modules/`: un módulo Nest por área (`auth`, `notifications`, `academic`, `syllabus`, `template`, `ai`, `library`, `dashboard`, `help`, `exports`, `files`, `users`, `settings`, `ficha`, `mail`, `queue` y `legacy`). `notifications` ya está portado completo (controlador, servicio, DTO, repositorio Prisma) y es el modelo para los demás.
+  - `modules/`: un módulo Nest por área (`auth`, `notifications`, `academic`, `syllabus`, `template`, `ai`, `library`, `dashboard`, `help`, `exports`, `files`, `users`, `settings`, `ficha`, `mail`, `queue`, `processes`, `keycloak` y `fallback`), cada uno con controlador, servicio, DTO y repositorio Prisma; `notifications` es el modelo de referencia.
   - `prisma/`: `PrismaService` (cliente con el adaptador `pg`).
   - `server/`: la lógica de negocio por módulo, en TypeScript, que los servicios reutilizan.
-  - `app/`: los route handlers que aún no tienen controlador. El módulo `legacy` los sirve con un adaptador Request→Response sobre Express; se borran a medida que cada área se porta.
-  - `db/`: esquema Drizzle y semilla.
 - **Organización de la interfaz** (`apps/web/src/`): `app/` (páginas por rol), `components/` (`ui/` de shadcn y `domain/`), `queries/` y `api/` (acceso a la API), `lib/`, `composables/`, `state/`.
 
 ---
@@ -125,7 +122,7 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 | IA | `mensajes_ia_plantilla`, `propuestas_ia_plantilla` |
 | Sistema | `notificaciones`, `ajustes_sistema` |
 
-- **Migraciones con Prisma:** el esquema está en `apps/api/prisma/schema.prisma` (sacado de la base con `prisma db pull`) y la migración base `0_baseline` reproduce el esquema completo, con funciones, triggers y la vista. `pnpm db:migrate` (`prisma migrate deploy`) crea una base desde cero y `pnpm db:seed` crea el administrador inicial y la plantilla oficial. En una base existente la migración base se marca como aplicada con `pnpm db:baseline`.
+- **Migraciones con Prisma:** el esquema está en `apps/api/prisma/schema.prisma` (sacado de la base con `prisma db pull`) y la migración base `0_baseline` reproduce el esquema completo, con funciones, triggers y la vista. `pnpm db:migrate` (`prisma migrate deploy`) crea una base desde cero y `pnpm db:seed` (`apps/api/scripts/seed.ts`, con Prisma) crea el administrador inicial con su cuenta de credenciales y la plantilla oficial; se puede repetir sin cambiar nada. La migración única de credenciales y 2FA del sistema anterior a Better Auth (`db:migrate-auth`) ya se aplicó a `silabos_ueb` y se eliminó. En una base existente la migración base se marca como aplicada con `pnpm db:baseline`.
 - **Integridad en la base:**
   - claves foráneas;
   - restricciones `CHECK` (estados, jornadas, rangos);
@@ -141,7 +138,7 @@ Roles: **Administrador, Coordinador, Docente y Bibliotecario**. Una persona pued
 - **Autenticación:** cookie de sesión, más verificación del origen de la petición.
 - **Respuestas:** 401 sin sesión, 403 sin permiso, 409 sin rol activo y 422 con errores de validación por campo.
 - **Límites de intentos:** guardados en Redis, con las cabeceras `X-RateLimit-*`.
-- **Documentación:** Swagger UI en `/api/docs` y el documento OpenAPI en `/api/docs-json` (puerto de la API). Muestra las rutas ya portadas a controladores Nest; las demás siguen respondiendo por el puente hasta que se porten.
+- **Documentación:** Swagger UI en `/api/docs` y el documento OpenAPI en `/api/docs-json` (puerto de la API). Muestra todas las rutas de la API.
 
 **130 endpoints** en total.
 
@@ -271,7 +268,7 @@ docker compose up -d --build
 docker compose logs -f migrate api
 ```
 
-Una base nueva se llena después con `docker compose run --rm api node_modules/.bin/tsx src/db/seed.ts`.
+Una base nueva se llena después con `docker compose run --rm api node_modules/.bin/tsx scripts/seed.ts`.
 
 **Almacenamiento de archivos.** Logos (institución, facultades), documentos de apoyo y sus vistas PDF, y los PDF generados se guardan con el mismo esquema de rutas en los dos controladores: `private/...` y `public/...`.
 
