@@ -65,7 +65,7 @@ export interface CareerWriteTx {
   parallelCodeTaken(subjectId: string, exceptId: string, upperCode: string): Promise<boolean>
   updateParallel(parallelId: string, code: string, shift: PhpValue): Promise<void>
   parallelHasSentSyllabus(parallelId: string): Promise<boolean>
-  restartSentForParallel(parallelId: string): Promise<void>
+  restartSentForParallel(parallelId: string, reason?: string): Promise<void>
   refreshParallel(parallelId: string): Promise<void>
   guard<T>(confirmed: boolean, careerId: string, change: () => Promise<T>, subjectIds: string[] | null): Promise<T>
   keepContent<T>(confirmed: boolean, careerId: string, change: () => Promise<T>): Promise<T>
@@ -378,7 +378,7 @@ export async function updateParallel(request: Request, parallelId: string, deps:
           const sent = await tx.parallelHasSentSyllabus(parallel.id)
           if (sent && !confirmed) throw new Rejected(validationError({ purge_required: [PURGE_SENT], purge_count: ["1"] }))
           await tx.updateParallel(parallel.id, code, input.shift)
-          if (sent) await tx.restartSentForParallel(parallel.id)
+          if (sent) await tx.restartSentForParallel(parallel.id, requestedCareerId === null ? undefined : "Administración cambió el código o la jornada del paralelo")
           await tx.refreshParallel(parallel.id)
         },
         [parallel.subjectId],

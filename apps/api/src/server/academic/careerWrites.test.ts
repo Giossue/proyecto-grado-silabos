@@ -167,7 +167,7 @@ function deps(): CareerWriteDeps {
             [...parallels.values()].some((parallel) => parallel.subjectId === subjectId && parallel.id !== exceptId && parallel.code.toUpperCase() === code),
           updateParallel: async (id, code, shift) => void log.push(`update-parallel:${id}:${code}:${shift}`),
           parallelHasSentSyllabus: async (id) => sent.has(id),
-          restartSentForParallel: async (id) => void log.push(`restart-sent:${id}`),
+          restartSentForParallel: async (id, reason) => void log.push(reason === undefined ? `restart-sent:${id}` : `restart-sent:${id}:${reason}`),
           refreshParallel: async (id) => void log.push(`refresh:${id}`),
           guard: async (confirmed, careerId, change, subjectIds) => {
             log.push(`guard:${confirmed}:${careerId}:${subjectIds?.join(",") ?? "null"}`)
@@ -613,6 +613,13 @@ describe("the administrator works on any career through /api/v1/admin/careers/{c
   beforeEach(() => {
     world.assignments = [makeAssignment({ role: "administrador", careerId: null, careerLabel: null })]
     grants.push({ id: OTHER_TEACHER_ROLE, userId: TEACHER, careerId: OTHER_CAREER, role: "docente", active: true, eligible: true })
+  })
+
+  it("tells the teacher that Administración changed the parallel when the admin restarts a sent syllabus", async () => {
+    sent.add(OTHER_PARALLEL)
+    log = []
+    expect((await send("PATCH", adminPath(OTHER_CAREER, `parallels/${OTHER_PARALLEL}`), { code: "C", shift: "matutina", confirm_purge: "1" }, (request) => updateParallel(request, OTHER_PARALLEL, deps(), OTHER_CAREER))).status).toBe(200)
+    expect(log).toContain(`restart-sent:${OTHER_PARALLEL}:Administración cambió el código o la jornada del paralelo`)
   })
 
   it("creates and edits subjects, creates parallels with their teacher, edits them and replaces their teacher in the requested career", async () => {

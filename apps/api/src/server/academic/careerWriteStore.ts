@@ -206,8 +206,8 @@ export function careerWriteTx(db: Db, afterCommit: AfterCommit, now: number, opt
       await db.$executeRaw`update paralelos set codigo_paralelo = ${code}, jornada_paralelo = ${shift as string} where paralelos.paralelo_id = ${parallelId}::uuid`
     },
     parallelHasSentSyllabus: (parallelId) => progress.parallelHasSentSyllabus(parallelId),
-    async restartSentForParallel(parallelId) {
-      await progress.restartSentForParallel(parallelId)
+    async restartSentForParallel(parallelId, reason) {
+      await progress.restartSentForParallel(parallelId, reason)
     },
     async refreshParallel(parallelId) {
       await progress.refreshParallel(parallelId)

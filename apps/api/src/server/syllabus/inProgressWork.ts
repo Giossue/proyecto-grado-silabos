@@ -296,7 +296,7 @@ export class InProgressWork {
     return syllabi.length
   }
 
-  async restartSentForParallel(parallelId: string): Promise<number> {
+  async restartSentForParallel(parallelId: string, reason = "Coordinación cambió el código o la jornada del paralelo"): Promise<number> {
     const syllabi = await this.syllabi(Prisma.sql`${inProgressFilter()} and silabos.paralelo_id = ${parallelId}::uuid and silabos.estado_silabo in ('en_revision', 'aprobado')`, {
       lock: true,
     })
@@ -306,7 +306,7 @@ export class InProgressWork {
       const subject = await this.subjectName(syllabus)
       const periodId = facts.get(syllabus.convocationId)?.periodId ?? null
       const fresh = await this.restartSyllabus(syllabus)
-      await this.notifyRestarted(teachers.get(syllabus.id) ?? [], [subject], 1, "Coordinación cambió el código o la jornada del paralelo", "silabo", fresh, periodId)
+      await this.notifyRestarted(teachers.get(syllabus.id) ?? [], [subject], 1, reason, "silabo", fresh, periodId)
     }
     return syllabi.length
   }
