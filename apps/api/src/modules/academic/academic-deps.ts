@@ -15,7 +15,7 @@ import { dispatchSupportDocumentView } from "../../server/academic/supportDocume
 import { defaultSupportDocumentWriteDeps, type SupportDocumentWriteDeps } from "../../server/academic/supportDocumentWrites"
 import type { BridgeDeps } from "../../server/auth/types"
 import { createTemplateStore } from "../../server/configuration/templateStore"
-import { institutionToday } from "../../server/dashboard/dashboardQueries"
+import { institutionToday } from "../../server/shared/clock"
 import type { RateLimiter } from "../../server/http/throttle"
 import { defaultIdentityWriteDeps, type IdentityWriteDeps } from "../../server/identity/accountWrites"
 import { defaultIdentityImportDeps, type IdentityImportDeps } from "../../server/identity/imports"

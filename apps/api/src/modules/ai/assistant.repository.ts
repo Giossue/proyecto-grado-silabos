@@ -5,8 +5,9 @@ import type { AssistantStore, AssistantTx, ConversationEntry, StoredMessage, Sto
 import { OPEN_STATES } from "../../server/ai/assistantStore"
 import { phpJsonDecode, phpShape, record } from "../../server/configuration/phpValues"
 import type { SyllabusTemplate } from "../../server/configuration/templatePresentation"
-import { type Db, hasRow, TRANSACTION_OPTIONS } from "../template/template-db"
-import { loadTemplateFrom } from "../template/template.repository"
+import { type Db, TRANSACTION_OPTIONS } from "../../prisma/db"
+import { hasRows as hasRow } from "../../prisma/sql"
+import { loadTemplate as loadTemplateFrom } from "../../server/shared/templateStore"
 
 type MessageRow = { id: string; templateId: string; userId: string; content: string | null; sentAt: string; hiddenAt: string | null }
 

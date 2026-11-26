@@ -1,6 +1,6 @@
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common"
 import { PhpInputMiddleware } from "../../common/middleware/php-input.middleware"
-import { institutionToday } from "../../server/dashboard/dashboardQueries"
+import { institutionToday } from "../../server/shared/clock"
 import { createTemplateStore } from "../../server/configuration/templateStore"
 import { createClosingDeps } from "../../server/syllabus/processClosingStore"
 import { createProcessWriteDeps } from "../../server/syllabus/processWriteStore"

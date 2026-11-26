@@ -6,16 +6,9 @@ import { isRecord, phpCount, phpJsonDecode } from "./phpValues"
 import { officialDefinition } from "./officialTemplate"
 import { trustedDefinition } from "./templateRuntime"
 import type { SyllabusTemplate, TemplateBlock, TemplateField, TemplateSection } from "./templatePresentation"
+import type { LiveField, StoredValue, TemplateStore } from "../shared/templateStore"
 
-export type StoredValue = { fieldId: string; subjectId: string | null; value: unknown }
-export type LiveField = { id: string; responsible: string; content: unknown }
-
-export interface TemplateStore {
-  template(): Promise<SyllabusTemplate | null>
-  subjectValues(subjectId: string): Promise<StoredValue[]>
-  valuesForSubjects(subjectIds: string[], fieldIds: string[]): Promise<StoredValue[]>
-  liveFields(ids: string[], careerOnly: boolean): Promise<LiveField[]>
-}
+export type { LiveField, StoredValue, TemplateStore }
 
 export async function loadTemplate(executor: Executor, lock = false): Promise<SyllabusTemplate | null> {
   const query = executor

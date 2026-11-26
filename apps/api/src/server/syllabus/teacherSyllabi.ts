@@ -8,7 +8,7 @@ import { aborted, forbidden, apiJson, validationError } from "../http/responses"
 import { listingFiltersSchema } from "@silabos/shared/schemas/syllabus"
 import { validateSchema } from "../http/schemaValidation"
 import { hasRole, ROLE_TEACHER } from "./policy"
-import { convocationName } from "./syllabusSql"
+import { convocationName } from "../shared/convocationName"
 import { createTeacherSyllabusRepository } from "./teacherSyllabusQueries"
 import { unmatchedRoute, routeAllows } from "../http/router"
 

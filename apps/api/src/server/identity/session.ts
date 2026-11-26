@@ -3,7 +3,7 @@ import { db } from "@/db"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import { phpArrayCast } from "../auth/runtime"
 import type { BridgeDeps, AppSession, RoleAssignmentRecord } from "../auth/types"
-import { institutionToday } from "../dashboard/dashboardQueries"
+import { institutionToday } from "../shared/clock"
 import { apiJson, unauthenticated } from "../http/responses"
 
 export type UserProfile = {

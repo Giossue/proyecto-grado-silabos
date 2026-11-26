@@ -3,8 +3,9 @@ import type { Prisma } from "../../generated/prisma/client"
 import { PrismaService } from "../../prisma/prisma.service"
 import { phpJsonDecode } from "../../server/configuration/phpValues"
 import type { DocumentSection, FieldRecord, StructureStore, StructureTx } from "../../server/configuration/templateStructure"
-import { type Db, hasRow, TRANSACTION_OPTIONS } from "./template-db"
-import { loadTemplateFrom } from "./template.repository"
+import { type Db, TRANSACTION_OPTIONS } from "../../prisma/db"
+import { hasRows } from "../../prisma/sql"
+import { loadTemplate } from "../../server/shared/templateStore"
 
 type FieldRow = { id: string; templateId: string; blockId: string; responsible: string; content: string | null; key: string | null; label: string | null }
 
@@ -55,10 +56,10 @@ export async function syncDocumentOn(db: Db, templateId: string, sections: Docum
 export function structureTxOn(db: Db): StructureTx {
   return {
     async lockTemplate(templateId) {
-      const found = await hasRow(db.$queryRaw<{ id: string }[]>`select plantilla_id::text as id from plantilla_silabo where plantilla_id = ${templateId}::uuid limit 1 for update`)
-      return found ? loadTemplateFrom(db) : null
+      const found = await hasRows(db.$queryRaw<{ id: string }[]>`select plantilla_id::text as id from plantilla_silabo where plantilla_id = ${templateId}::uuid limit 1 for update`)
+      return found ? loadTemplate(db) : null
     },
-    reload: () => loadTemplateFrom(db),
+    reload: () => loadTemplate(db),
     syncDocument: (templateId, sections) => syncDocumentOn(db, templateId, sections),
     async insertField(field) {
       await db.definiciones_campo.create({
@@ -83,7 +84,7 @@ export function structureTxOn(db: Db): StructureTx {
 
 export function structureStoreOn(db: Db, transaction: <T>(work: (tx: StructureTx) => Promise<T>) => Promise<T>): StructureStore {
   return {
-    templateLocked: () => hasRow(db.convocatorias_universidad.findMany({ where: { estado_convocatoria_universidad: "abierto" }, select: { convocatoria_universidad_id: true }, take: 1 })),
+    templateLocked: () => hasRows(db.convocatorias_universidad.findMany({ where: { estado_convocatoria_universidad: "abierto" }, select: { convocatoria_universidad_id: true }, take: 1 })),
     async field(id) {
       const [row] = await db.$queryRaw<FieldRow[]>`
         select d.definicion_campo_id::text as id, d.plantilla_id::text as "templateId", d.campo_plantilla_id::text as "blockId",

@@ -30,7 +30,7 @@ import {
   type TemplateDefinition,
 } from "../configuration/templateRuntime"
 import type { TemplateStore } from "../configuration/templateStore"
-import { institutionToday } from "../dashboard/dashboardQueries"
+import { institutionToday } from "../shared/clock"
 import type { DraftSyllabus, LockedSyllabus } from "./draftField"
 import { identificationOf, type IdentificationSource } from "./identificationCard"
 import { mayEdit } from "./policy"

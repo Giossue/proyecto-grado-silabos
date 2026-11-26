@@ -15,7 +15,7 @@ import { type SyllabusTemplate, teacherEditable, type TemplateField } from "../c
 import { fieldResponseNormalize } from "../configuration/templateRehearsal"
 import { fieldCarried, INSTITUTIONAL, responseWithin, TemplateValidationError } from "../configuration/templateRuntime"
 import type { TemplateStore } from "../configuration/templateStore"
-import { institutionToday } from "../dashboard/dashboardQueries"
+import { institutionToday } from "../shared/clock"
 import { mayEdit, mayStart, mayView } from "./policy"
 import { syllabusPayload, type DetailSyllabus, type SyllabusDetailStore } from "./syllabusDetail"
 import { createDraftStartStore } from "./draftStartStore"

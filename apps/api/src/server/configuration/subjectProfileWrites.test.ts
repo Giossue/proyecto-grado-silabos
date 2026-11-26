@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { GenerationRejected, purgeRequired } from "../syllabus/inProgressWork"
+import { GenerationRejected, purgeRequired } from "../syllabus/inProgressWorkHelpers"
 import type { PhpRecord } from "./phpValues"
 import { showSubjectProfile } from "./subjectProfile"
 import { updateSubjectProfile, type SubjectProfileTx, type SubjectProfileWriteDeps } from "./subjectProfileWrites"

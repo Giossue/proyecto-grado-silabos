@@ -26,61 +26,24 @@ import { recipientsOn } from "../notifications/queries"
 import { scheduleWorkflowNotification, storeInternalNotifications, type NotificationScope } from "../notifications/store"
 import { sameStructure, fieldResponseNormalize, documentIsEmpty } from "../configuration/templateRehearsal"
 import { dataGet } from "./identificationCard"
+import { DOCUMENT_PATHS, GenerationRejected, purgeRequired, SENT_STATES, type GenerateOptions, type WorkScope, type WorkSyllabus } from "./inProgressWorkHelpers"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
-
-export class GenerationRejected extends Error {
-  constructor(readonly errors: Record<string, string[]>) {
-    super("generation rejected")
-  }
-}
 
 export const SYLLABUS_ALIVE = sql`exists (select 1 from convocatorias_carreras vivo where vivo.convocatoria_carrera_id = silabos.convocatoria_carrera_id
   and exists (select 1 from convocatorias_universidad vivo_proceso where vivo_proceso.convocatoria_universidad_id = vivo.convocatoria_universidad_id))`
 
 type ParallelRow = { id: string; subject_id: string; code: string; shift: string | null; subject: string; campus: string | null; modality: string | null; teachers: number }
 
-export type GenerateOptions = { subjectId?: string | null; subjectIds?: string[] | null; parallelId?: string | null; allowEmpty?: boolean; skipIncomplete?: boolean; notifyTeacher?: boolean }
-
 export const CONFIRMATION_FIELD = "confirm_purge"
 export const DEFAULT_REASON = "cambió la base institucional (malla, período académico o plantilla)"
 export const BACK_TO_DRAFT_EVENT = "silabo.devuelto_borrador"
-export const SENT_STATES = ["en_revision", "correccion_solicitada", "aprobado"]
-export const DOCUMENT_PATHS = [
-  "career.name",
-  "career.faculty",
-  "career.faculty_logo",
-  "scheduled_subject.campus",
-  "subject.name",
-  "subject.code",
-  "subject.cycle",
-  "subject.organization_unit",
-  "subject.credits",
-  "subject.total_hours",
-  "subject.hours_ac",
-  "subject.hours_pae",
-  "subject.hours_aa",
-  "subject.prerequisites",
-  "subject.corequisites",
-  "scheduled_subject.modality",
-]
 const SILENT_PATHS = ["subject.position", "curriculum.cycle_count", "career.code"]
-
-export type WorkScope = { careerIds?: string | string[] | null; periodId?: string | null; subjectId?: string | null; subjectIds?: string[] | null }
-
-export type WorkSyllabus = { id: string; convocationId: string; parallelId: string; state: string; context: PhpRecord; started: boolean; version: number }
 
 type PendingChange = { syllabus: WorkSyllabus; context: PhpRecord; documents: Map<string, unknown>; backToDraft: boolean }
 
 type DocumentsFor = (parallel: ParallelRow, syllabus: WorkSyllabus) => Promise<Map<string, unknown>>
 
 export type SubjectProfiles = Map<string, Map<string, PhpRecord | null>>
-
-export function requestBoolean(value: unknown): boolean {
-  if (value === true) return true
-  if (typeof value === "number") return value === 1
-  if (typeof value !== "string") return false
-  return ["1", "true", "on", "yes"].includes(value.trim().toLowerCase())
-}
 
 export function idsIn(column: SQL, ids: string[]): SQL {
   return ids.length === 0 ? sql`0 = 1` : sql`${column} in (${uuidList(ids)})`
@@ -138,17 +101,6 @@ function deepCopy(value: PhpRecord): PhpRecord {
 
 function subjectNames(subjects: string[]): string {
   return subjects.length > 1 ? `${subjects.slice(0, -1).join(", ")} y ${subjects[subjects.length - 1]}` : (subjects[0] ?? "")
-}
-
-export function purgeRequired(count: number): Record<string, string[]> {
-  return {
-    purge_required: [
-      count === 1
-        ? "Este cambio reemplazará 1 sílabo. Se eliminará todo su contenido, incluso si ya estaba aprobado (borrador, revisiones, aprobación, firmas y análisis de IA), y se generará nuevamente desde la base corregida. El docente recibirá un aviso."
-        : `Este cambio reemplazará ${count} sílabos. Se eliminará todo su contenido, incluso los ya aprobados (borradores, revisiones, aprobaciones, firmas y análisis de IA), y se generarán nuevamente desde la base corregida. Cada docente recibirá un aviso.`,
-    ],
-    purge_count: [String(count)],
-  }
 }
 
 function backToDraftRequired(count: number): Record<string, string[]> {

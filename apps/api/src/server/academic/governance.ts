@@ -4,7 +4,7 @@ import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { apiJson } from "../http/responses"
 import { configuredFacultyUrl, type StoredLogo } from "../configuration/institutionalLogos"
-import { institutionToday } from "../dashboard/dashboardQueries"
+import { institutionToday } from "../shared/clock"
 import { baseOptions, CONVOCATION_LOCK_REASON, forbidden } from "./structure"
 import { createGovernanceRepository } from "./governanceQueries"
 

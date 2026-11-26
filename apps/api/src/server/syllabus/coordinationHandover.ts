@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm"
 import { storageWriter } from "../http/storageWriter"
 import { uuidList } from "../http/sql"
 import type { AfterCommit } from "../queue/dispatch"
-import type { WorkSyllabus } from "./inProgressWork"
+import type { WorkSyllabus } from "./inProgressWorkHelpers"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 const ROLE_COORDINATION = "coordinacion"

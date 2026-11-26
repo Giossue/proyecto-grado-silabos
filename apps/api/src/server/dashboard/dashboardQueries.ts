@@ -2,14 +2,9 @@ import { and, desc, eq, exists, inArray, ne, sql, type AnyColumn, type SQL } fro
 import { db } from "@/db"
 import { convocatoriasCarreras, convocatoriasUniversidad, docentesVigentesSilabo, periodosAcademicos, silabos, usuarios } from "@/db/schema"
 import { libraryReviewCounts } from "../library/reviewQueries"
+import { institutionTimezone } from "../shared/clock"
 import type { Executor } from "../syllabus/teacherSyllabusQueries"
 import type { ConvocationRecord, DashboardRepository, ProcessRecord, TeacherSyllabus } from "./dashboard"
-
-const institutionTimezone = () => process.env.DISPLAY_TIMEZONE ?? "America/Guayaquil"
-
-export function institutionToday(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: institutionTimezone(), year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())
-}
 
 const localDate = (column: AnyColumn) => sql<string>`to_char(${column} at time zone ${institutionTimezone()}, 'YYYY-MM-DD')`
 

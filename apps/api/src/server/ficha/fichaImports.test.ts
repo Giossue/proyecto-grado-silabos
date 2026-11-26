@@ -10,7 +10,7 @@ import { teacherEditable, templateFields } from "../configuration/templatePresen
 import { keepOwnOptions, normalizeFieldDocument, plainText, responseTemplate, TemplateValidationError } from "../configuration/templateRuntime"
 import { fakeTemplateStore, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import { createRateLimiter } from "../http/throttle"
-import { GenerationRejected } from "../syllabus/inProgressWork"
+import { GenerationRejected } from "../syllabus/inProgressWorkHelpers"
 import { applyFichaImport, fichaTemplate, previewFichaImport, type FichaApplyTx, type FichaImportDeps } from "./fichaImports"
 
 const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"

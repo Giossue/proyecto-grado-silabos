@@ -7,7 +7,7 @@ import { apiJson, validationError } from "../http/responses"
 import { officialFormatSchema } from "@silabos/shared/schemas/template"
 import { validateSchema } from "../http/schemaValidation"
 import { uuid7 } from "../http/uuid7"
-import { requestBoolean } from "../syllabus/inProgressWork"
+import { requestBoolean } from "../syllabus/inProgressWorkHelpers"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { officialDefinition, officialSections } from "./officialTemplate"
 

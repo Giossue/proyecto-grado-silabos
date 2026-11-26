@@ -26,7 +26,7 @@ import {
 } from "../configuration/templateRuntime"
 import { createTemplateStore, type TemplateStore } from "../configuration/templateStore"
 import type { PhpRecord } from "../configuration/phpValues"
-import { institutionToday } from "../dashboard/dashboardQueries"
+import { institutionToday } from "../shared/clock"
 import { identificationOf, type IdentificationSource } from "./identificationCard"
 import { mayEdit, type SyllabusFacts } from "./policy"
 import { createDraftFieldStore } from "./draftFieldStore"

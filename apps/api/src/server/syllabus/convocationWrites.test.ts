@@ -5,7 +5,7 @@ import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
 import { createConvocation, resumeConvocation, type ConvocationWriteDeps, type LockedConvocation, type LockedProcess } from "./convocationWrites"
 import type { ConvocationRecord } from "./convocations"
-import { GenerationRejected } from "./inProgressWork"
+import { GenerationRejected } from "./inProgressWorkHelpers"
 
 const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 

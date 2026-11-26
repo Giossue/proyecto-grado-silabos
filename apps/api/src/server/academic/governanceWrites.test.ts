@@ -8,7 +8,7 @@ import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW
 import { decodePng } from "../files/png"
 import { createStorageWriter, type StorageWriter } from "../http/storageWriter"
 import type { StoredObjectInput } from "./supportDocumentWrites"
-import { GenerationRejected, purgeRequired } from "../syllabus/inProgressWork"
+import { GenerationRejected, purgeRequired } from "../syllabus/inProgressWorkHelpers"
 import {
   createGovernanceRecord,
   periodLabel,

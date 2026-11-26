@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common"
 import { Prisma } from "../../../generated/prisma/client"
 import { PrismaService } from "../../../prisma/prisma.service"
 import type { AcademicDeletionStore, DeletionTx } from "../../../server/academic/deletions"
-import { TRANSACTION_OPTIONS } from "../academic-handler"
+import { TRANSACTION_OPTIONS } from "../../../prisma/db"
 import { AcademicStructurePrismaRepository } from "./academic-structure.repository"
 import { SYLLABUS_SCOPE, TOUCHED_SYLLABUS } from "./scheduled-subjects.repository"
 

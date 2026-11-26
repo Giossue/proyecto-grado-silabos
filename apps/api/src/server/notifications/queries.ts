@@ -141,8 +141,6 @@ export type Mail = (mail: QueuedMail) => Promise<unknown>
 
 export type WriteOptions = { now?: () => number; mail?: Mail }
 
-export const systemNow = () => Math.floor(Date.now() / 1000)
-
 export function notificationScope(executor: Executor, afterCommit: AfterCommit, now: number, mail: Mail = queueMail): NotificationScope {
   return { tx: notificationTx(executor), afterCommit, mail, now, email: notificationEmailConfig(), frontendUrl: frontendUrl() }
 }

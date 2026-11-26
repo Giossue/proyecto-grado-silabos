@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import { createTemplateStore } from "../../server/configuration/templateStore"
-import { institutionToday } from "../../server/dashboard/dashboardQueries"
+import { institutionToday } from "../../server/shared/clock"
 import { libraryReviewCounts } from "../../server/library/reviewQueries"
 import { DashboardController } from "./dashboard.controller"
 import { PrismaDashboardRepository } from "./dashboard.repository"

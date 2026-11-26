@@ -70,7 +70,3 @@ export function writtenBySql(userId: string): SQL {
 
 export const IN_CURRENT_PERIOD = convocationWhere(sql`convocatoria_filtro.convocatoria_universidad_id = ${CURRENT_PROCESS}`)
 export const IN_PAST_PERIOD = convocationWhere(sql`convocatoria_filtro.convocatoria_universidad_id != ${CURRENT_PROCESS}`)
-
-export function convocationName(career: string, period: string | null): string {
-  return `${career} · ${period ?? "Período"}`.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, "")
-}

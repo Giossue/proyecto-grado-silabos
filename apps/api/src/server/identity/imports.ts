@@ -9,7 +9,7 @@ import type { PhpArray } from "../http/input"
 import { forbidden, apiJson } from "../http/responses"
 import { importedTeacherSchema, importedUserSchema, NAME_SUBJECTS, nameColumnMessages } from "@silabos/shared/schemas/people"
 import { validateSchema } from "../http/schemaValidation"
-import { systemNow } from "../notifications/queries"
+import { systemNow } from "../shared/clock"
 import {
   collapseName,
   fullName,

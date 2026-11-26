@@ -4,7 +4,7 @@ import type { SupportDocumentRecord, SupportDocumentRepository } from "../../../
 import type { ReadableDocument, StoredObjectInput, SupportDocumentTx, SupportDocumentWriteStore } from "../../../server/academic/supportDocumentWrites"
 import { withAfterCommit } from "../../../server/queue/dispatch"
 import type { Prisma } from "../../../generated/prisma/client"
-import { TRANSACTION_OPTIONS } from "../academic-handler"
+import { TRANSACTION_OPTIONS } from "../../../prisma/db"
 import { AcademicStructurePrismaRepository } from "./academic-structure.repository"
 import { epochDate } from "./prisma-values"
 

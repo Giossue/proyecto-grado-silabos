@@ -6,8 +6,6 @@ import { WebReply } from "../../common/http/web-reply"
 import { withCookieQueue, withSetCookies } from "../../server/auth/cookieQueue"
 import { unmatchedRoute } from "../../server/http/router"
 
-export const TRANSACTION_OPTIONS = { maxWait: 60_000, timeout: 600_000 } as const
-
 export function SessionInHandler() {
   return applyDecorators(
     ApiCookieAuth(SESSION_COOKIE),

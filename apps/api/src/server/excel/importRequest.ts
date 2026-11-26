@@ -9,7 +9,7 @@ import type { z } from "zod"
 import { fieldFailures, is } from "@silabos/shared/schemas/fields"
 import { spreadsheetOptionsSchema } from "@silabos/shared/schemas/imports"
 import { mergeErrors, validateSchema } from "../http/schemaValidation"
-import { requestBoolean } from "../syllabus/inProgressWork"
+import { requestBoolean } from "../syllabus/inProgressWorkHelpers"
 import { readImportRows, SpreadsheetRejected, type ImportColumns, type ImportRow } from "./spreadsheetReader"
 
 export type ImportDeps = { bridge: BridgeDeps; limiter: RateLimiter; maxPostSize?: number }

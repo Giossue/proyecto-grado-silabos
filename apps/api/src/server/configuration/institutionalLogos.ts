@@ -5,16 +5,12 @@ import { requestRoot } from "../http/request"
 import { fileBase64, fileModifiedAt, publicPath } from "../http/storage"
 import { storageWriter } from "../http/storageWriter"
 import { localFile, storedFile, type FileSource } from "../storage/fileSource"
+import { LOGO_DISK, type LogoStore, type StoredFaculty, type StoredLogo } from "../shared/logoStore"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 
-export type StoredLogo = { disk: string; path: string | null; classification: string | null }
-export type StoredFaculty = { id: string; logo: StoredLogo | null }
+export type { LogoStore, StoredFaculty, StoredLogo }
 
-export interface LogoStore {
-  faculty(id: string): Promise<StoredFaculty | null>
-}
-
-const DISK = "private"
+const DISK = LOGO_DISK
 const INSTITUTION_PATH = "logos/institucion.png"
 const DEFAULT_INSTITUTION = "images/silabo/logo-universidad.png"
 const DEFAULT_FACULTY = "images/silabo/facultad.jpeg"
