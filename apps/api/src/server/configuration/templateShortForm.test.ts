@@ -296,9 +296,12 @@ describe("template JSON in Spanish", () => {
     expect((imported(payload).blocks.bibliografia as PhpRecord).catalog).toEqual((definition.blocks.bibliografia as PhpRecord).catalog)
     expect(((definition.blocks.bibliografia as PhpRecord).catalog as PhpRecord).map).toEqual({ author: "autor", title: "titulo", year: "anio", place: "ciudad", publisher: "editorial", isbn: "isbn", format: "codigo" })
     expect(imported(english)).toEqual(definition)
+    const shelf = structuredClone(payload)
+    ;(blocksOf(shelf).bibliografia.catalogo as PhpRecord).columnas = { autor: "autor", signatura: "codigo" }
+    expect(((imported(shelf).blocks.bibliografia as PhpRecord).catalog as PhpRecord).map).toEqual({ author: "autor", call_number: "codigo" })
     expect(definitionErrors(() => imported(twice))).toEqual(["blocks.bibliografia.catalogo.columnas: «autor» y «author» son el mismo dato del libro."])
     expect(definitionErrors(() => imported(unknown))).toEqual([
-      "blocks.bibliografia.catalogo.columnas: «editor» no es un dato del libro (autor, titulo, anio, ciudad, editorial, isbn, codigo o call_number).",
+      "blocks.bibliografia.catalogo.columnas: «editor» no es un dato del libro (autor, titulo, anio, ciudad, editorial, isbn, codigo o signatura).",
     ])
   })
 

@@ -41,6 +41,7 @@ const CATALOG_NAMES: Record<string, string> = {
   publisher: "editorial",
   isbn: "isbn",
   format: "codigo",
+  call_number: "signatura",
 }
 const CATALOG_FIELD_OF: Record<string, string> = Object.fromEntries(Object.entries(CATALOG_NAMES).map(([field, name]) => [name, field]))
 const NAMES: Record<string, string> = {

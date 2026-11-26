@@ -373,8 +373,8 @@
                         "columnas": {
                             "type": "object",
                             "minProperties": 1,
-                            "description": "Clave: dato del libro (autor, titulo, anio, ciudad, editorial, isbn, codigo o call_number; también se aceptan los nombres de Koha author, title, year, place, publisher y format). Valor: columna de texto de la lista.",
-                            "propertyNames": { "enum": ["autor", "titulo", "anio", "ciudad", "editorial", "isbn", "codigo", "call_number", "author", "title", "year", "place", "publisher", "format"] },
+                            "description": "Clave: dato del libro (autor, titulo, anio, ciudad, editorial, isbn, codigo o signatura; también se aceptan los nombres de Koha author, title, year, place, publisher, call_number y format). Valor: columna de texto de la lista.",
+                            "propertyNames": { "enum": ["autor", "titulo", "anio", "ciudad", "editorial", "isbn", "codigo", "signatura", "call_number", "author", "title", "year", "place", "publisher", "format"] },
                             "additionalProperties": { "$ref": "#/$defs/key" }
                         }
                     }
