@@ -34,7 +34,7 @@ import { careerAcademicKeys } from "@/queries/careerAcademics"
 
 type Subject = ScheduledSubjects["options"]["activeSubjects"][number]
 type Values = Record<string, DocumentNode | null>
-type Loaded = { career: ScheduledSubjects["career"]; subjects: Subject[]; subjectName: string; fields: SubjectProfileField[]; values: Values }
+type Loaded = { subjects: Subject[]; subjectName: string; fields: SubjectProfileField[]; values: Values; lockReason: string | null }
 
 const GENERAL = "General"
 const sectionOf = (field: SubjectProfileField): string => field.section?.trim() || GENERAL
@@ -47,7 +47,6 @@ const loadProfile = async (subjectId: string, careerId: string | null): Promise<
   const fields = profile.fields.toSorted((first, second) => (first.position ?? 0) - (second.position ?? 0))
 
   return {
-    career: scheduled.career,
     subjects: scheduled.options.activeSubjects
       .filter((subject) => subject.generates_syllabus !== false)
       .map((subject, order) => ({ subject, order }))
@@ -56,6 +55,7 @@ const loadProfile = async (subjectId: string, careerId: string | null): Promise<
     subjectName: scheduled.options.activeSubjects.find((subject) => subject.id === subjectId)?.nombre ?? "",
     fields,
     values: valuesFrom(fields, profile.values),
+    lockReason: profile.lock_reason ?? null,
   }
 }
 
@@ -79,14 +79,14 @@ function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: 
   const [previewError, setPreviewError] = useState<string | null>(null)
   const { open: discardOpen, ask: askToDiscard, decide: decideDiscard } = useDiscardConfirmation()
 
-  const career = data?.career ?? null
+  const lockReason = data?.lockReason ?? null
   const subjects = data?.subjects ?? []
   const fields = data?.fields ?? []
   const byCycle = new Map<number, Subject[]>()
   for (const subject of subjects) byCycle.set(subject.ciclo, [...(byCycle.get(subject.ciclo) ?? []), subject])
   const subjectGroups = [...byCycle].map(([cycle, list]) => ({ cycle, list }))
   const changed = !loading && JSON.stringify(values) !== loaded
-  const locked = Boolean(career?.lock_reason)
+  const locked = Boolean(lockReason)
   const sections = [...new Set(fields.map(sectionOf))]
   const activeSection = chosen !== null && sections.includes(chosen) ? chosen : (sections[0] ?? "")
   const shownFields = fields.filter((field) => sectionOf(field) === activeSection)
@@ -213,7 +213,7 @@ function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: 
           Volver al proyecto de carrera
         </Button>
       }
-      banner={locked && career?.lock ? <ProcessLockAlert banner lock={career.lock} /> : null}
+      banner={lockReason ? <ProcessLockAlert banner message={lockReason} hideAction /> : null}
       actions={
         !loading && !loadError && fields.length > 0 ? (
           <>

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react"
 import { type ScheduledSubjects } from "@/api/career-academics"
 import { AdminCareerBackLink, AdminCareerTabs } from "@/components/domain/academic/AdminCareerNavigation"
 import { FichaImportDialog } from "@/components/domain/academic/FichaImportDialog"
+import { IconTooltip } from "@/components/domain/IconTooltip"
 import { SupportDocumentsPanel } from "@/components/domain/academic/SupportDocumentsPanel"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { EmptyState } from "@/components/domain/EmptyState"
@@ -29,7 +30,7 @@ import { useClientFilter, type ClientFilterDefinition } from "@/composables/useC
 import { paths } from "@/lib/routes"
 import { rowLinkClass } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
-import { cn } from "@/lib/utils"
+import { cn, withoutFinalPeriod } from "@/lib/utils"
 import { queryErrorMessage } from "@/lib/queryClient"
 import { coordinatorCareerQuery, scheduledSubjectsQuery } from "@/queries/careerAcademics"
 
@@ -88,6 +89,8 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
   }
 
   const documents = tab === "documentos"
+  const profileLock = data?.career.profile_lock_reason ?? null
+  const fichaImport = <FichaImportDialog disabled={Boolean(profileLock)} onApplied={(message) => void saved(message)} />
   const subjectHref = (subject: string): string => (careerId ? paths.admin.careerProjectSubject(careerId, subject) : paths.coordination.careerProjectSubject(subject))
   const title = documents ? "Documentos de apoyo" : careerId && data ? `Proyecto de ${data.career.name}` : "Proyecto de carrera por materia"
 
@@ -99,7 +102,7 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
       size="wide"
       loading={!data && !loadError}
       actionsSkeleton={!data && !loadError ? [documents ? "w-40" : "w-44"] : []}
-      banner={data?.career.lock_reason && !documents ? <ProcessLockAlert banner lock={data.career.lock} /> : null}
+      banner={profileLock && !documents ? <ProcessLockAlert banner message={profileLock} hideAction /> : null}
       actions={
         documents ? (
           <Button type="button" onClick={() => setUploadOpen(true)}>
@@ -107,7 +110,20 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
             Subir documento
           </Button>
         ) : (
-          <FichaImportDialog disabled={Boolean(data?.career.lock_reason)} onApplied={(message) => void saved(message)} />
+          profileLock ? (
+            <>
+              <IconTooltip label={withoutFinalPeriod(profileLock)}>
+                <span className="inline-flex" tabIndex={0} aria-describedby="ficha-import-lock">
+                  {fichaImport}
+                </span>
+              </IconTooltip>
+              <span id="ficha-import-lock" className="sr-only">
+                {profileLock}
+              </span>
+            </>
+          ) : (
+            fichaImport
+          )
         )
       }
     >

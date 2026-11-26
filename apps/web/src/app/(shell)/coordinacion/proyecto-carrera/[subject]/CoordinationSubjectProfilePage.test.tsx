@@ -32,7 +32,7 @@ vi.mock("@/components/domain/syllabus/FreeTextEditor", () => ({
     </button>
   ),
 }))
-vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: () => <div data-testid="process-lock" /> }))
+vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: ({ message }: { message?: string }) => <div data-testid="process-lock">{message}</div> }))
 vi.mock("@/components/domain/syllabus/SyllabusDocumentPreview", () => ({ SyllabusDocumentPreview: () => <div data-preview /> }))
 
 const blank: DocumentNode = { type: "doc", content: [{ type: "paragraph" }] }
@@ -178,13 +178,22 @@ describe("Página del proyecto de carrera de una materia", () => {
     expect(tabs()).toEqual(["Descripción", "Metodología"])
   })
 
-  it("con el periodo académico abierto muestra el bloqueo y no deja editar ni guardar", async () => {
-    vi.mocked(getScheduledSubjects).mockResolvedValue(scheduled("Periodo académico abierto"))
+  it("con el periodo académico en pausa o finalizado queda de solo lectura con el motivo que da el servidor", async () => {
+    vi.mocked(getSubjectProfile).mockResolvedValue(profile({ lock_reason: "El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado." }))
     await mountPage()
 
-    expect(document.querySelector('[data-testid="process-lock"]')).not.toBeNull()
+    expect(document.querySelector('[data-testid="process-lock"]')?.textContent).toBe("El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado.")
     expect(document.querySelector("fieldset")).toBeDisabled()
     expect(button("Guardar información")).toBeDisabled()
+  })
+
+  it("sin bloqueo del servidor se edita aunque la malla esté bloqueada", async () => {
+    vi.mocked(getScheduledSubjects).mockResolvedValue(scheduled("Periodo académico activo"))
+    vi.mocked(getSubjectProfile).mockResolvedValue(profile({ lock_reason: null }))
+    await mountPage()
+
+    expect(document.querySelector('[data-testid="process-lock"]')).toBeNull()
+    expect(document.querySelector("fieldset")).not.toBeDisabled()
   })
 
   it("marca el campo con un espacio de elegir sin opciones y abre la vista previa con su botón de icono y texto", async () => {

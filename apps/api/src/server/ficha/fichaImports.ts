@@ -4,7 +4,7 @@ import { activeCareerId, resolveCareerScope } from "../academic/careerScope"
 import type { AppSession } from "../auth/types"
 import { freeTextNormalize } from "../configuration/freeText"
 import { phpTrim, type PhpRecord } from "../configuration/phpValues"
-import { profileContext } from "../configuration/subjectProfile"
+import { careerProfileLockReason, profileContext } from "../configuration/subjectProfile"
 import { profileFields } from "../configuration/subjectProfileFields"
 import { fieldResponseNormalize } from "../configuration/templateRehearsal"
 import { fieldSection, type TemplateField } from "../configuration/templatePresentation"
@@ -32,13 +32,13 @@ export type CurrentValue = { subjectId: string; fieldId: string; value: unknown 
 
 export type FichaImportStore = FichaReader & {
   careerActive(careerId: string): Promise<boolean>
-  careerLocked(careerId: string): Promise<boolean>
+  careerEditable(careerId: string): Promise<boolean>
   currentValues(subjectIds: string[], fieldIds: string[]): Promise<CurrentValue[]>
 }
 
 export interface FichaApplyTx extends FichaReader {
   lockCareer(careerId: string): Promise<void>
-  careerLocked(careerId: string): Promise<boolean>
+  careerEditable(careerId: string): Promise<boolean>
   storedValue(subjectId: string, fieldId: string): Promise<unknown>
   saveValue(subjectId: string, fieldId: string, document: PhpRecord): Promise<void>
   keepContent<T>(confirmed: boolean, careerId: string, subjectIds: string[], change: () => Promise<T>): Promise<T>
@@ -51,7 +51,6 @@ export type FichaImportDeps = ImportDeps & {
 }
 
 const CAREER_MODEL = "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
-const CONVOCATION_LOCK = "Periodo académico activo"
 const NO_BLOCKS = { document: {}, variables: {}, blocks: {} } as unknown as TemplateDefinition
 
 const FICHA_FILE: ImportFileRules = {
@@ -70,6 +69,11 @@ type Context = { definition: FichaDefinition; fields: TemplateField[]; template:
 
 function rejectWith(errors: Record<string, string[]>): never {
   throw new Rejected(validationError(errors))
+}
+
+async function closedFor(session: AppSession, careerId: string, careerEditable: (careerId: string) => Promise<boolean>): Promise<Response | null> {
+  const reason = await careerProfileLockReason(session, careerId, careerEditable)
+  return reason === null ? null : validationError({ process: [reason] })
 }
 
 function careerContext(session: AppSession, store: Pick<FichaImportStore, "careerActive">, requestedCareerId: string | null): Promise<string | Response> {
@@ -117,7 +121,8 @@ export async function fichaTemplate(request: Request, deps: FichaImportDeps, req
   if (session instanceof Response) return session
   const careerId = await careerContext(session, deps.store, requestedCareerId)
   if (careerId instanceof Response) return careerId
-  if (await deps.store.careerLocked(careerId)) return validationError({ process: [CONVOCATION_LOCK] })
+  const closed = await closedFor(session, careerId, deps.store.careerEditable)
+  if (closed !== null) return closed
   try {
     const { definition } = await fichaContext(careerId, deps.store)
     return xlsxDownload(await createFichaWorkbook(definition, { now: deps.now() }), "proyecto-carrera.xlsx", "no-store, private")
@@ -131,7 +136,8 @@ type Preview = { definition: FichaDefinition; fileHash: string; subjects: FichaE
 async function previewWorkbook(file: UploadedFile, session: AppSession, deps: FichaImportDeps, requestedCareerId: string | null): Promise<Preview | Response> {
   const careerId = await careerContext(session, deps.store, requestedCareerId)
   if (careerId instanceof Response) return careerId
-  if (await deps.store.careerLocked(careerId)) return validationError({ process: [CONVOCATION_LOCK] })
+  const closed = await closedFor(session, careerId, deps.store.careerEditable)
+  if (closed !== null) return closed
   try {
     const { definition } = await fichaContext(careerId, deps.store)
     const subjects = readFichaWorkbook(file.bytes, definition)
@@ -223,13 +229,15 @@ function assertSelection(preview: Preview, subjectIds: string[], fieldsBySubject
 
 async function applyEntries(
   tx: FichaApplyTx,
+  session: AppSession,
   preview: Preview,
   subjectIds: string[],
   fieldsBySubject: Map<string, string[]> | null,
 ): Promise<number> {
   const careerId = preview.definition.careerId
   await tx.lockCareer(careerId)
-  if (await tx.careerLocked(careerId)) rejectWith({ process: [CONVOCATION_LOCK] })
+  const closed = await closedFor(session, careerId, tx.careerEditable)
+  if (closed !== null) throw new Rejected(closed)
   let fresh: Context
   try {
     fresh = await fichaContext(careerId, tx)
@@ -295,7 +303,7 @@ export async function applyFichaImport(request: Request, deps: FichaImportDeps, 
         assertSelection(preview, subjectIds, fieldsBySubject)
         const careerId = preview.definition.careerId
         const applied = await deps.transaction((tx) =>
-          tx.keepContent(requestBoolean(input.confirm_purge), careerId, subjectIds, () => applyEntries(tx, preview, subjectIds, fieldsBySubject)),
+          tx.keepContent(requestBoolean(input.confirm_purge), careerId, subjectIds, () => applyEntries(tx, session, preview, subjectIds, fieldsBySubject)),
         )
         return apiJson({ message: "Proyecto de carrera aplicado.", applied })
       } catch (error) {

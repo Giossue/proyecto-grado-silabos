@@ -9,6 +9,7 @@ import type { AfterCommit } from "../queue/dispatch"
 import { keepContent } from "../syllabus/finalizedChangeNotice"
 import { InProgressWork } from "../syllabus/inProgressWork"
 import { phpShape } from "./phpValues"
+import { careerProfileEditable } from "./subjectProfile"
 import type { SubjectProfileTx, SubjectProfileWriteDeps } from "./subjectProfileWrites"
 
 export async function careerDataLocked(db: Db, careerId: string): Promise<boolean> {
@@ -33,7 +34,7 @@ export function subjectProfileTx(db: Db, afterCommit: AfterCommit, now: number, 
       const [row] = await db.$queryRaw<{ careerId: string }[]>`select carrera_id::text as "careerId" from asignaturas where asignatura_id = ${subjectId}::uuid limit 1 for update`
       return row ? { careerId: row.careerId } : null
     },
-    careerLocked: (careerId) => careerDataLocked(db, careerId),
+    careerEditable: (careerId) => careerProfileEditable(db, careerId),
     async deleteValue(subjectId, fieldId) {
       const row = await subjectValue(db, subjectId, fieldId)
       if (row) await db.$executeRaw`delete from valores_campo where valor_campo_id = ${row.id}::uuid`

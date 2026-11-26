@@ -5,7 +5,8 @@ import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW
 import { GenerationRejected, purgeRequired } from "../syllabus/inProgressWorkHelpers"
 import type { PhpRecord } from "./phpValues"
 import { USED_OPTION_REMOVED, USED_RESPONSE_REMOVED } from "./responseConditions"
-import { showSubjectProfile } from "./subjectProfile"
+import type { Db } from "../../prisma/db"
+import { careerProfileEditable, showSubjectProfile } from "./subjectProfile"
 import { profileTemplates } from "./subjectProfileFields"
 import { teacherEditable, type TemplateField } from "./templatePresentation"
 import { fieldCarried, plainText } from "./templateRuntime"
@@ -32,9 +33,25 @@ const stored = (value: string): PhpRecord => ({ type: "doc", content: [{ type: "
 let world: FakeWorld
 let templates: FakeTemplateWorld
 let subjects: Map<string, string>
-let lockedCareers: Set<string>
+let period: { processState: string; convocationState: string | null } | null
 let purge: Record<string, string[]> | null
 let log: string[]
+
+const periodDb = (): Db => ({ $queryRaw: async () => (period === null ? [] : [period]) }) as unknown as Db
+
+const allowedPeriods = [
+  null,
+  { processState: "abierto", convocationState: null },
+  { processState: "abierto", convocationState: "preparacion" },
+  { processState: "abierto", convocationState: "abierto" },
+]
+const blockedPeriods = [
+  { processState: "pausado", convocationState: "abierto" },
+  { processState: "cerrado", convocationState: "cerrado" },
+  { processState: "cerrado", convocationState: null },
+  { processState: "abierto", convocationState: "pausado" },
+  { processState: "abierto", convocationState: "cerrado" },
+]
 
 function deps(): SubjectProfileWriteDeps {
   const tx: SubjectProfileTx = {
@@ -44,7 +61,7 @@ function deps(): SubjectProfileWriteDeps {
       const careerId = subjects.get(id)
       return careerId === undefined ? null : { careerId }
     },
-    careerLocked: async (careerId) => lockedCareers.has(careerId),
+    careerEditable: (careerId) => careerProfileEditable(periodDb(), careerId),
     deleteValue: async (subjectId, field) => {
       log.push(`delete:${field}`)
       templates.values = templates.values.filter((value) => !(value.subjectId === subjectId && value.fieldId === field))
@@ -65,6 +82,7 @@ function deps(): SubjectProfileWriteDeps {
     store: fakeTemplateStore(templates),
     subjectCareer: async (id) => subjects.get(id) ?? null,
     careerActive: async () => true,
+    careerEditable: (careerId) => careerProfileEditable(periodDb(), careerId),
     async transaction(work) {
       const values = templates.values
       log.push("begin")
@@ -103,7 +121,7 @@ beforeEach(() => {
   }
   templates = { template: goldenTemplate(), values: [] }
   subjects = new Map([[SUBJECT, CAREER]])
-  lockedCareers = new Set()
+  period = { processState: "abierto", convocationState: "abierto" }
   purge = null
   log = []
   asRole("coordinador", CAREER)
@@ -178,10 +196,38 @@ describe("PUT academic/asignaturas/{asignatura}/ficha", () => {
     expect(log.filter((entry) => entry === "rollback")).toHaveLength(2)
   })
 
-  it("an open convocation of the career locks its career project", async () => {
-    lockedCareers.add(CAREER)
-    expect((await put({ values: { [DESCRIPCION]: text("x") } })).json?.errors).toEqual({ process: ["Periodo académico activo"] })
-    expect(templates.values).toEqual([])
+  it("coordination saves the career project before and while the period is open, never paused or finalized", async () => {
+    const message = "El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado."
+    for (const blocked of blockedPeriods) {
+      period = blocked
+      const response = await put({ values: { [DESCRIPCION]: text("x") } })
+      expect(response.status).toBe(422)
+      expect(response.json).toEqual({ message, errors: { process: [message] } })
+      expect(templates.values).toEqual([])
+    }
+    for (const allowed of allowedPeriods) {
+      period = allowed
+      const saved = await put({ values: { [DESCRIPCION]: text("x") } })
+      expect(saved.status).toBe(200)
+      expect(saved.json?.lock_reason).toBeNull()
+    }
+  })
+
+  it("the administrator saves the career project while the period is paused", async () => {
+    asRole("administrador", null)
+    period = { processState: "pausado", convocationState: "abierto" }
+    const response = await put({ values: { [DESCRIPCION]: text("Texto del administrador") } })
+    expect(response.status).toBe(200)
+    expect(response.json?.lock_reason).toBeNull()
+    expect(templates.values).toEqual([{ fieldId: DESCRIPCION, subjectId: SUBJECT, value: stored("Texto del administrador") }])
+  })
+
+  it("the profile tells coordination why it is read-only and tells the administrator nothing", async () => {
+    period = { processState: "pausado", convocationState: "abierto" }
+    const show = async () => (await (await showSubjectProfile(apiRequest(`/api/v1/academic/asignaturas/${SUBJECT}/ficha`, { cookie }), SUBJECT, deps())).json()) as Record<string, unknown>
+    expect((await show()).lock_reason).toBe("El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado.")
+    asRole("administrador", null)
+    expect((await show()).lock_reason).toBeNull()
   })
 
   it("asks to confirm before sending syllabi in progress back to draft, and passes confirm_purge", async () => {

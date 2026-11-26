@@ -1,7 +1,7 @@
 import { aborted } from "../http/responses"
 import { fromController } from "../auth/controllerResponse"
 import { requireSession } from "../auth/requireSession"
-import type { BridgeDeps } from "../auth/types"
+import type { AppSession, BridgeDeps } from "../auth/types"
 import { phpIsNumeric } from "@silabos/shared/schemas/php"
 import { CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES, studyModalityLabel } from "@silabos/shared/schemas/academic"
 import { apiJson } from "../http/responses"
@@ -177,10 +177,20 @@ function subjectPayload(subject: SubjectRecord): Record<string, unknown> {
   }
 }
 
-export async function authorizedCareer(request: Request, deps: AcademicStructureDeps, requestedCareerId: string | null = null): Promise<CareerRecord | Response> {
+export async function authorizedCareerSession(
+  request: Request,
+  deps: AcademicStructureDeps,
+  requestedCareerId: string | null = null,
+): Promise<{ session: AppSession; career: CareerRecord } | Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
-  return resolveCareerScope(session, requestedCareerId, (careerId) => deps.academic.activeCareer(careerId), forbidden)
+  const career = await resolveCareerScope(session, requestedCareerId, (careerId) => deps.academic.activeCareer(careerId), forbidden)
+  return career instanceof Response ? career : { session, career }
+}
+
+export async function authorizedCareer(request: Request, deps: AcademicStructureDeps, requestedCareerId: string | null = null): Promise<CareerRecord | Response> {
+  const authorized = await authorizedCareerSession(request, deps, requestedCareerId)
+  return authorized instanceof Response ? authorized : authorized.career
 }
 
 export async function curriculumBuilder(

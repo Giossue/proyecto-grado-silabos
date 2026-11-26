@@ -12,12 +12,17 @@ import { fieldSection, presentDefinition, variableCatalog } from "./templatePres
 import { createTemplateStore, type TemplateStore } from "../shared/templateStore"
 import { profileComplete, profileFields, profilePositions, profileValues, type ProfileContext } from "./subjectProfileFields"
 import { unmatchedRoute, modelNotFound, routeAllows } from "../http/router"
+import { CONVOCATION_PAUSED, PROCESS_PAUSED, ROLE_ADMINISTRATOR } from "../syllabus/policy"
+
+export const CAREER_PROFILE_BLOCKED = "El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado."
+const CLOSED = "cerrado"
 
 export type SubjectProfileDeps = {
   bridge: BridgeDeps
   store: TemplateStore
   subjectCareer: (subjectId: string) => Promise<string | null>
   careerActive: (careerId: string) => Promise<boolean>
+  careerEditable: (careerId: string) => Promise<boolean>
 }
 
 async function subjectCareer(db: Db, subjectId: string): Promise<string | null> {
@@ -30,12 +35,31 @@ async function careerActive(db: Db, careerId: string): Promise<boolean> {
   return row !== undefined
 }
 
+export async function careerProfileEditable(db: Db, careerId: string): Promise<boolean> {
+  const [period] = await db.$queryRaw<{ processState: string; convocationState: string | null }[]>`select proceso.estado_convocatoria_universidad as "processState",
+      convocatoria.estado_convocatoria_carrera as "convocationState"
+    from convocatorias_universidad proceso
+    inner join periodos_academicos periodo on periodo.periodo_academico_id = proceso.periodo_academico_id
+    left join convocatorias_carreras convocatoria on convocatoria.convocatoria_universidad_id = proceso.convocatoria_universidad_id and convocatoria.carrera_id = ${careerId}::uuid
+    order by periodo.fecha_inicio_periodo desc, proceso.convocatoria_universidad_id desc
+    limit 1`
+  if (period === undefined) return true
+  if (period.processState === PROCESS_PAUSED || period.processState === CLOSED) return false
+  return period.convocationState !== CONVOCATION_PAUSED && period.convocationState !== CLOSED
+}
+
+export async function careerProfileLockReason(session: AppSession, careerId: string, careerEditable: (careerId: string) => Promise<boolean>): Promise<string | null> {
+  if (session.activeRole?.role === ROLE_ADMINISTRATOR) return null
+  return (await careerEditable(careerId)) ? null : CAREER_PROFILE_BLOCKED
+}
+
 export function defaultSubjectProfileDeps(db: Db): SubjectProfileDeps {
   return {
     bridge: defaultBridgeDeps(),
     store: createTemplateStore(db),
     subjectCareer: (subjectId) => subjectCareer(db, subjectId),
     careerActive: (careerId) => careerActive(db, careerId),
+    careerEditable: (careerId) => careerProfileEditable(db, careerId),
   }
 }
 
@@ -76,10 +100,10 @@ export async function showSubjectProfile(request: Request, subjectId: string, de
   )
   if (session instanceof Response) return session
   if (careerId === null || !(await mayManageSubjectProfile(session, careerId, deps.careerActive))) return jsonError(403, "")
-  return subjectProfileResponse(request, subjectId, deps)
+  return subjectProfileResponse(request, subjectId, deps, await careerProfileLockReason(session, careerId, deps.careerEditable))
 }
 
-export async function subjectProfileResponse(request: Request, subjectId: string, deps: Pick<SubjectProfileDeps, "bridge" | "store">): Promise<Response> {
+export async function subjectProfileResponse(request: Request, subjectId: string, deps: Pick<SubjectProfileDeps, "bridge" | "store">, lockReason: string | null): Promise<Response> {
   const context = await profileContext(deps.store)
   if (context === null) return fromController(modelNotFoundResponse(MODELS.template))
 
@@ -106,6 +130,7 @@ export async function subjectProfileResponse(request: Request, subjectId: string
         complete,
         definition: presentDefinition(definition),
         variables: phpObject(Object.fromEntries(variableCatalog(definition).map((item) => [item.key, item.sample]))),
+        lock_reason: lockReason,
       }),
     )
   } catch (error) {

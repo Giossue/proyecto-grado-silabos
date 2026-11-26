@@ -24,6 +24,7 @@ const SHIFTS = '[{"value":"matutina","label":"Matutina"},{"value":"vespertina","
 let world: FakeWorld
 let careers: Map<string, CareerRecord>
 let lock: CareerLock | null
+let profileEditable: boolean
 let parallels: CareerParallelRecord[]
 let subjects: ScheduledSubjectRecord[]
 let marks: { syllabus: string[]; teacher: string[]; sent: string[]; started: string[] }
@@ -49,6 +50,7 @@ const deps = (): ScheduledSubjectsDeps => ({
   bridge: fakeDeps(world),
   academic: academic(),
   templates: fakeTemplateStore(templates),
+  careerProfileEditable: async () => profileEditable,
   scheduled: {
     careerParallels: async (id) => (id === CAREER ? parallels : []),
     parallelsWithSyllabus: async (ids) => marks.syllabus.filter((id) => ids.includes(id)),
@@ -78,6 +80,7 @@ beforeEach(() => {
   asRole("coordinador")
   careers = new Map([[CAREER, { id: CAREER, name: "Software", modality: "presencial", cycleCount: 4 }]])
   lock = null
+  profileEditable = true
   parallels = []
   subjects = []
   marks = { syllabus: [], teacher: [], sent: [], started: [] }
@@ -106,7 +109,7 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
 
     expect(response.status).toBe(200)
     expect(response.text).toBe(
-      `{"career":{"id":"${CAREER}","name":"Software","lock_reason":"Periodo académico activo","lock":{"scope":"convocation","period":"2026-1","institutional_pause":true,"delivery_on":"2026-08-14"}},` +
+      `{"career":{"id":"${CAREER}","name":"Software","lock_reason":"Periodo académico activo","lock":{"scope":"convocation","period":"2026-1","institutional_pause":true,"delivery_on":"2026-08-14"},"profile_lock_reason":null},` +
         `"scheduledSubjects":[` +
         `{"subject_id":"${ALGORITHMS}","label":"SW-B1-001 · Algoritmos","subject_code":"SW-B1-001","subject_name":"Algoritmos","subject_cycle":1,"profile_complete":false,"generates_syllabus":true,"modality_name":"Presencial","malla_name":"Malla SW-9","parallels":[` +
         `{"id":"p-a","code":"A","shift":"matutina","editable":true,"deletable":false,"sent_syllabus":true,"started_syllabus":true},` +
@@ -120,6 +123,16 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
         `{"id":"${NETWORKS}","codigo_asignatura":"SW-B2-004","nombre":"Redes","ciclo":2,"malla_name":"Malla SW-8","generates_syllabus":true,"profile_complete":false,"profile_filled":1,"profile_total":13}],` +
         `"scheduledSubjects":[],"parallels":[],"teacherUsers":[]}}`,
     )
+  })
+
+  it("tells coordination why the career project is read-only when the period is paused or finalized, and tells the administrator nothing", async () => {
+    const reason = async () => ((await (await get()).json()) as { career: { profile_lock_reason: string | null } }).career.profile_lock_reason
+    expect(await reason()).toBeNull()
+    profileEditable = false
+    expect(await reason()).toBe("El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado.")
+    asRole("administrador", null)
+    const admin = await scheduledSubjects(apiRequest(`/api/v1/admin/careers/${CAREER}/academic/scheduled-subjects`, { cookie }), deps(), CAREER)
+    expect(((await admin.json()) as { career: { profile_lock_reason: string | null } }).career.profile_lock_reason).toBeNull()
   })
 
   it("without a template every profile is complete with nothing to fill", async () => {

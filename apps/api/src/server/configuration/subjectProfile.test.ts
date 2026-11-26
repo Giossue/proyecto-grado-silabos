@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeTemplateStore, fieldId, goldenCatalog, goldenFields, goldenPresentation, goldenTemplate, type FakeTemplateWorld } from "./testing"
-import { showSubjectProfile, type SubjectProfileDeps } from "./subjectProfile"
+import { Prisma } from "../../generated/prisma/client"
+import type { Db } from "../../prisma/db"
+import { careerProfileEditable, showSubjectProfile, type SubjectProfileDeps } from "./subjectProfile"
 
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
@@ -22,6 +24,7 @@ const deps = (): SubjectProfileDeps => ({
   store: fakeTemplateStore(templates),
   subjectCareer: async (id) => subjects.get(id) ?? null,
   careerActive: async (id) => activeCareers.has(id),
+  careerEditable: async () => true,
 })
 
 const get = (subject = SUBJECT) => showSubjectProfile(apiRequest(`/api/v1/academic/asignaturas/${subject}/ficha`, { cookie }), subject, deps())
@@ -42,7 +45,7 @@ function expectedBody(values: string, complete: boolean): string {
     )
     .join(",")
   const variables = (JSON.parse(goldenCatalog) as { key: string; sample: string }[]).map((item) => `${JSON.stringify(item.key)}:${JSON.stringify(item.sample)}`).join(",")
-  return `{"fields":[${fields}],"values":${values},"complete":${complete},"definition":${goldenPresentation},"variables":{${variables}}}`
+  return `{"fields":[${fields}],"values":${values},"complete":${complete},"definition":${goldenPresentation},"variables":{${variables}},"lock_reason":null}`
 }
 
 function asRole(role: string, careerId: string | null) {
@@ -125,5 +128,40 @@ describe("GET academic/asignaturas/{asignatura}/ficha", () => {
     templates.template = null
     const missing = await get()
     expect([missing.status, await missing.text()]).toEqual([404, '{"message":"No query results for model [App\\\\Modules\\\\Configuration\\\\Infrastructure\\\\Persistence\\\\Models\\\\SyllabusTemplate]."}'])
+  })
+})
+
+describe("careerProfileEditable", () => {
+  const database = (rows: { processState: string; convocationState: string | null }[]) => {
+    const statements: { text: string; values: unknown[] }[] = []
+    const db = {
+      $queryRaw: async (query: TemplateStringsArray, ...values: unknown[]) => {
+        const sql = Prisma.sql(query, ...values)
+        statements.push({ text: sql.text, values: sql.values })
+        return rows
+      },
+    } as unknown as Db
+    return { db, statements }
+  }
+
+  it("reads the career convocation of the most recent university process by its period", async () => {
+    const { db, statements } = database([])
+    await careerProfileEditable(db, CAREER)
+    expect(statements[0].text).toContain("left join convocatorias_carreras convocatoria on convocatoria.convocatoria_universidad_id = proceso.convocatoria_universidad_id and convocatoria.carrera_id = $1::uuid")
+    expect(statements[0].text).toMatch(/order by periodo\.fecha_inicio_periodo desc, proceso\.convocatoria_universidad_id desc\s+limit 1$/)
+    expect(statements[0].values).toEqual([CAREER])
+  })
+
+  it("is editable with no process, before the career opens and while it is open, and not paused or finalized", async () => {
+    const editable = async (rows: { processState: string; convocationState: string | null }[]) => careerProfileEditable(database(rows).db, CAREER)
+    expect(await editable([])).toBe(true)
+    expect(await editable([{ processState: "abierto", convocationState: null }])).toBe(true)
+    expect(await editable([{ processState: "abierto", convocationState: "preparacion" }])).toBe(true)
+    expect(await editable([{ processState: "abierto", convocationState: "abierto" }])).toBe(true)
+    expect(await editable([{ processState: "pausado", convocationState: "abierto" }])).toBe(false)
+    expect(await editable([{ processState: "cerrado", convocationState: "cerrado" }])).toBe(false)
+    expect(await editable([{ processState: "cerrado", convocationState: null }])).toBe(false)
+    expect(await editable([{ processState: "abierto", convocationState: "pausado" }])).toBe(false)
+    expect(await editable([{ processState: "abierto", convocationState: "cerrado" }])).toBe(false)
   })
 })

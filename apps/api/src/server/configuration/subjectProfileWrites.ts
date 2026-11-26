@@ -10,7 +10,7 @@ import { requestBoolean } from "../syllabus/inProgressWorkHelpers"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { isPhpArray, phpEquals, type PhpRecord } from "./phpValues"
 import { keepsUsedOptions, keepsUsedResponses, USED_OPTION_REMOVED, USED_RESPONSE_REMOVED, usedOptions } from "./responseConditions"
-import { defaultSubjectProfileDeps, mayManageSubjectProfile, type SubjectProfileDeps, subjectProfileResponse, writableProfileContext } from "./subjectProfile"
+import { careerProfileLockReason, defaultSubjectProfileDeps, mayManageSubjectProfile, type SubjectProfileDeps, subjectProfileResponse, writableProfileContext } from "./subjectProfile"
 import { profileFields } from "./subjectProfileFields"
 import { createSubjectProfileWriteDeps } from "./subjectProfileWriteStore"
 import { toRuntime } from "./templateDraft"
@@ -22,7 +22,7 @@ import { unmatchedRoute, modelNotFound, routeAllows } from "../http/router"
 export interface SubjectProfileTx {
   store: TemplateStore
   lockSubject(subjectId: string): Promise<{ careerId: string } | null>
-  careerLocked(careerId: string): Promise<boolean>
+  careerEditable(careerId: string): Promise<boolean>
   deleteValue(subjectId: string, fieldId: string): Promise<void>
   saveValue(subjectId: string, fieldId: string, document: PhpRecord): Promise<void>
   keepContent<T>(confirmed: boolean, careerId: string, subjectIds: string[], change: () => Promise<T>): Promise<T>
@@ -37,7 +37,6 @@ export function defaultSubjectProfileWriteDeps(prisma: PrismaService): SubjectPr
 }
 
 const FIELD_GONE = "El proyecto de carrera incluye un campo que ya no existe en la plantilla."
-const CONVOCATION_LOCK = "Periodo académico activo"
 
 function rejectWith(errors: Record<string, string[]>): never {
   throw new Rejected(validationError(errors))
@@ -47,7 +46,8 @@ async function saveValues(tx: SubjectProfileTx, session: AppSession, subjectId: 
   const locked = await tx.lockSubject(subjectId)
   if (locked === null) throw new Missing(MODELS.subject)
   if (!(await mayManageSubjectProfile(session, locked.careerId, deps.careerActive))) throw new Rejected(jsonError(403, ""))
-  if (await tx.careerLocked(locked.careerId)) rejectWith({ process: [CONVOCATION_LOCK] })
+  const lockReason = await careerProfileLockReason(session, locked.careerId, tx.careerEditable)
+  if (lockReason !== null) rejectWith({ process: [lockReason] })
   const context = await writableProfileContext(tx.store)
   const allowed = new Map(profileFields(context).map((field) => [field.id, field]))
   const used = usedOptions(
@@ -103,6 +103,6 @@ export async function updateSubjectProfile(request: Request, subjectId: string, 
       if (error instanceof TemplateValidationError) return validationError(error.errors)
       throw error
     }
-    return subjectProfileResponse(request, subjectId, deps)
+    return subjectProfileResponse(request, subjectId, deps, await careerProfileLockReason(session, career, deps.careerEditable))
   })
 }

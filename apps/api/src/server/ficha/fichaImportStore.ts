@@ -2,7 +2,8 @@ import { type Db, inTransactionAfterCommit } from "../../prisma/db"
 import type { PrismaService } from "../../prisma/prisma.service"
 import { uuidList } from "../../prisma/sql"
 import { phpJsonDecode } from "../configuration/phpValues"
-import { careerDataLocked, subjectProfileTx } from "../configuration/subjectProfileWriteStore"
+import { careerProfileEditable } from "../configuration/subjectProfile"
+import { subjectProfileTx } from "../configuration/subjectProfileWriteStore"
 import { createTemplateStore } from "../shared/templateStore"
 import { systemNow } from "../shared/clock"
 import type { WriteOptions } from "../notifications/queries"
@@ -34,7 +35,7 @@ export function fichaImportStore(db: Db): FichaImportStore {
       const row = await db.carreras.findFirst({ where: { carrera_id: careerId }, select: { carrera_activa: true } })
       return row?.carrera_activa === true
     },
-    careerLocked: (careerId) => careerDataLocked(db, careerId),
+    careerEditable: (careerId) => careerProfileEditable(db, careerId),
     async currentValues(subjectIds, fieldIds) {
       if (subjectIds.length === 0 || fieldIds.length === 0) return []
       const rows = await db.$queryRaw<{ subject_id: string | null; field_id: string; value: string | null }[]>`select valores_campo.asignatura_id::text as subject_id,
@@ -52,7 +53,7 @@ function fichaApplyTx(db: Db, afterCommit: AfterCommit, now: number, options: Wr
     async lockCareer(careerId) {
       await db.$queryRaw`select carreras.carrera_id from carreras where carreras.carrera_id = ${careerId}::uuid limit 1 for update`
     },
-    careerLocked: profile.careerLocked,
+    careerEditable: profile.careerEditable,
     async storedValue(subjectId, fieldId) {
       const [row] = await db.$queryRaw<{ value: string | null }[]>`select valores_campo.valor_campo::text as value from valores_campo
         where valores_campo.asignatura_id = ${subjectId}::uuid and valores_campo.definicion_campo_id = ${fieldId}::uuid limit 1`

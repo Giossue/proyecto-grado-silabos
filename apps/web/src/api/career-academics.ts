@@ -81,7 +81,7 @@ export type Curriculum = {
 };
 
 export type ScheduledSubjects = {
-  career: { id: string; name: string; lock_reason: string | null; lock?: LockDetail | null };
+  career: { id: string; name: string; lock_reason: string | null; lock?: LockDetail | null; profile_lock_reason?: string | null };
   scheduledSubjects: Array<{
     subject_id: string;
     label: string;
@@ -120,6 +120,7 @@ export type SubjectProfile = {
   complete: boolean;
   definition?: TemplateDefinitionPayload;
   variables?: Record<string, string>;
+  lock_reason?: string | null;
 };
 
 const rememberDefinition = (profile: SubjectProfile): SubjectProfile => {

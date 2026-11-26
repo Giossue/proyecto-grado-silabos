@@ -11,16 +11,23 @@ const panel = vi.hoisted(() => ({ uploadOpen: undefined as boolean | undefined }
 vi.mock("next/navigation", () => import("@/test/nextNavigation"))
 vi.mock("@/api/career-academics", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/api/career-academics")>()), getScheduledSubjects: vi.fn() }))
 vi.mock("@/api/session", () => ({ getSession: vi.fn() }))
-vi.mock("@/components/domain/academic/FichaImportDialog", () => ({ FichaImportDialog: () => null }))
+vi.mock("@/components/domain/academic/FichaImportDialog", () => ({
+  FichaImportDialog: ({ disabled }: { disabled?: boolean }) => (
+    <button type="button" disabled={disabled}>
+      Importar desde Excel
+    </button>
+  ),
+}))
 vi.mock("@/components/domain/academic/SupportDocumentsPanel", () => ({
   SupportDocumentsPanel: ({ uploadOpen }: { uploadOpen?: boolean }) => {
     panel.uploadOpen = uploadOpen
     return <div data-testid="support-documents" />
   },
 }))
-vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: () => <div data-testid="process-lock" /> }))
+vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: ({ message }: { message?: string }) => <div data-testid="process-lock">{message}</div> }))
 
 const subject = (id: string, nombre: string, ciclo: number, extra: Record<string, unknown> = {}) => ({ id, nombre, ciclo, generates_syllabus: true, profile_complete: true, ...extra })
+const CLOSED = "El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado."
 const scheduled = (subjects: unknown[]) => ({ career: { lock_reason: null, lock: null }, options: { activeSubjects: subjects } }) as unknown as ScheduledSubjects
 const mountPage = async () => {
   const view = renderWithProviders(<CoordinationCareerProjectPage />)
@@ -90,7 +97,7 @@ describe("Proyecto de carrera", () => {
   it("los documentos de apoyo son una pestaña con su propio botón para subir y sin el aviso de edición bloqueada", async () => {
     vi.mocked(getScheduledSubjects).mockResolvedValue({
       ...scheduled([subject("m2", "Matemática Discreta", 1)]),
-      career: { lock_reason: "Periodo académico abierto", lock: { label: "Edición bloqueada", reason: "Periodo académico abierto" } },
+      career: { lock_reason: null, lock: null, profile_lock_reason: CLOSED },
     } as unknown as ScheduledSubjects)
     await mountPage()
     expect(document.querySelector('[data-testid="process-lock"]')).not.toBeNull()
@@ -107,6 +114,34 @@ describe("Proyecto de carrera", () => {
     fireEvent.click([...document.querySelectorAll("button")].find((button) => button.textContent === "Subir documento")!)
     await flush()
     expect(panel.uploadOpen).toBe(true)
+  })
+
+  it("con el periodo académico en pausa o finalizado muestra el motivo y deshabilita «Importar desde Excel» con ese motivo como ayuda", async () => {
+    vi.mocked(getScheduledSubjects).mockResolvedValue({
+      ...scheduled([subject("m2", "Matemática Discreta", 1)]),
+      career: { lock_reason: null, lock: null, profile_lock_reason: CLOSED },
+    } as unknown as ScheduledSubjects)
+    await mountPage()
+
+    expect(document.querySelector('[data-testid="process-lock"]')?.textContent).toBe(CLOSED)
+    const importButton = [...document.querySelectorAll("button")].find((item) => item.textContent?.trim() === "Importar desde Excel")!
+    expect(importButton).toBeDisabled()
+    const trigger = importButton.closest("[aria-describedby]")!
+    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)?.textContent).toBe(CLOSED)
+    fireEvent.focus(trigger)
+    await flush()
+    expect([...document.querySelectorAll('[data-slot="tooltip-content"]')].map((item) => item.textContent)).toContain("El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado")
+  })
+
+  it("sin bloqueo del servidor deja importar aunque la malla esté bloqueada", async () => {
+    vi.mocked(getScheduledSubjects).mockResolvedValue({
+      ...scheduled([subject("m2", "Matemática Discreta", 1)]),
+      career: { lock_reason: "Periodo académico activo", lock: { scope: "convocation" }, profile_lock_reason: null },
+    } as unknown as ScheduledSubjects)
+    await mountPage()
+
+    expect(document.querySelector('[data-testid="process-lock"]')).toBeNull()
+    expect([...document.querySelectorAll("button")].find((item) => item.textContent?.trim() === "Importar desde Excel")).not.toBeDisabled()
   })
 
   it("abre directamente la pestaña de documentos con ?tab=documentos", async () => {

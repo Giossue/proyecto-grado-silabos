@@ -17,6 +17,7 @@ import type { SupportDocumentDeps } from "../../server/academic/supportDocuments
 import { dispatchSupportDocumentView } from "../../server/academic/supportDocumentViewJob"
 import { defaultSupportDocumentWriteDeps, type SupportDocumentWriteDeps } from "../../server/academic/supportDocumentWrites"
 import type { BridgeDeps } from "../../server/auth/types"
+import { careerProfileEditable } from "../../server/configuration/subjectProfile"
 import { institutionToday } from "../../server/shared/clock"
 import { createTemplateStore } from "../../server/shared/templateStore"
 import type { RateLimiter } from "../../server/http/throttle"
@@ -75,7 +76,12 @@ export class AcademicDeps {
   }
 
   scheduled(): ScheduledSubjectsDeps {
-    return { ...this.structure(), scheduled: this.scheduledRepository, templates: createTemplateStore(this.prisma) }
+    return {
+      ...this.structure(),
+      scheduled: this.scheduledRepository,
+      templates: createTemplateStore(this.prisma),
+      careerProfileEditable: (careerId) => careerProfileEditable(this.prisma, careerId),
+    }
   }
 
   careerWrites(): CareerWriteDeps {

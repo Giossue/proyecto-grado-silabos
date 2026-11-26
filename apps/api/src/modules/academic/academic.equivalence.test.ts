@@ -180,6 +180,7 @@ const fakes = {
     bridge,
     academic: structureRepository,
     templates,
+    careerProfileEditable: async () => true,
     scheduled: {
       careerParallels: async () => [{ id: PARALLEL, subjectId: SUBJECT, code: "A", shift: "matutina" }],
       parallelsWithSyllabus: async () => [],
@@ -222,10 +223,10 @@ const fakes = {
 }
 
 const fichaFakes = {
-  imports: () => ({ bridge, limiter, now: () => NOW, transaction: rejectTransaction, store: { careerActive, careerLocked: async () => false, activeCareer: async () => null, subjects: async () => [], currentValues: async () => [], store: templates } }),
-  profile: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive }),
-  profileWrites: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive, transaction: rejectTransaction }),
-  preview: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive }),
+  imports: () => ({ bridge, limiter, now: () => NOW, transaction: rejectTransaction, store: { careerActive, careerEditable: async () => true, activeCareer: async () => null, subjects: async () => [], currentValues: async () => [], store: templates } }),
+  profile: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive, careerEditable: async () => true }),
+  profileWrites: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive, careerEditable: async () => true, transaction: rejectTransaction }),
+  preview: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive, careerEditable: async () => true }),
 }
 
 type Oracle = (web: Request, params: OracleParams) => Promise<Response>

@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it } from "vitest"
 import JSZip from "jszip"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
+import type { Db } from "../../prisma/db"
 import { freeTextFromText } from "../configuration/freeText"
+import { careerProfileEditable } from "../configuration/subjectProfile"
 import type { PhpRecord } from "../configuration/phpValues"
 import { profileTemplates } from "../configuration/subjectProfileFields"
 import { teacherEditable, templateFields } from "../configuration/templatePresentation"
@@ -25,7 +27,7 @@ const OWN = ["Aula", "Taller", "Campo"]
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
-let locked: boolean
+let period: { processState: string; convocationState: string | null } | null
 let purge: Record<string, string[]> | null
 let log: string[]
 
@@ -56,11 +58,28 @@ function reader() {
   }
 }
 
+const periodDb = (): Db => ({ $queryRaw: async () => (period === null ? [] : [period]) }) as unknown as Db
+const CLOSED = "El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado."
+const allowedPeriods = [
+  null,
+  { processState: "abierto", convocationState: null },
+  { processState: "abierto", convocationState: "preparacion" },
+  { processState: "abierto", convocationState: "abierto" },
+]
+const blockedPeriods = [
+  { processState: "pausado", convocationState: "abierto" },
+  { processState: "cerrado", convocationState: "cerrado" },
+  { processState: "cerrado", convocationState: null },
+  { processState: "abierto", convocationState: "pausado" },
+  { processState: "abierto", convocationState: "cerrado" },
+]
+
+
 function deps(limiter = createRateLimiter()): FichaImportDeps {
   const tx: FichaApplyTx = {
     ...reader(),
     lockCareer: async (id) => void log.push(`lock:${id}`),
-    careerLocked: async () => locked,
+    careerEditable: (id) => careerProfileEditable(periodDb(), id),
     storedValue: async (subjectId, fieldId) => templates.values.find((value) => value.subjectId === subjectId && value.fieldId === fieldId)?.value ?? null,
     saveValue: async (subjectId, fieldId, document) => {
       templates.values = [...templates.values.filter((value) => !(value.subjectId === subjectId && value.fieldId === fieldId)), { fieldId, subjectId, value: document }]
@@ -78,7 +97,7 @@ function deps(limiter = createRateLimiter()): FichaImportDeps {
     store: {
       ...reader(),
       careerActive: async (id) => id === CAREER,
-      careerLocked: async () => locked,
+      careerEditable: (id) => careerProfileEditable(periodDb(), id),
       currentValues: async (subjectIds, fieldIds) =>
         templates.values
           .filter((value) => subjectIds.includes(value.subjectId ?? "") && fieldIds.includes(value.fieldId))
@@ -188,7 +207,7 @@ function ownSetup(options: string[]): PhpRecord {
 beforeEach(() => {
   signIn("coordinador")
   templates = { template: goldenTemplate(), values: [] }
-  locked = false
+  period = { processState: "abierto", convocationState: "abierto" }
   purge = null
   log = []
 })
@@ -325,15 +344,33 @@ describe("FichaImportTest", () => {
     })
   })
 
-  it("stops on an open convocation, a stale preview and a foreign selection", async () => {
+  it("Coordination downloads, previews and applies the workbook before and while the period is open, never paused or finalized", async () => {
     const file = await workbook({ descripcion: { D4: "Texto" } })
     const detail = await preview(file)
-    locked = true
-    expect(await (await previewFichaImport(post("/api/v1/coordination/ficha-imports/spreadsheet", file), deps())).json()).toEqual({
-      message: "Periodo académico activo",
-      errors: { process: ["Periodo académico activo"] },
-    })
-    locked = false
+    for (const blocked of blockedPeriods) {
+      period = blocked
+      for (const step of [
+        fichaTemplate(get("/api/v1/coordination/ficha-imports/template"), deps()),
+        previewFichaImport(post("/api/v1/coordination/ficha-imports/spreadsheet", file), deps()),
+        apply(file, detail),
+      ]) {
+        const response = await step
+        expect(response.status).toBe(422)
+        expect(await response.json()).toEqual({ message: CLOSED, errors: { process: [CLOSED] } })
+      }
+    }
+    expect(templates.values).toEqual([])
+    for (const allowed of allowedPeriods) {
+      period = allowed
+      expect((await fichaTemplate(get("/api/v1/coordination/ficha-imports/template"), deps())).status).toBe(200)
+      expect((await previewFichaImport(post("/api/v1/coordination/ficha-imports/spreadsheet", file), deps())).status).toBe(200)
+      expect((await apply(file, detail)).status).toBe(200)
+    }
+  })
+
+  it("stops on a stale preview and a foreign selection", async () => {
+    const file = await workbook({ descripcion: { D4: "Texto" } })
+    const detail = await preview(file)
     const stale = await apply(file, { ...detail, file_hash: "0".repeat(64) })
     expect(((await stale.json()) as { errors: unknown }).errors).toEqual({
       file: ["El Excel o la estructura cambió desde la vista previa. Vuelva a revisar el archivo antes de aplicar."],
@@ -406,9 +443,10 @@ describe("career project workbook through /api/v1/admin/careers/{career}/ficha-i
   const OTHER = "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9"
   const base = (careerId: string) => `/api/v1/admin/careers/${careerId}/ficha-imports`
 
-  it("lets the administrator download, preview and apply the workbook of the requested career", async () => {
+  it("lets the administrator download, preview and apply the workbook of the requested career, even with the period paused", async () => {
     const file = await workbook({ descripcion: { D4: "Ficha del administrador" } })
     signIn("administrador")
+    period = { processState: "pausado", convocationState: "abierto" }
     expect((await fichaTemplate(get(`${base(CAREER)}/template`), deps(), CAREER)).status).toBe(200)
     const previewed = await previewFichaImport(post(`${base(CAREER)}/spreadsheet`, file), deps(), CAREER)
     expect(previewed.status).toBe(200)

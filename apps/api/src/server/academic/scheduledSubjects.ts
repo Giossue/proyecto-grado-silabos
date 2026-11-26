@@ -1,9 +1,11 @@
+import type { AppSession } from "../auth/types"
+import { careerProfileLockReason } from "../configuration/subjectProfile"
 import { profileProgress } from "../configuration/subjectProfileFields"
 import type { TemplateStore } from "../shared/templateStore"
 import { TemplateValidationError } from "../configuration/templateRuntime"
 import { apiJson, validationError } from "../http/responses"
 import {
-  authorizedCareer,
+  authorizedCareerSession,
   baseOptions,
   CONVOCATION_LOCK_REASON,
   lockPayload,
@@ -35,7 +37,11 @@ export interface ScheduledSubjectsRepository {
   careerSubjects(careerId: string): Promise<ScheduledSubjectRecord[]>
 }
 
-export type ScheduledSubjectsDeps = AcademicStructureDeps & { scheduled: ScheduledSubjectsRepository; templates: TemplateStore }
+export type ScheduledSubjectsDeps = AcademicStructureDeps & {
+  scheduled: ScheduledSubjectsRepository
+  templates: TemplateStore
+  careerProfileEditable: (careerId: string) => Promise<boolean>
+}
 
 type Progress = Map<string, { filled: number; total: number }>
 
@@ -46,14 +52,15 @@ async function progressOf(templates: TemplateStore, subjectIds: string[]): Promi
 }
 
 export async function scheduledSubjects(request: Request, deps: ScheduledSubjectsDeps, requestedCareerId: string | null = null): Promise<Response> {
-  const career = await authorizedCareer(request, deps, requestedCareerId)
-  if (career instanceof Response) return career
-  return scheduledSubjectsResponse(request, career, deps)
+  const authorized = await authorizedCareerSession(request, deps, requestedCareerId)
+  if (authorized instanceof Response) return authorized
+  return scheduledSubjectsResponse(request, authorized.career, deps, authorized.session)
 }
 
-export async function scheduledSubjectsResponse(request: Request, career: CareerRecord, deps: ScheduledSubjectsDeps): Promise<Response> {
+export async function scheduledSubjectsResponse(request: Request, career: CareerRecord, deps: ScheduledSubjectsDeps, session: AppSession): Promise<Response> {
   try {
     const lock = await deps.academic.careerLock(career.id)
+    const profileLockReason = await careerProfileLockReason(session, career.id, deps.careerProfileEditable)
     const parallels = await deps.scheduled.careerParallels(career.id)
     const ids = parallels.map((parallel) => parallel.id)
     const withSyllabus = new Set(await deps.scheduled.parallelsWithSyllabus(ids))
@@ -100,7 +107,7 @@ export async function scheduledSubjectsResponse(request: Request, career: Career
     })
 
     return apiJson({
-      career: { id: career.id, name: career.name, lock_reason: lock === null ? null : CONVOCATION_LOCK_REASON, lock: lockPayload(lock) },
+      career: { id: career.id, name: career.name, lock_reason: lock === null ? null : CONVOCATION_LOCK_REASON, lock: lockPayload(lock), profile_lock_reason: profileLockReason },
       scheduledSubjects: rows,
       options: {
         ...baseOptions(),

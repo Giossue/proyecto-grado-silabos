@@ -332,6 +332,19 @@ describe("PATCH /api/v1/teacher/syllabi/{syllabus}/fields/{field}", () => {
     expect(saved).toEqual([])
   })
 
+  it("a teacher cannot save a field while the process is paused or once the period is closed", async () => {
+    world.assignments = [makeAssignment({ role: "docente", careerId: CAREER })]
+    for (const states of [
+      { convocationState: "abierto", processState: "pausado" },
+      { convocationState: "abierto", processState: "cerrado" },
+      { convocationState: "cerrado", processState: "cerrado" },
+    ]) {
+      facts = { ...(facts as DraftSyllabus), ...states }
+      expect((await patch({ version_bloqueo: 3, value: doc("x") })).status).toBe(403)
+    }
+    expect(saved).toEqual([])
+  })
+
   it("answers Laravel's 404 for unknown records and reads form bodies natively", async () => {
     expect(await patch({ version_bloqueo: 3, value: doc("x") }, { syllabus: "50000000-0000-4000-8000-00000000ffff" })).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "50000000-0000-4000-8000-00000000ffff") })
     expect((await patch({ version_bloqueo: 3, value: doc("x") }, { field: "01a1c5ba-0000-7000-8000-00000000ffff" })).status).toBe(404)
