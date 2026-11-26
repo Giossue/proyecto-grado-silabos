@@ -25,7 +25,13 @@
   vertical-align: top;
 }
 
+.free-text-content .free-text-table th:not([style*="background"]) {
+  background-color: var(--document-th-background, #c3d4ea);
+  font-weight: bold;
+}
+
 .dark .free-text-content:not(.template-sheet .free-text-content) .free-text-table td[style*="background"],
-.dark .free-text-content:not(.template-sheet .free-text-content) .free-text-table th[style*="background"] {
+.dark .free-text-content:not(.template-sheet .free-text-content) .free-text-table th[style*="background"],
+.dark .free-text-content:not(.template-sheet .free-text-content) .free-text-table th:not([style*="background"]) {
   color: var(--document-editor-foreground);
 }
