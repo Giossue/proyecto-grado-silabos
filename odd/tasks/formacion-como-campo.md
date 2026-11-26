@@ -26,7 +26,7 @@ Rama: `main` (repositorio privado). Entrega: commits por unidad. Pruebas: Vitest
 |---|---|---|---|---|
 | F1 | S1-S6 | explorador (lectura) | hecho: mapa (ver L2) | — |
 | F2 | S1-S6, D1-D5 | escritor delegado (respaldo de contexto: sesión muy larga) | hecho: código, pruebas, docs y migración aplicada a `silabos_ueb` tras ensayo en PG18 desechable (ver L5); E2E pendiente (puertos ocupados) | sin commit (el padre hace git) |
-| F3 | S1-S6 | verificador independiente (riesgo 1: migración que borra una columna) | pendiente | — |
+| F3 | S1-S6 | verificador independiente (riesgo 1: migración que borra una columna) | hecho: sin bloqueos (ver L6) | — |
 
 ## Log
 
@@ -40,3 +40,4 @@ Rama: `main` (repositorio privado). Entrega: commits por unidad. Pruebas: Vitest
   - Ensayo en PostgreSQL 18 desechable (podman, restaurado del respaldo; también una copia con un sílabo `en_revision` y otro `aprobado` sintéticos): campo y definición insertados; 27/27 sílabos con valor (22 con texto; los enviados tomaron `identification.formation` de su última revisión); 432/432 huellas, iguales a `definitionHash` en JS; columna eliminada; revisiones (md5 igual), aprobaciones, firmas, exportaciones y los 465 valores previos sin cambios (md5 igual); `plantilla_modificada_en` restaurado; sin funciones auxiliares sobrantes. Contenedor eliminado.
   - `silabos_ueb`: mismo resultado que el ensayo (diff idéntico). Verificación: `pnpm typecheck` y `pnpm lint` limpios; API 2179, web 995 y shared 147 pruebas en verde. E2E sin correr (puertos 8000/3000 ocupados por los servidores de desarrollo): queda para el padre (`account.spec.ts`, `syllabus-lifecycle.spec.ts`, `support/syllabus.ts`).
 
+- L6 (2026-11-25, F3): verificador independiente sobre 6ef1652 y 8eacbe5: sin bloqueos. 432/432 huellas iguales al `definitionHash` de JS; los 465 valores previos idénticos; 22/22 sílabos con docente tienen su formación; `plantilla_modificada_en` igual al respaldo; columna eliminada. Advertencias: arrastre desde un sílabo compartido junta ambos textos; el constructor oculta el campo al admin (decidido: «Solo en la tabla»); al adaptar a una plantilla nueva no se arrastra (D3 solo pide generar e iniciar). Sin revisiones locales: la rama de enviados/aprobados se probó en la copia sintética.
