@@ -8,39 +8,12 @@ const SWITCH_OF: Record<string, string> = {
   "proceso.plantilla_rehecho": "silabo.devuelto_borrador",
 }
 
+const SUMMARY: NoticeTexts = { label: "Resumen diario", description: "Un aviso de que tiene pendientes, de lunes a viernes a la hora del resumen" }
+
 const BY_ROLE: [string, [string, NoticeTexts][]][] = [
-  [
-    "docente",
-    [
-      ["docente.resumen_diario", { label: "Resumen diario", description: "Sílabos por elaborar o corregir y el plazo, de lunes a viernes, solo si hay pendientes" }],
-      ["convocatoria.abierta", { label: "Periodo académico abierto", description: "Tiene sílabos por elaborar" }],
-      ["convocatoria.reanudada", { label: "Periodo académico reanudado", description: "Puede seguir con sus sílabos tras una pausa" }],
-      ["silabo.asignado", { label: "Sílabo nuevo", description: "Le asignaron un paralelo con el periodo académico abierto y ya tiene su sílabo" }],
-      ["silabo.correccion_solicitada", { label: "Corrección solicitada", description: "Coordinación o Biblioteca le pide corregir un sílabo" }],
-      ["silabo.devuelto_borrador", { label: "Sílabo devuelto a borrador", description: "Cambió un dato de la carrera, de la malla o la plantilla" }],
-      ["silabo.aprobado", { label: "Sílabo aprobado", description: "Su sílabo quedó aprobado, con el PDF listo" }],
-      [SYLLABUS_RESTARTED, { label: "Sílabo reiniciado", description: "Su sílabo volvió a empezar: Coordinación lo reinició o cambió la malla o el paralelo" }],
-      ["proceso.cierre_proximo", { label: "Cierre del periodo académico", description: "3 días antes del último día de entrega, si tiene sílabos sin aprobar" }],
-    ],
-  ],
-  [
-    "coordinador",
-    [
-      ["coordinacion.resumen_diario", { label: "Resumen diario", description: "Sílabos por revisar, de lunes a viernes, solo si hay pendientes" }],
-      ["biblioteca.verificado", { label: "Bibliografía verificada", description: "Biblioteca verificó la bibliografía de un sílabo y espera su aprobación" }],
-      ["proceso.reanudado", { label: "Periodo académico reanudado por Administración", description: "Se retoman las revisiones tras una pausa institucional" }],
-      ["proceso.cierre_proximo", { label: "Cierre del periodo académico", description: "3 días antes del último día de entrega, si su carrera tiene sílabos sin aprobar" }],
-    ],
-  ],
-  [
-    "bibliotecario",
-    [
-      ["biblioteca.resumen_diario", { label: "Resumen diario", description: "Sílabos por revisar, de lunes a viernes, solo si hay pendientes" }],
-      ["silabo.enviado", { label: "Sílabo por revisar", description: "Un docente envió un sílabo y espera la revisión de biblioteca" }],
-      ["silabo.reenviado_biblioteca", { label: "Sílabo reenviado", description: "El docente corrigió la bibliografía y la reenvió" }],
-      ["proceso.reanudado", { label: "Periodo académico reanudado por Administración", description: "Se retoman las revisiones tras una pausa institucional" }],
-    ],
-  ],
+  ["docente", [["docente.resumen_diario", SUMMARY]]],
+  ["coordinador", [["coordinacion.resumen_diario", SUMMARY]]],
+  ["bibliotecario", [["biblioteca.resumen_diario", SUMMARY]]],
 ]
 
 export function wantsEmail(preferences: unknown, type: string): boolean {

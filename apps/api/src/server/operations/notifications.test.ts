@@ -204,44 +204,29 @@ describe("GET /api/v1/notifications/email-preferences", () => {
     return options.map((option) => `${option.type}:${option.enabled ? "si" : "no"}`)
   }
 
-  it("each role sees only its email notices, all on by default", async () => {
-    expect(await types("docente")).toEqual([
-      "docente.resumen_diario:si", "convocatoria.abierta:si", "convocatoria.reanudada:si", "silabo.asignado:si",
-      "silabo.correccion_solicitada:si", "silabo.devuelto_borrador:si", "silabo.aprobado:si", "silabo.reiniciado:si", "proceso.cierre_proximo:si",
-    ])
-    expect(await types("coordinador")).toEqual(["coordinacion.resumen_diario:si", "biblioteca.verificado:si", "proceso.reanudado:si", "proceso.cierre_proximo:si"])
-    expect(await types("bibliotecario")).toEqual(["biblioteca.resumen_diario:si", "silabo.enviado:si", "silabo.reenviado_biblioteca:si", "proceso.reanudado:si"])
+  it("each role sees only its daily summary, on by default", async () => {
+    expect(await types("docente")).toEqual(["docente.resumen_diario:si"])
+    expect(await types("coordinador")).toEqual(["coordinacion.resumen_diario:si"])
+    expect(await types("bibliotecario")).toEqual(["biblioteca.resumen_diario:si"])
     expect(await types("administrador")).toEqual([])
   })
 
-  it("keeps the first position and the last text of a notice two roles share", async () => {
-    world.assignments = [
-      makeAssignment({ id: "t", role: "docente" }),
-      makeAssignment({ id: "c", role: "coordinador", careerId: "c" }),
-    ]
+  it("shows one summary per role of the account", async () => {
+    world.assignments = [makeAssignment({ id: "t", role: "docente" }), makeAssignment({ id: "c", role: "coordinador", careerId: "c" })]
     const response = await showEmailPreferences(apiRequest("/api/v1/notifications/email-preferences", { cookie }), { bridge: fakeDeps(world) })
-    const { options } = JSON.parse(await response.text()) as { options: { type: string; description: string }[] }
-    expect(options.map((option) => option.type)).toEqual([
-      "docente.resumen_diario", "convocatoria.abierta", "convocatoria.reanudada", "silabo.asignado", "silabo.correccion_solicitada",
-      "silabo.devuelto_borrador", "silabo.aprobado", "silabo.reiniciado", "proceso.cierre_proximo", "coordinacion.resumen_diario", "biblioteca.verificado", "proceso.reanudado",
-    ])
-    expect(options[8].description).toBe("3 días antes del último día de entrega, si su carrera tiene sílabos sin aprobar")
+    const { options } = JSON.parse(await response.text()) as { options: { type: string }[] }
+    expect(options.map((option) => option.type)).toEqual(["docente.resumen_diario", "coordinacion.resumen_diario"])
   })
 
-  it("shows a notice turned off and keeps the rest on", async () => {
-    expect((await types("coordinador", { "coordinacion.resumen_diario": false }))[0]).toBe("coordinacion.resumen_diario:no")
-    expect((await types("docente", { "silabo.aprobado": false, "silabo.reiniciado": 0 }))[6]).toBe("silabo.aprobado:no")
-    expect((await types("docente", { "silabo.reiniciado": 0 }))[7]).toBe("silabo.reiniciado:si")
+  it("shows a summary turned off", async () => {
+    expect(await types("coordinador", { "coordinacion.resumen_diario": false })).toEqual(["coordinacion.resumen_diario:no"])
   })
 
-  it("renders the exact JSON Laravel renders", async () => {
+  it("renders the exact JSON", async () => {
     world.assignments = [makeAssignment({ id: "r", role: "bibliotecario", careerId: null })]
     const response = await showEmailPreferences(apiRequest("/api/v1/notifications/email-preferences", { cookie }), { bridge: fakeDeps(world) })
     expect(await response.text()).toBe(
-      '{"options":[{"type":"biblioteca.resumen_diario","label":"Resumen diario","description":"Sílabos por revisar, de lunes a viernes, solo si hay pendientes","enabled":true},' +
-        '{"type":"silabo.enviado","label":"Sílabo por revisar","description":"Un docente envió un sílabo y espera la revisión de biblioteca","enabled":true},' +
-        '{"type":"silabo.reenviado_biblioteca","label":"Sílabo reenviado","description":"El docente corrigió la bibliografía y la reenvió","enabled":true},' +
-        '{"type":"proceso.reanudado","label":"Periodo académico reanudado por Administración","description":"Se retoman las revisiones tras una pausa institucional","enabled":true}]}',
+      '{"options":[{"type":"biblioteca.resumen_diario","label":"Resumen diario","description":"Un aviso de que tiene pendientes, de lunes a viernes a la hora del resumen","enabled":true}]}',
     )
   })
 

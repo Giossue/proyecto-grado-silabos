@@ -179,7 +179,8 @@ describe("DELETE /api/v1/admin/processes/{process}", () => {
       [COORDINATOR, `flujo:proceso.eliminado:${PROCESS}`, "Periodo académico eliminado", message, "periodo_academico", PERIOD, PERIOD],
       [LIBRARIAN, `flujo:proceso.eliminado:${PROCESS}`, "Periodo académico eliminado", message, "periodo_academico", PERIOD, PERIOD],
     ])
-    expect(notices.mails).toHaveLength(3)
+    // No email of its own: the daily summary replaces it.
+    expect(notices.mails).toEqual([])
   })
 
   it("needs no message and ignores one if sent", async () => {

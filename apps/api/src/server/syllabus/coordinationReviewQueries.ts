@@ -11,7 +11,7 @@ const REVISION_EXISTS = Prisma.sql`exists (select 1 from silabos silabo_revision
   and exists (select 1 from convocatorias_carreras convocatoria_revision where convocatoria_revision.convocatoria_carrera_id = silabo_revision.convocatoria_carrera_id
     and exists (select 1 from convocatorias_universidad proceso_revision where proceso_revision.convocatoria_universidad_id = convocatoria_revision.convocatoria_universidad_id)))`
 
-function reviewConditions(filters: { careerId: string | null; search: string }): Prisma.Sql {
+export function reviewConditions(filters: { careerId: string | null; search: string }): Prisma.Sql {
   const conditions: Prisma.Sql[] = [
     convocationWhere(careerIs(Prisma.raw("convocatoria_filtro.carrera_id"), filters.careerId)),
     Prisma.sql`exists (select 1 from revisiones_silabo where silabos.silabo_id = revisiones_silabo.silabo_id and ${REVISION_EXISTS})`,

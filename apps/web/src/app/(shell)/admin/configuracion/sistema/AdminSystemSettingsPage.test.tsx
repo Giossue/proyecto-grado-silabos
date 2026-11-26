@@ -76,7 +76,7 @@ describe("Configuración › Sistema", () => {
     await flush()
 
     expect(
-      [...document.body.querySelectorAll('[data-slot="accordion-trigger"]')].map((item) => item.textContent?.trim().split(/Avisos|Proveedor|Catálogo/)[0]),
+      [...document.body.querySelectorAll('[data-slot="accordion-trigger"]')].map((item) => item.textContent?.trim().split(/Resumen|Proveedor|Catálogo/)[0]),
     ).toEqual(["Notificaciones", "Asistente de IA", "Biblioteca (Koha)"])
     expect(document.body.querySelector("#settings-digest-time")).not.toBeNull()
     expect(document.body.querySelector("#settings-ai-driver")).toBeNull()

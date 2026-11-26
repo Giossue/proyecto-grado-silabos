@@ -102,7 +102,9 @@ describe("notification settings", () => {
     expect(notificationEmailConfig({ NOTIFICATION_EMAILS: "false" }).enabled).toBe(false)
     expect(notificationEmailConfig({ NOTIFICATION_EMAILS: "0" }).enabled).toBe(false)
     expect(notificationEmailConfig({ NOTIFICATION_EMAIL_EVENTS: " silabo.aprobado, TRUE, 1 " }).events).toEqual(["silabo.aprobado"])
-    expect(notificationEmailConfig({ NOTIFICATION_EMAIL_EVENTS: "TRUE" }).events).toContain("convocatoria.abierta")
+    // By default no event has its own email: the daily summary replaces them.
+    expect(notificationEmailConfig({}).events).toEqual([])
+    expect(notificationEmailConfig({ NOTIFICATION_EMAIL_EVENTS: "TRUE" }).events).toEqual([])
   })
 
   it("formats dates like translatedFormat('j \\d\\e F \\d\\e Y, H:i') in the institution timezone", () => {

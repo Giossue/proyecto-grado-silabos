@@ -272,9 +272,8 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
     expect(notices.notifications).toMatchObject([
       { userId: TEACHER, key: `flujo:silabo.eliminado:${FRESH}`, type: "silabo.eliminado", title: "Su sílabo volvió a empezar", message, resourceType: "silabo", resourceId: FRESH },
     ])
-    expect(notices.mails).toEqual([
-      { mailable: "workflow", to: "ana@ueb.edu.ec", data: { name: "Ana Pérez", title: "Su sílabo volvió a empezar", body: message, url: "http://localhost:3000/" } },
-    ])
+    // No email of its own: the daily summary replaces it.
+    expect(notices.mails).toEqual([])
   })
 
   it("needs no reason and ignores one if sent", async () => {

@@ -57,28 +57,23 @@ beforeEach(() => {
 })
 
 describe("PUT /api/v1/notifications/email-preferences", () => {
-  it("lets a teacher turn off one notice and answers the options with it off", async () => {
-    const result = await send({ preferences: { "silabo.aprobado": false } })
+  it("lets a teacher turn off the daily summary and answers the option with it off", async () => {
+    const result = await send({ preferences: { "docente.resumen_diario": false } })
     expect(result.status).toBe(200)
-    const options = result.json.options as { type: string; enabled: boolean }[]
-    expect(options[6]).toMatchObject({ type: "silabo.aprobado", enabled: false })
-    expect(options.filter((option) => !option.enabled)).toHaveLength(1)
-    expect(saved).toEqual([[golden.userId, { "silabo.aprobado": false }]])
-    expect(result.text).toContain('"label":"Sílabo aprobado"')
+    expect(result.json.options).toEqual([expect.objectContaining({ type: "docente.resumen_diario", label: "Resumen diario", enabled: false })])
+    expect(saved).toEqual([[golden.userId, { "docente.resumen_diario": false }]])
     expect(result.headers.get("x-ratelimit-limit")).toBe("20")
     expect(result.headers.get("x-ratelimit-remaining")).toBe("19")
   })
 
   it("keeps the earlier switches and casts 1, 0, '1' and '0' to booleans", async () => {
-    world.users = [makeUser({ emailPreferences: { "silabo.aprobado": false, "convocatoria.abierta": true } })]
-    const result = await send({ preferences: { "convocatoria.abierta": 0, "silabo.reiniciado": "1", "proceso.cierre_proximo": " 0 " } })
-    expect(result.status).toBe(200)
-    expect(saved).toEqual([
-      [golden.userId, { "silabo.aprobado": false, "convocatoria.abierta": false, "silabo.reiniciado": true, "proceso.cierre_proximo": false }],
-    ])
-    const enabled = Object.fromEntries((result.json.options as { type: string; enabled: boolean }[]).map((option) => [option.type, option.enabled]))
-    expect(enabled["silabo.aprobado"]).toBe(false)
-    expect(enabled["silabo.reiniciado"]).toBe(true)
+    world.users = [makeUser({ emailPreferences: { "silabo.aprobado": false } })]
+    const casts: [unknown, boolean][] = [[0, false], ["1", true], [" 0 ", false], [1, true]]
+    for (const [input, expected] of casts) {
+      saved = []
+      expect((await send({ preferences: { "docente.resumen_diario": input } })).status).toBe(200)
+      expect(saved).toEqual([[golden.userId, { "silabo.aprobado": false, "docente.resumen_diario": expected }]])
+    }
   })
 
   it("rejects notices of other roles with Laravel's message", async () => {
@@ -100,11 +95,11 @@ describe("PUT /api/v1/notifications/email-preferences", () => {
       preferences: ["El campo avisos por correo debe ser una lista.", "El campo avisos por correo debe tener al menos 1 elementos."],
     })
     expect((await send({ preferences: "si" })).json.errors).toEqual({ preferences: ["El campo avisos por correo debe ser una lista."] })
-    const mixed = await send({ preferences: { "silabo.aprobado": "true", otro: true, "silabo.reiniciado": null } })
+    const mixed = await send({ preferences: { "docente.resumen_diario": "true", otro: true, "coordinacion.resumen_diario": null } })
     expect(mixed.text).toBe(
       '{"message":"El campo aviso por correo debe ser verdadero o falso. (y 2 errores más)","errors":{' +
-        '"preferences.silabo.aprobado":["El campo aviso por correo debe ser verdadero o falso."],' +
-        '"preferences.silabo.reiniciado":["El campo aviso por correo debe ser verdadero o falso."],' +
+        '"preferences.docente.resumen_diario":["El campo aviso por correo debe ser verdadero o falso."],' +
+        '"preferences.coordinacion.resumen_diario":["El campo aviso por correo debe ser verdadero o falso."],' +
         '"preferences":["Hay avisos que no corresponden a sus roles."]}}',
     )
     expect(saved).toEqual([])
@@ -112,7 +107,7 @@ describe("PUT /api/v1/notifications/email-preferences", () => {
 
   it("limits each user to 20 changes a minute with Laravel's 429", async () => {
     for (let attempt = 0; attempt < 20; attempt += 1) expect((await send({ preferences: {} })).status).toBe(422)
-    const limited = await send({ preferences: { "silabo.aprobado": false } })
+    const limited = await send({ preferences: { "docente.resumen_diario": false } })
     expect(limited.status).toBe(429)
     expect(limited.text).toBe('{"message":"Too Many Attempts."}')
     expect(limited.headers.get("retry-after")).toBe("60")
@@ -121,28 +116,28 @@ describe("PUT /api/v1/notifications/email-preferences", () => {
 
   it("counts the attempt before the account checks, like Laravel's middleware order", async () => {
     world.users = [makeUser({ active: false })]
-    const result = await send({ preferences: { "silabo.aprobado": false } })
+    const result = await send({ preferences: { "docente.resumen_diario": false } })
     expect(result.status).toBe(403)
     expect(result.headers.get("x-ratelimit-remaining")).toBe("19")
   })
 
   it("needs the session and the web app's origin before counting", async () => {
-    expect((await send({ preferences: { "silabo.aprobado": false } }, { origin: "https://evil.example" })).status).toBe(401)
-    expect((await send({ preferences: { "silabo.aprobado": false } }, { referer: "", cookie: "" })).status).toBe(401)
+    expect((await send({ preferences: { "docente.resumen_diario": false } }, { origin: "https://evil.example" })).status).toBe(401)
+    expect((await send({ preferences: { "docente.resumen_diario": false } }, { referer: "", cookie: "" })).status).toBe(401)
     expect(limiter.attempts(`throttle:20,1:${golden.userId}`, NOW)).toBe(0)
   })
 
   it("reads the preferences from the query when the body has none, as Laravel's input() does", async () => {
-    const result = await send({}, {}, `${PATH}?preferences[silabo.aprobado]=0`)
+    const result = await send({}, {}, `${PATH}?preferences[docente.resumen_diario]=0`)
     expect(result.status).toBe(200)
-    expect(saved).toEqual([[golden.userId, { "silabo.aprobado": false }]])
+    expect(saved).toEqual([[golden.userId, { "docente.resumen_diario": false }]])
   })
 
   it("reads a form body like Laravel's request input", async () => {
     const request = new Request(`http://localhost:3000${PATH}`, {
       method: "PUT",
       headers: { "content-type": "application/x-www-form-urlencoded", cookie, referer: "http://localhost:3000/", "x-csrf-token": golden.csrfToken },
-      body: "preferences[silabo.aprobado]=0",
+      body: "preferences[docente.resumen_diario]=0",
     })
     const response = await updateEmailPreferences(request, deps())
     expect(response.status).toBe(200)

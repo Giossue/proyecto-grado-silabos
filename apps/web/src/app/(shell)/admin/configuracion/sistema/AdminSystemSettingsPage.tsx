@@ -185,13 +185,13 @@ export default function AdminSystemSettingsPage() {
               value="notificaciones"
               data-tour="settings-notices"
               title="Notificaciones"
-              description="Avisos por correo y resumen diario para Coordinación"
+              description="Resumen diario de pendientes, de lunes a viernes"
               icon={Bell}
             >
               <Field orientation="horizontal">
                 <Switch id="settings-emails" checked={notifications.emails} onCheckedChange={(emails) => setNotifications((previous) => ({ ...previous, emails }))} />
                 <FieldLabel htmlFor="settings-emails" className="font-normal">
-                  Enviar avisos por correo
+                  Enviar el resumen diario por correo
                 </FieldLabel>
               </Field>
               <Field data-invalid={Boolean(errors.digest_time)}>

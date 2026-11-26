@@ -56,7 +56,7 @@ export const screenTours: Record<string, TourStep[]> = {
     step('[data-tour="template-assistant"]', 'Asistente', 'Pídale cambios con sus palabras. Si le gusta la propuesta, aplíquela y luego guarde', 'left'),
   ],
   '/admin/configuracion/sistema': [
-    step('[data-tour="settings-notices"]', 'Correos', 'Active o apague los avisos por correo y elija a qué hora llega el resumen del día', 'bottom'),
+    step('[data-tour="settings-notices"]', 'Correos', 'Active o apague el resumen de pendientes y elija a qué hora llega', 'bottom'),
     step('[data-tour="settings-ai"]', 'Asistente', 'Conecte el asistente con un servicio de inteligencia artificial y pruebe que funcione', 'bottom'),
     step('[data-tour="settings-library"]', 'Biblioteca', 'Conecte el catálogo de la biblioteca para que los docentes busquen libros', 'top'),
   ],
@@ -160,7 +160,7 @@ const sharedScreens: Record<string, TourStep[]> = {
     step('[data-tour="security-reset"]', 'Por correo', 'Si no recuerda su contraseña, le enviamos un enlace para crear otra', 'top'),
   ],
   'configuracion/notificaciones': [
-    step('[data-tour="email-notices"]', 'Avisos por correo', 'Elija qué avisos le llegan también al correo. En el sistema los verá siempre', 'top'),
+    step('[data-tour="email-notices"]', 'Avisos por correo', 'Active o apague el resumen diario de pendientes. En el sistema verá siempre los avisos', 'top'),
   ],
   notificaciones: [
     step(ACTIONS, 'Marcar todo', 'Marca todos los avisos como leídos', 'left'),

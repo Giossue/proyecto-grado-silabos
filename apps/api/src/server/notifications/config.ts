@@ -4,23 +4,8 @@ type Env = Record<string, string | undefined>
 
 export type NotificationEmailConfig = { enabled: boolean; events: string[] }
 
-export const DEFAULT_EMAIL_EVENTS = [
-  "convocatoria.abierta",
-  "convocatoria.reanudada",
-  "silabo.asignado",
-  "silabo.correccion_solicitada",
-  "silabo.devuelto_borrador",
-  "silabo.aprobado",
-  "silabo.enviado",
-  "silabo.reenviado_biblioteca",
-  "biblioteca.verificado",
-  "proceso.reanudado",
-  "silabo.eliminado",
-  "silabo.regenerado",
-  "proceso.plantilla_rehecho",
-  "proceso.eliminado",
-  "proceso.cierre_proximo",
-]
+// People get one daily summary (dailyDigest) instead of an email per event. NOTIFICATION_EMAIL_EVENTS can still turn single events on.
+export const DEFAULT_EMAIL_EVENTS: string[] = []
 
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 

@@ -138,10 +138,8 @@ describe("POST /api/v1/coordination/convocations", () => {
       [TEACHER, `flujo:convocatoria.abierta:${CONVOCATION}:${TEACHER}`, "Tiene 2 sílabos por elaborar", message, "convocatoria", CONVOCATION, PERIOD],
       [OTHER_TEACHER, `flujo:convocatoria.abierta:${CONVOCATION}:${OTHER_TEACHER}`, "Tiene un sílabo por elaborar", message, "convocatoria", CONVOCATION, PERIOD],
     ])
-    expect(notices.mails.map((mail) => [mail.to, mail.data])).toEqual([
-      ["ana@ueb.edu.ec", { name: "Ana Pérez", title: "Tiene 2 sílabos por elaborar", body: message, url: "http://localhost:3000/" }],
-      ["luis@ueb.edu.ec", { name: "Luis Mora", title: "Tiene un sílabo por elaborar", body: message, url: "http://localhost:3000/" }],
-    ])
+    // No email of its own: the daily summary replaces it.
+    expect(notices.mails).toEqual([])
   })
 
   it("validates the process like Laravel, with exists only after the earlier rules pass", async () => {
@@ -199,7 +197,7 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
       [TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${TEACHER}:${at}`, "Se reanudó el periodo académico", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
       [OTHER_TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${OTHER_TEACHER}:${at}`, "Se reanudó el periodo académico", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
     ])
-    expect(notices.mails).toHaveLength(2)
+    expect(notices.mails).toEqual([])
   })
 
   it("resumes even when nothing new was generated", async () => {

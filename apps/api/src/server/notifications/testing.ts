@@ -1,5 +1,4 @@
 import type { QueuedMail } from "../mail/mailables"
-import { DEFAULT_EMAIL_EVENTS } from "./config"
 import type { NotificationRecipient, NotificationRow, NotificationScope, NotificationTx } from "./store"
 
 export type NotificationWorld = {
@@ -39,7 +38,8 @@ export async function fakeNotificationTransaction<T>(world: NotificationWorld, n
     afterCommit: (callback) => void callbacks.push(callback),
     mail: async (mail) => void world.mails.push(mail),
     now,
-    email: { enabled: true, events: DEFAULT_EMAIL_EVENTS },
+    // Single-event emails are opt-in; tests of that path name the events they use.
+    email: { enabled: true, events: ["silabo.correccion_solicitada"] },
     frontendUrl: "http://localhost:3000/",
   }
   const result = await work(scope)

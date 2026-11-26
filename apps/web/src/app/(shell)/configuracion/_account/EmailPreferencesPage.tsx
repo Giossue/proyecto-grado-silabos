@@ -18,15 +18,11 @@ import { SettingsLayout } from "@/layouts/settings/Layout"
 import { errorMessage, queryErrorMessage } from "@/lib/queryClient"
 import { toast } from "@/lib/toast"
 import { accountKeys, emailPreferencesQuery } from "@/queries/account"
-import { useSession } from "@/state/session"
 
-const ROWS_BY_ROLE: Record<string, number> = { docente: 6, coordinador: 2, bibliotecario: 4 }
 
 const chosenFrom = (options: EmailNoticeOption[]): Record<string, boolean> => Object.fromEntries(options.map((option) => [option.type, option.enabled]))
 
 export default function EmailPreferencesPage() {
-  const role = useSession().session?.active_role?.code ?? ""
-  const optionRows = ROWS_BY_ROLE[role] ?? 4
   const queryClient = useQueryClient()
   const query = useQuery(emailPreferencesQuery())
   const options = query.data?.options ?? null
@@ -76,7 +72,7 @@ export default function EmailPreferencesPage() {
       {loadError ? (
         <LoadErrorState message={loadError} onRetry={load} />
       ) : !options ? (
-        <LoadingSkeleton variant="settings" settingsSection="email" rows={optionRows} />
+        <LoadingSkeleton variant="settings" settingsSection="email" rows={1} />
       ) : (
         <div data-tour="email-notices" className="flex flex-col gap-6">
           {saveError ? <FeedbackAlert message={saveError} /> : null}

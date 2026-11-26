@@ -175,7 +175,8 @@ describe("GenerateSyllabusExportJob", () => {
         resourceId: ARTIFACT,
       }),
     ])
-    expect(notices.mails).toEqual([expect.objectContaining({ mailable: "workflow", to: recipient(TEACHER).email })])
+    // No email of its own: the daily summary replaces it.
+    expect(notices.mails).toEqual([])
     expect(renders[0]).toMatchObject({ subject: "Biología", subjectCode: "C2", academicPeriod: "2026-2", revisionNumber: 3, generatedAt: "2026-11-24T15:00:00+00:00", locale: "es-EC" })
   })
 

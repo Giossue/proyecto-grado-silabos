@@ -9,7 +9,7 @@
     },
     "/admin/configuracion/sistema": {
         "title": "Sistema",
-        "content": "Aquí se configuran los avisos por correo, el asistente y la conexión con la biblioteca.\n\nAbra cada parte para cambiarla. Algunas piden su contraseña antes de guardar."
+        "content": "Aquí se configuran el resumen diario por correo, el asistente y la conexión con la biblioteca.\n\nAbra cada parte para cambiarla. Algunas piden su contraseña antes de guardar."
     },
     "/admin/periodos": {
         "title": "Periodos académicos",
@@ -57,7 +57,7 @@
     },
     "/biblioteca/configuracion/notificaciones": {
         "title": "Avisos por correo",
-        "content": "Elija qué avisos le llegan también a su correo. En el sistema los verá siempre."
+        "content": "Active o apague el resumen diario: un correo de lunes a viernes que avisa que tiene pendientes, solo si los tiene. En el sistema verá siempre los avisos."
     },
     "/biblioteca/configuracion/perfil": {
         "title": "Perfil",
@@ -85,7 +85,7 @@
     },
     "/coordinacion/configuracion/notificaciones": {
         "title": "Avisos por correo",
-        "content": "Elija qué avisos le llegan también a su correo. En el sistema los verá siempre."
+        "content": "Active o apague el resumen diario: un correo de lunes a viernes que avisa que tiene pendientes, solo si los tiene. En el sistema verá siempre los avisos."
     },
     "/coordinacion/configuracion/perfil": {
         "title": "Perfil",
@@ -141,7 +141,7 @@
     },
     "/docente/configuracion/notificaciones": {
         "title": "Avisos por correo",
-        "content": "Elija qué avisos le llegan también a su correo. En el sistema los verá siempre."
+        "content": "Active o apague el resumen diario: un correo de lunes a viernes que avisa que tiene pendientes, solo si los tiene. En el sistema verá siempre los avisos."
     },
     "/docente/configuracion/perfil": {
         "title": "Perfil",
