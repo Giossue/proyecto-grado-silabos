@@ -20,7 +20,7 @@ export async function resolveCareerScope<T>(
     return career ?? modelNotFound(MODELS.career, requestedCareerId)
   }
   if (role.role !== ROLE_COORDINATOR || role.careerId === null) return refusal()
-  if (requestedCareerId !== null && requestedCareerId !== role.careerId) return refusal()
+  if (requestedCareerId !== null) return refusal()
   return (await load(role.careerId)) ?? refusal()
 }
 

@@ -677,8 +677,9 @@ describe("a coordinator never reaches another career", () => {
     expect(log).toEqual([])
   })
 
-  it("keeps working on its own career when the identifier is its own", async () => {
-    expect((await send("POST", `/api/v1/admin/careers/${CAREER}/academic/asignatura`, subjectBody, (request) => createCareerRecord(request, "asignatura", deps(), CAREER))).text).toBe(CREATED)
+  it("refuses the admin routes even for its own career and writes nothing", async () => {
+    expect((await send("POST", `/api/v1/admin/careers/${CAREER}/academic/asignatura`, subjectBody, (request) => createCareerRecord(request, "asignatura", deps(), CAREER))).status).toBe(403)
+    expect(log).toEqual([])
   })
 
   it("answers 401 without a session", async () => {

@@ -530,7 +530,7 @@ describe("academic structure served by Nest answers exactly like the route handl
     expect(answers.map((answer) => answer.status)).toEqual([200, 404, 200, 200, 200, 403, 403])
   })
 
-  it("shows any career's screens to the administrator through the career routes and keeps coordinators in their own career", async () => {
+  it("shows any career's screens to the administrator through the career routes and keeps coordinators out of them", async () => {
     const OTHER = "c0000000-0000-4000-8000-000000000002"
     activeRole = ADMIN
     const admin = await expectSame(
@@ -546,7 +546,7 @@ describe("academic structure served by Nest answers exactly like the route handl
       { method: "DELETE", path: `/api/v1/admin/careers/${OTHER}/academic/parallels/${PARALLEL}` },
       { method: "GET", path: `/api/v1/admin/careers/${CAREER}/academic/scheduled-subjects` },
     )
-    expect(coordinator.map((answer) => answer.status)).toEqual([403, 403, 200])
+    expect(coordinator.map((answer) => answer.status)).toEqual([403, 403, 403])
     expect(coordinator[1].writes).toEqual([])
   })
 

@@ -39,9 +39,12 @@ describe("resolveCareerScope", () => {
     expect((await outcome(await resolveCareerScope(session("administrador"), null, load))).startsWith("403 ")).toBe(true)
   })
 
-  it("always gives the coordinator its own career", async () => {
+  it("gives the coordinator its own career on the coordinator routes", async () => {
     expect(await outcome(await resolveCareerScope(session("coordinador", CAREER), null, load))).toBe(CAREER)
-    expect(await outcome(await resolveCareerScope(session("coordinador", CAREER), CAREER, load))).toBe(CAREER)
+  })
+
+  it("refuses a coordinator on the admin routes, even for its own career", async () => {
+    expect((await outcome(await resolveCareerScope(session("coordinador", CAREER), CAREER, load))).startsWith("403 ")).toBe(true)
   })
 
   it("refuses a coordinator who requests another career, even an active one", async () => {
