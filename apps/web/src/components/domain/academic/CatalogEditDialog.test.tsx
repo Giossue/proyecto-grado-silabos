@@ -1,12 +1,11 @@
-import { act, fireEvent, screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { useState, type ComponentProps } from "react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { updateAcademicRecord } from "@/api/academic"
 import { ApiError } from "@/api/client"
 import { getCatalogLibraries } from "@/api/libraryCatalog"
 import { CatalogEditDialog } from "@/components/domain/academic/CatalogEditDialog"
 import { buttonNamed, buttonWithText } from "@/components/domain/academic/academicTestUtils"
-import { FINALIZED_NOTICE, purgeConfirmation } from "@/composables/usePurgeConfirmation"
 import { flush, renderWithProviders } from "@/test/render"
 
 vi.mock("@/api/academic", () => ({ updateAcademicRecord: vi.fn() }))
@@ -21,9 +20,6 @@ beforeEach(() => {
     { id: "BHTM", name: "SAN MIGUEL" },
   ])
   vi.mocked(updateAcademicRecord).mockReset().mockResolvedValue({ message: "Facultad actualizada." })
-})
-afterEach(() => {
-  if (purgeConfirmation.open.value) purgeConfirmation.cancel()
 })
 
 const base: DialogProps = {
@@ -167,25 +163,7 @@ describe("CatalogEditDialog · periodo académico activo", () => {
 })
 
 describe("CatalogEditDialog · cambios que devuelven sílabos enviados", () => {
-  it("con un periodo académico finalizado abre el aviso sin frase y reenvía con confirm_purge", async () => {
-    vi.mocked(updateAcademicRecord)
-      .mockRejectedValueOnce(new ApiError("Aviso", 422, { purge_required: ["El periodo académico 2026-2027 ya finalizó."], purge_count: ["0"], purge_mode: [FINALIZED_NOTICE] }))
-      .mockResolvedValueOnce({ message: "Actualizado" })
-    await editingDialog()
-    await rename("Facultad con otro nombre")
-    fireEvent.click(buttonWithText("Guardar cambios")!)
-    await flush()
-
-    expect(purgeConfirmation.mode.value).toBe(FINALIZED_NOTICE)
-    await act(async () => {
-      await purgeConfirmation.confirm()
-    })
-    await flush()
-
-    expect((vi.mocked(updateAcademicRecord).mock.calls[1]![2] as FormData).get("confirm_purge")).toBe("1")
-  })
-
-  it("al cambiar el nombre pide confirmar y, al confirmar, reenvía con confirm_purge", async () => {
+  it("si el cambio devuelve sílabos a borrador, reenvía directo con confirm_purge, sin diálogo", async () => {
     vi.mocked(updateAcademicRecord)
       .mockRejectedValueOnce(new ApiError("Confirme", 422, { purge_required: ["Este cambio devolverá 1 sílabo enviado o aprobado a borrador"], purge_count: ["1"] }))
       .mockResolvedValueOnce({ message: "Facultad actualizada." })
@@ -193,12 +171,6 @@ describe("CatalogEditDialog · cambios que devuelven sílabos enviados", () => {
     await rename("Facultad con otro nombre")
     fireEvent.click(buttonWithText("Guardar cambios")!)
     await flush()
-
-    expect(purgeConfirmation.open.value).toBe(true)
-    expect(purgeConfirmation.message.value).toContain("devolverá 1 sílabo")
-    await act(async () => {
-      await purgeConfirmation.confirm()
-    })
     await flush()
 
     expect(updateAcademicRecord).toHaveBeenCalledTimes(2)
@@ -207,6 +179,7 @@ describe("CatalogEditDialog · cambios que devuelven sílabos enviados", () => {
     expect(resent[1]).toBe("faculty-1")
     expect((resent[2] as FormData).get("confirm_purge")).toBe("1")
     expect((resent[2] as FormData).get("nombre")).toBe("Facultad con otro nombre")
+    expect((vi.mocked(updateAcademicRecord).mock.calls[0]![2] as FormData).get("confirm_purge")).toBeNull()
   })
 
   it("la facultad no tiene campo de campus y no lo envía al guardar", async () => {

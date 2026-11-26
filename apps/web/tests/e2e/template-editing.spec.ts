@@ -42,11 +42,7 @@ async function convocationOption(page: Page, action: RegExp): Promise<void> {
 async function enterEditMode(page: Page): Promise<void> {
   await page.goto("/admin/plantilla")
   await page.getByRole("button", { name: "Editar", exact: true }).click()
-  const warning = page.getByRole("dialog", { name: "Editar la plantilla" })
-  await expect(warning.getByRole("button", { name: "Continuar" })).toBeDisabled()
-  await warning.getByRole("textbox", { name: /Escriba «editar plantilla»/ }).fill("editar plantilla")
-  await warning.getByRole("button", { name: "Continuar" }).click()
-  await expect(warning).toBeHidden()
+  await expect(page.getByRole("dialog", { name: "Editar la plantilla" })).toHaveCount(0)
   await expect(page.getByRole("toolbar", { name: "Cinta de edición de la plantilla" })).toBeVisible()
 }
 
@@ -151,9 +147,6 @@ test.describe.serial("template editing during a paused convocation", () => {
     await expect(page.getByRole("button", { name: "Editar", exact: true })).toBeDisabled()
 
     await convocationOption(page, /^Pausar/)
-    const dialog = page.getByRole("dialog", { name: "Pausar el periodo académico" })
-    await dialog.getByRole("button", { name: "Pausar", exact: true }).click()
-    await expect(dialog).toBeHidden()
     await expect(rowNamed(page, /\S/, "button").first()).toContainText(/Pausad/)
     expect(await convocationState()).toBe("pausado")
 
@@ -345,15 +338,10 @@ test.describe.serial("template editing during a paused convocation", () => {
   })
 
   test("admin resumes the convocation and confirms that syllabi adapt to the template", async ({ page, issues }) => {
+    const resumed = page.waitForResponse((response) => /\/reanudar$/.test(response.url()) && response.request().postData()?.includes("confirmar_rehacer") === true)
     await convocationOption(page, /^Reanudar/)
-    const dialog = page.getByRole("dialog", { name: "Reanudar el periodo académico" })
-    await dialog.getByRole("button", { name: "Reanudar", exact: true }).click()
-    await expect(dialog.getByRole("table", { name: "Cantidad de sílabos que se adaptan, por estado" })).toBeVisible()
-    const confirm = dialog.getByRole("button", { name: "Reanudar y adaptar sílabos" })
-    await expect(confirm).toBeDisabled()
-    await dialog.getByRole("textbox", { name: /Escriba «adaptar sílabos»/ }).fill("adaptar sílabos")
-    await confirm.click()
-    await expect(dialog).toBeHidden()
+    expect((await resumed).status()).toBe(200)
+    await expect(page.getByRole("dialog")).toHaveCount(0)
     await expect(rowNamed(page, /\S/, "button").first()).toContainText(/Abiert/)
     expect(await convocationState()).toBe("abierto")
 
@@ -370,10 +358,6 @@ test.describe.serial("template editing during a paused convocation", () => {
       await page.goto("/admin/periodos")
       await expect(page.getByRole("button", { name: "Nuevo periodo académico" })).toBeDisabled()
       await convocationOption(page, /^Finalizar/)
-      const finalize = page.getByRole("dialog", { name: "Finalizar el periodo académico" })
-      await finalize.getByRole("textbox", { name: /Escriba «finalizar periodo»/ }).fill("finalizar periodo")
-      await finalize.getByRole("button", { name: "Finalizar", exact: true }).click()
-      await expect(finalize).toBeHidden()
       await expect(rowNamed(page, /\S/, "button").first()).toContainText(/Finalizad/)
       expect(await convocationState()).toBeUndefined()
 
@@ -386,9 +370,6 @@ test.describe.serial("template editing during a paused convocation", () => {
       await pickDate(page, "convocation-starts", new Date(Date.UTC(2027, 2, 22)))
       await pickDate(page, "convocation-due", new Date(Date.UTC(2027, 3, 12)))
       await dialog.getByRole("button", { name: "Abrir periodo académico" }).click()
-      const opening = page.getByRole("dialog", { name: "Abrir periodo académico" })
-      await opening.getByRole("textbox", { name: /Escriba «abrir periodo»/ }).fill("abrir periodo")
-      await opening.getByRole("button", { name: "Abrir periodo académico" }).click()
       await expect(toast(page, "Periodo académico abierto. Cada coordinación ya puede abrir el de su carrera")).toBeVisible()
       await expect(page.getByRole("dialog")).toHaveCount(0)
 

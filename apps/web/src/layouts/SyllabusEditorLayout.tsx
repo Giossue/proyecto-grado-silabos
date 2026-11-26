@@ -1,5 +1,4 @@
 import type { ReactNode } from "react"
-import { PurgeConfirmationDialog } from "@/components/domain/PurgeConfirmationDialog"
 import { ScreenHelpButton } from "@/components/domain/ScreenHelpButton"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
@@ -12,7 +11,6 @@ export function SyllabusEditorLayout({ children }: { children: ReactNode }) {
         </main>
         <ScreenHelpButton editorMode corner="left" />
       </TooltipProvider>
-      <PurgeConfirmationDialog />
     </div>
   )
 }

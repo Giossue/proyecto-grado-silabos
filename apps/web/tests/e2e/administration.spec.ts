@@ -234,19 +234,10 @@ test.describe.serial("administration: convocations, settings and template", () =
     const row = rowNamed(page, /\S/, "button").first()
     const options = page.getByRole("dialog", { name: /^Periodo académico / })
 
-    await row.getByRole("button").click()
-    await options.getByRole("button", { name: /^Finalizar/ }).click()
-    const finalize = page.getByRole("dialog", { name: "Finalizar el periodo académico" })
-    await expect(finalize.getByRole("table").first()).toBeVisible()
-    await finalize.getByRole("button", { name: "Cancelar" }).click()
-    await expect(finalize).toBeHidden()
-
     for (const [action, state] of [["Pausar", /Pausad/], ["Reanudar", /Abiert/]] as const) {
       if (!(await options.isVisible())) await row.getByRole("button").click()
       await options.getByRole("button", { name: new RegExp(`^${action}`) }).click()
-      const dialog = page.getByRole("dialog", { name: `${action} el periodo académico` })
-      await dialog.getByRole("button", { name: action, exact: true }).click()
-      await expect(dialog).toBeHidden()
+      await expect(page.getByRole("dialog")).toHaveCount(0)
       await expect(row).toContainText(state)
     }
     const states = await query<{ state: string }>("select estado_convocatoria_universidad as state from convocatorias_universidad where finalizada_en is null")

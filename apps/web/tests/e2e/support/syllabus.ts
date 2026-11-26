@@ -1,7 +1,7 @@
 import path from "node:path"
 import { expect, type Locator, type Page } from "@playwright/test"
 import { certificatePassword, signaturesDir, type Account } from "./accounts"
-import { chooseOption, confirmPurgeIfAsked, rowNamed, uniqueSuffix } from "./ui"
+import { chooseOption, rowNamed, uniqueSuffix } from "./ui"
 
 const autosaveUrl = /\/api\/v1\/teacher\/syllabi\/[^/]+\/fields\/[^/]+$/
 
@@ -267,7 +267,6 @@ export async function addTeacherParallel(page: Page, subject: string, teacherNam
   await chooseOption(page, dialog.getByRole("combobox", { name: "Jornada del nuevo paralelo" }), "Vespertina")
   await chooseOption(page, dialog.getByRole("combobox", { name: "Docente del nuevo paralelo" }), teacherName)
   await dialog.getByRole("button", { name: "Guardar nuevo paralelo" }).click()
-  await confirmPurgeIfAsked(page)
   await expect(dialog.getByRole("row").filter({ has: page.getByRole("cell", { name: code, exact: true }) })).toContainText(teacherName)
   await dialog.getByRole("button", { name: "Cerrar" }).last().click()
   return code

@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 
 export const toast = (page: Page, text?: string | RegExp): Locator => {
   const toasts = page.locator("[data-sonner-toast]")
@@ -8,15 +8,6 @@ export const toast = (page: Page, text?: string | RegExp): Locator => {
 export async function chooseOption(page: Page, trigger: Locator, option: string | RegExp): Promise<void> {
   await trigger.click()
   await page.getByRole("option", { name: option }).first().click()
-}
-
-export async function confirmPurgeIfAsked(page: Page): Promise<boolean> {
-  const dialog = page.getByRole("dialog", { name: "Este cambio afecta sílabos en curso" })
-  if (!(await dialog.isVisible({ timeout: 2_000 }).catch(() => false))) return false
-  await dialog.getByLabel("Escriba «devolver a borrador» para confirmar").fill("devolver a borrador")
-  await dialog.getByRole("button").last().click()
-  await expect(dialog).toBeHidden()
-  return true
 }
 
 export async function dragBetween(page: Page, from: Locator, to: Locator): Promise<void> {

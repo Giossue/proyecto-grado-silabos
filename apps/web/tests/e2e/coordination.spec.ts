@@ -4,7 +4,7 @@ import { expect, test } from "./support/fixtures"
 import { fillWorkbookCell, writeDocx, writePdf } from "./support/files"
 import { storageStateOf } from "./support/accounts"
 import { expireInvitation, query } from "./support/db"
-import { chooseOption, confirmPurgeIfAsked, lettersOnly, dragBetween, rowNamed, toast, uniqueSuffix } from "./support/ui"
+import { chooseOption, lettersOnly, dragBetween, rowNamed, toast, uniqueSuffix } from "./support/ui"
 
 test.use({ storageState: storageStateOf("coordinator") })
 
@@ -80,7 +80,6 @@ test.describe.serial("coordination", () => {
     await expect(form.getByLabel(/^TOTAL\b/)).toHaveValue("144")
     await form.getByRole("button", { name: "Agregar materia" }).click()
     await expect(form).toBeHidden()
-    await confirmPurgeIfAsked(page)
     const created = canvas.getByRole("article", { name: new RegExp(`${subjectName}$`) })
     await expect(created).toBeVisible()
 
@@ -90,7 +89,6 @@ test.describe.serial("coordination", () => {
       node("Estructura de Datos").getByRole("button", { name: "Conectar a la materia que requiere esta" }),
       node(subjectName).getByRole("button", { name: "Conectar el requisito de esta materia" }),
     )
-    await confirmPurgeIfAsked(page)
     const edge = canvas.getByRole("group", { name: `Prerrequisito: Estructura de Datos → ${subjectName}` })
     await expect(edge).toBeAttached()
     await expect.poll(async () => (await requirementsOf(`E2E-${suffix}`)).length).toBe(1)
@@ -114,7 +112,6 @@ test.describe.serial("coordination", () => {
     await page.mouse.click(middle.x, middle.y)
     const requirement = page.getByRole("dialog", { name: "Prerrequisito" })
     await requirement.getByRole("button").filter({ hasText: /Quitar|Eliminar/ }).click()
-    await confirmPurgeIfAsked(page)
     await expect(edge).toHaveCount(0)
     await expect.poll(async () => (await requirementsOf(`E2E-${suffix}`)).length).toBe(0)
 
@@ -129,7 +126,6 @@ test.describe.serial("coordination", () => {
       const deleted = page.waitForResponse((response) => response.request().method() === "DELETE" && /\/subjects\/[^/]+$/.test(response.url()))
       await page.getByRole("dialog", { name: "Eliminar materia" }).getByRole("button", { name: "Eliminar materia" }).click()
       expect((await deleted).status()).toBe(200)
-      await confirmPurgeIfAsked(page)
     }
     await removeSubject(created)
     await expect(created).toHaveCount(0)
@@ -192,7 +188,6 @@ test.describe.serial("coordination", () => {
     await page.keyboard.press("ControlOrMeta+End")
     await page.keyboard.type(" Incluye prácticas guiadas.", { delay: 15 })
     await save.click()
-    await confirmPurgeIfAsked(page)
     await expect(toast(page)).toBeVisible()
     await page.reload()
     await expect(editor).toContainText("Incluye prácticas guiadas.")
@@ -201,7 +196,7 @@ test.describe.serial("coordination", () => {
     await page.keyboard.press("ControlOrMeta+a")
     await page.keyboard.type(original, { delay: 5 })
     await save.click()
-    await confirmPurgeIfAsked(page)
+    await expect(toast(page)).toBeVisible()
     await page.reload()
     await expect(editor).toHaveText(original)
     issues.expectClean()
@@ -230,7 +225,6 @@ test.describe.serial("coordination", () => {
     const apply = dialog.getByRole("button", { name: /^Aplicar a \d+ materias$/ })
     const applied = page.waitForResponse((response) => /ficha.*apply|apply/.test(response.url()) && response.request().method() !== "GET")
     await apply.click()
-    await confirmPurgeIfAsked(page)
     expect((await applied).status()).toBeLessThan(400)
     await expect(toast(page)).toBeVisible()
     issues.expectClean()
@@ -255,7 +249,6 @@ test.describe.serial("coordination", () => {
     await chooseOption(page, dialog.getByRole("combobox", { name: "Jornada del nuevo paralelo" }), "Vespertina")
     await chooseOption(page, dialog.getByRole("combobox", { name: "Docente del nuevo paralelo" }), "JUAN CARLOS GAIBOR NARANJO")
     await dialog.getByRole("button", { name: "Guardar nuevo paralelo" }).click()
-    await confirmPurgeIfAsked(page)
     const created = dialog.getByRole("row").filter({ has: page.getByRole("cell", { name: code, exact: true }) })
     await expect(created).toContainText("Vespertina")
 
@@ -263,14 +256,12 @@ test.describe.serial("coordination", () => {
     await chooseOption(page, dialog.getByRole("combobox", { name: `Jornada del paralelo ${code}` }), "Nocturna")
     await chooseOption(page, dialog.getByRole("combobox", { name: `Docente del paralelo ${code}` }), "ANA LUCÍA CHÁVEZ TORRES")
     await dialog.getByRole("button", { name: `Guardar paralelo ${code}` }).click()
-    await confirmPurgeIfAsked(page)
     await expect(created).toContainText("Nocturna")
     await expect(created).toContainText("ANA LUCÍA CHÁVEZ TORRES")
 
     await dialog.getByRole("button", { name: `Editar paralelo ${code}` }).click()
     await chooseOption(page, dialog.getByRole("combobox", { name: `Docente del paralelo ${code}` }), "JUAN CARLOS GAIBOR NARANJO")
     await dialog.getByRole("button", { name: `Guardar paralelo ${code}` }).click()
-    await confirmPurgeIfAsked(page)
     await expect(created).toContainText("JUAN CARLOS GAIBOR NARANJO")
     await dialog.getByRole("button", { name: "Cerrar" }).last().click()
     await expect(rowNamed(page, "Cálculo III", "button")).toContainText(code)

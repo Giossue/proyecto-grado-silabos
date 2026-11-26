@@ -17,8 +17,8 @@ const api = vi.hoisted(() => ({
   replaceParallelTeacher: vi.fn(),
 }))
 vi.mock("@/api/career-academics", () => api)
-const purge = vi.hoisted(() => ({ requestPurgeConfirmation: vi.fn(), FINALIZED_NOTICE: "convocatoria_finalizada" }))
-vi.mock("@/composables/usePurgeConfirmation", () => purge)
+const purge = vi.hoisted(() => ({ announcePurge: vi.fn() }))
+vi.mock("@/lib/purgeNotice", () => purge)
 const deadline = vi.hoisted(() => ({ state: null as string | null }))
 vi.mock("@/state/deadline", () => ({
   deadlineState: {
@@ -141,7 +141,7 @@ describe("ParallelBulkActions", () => {
     expect(changed.mock.calls[0]).toEqual(["Se aplicaron los cambios posibles"])
   })
 
-  it("cambio masivo de jornada: pregunta una sola vez antes de tocar nada; si cancela, no cambia ningún paralelo", async () => {
+  it("cambio masivo de jornada: aplica directo, confirma solo los sílabos enviados y avisa una vez", async () => {
     const actor = userEvent.setup()
     mountBar({
       parallelIds: ["p1", "p2", "p3"],
@@ -157,18 +157,11 @@ describe("ParallelBulkActions", () => {
       assignments: [],
     })
 
-    purge.requestPurgeConfirmation.mockImplementationOnce((_message: string, count: number, _confirmed: () => void, cancelled: () => void) => {
-      expect(count).toBe(1)
-      cancelled()
-    })
-    await chooseFromSubmenu(actor, "Asignar jornada", "Matutina")
-    expect(purge.requestPurgeConfirmation).toHaveBeenCalledTimes(1)
-    expect(purge.requestPurgeConfirmation.mock.calls[0]![0]).toContain("Si cancela, no se cambia ningún paralelo")
-    expect(api.updateParallel).not.toHaveBeenCalled()
-
     api.updateParallel.mockResolvedValue({ message: "ok" })
-    purge.requestPurgeConfirmation.mockImplementationOnce((_message: string, _count: number, confirmed: () => void) => confirmed())
     await chooseFromSubmenu(actor, "Asignar jornada", "Matutina")
+    expect(purge.announcePurge).toHaveBeenCalledTimes(1)
+    expect(purge.announcePurge.mock.calls[0]![0]).toContain("El sílabo de 1 paralelo seleccionado ya está en revisión o aprobado")
+    expect(purge.announcePurge.mock.calls[0]![0]).not.toContain("Si cancela")
     expect(api.updateParallel.mock.calls).toEqual([
       ["p1", { code: "A", shift: "matutina" }, "confirmed"],
       ["p2", { code: "B", shift: "matutina" }, "unconfirmed"],
@@ -177,26 +170,19 @@ describe("ParallelBulkActions", () => {
     expect(changed.mock.calls.at(-1)).toEqual(["Jornada actualizada en los paralelos seleccionados"])
   })
 
-  it("con el periodo académico finalizado, asignar docente avisa una sola vez antes de empezar; si cancela, no cambia nada", async () => {
+  it("con el periodo académico finalizado, asignar docente aplica directo con confirmación y avisa una vez", async () => {
     deadline.state = "closed"
     const actor = userEvent.setup()
     mountBar()
 
-    purge.requestPurgeConfirmation.mockImplementationOnce((_message: string, _count: number, _confirmed: () => void, cancelled: () => void, mode: string) => {
-      expect(mode).toBe("convocatoria_finalizada")
-      cancelled()
-    })
-    await chooseFromSubmenu(actor, "Asignar docente", "Docente Uno")
-    expect(api.replaceParallelTeacher).not.toHaveBeenCalled()
-
     api.replaceParallelTeacher.mockResolvedValue({ message: "ok" })
-    purge.requestPurgeConfirmation.mockImplementationOnce((_message: string, _count: number, confirmed: () => void) => confirmed())
     await chooseFromSubmenu(actor, "Asignar docente", "Docente Uno")
     expect(api.replaceParallelTeacher).toHaveBeenCalledWith("p1", TEACHER_ID, "confirmed")
-    expect(purge.requestPurgeConfirmation).toHaveBeenCalledTimes(2)
+    expect(purge.announcePurge).toHaveBeenCalledTimes(1)
+    expect(purge.announcePurge.mock.calls[0]![0]).toContain("El periodo académico de su carrera ya finalizó")
   })
 
-  it("asignar otro docente donde el sílabo ya tiene trabajo pregunta una sola vez; si cancela, no cambia ningún paralelo", async () => {
+  it("asignar otro docente donde el sílabo ya tiene trabajo aplica directo y avisa una vez", async () => {
     const actor = userEvent.setup()
     mountBar({
       parallelIds: ["p1", "p2"],
@@ -211,17 +197,10 @@ describe("ParallelBulkActions", () => {
       assignments: [],
     })
 
-    purge.requestPurgeConfirmation.mockImplementationOnce((message: string, count: number, _confirmed: () => void, cancelled: () => void) => {
-      expect(count).toBe(1)
-      expect(message).toContain("el nuevo docente lo empieza de cero")
-      cancelled()
-    })
-    await chooseFromSubmenu(actor, "Asignar docente", "Docente Uno")
-    expect(api.createCareerRecord).not.toHaveBeenCalled()
-
     api.createCareerRecord.mockResolvedValue({ message: "ok" })
-    purge.requestPurgeConfirmation.mockImplementationOnce((_message: string, _count: number, confirmed: () => void) => confirmed())
     await chooseFromSubmenu(actor, "Asignar docente", "Docente Uno")
+    expect(purge.announcePurge).toHaveBeenCalledTimes(1)
+    expect(purge.announcePurge.mock.calls[0]![0]).toContain("el nuevo docente lo empieza de cero")
     expect(api.createCareerRecord.mock.calls).toEqual([
       ["asignacion_docente", { user_id: TEACHER_ID, parallel_id: "p1" }, "confirmed"],
       ["asignacion_docente", { user_id: TEACHER_ID, parallel_id: "p2" }, "unconfirmed"],
