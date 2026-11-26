@@ -567,9 +567,6 @@ model usuarios {
   contrasena                                                                       String                    @db.VarChar(255)
   usuario_activo                                                                   Boolean                   @default(true)
   codigo_recordarme                                                                String?                   @db.VarChar(100)
-  secreto_dos_factores                                                             String?
-  codigos_recuperacion_dos_factores                                                String?
-  dos_factores_confirmado_en                                                       DateTime?                 @db.Timestamptz(0)
   preferencias_accesibilidad_usuario                                               Json?
   preferencias_correo_usuario                                                      Json?
   ajustes_sistema                                                                  ajustes_sistema[]
