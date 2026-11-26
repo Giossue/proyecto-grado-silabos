@@ -1,34 +1,51 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Plantilla del sílabo (formato 2)",
-    "description": "Estructura del JSON que exporta e importa «Plantilla como JSON». El servidor valida además las reglas que este esquema no puede expresar. Manual: docs/sistema.md (JSON de la plantilla).",
+    "description": "Estructura del JSON que exporta e importa «Plantilla como JSON». La exportación escribe las claves y los valores en español; la importación acepta también los nombres en inglés de los JSON anteriores, en cualquier mezcla. El servidor valida además las reglas que este esquema no puede expresar. Manual: docs/sistema.md (JSON de la plantilla).",
     "type": "object",
-    "required": ["version", "sections"],
+    "allOf": [
+        { "anyOf": [{ "required": ["versión"] }, { "required": ["version"] }] },
+        { "anyOf": [{ "required": ["secciones"] }, { "required": ["sections"] }] }
+    ],
     "additionalProperties": false,
     "properties": {
         "$schema": { "type": "string" },
-        "version": { "const": 2 },
-        "response_policy": { "const": "protected", "description": "El formato de Administración queda protegido; los demás solo completan párrafos y celdas vacíos." },
-        "document": { "$ref": "#/$defs/document" },
+        "versión": { "const": 2 },
+        "version": { "const": 2, "description": "Nombre anterior de «versión»." },
+        "politica_respuestas": { "$ref": "#/$defs/responsePolicy" },
+        "response_policy": { "$ref": "#/$defs/responsePolicy", "description": "Nombre anterior de «politica_respuestas»." },
+        "documento": { "$ref": "#/$defs/document" },
+        "document": { "$ref": "#/$defs/document", "description": "Nombre anterior de «documento»." },
         "variables": {
             "type": "object",
             "description": "Datos del sistema que se insertan con <span data-variable=\"clave\"></span>.",
             "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,99}$" },
             "additionalProperties": { "$ref": "#/$defs/variable" }
         },
+        "tablas": { "$ref": "#/$defs/blocks" },
+        "blocks": { "$ref": "#/$defs/blocks", "description": "Nombre anterior de «tablas»." },
+        "secciones_obligatorias": { "$ref": "#/$defs/requiredSections" },
+        "required_sections": { "$ref": "#/$defs/requiredSections", "description": "Nombre anterior de «secciones_obligatorias»." },
+        "secciones_biblioteca": { "$ref": "#/$defs/librarySections" },
+        "library_sections": { "$ref": "#/$defs/librarySections", "description": "Nombre anterior de «secciones_biblioteca»." },
+        "campos_docente": { "$ref": "#/$defs/teacherFields" },
+        "teacher_fields": { "$ref": "#/$defs/teacherFields", "description": "Nombre anterior de «campos_docente»." },
+        "contenidos_predefinidos": { "type": "array", "items": { "$ref": "#/$defs/preset" } },
+        "presets": { "type": "array", "items": { "$ref": "#/$defs/preset" }, "description": "Nombre anterior de «contenidos_predefinidos»." },
+        "secciones": { "type": "array", "maxItems": 60, "items": { "$ref": "#/$defs/section" } },
+        "sections": { "type": "array", "maxItems": 60, "items": { "$ref": "#/$defs/section" }, "description": "Nombre anterior de «secciones»." }
+    },
+    "$defs": {
+        "responsePolicy": { "enum": ["protegida", "protected"], "description": "El formato de Administración queda protegido; los demás solo completan párrafos y celdas vacíos. «protected» es el valor anterior." },
         "blocks": {
             "type": "object",
             "description": "Piezas con datos, reglas y diseño propios. Se insertan con <div data-block=\"clave\"></div>. La exportación usa la forma corta (titulo, campos, reglas, catalogo, diseño); la importación acepta también la forma completa (label, value, rules, catalog, layout).",
             "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,40}$" },
             "additionalProperties": { "anyOf": [{ "$ref": "#/$defs/shortBlock" }, { "$ref": "#/$defs/block" }] }
         },
-        "required_sections": { "type": "array", "items": { "type": "string" }, "description": "Secciones que la plantilla no puede quitar." },
-        "library_sections": { "type": "array", "items": { "type": "string" }, "description": "Secciones que revisa Biblioteca." },
-        "teacher_fields": { "type": "array", "items": { "$ref": "#/$defs/key" }, "description": "Campos que llena el docente en su sílabo (campus, correquisitos y su formación); no van en el perfil de la asignatura." },
-        "presets": { "type": "array", "items": { "$ref": "#/$defs/preset" } },
-        "sections": { "type": "array", "maxItems": 60, "items": { "$ref": "#/$defs/section" } }
-    },
-    "$defs": {
+        "requiredSections": { "type": "array", "items": { "type": "string" }, "description": "Secciones que la plantilla no puede quitar." },
+        "librarySections": { "type": "array", "items": { "type": "string" }, "description": "Secciones que revisa Biblioteca." },
+        "teacherFields": { "type": "array", "items": { "$ref": "#/$defs/key" }, "description": "Campos que llena el docente en su sílabo (campus, correquisitos y su formación); no van en el perfil de la asignatura." },
         "key": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 100 },
         "html": {
             "description": "Lista de líneas HTML, un texto HTML o un documento Tiptap.",
@@ -39,59 +56,137 @@
             ]
         },
         "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
-        "alignment": { "enum": ["left", "center", "right", "justify"] },
+        "alignment": { "enum": ["izquierda", "centro", "derecha", "justificado", "left", "center", "right", "justify"] },
+        "sizes": {
+            "type": "object",
+            "properties": {
+                "titulo": { "type": "number" }, "seccion": { "type": "number" }, "texto": { "type": "number" },
+                "title": { "type": "number" }, "section": { "type": "number" }, "body": { "type": "number" }
+            }
+        },
+        "colors": {
+            "type": "object",
+            "properties": {
+                "texto": { "$ref": "#/$defs/color" },
+                "titulo": { "$ref": "#/$defs/color" },
+                "fondo_encabezado_tabla": { "anyOf": [{ "$ref": "#/$defs/color" }, { "type": "null" }] },
+                "texto_encabezado_tabla": { "anyOf": [{ "$ref": "#/$defs/color" }, { "type": "null" }] },
+                "borde_tabla": { "$ref": "#/$defs/color" },
+                "texto_vacio": { "$ref": "#/$defs/color" },
+                "text": { "$ref": "#/$defs/color" },
+                "title": { "$ref": "#/$defs/color" },
+                "table_header_background": { "anyOf": [{ "$ref": "#/$defs/color" }, { "type": "null" }] },
+                "table_header_text": { "anyOf": [{ "$ref": "#/$defs/color" }, { "type": "null" }] },
+                "table_border": { "$ref": "#/$defs/color" },
+                "empty_text": { "$ref": "#/$defs/color" }
+            }
+        },
+        "titleStyle": {
+            "type": "object",
+            "properties": {
+                "texto": { "type": "string" }, "negrita": { "type": "boolean" }, "cursiva": { "type": "boolean" }, "alineacion": { "$ref": "#/$defs/alignment" },
+                "text": { "type": "string" }, "bold": { "type": "boolean" }, "italic": { "type": "boolean" }, "alignment": { "$ref": "#/$defs/alignment" }
+            }
+        },
+        "sectionTitleStyle": {
+            "type": "object",
+            "properties": {
+                "negrita": { "type": "boolean" }, "cursiva": { "type": "boolean" }, "alineacion": { "$ref": "#/$defs/alignment" },
+                "bold": { "type": "boolean" }, "italic": { "type": "boolean" }, "alignment": { "$ref": "#/$defs/alignment" }
+            }
+        },
+        "bodyStyle": { "type": "object", "properties": { "alineacion": { "$ref": "#/$defs/alignment" }, "alignment": { "$ref": "#/$defs/alignment" } } },
+        "header": {
+            "type": "object",
+            "properties": {
+                "logos": {
+                    "type": "array",
+                    "maxItems": 2,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "fuente": { "enum": ["institucion", "facultad", "institution", "faculty"] },
+                            "alto_pt": { "type": "number" },
+                            "source": { "enum": ["institucion", "facultad", "institution", "faculty"] },
+                            "height_pt": { "type": "number" }
+                        }
+                    }
+                },
+                "proporcion_izquierda": { "type": "number" },
+                "left_share": { "type": "number" }
+            }
+        },
+        "choices": {
+            "type": "object",
+            "properties": {
+                "margen_cm": { "type": "array", "items": { "type": "number" } }, "titulo": { "type": "array", "items": { "type": "number" } },
+                "seccion": { "type": "array", "items": { "type": "number" } }, "texto": { "type": "array", "items": { "type": "number" } },
+                "margin_cm": { "type": "array", "items": { "type": "number" } }, "title": { "type": "array", "items": { "type": "number" } },
+                "section": { "type": "array", "items": { "type": "number" } }, "body": { "type": "array", "items": { "type": "number" } }
+            }
+        },
         "document": {
             "type": "object",
-            "description": "Estilo del documento: papel, márgenes, letra, colores, encabezado y pie.",
+            "description": "Estilo del documento: papel, márgenes, letra, colores, encabezado y pie. Cada clave tiene su nombre anterior en inglés, que la importación también acepta.",
+            "additionalProperties": false,
             "properties": {
-                "paper": { "enum": ["letter", "a4", "legal"] },
-                "orientation": { "enum": ["portrait", "landscape"] },
+                "papel": { "enum": ["carta", "a4", "oficio", "letter", "legal"] },
+                "orientacion": { "enum": ["vertical", "horizontal", "portrait", "landscape"] },
+                "margen_cm": { "type": "number" },
+                "letra": { "type": "string" },
+                "interlineado": { "type": "number" },
+                "espacio_parrafos_pt": { "type": "number" },
+                "tamaños": { "$ref": "#/$defs/sizes" },
+                "colores": { "$ref": "#/$defs/colors" },
+                "titulo": { "$ref": "#/$defs/titleStyle" },
+                "titulo_seccion": { "$ref": "#/$defs/sectionTitleStyle" },
+                "texto": { "$ref": "#/$defs/bodyStyle" },
+                "encabezado": { "$ref": "#/$defs/header" },
+                "pie": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+                "metadatos": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+                "texto_vacio": { "type": "string" },
+                "opciones": { "$ref": "#/$defs/choices" },
+                "paper": { "enum": ["carta", "a4", "oficio", "letter", "legal"] },
+                "orientation": { "enum": ["vertical", "horizontal", "portrait", "landscape"] },
                 "margin_cm": { "type": "number" },
                 "font_family": { "type": "string" },
                 "line_height": { "type": "number" },
                 "paragraph_spacing_pt": { "type": "number" },
-                "sizes": {
-                    "type": "object",
-                    "properties": { "title": { "type": "number" }, "section": { "type": "number" }, "body": { "type": "number" } }
-                },
-                "colors": {
-                    "type": "object",
-                    "properties": {
-                        "text": { "$ref": "#/$defs/color" },
-                        "title": { "$ref": "#/$defs/color" },
-                        "table_header_background": { "anyOf": [{ "$ref": "#/$defs/color" }, { "type": "null" }] },
-                        "table_header_text": { "anyOf": [{ "$ref": "#/$defs/color" }, { "type": "null" }] },
-                        "table_border": { "$ref": "#/$defs/color" },
-                        "empty_text": { "$ref": "#/$defs/color" }
-                    }
-                },
-                "title": {
-                    "type": "object",
-                    "properties": { "text": { "type": "string" }, "bold": { "type": "boolean" }, "italic": { "type": "boolean" }, "alignment": { "$ref": "#/$defs/alignment" } }
-                },
-                "section_title": {
-                    "type": "object",
-                    "properties": { "bold": { "type": "boolean" }, "italic": { "type": "boolean" }, "alignment": { "$ref": "#/$defs/alignment" } }
-                },
-                "body": { "type": "object", "properties": { "alignment": { "$ref": "#/$defs/alignment" } } },
-                "header": { "type": "object" },
+                "sizes": { "$ref": "#/$defs/sizes" },
+                "colors": { "$ref": "#/$defs/colors" },
+                "title": { "$ref": "#/$defs/titleStyle" },
+                "section_title": { "$ref": "#/$defs/sectionTitleStyle" },
+                "body": { "$ref": "#/$defs/bodyStyle" },
+                "header": { "$ref": "#/$defs/header" },
                 "footer": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
                 "metadata": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
                 "empty_text": { "type": "string" },
-                "choices": { "type": "object" }
+                "choices": { "$ref": "#/$defs/choices" }
             }
         },
         "variable": {
             "type": "object",
-            "required": ["label", "source"],
+            "allOf": [
+                { "anyOf": [{ "required": ["etiqueta"] }, { "required": ["label"] }] },
+                { "anyOf": [{ "required": ["fuente"] }, { "required": ["source"] }] }
+            ],
             "additionalProperties": false,
             "properties": {
+                "etiqueta": { "type": "string", "maxLength": 120 },
+                "fuente": { "$ref": "#/$defs/variableSource" },
+                "ejemplo": { "type": "string" },
+                "formato": { "enum": ["numero", "number"] },
+                "igual_a": { "type": "string", "description": "Muestra X cuando el dato es igual a este texto." },
                 "label": { "type": "string", "maxLength": 120 },
-                "source": { "type": "string", "description": "Dato del sistema: identification.*, approval.* o signature.*." },
+                "source": { "$ref": "#/$defs/variableSource" },
                 "sample": { "type": "string" },
-                "format": { "const": "number" },
+                "format": { "enum": ["numero", "number"] },
                 "equals": { "type": "string", "description": "Muestra X cuando el dato es igual a este texto." }
             }
+        },
+        "variableSource": {
+            "type": "string",
+            "description": "Dato del sistema: identificacion.*, aprobacion.* o firma.* (por ejemplo identificacion.facultad, identificacion.horas_acd, aprobacion.coordinador, firma.docente). También se aceptan los nombres anteriores identification.*, approval.* y signature.*."
         },
         "condition": {
             "type": "object",
@@ -384,48 +479,78 @@
         },
         "preset": {
             "type": "object",
-            "required": ["key", "label", "field"],
+            "allOf": [
+                { "anyOf": [{ "required": ["clave"] }, { "required": ["key"] }] },
+                { "anyOf": [{ "required": ["etiqueta"] }, { "required": ["label"] }] },
+                { "anyOf": [{ "required": ["campo"] }, { "required": ["field"] }] }
+            ],
             "properties": {
+                "clave": { "$ref": "#/$defs/key" },
+                "etiqueta": { "type": "string", "maxLength": 120 },
+                "campo": { "$ref": "#/$defs/key" },
                 "key": { "$ref": "#/$defs/key" },
                 "label": { "type": "string", "maxLength": 120 },
                 "field": { "$ref": "#/$defs/key" }
             }
         },
-        "field": {
-            "type": "object",
-            "required": ["key", "quien_llena", "content"],
+        "showIf": {
+            "type": ["object", "null"],
+            "description": "Mostrar el campo solo si una respuesta anterior de elegir una o varias tiene alguna de estas opciones.",
+            "allOf": [
+                { "anyOf": [{ "required": ["respuesta"] }, { "required": ["response"] }] },
+                { "anyOf": [{ "required": ["opciones"] }, { "required": ["options"] }] }
+            ],
             "additionalProperties": false,
             "properties": {
+                "respuesta": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,40}$" },
+                "opciones": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,40}$" } },
+                "response": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,40}$" },
+                "options": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,40}$" } }
+            }
+        },
+        "maxCharacters": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "maximum": 50000,
+            "description": "Límite de caracteres que el docente puede escribir en el campo: su texto libre y sus respuestas de texto. Solo en campos «carrera»."
+        },
+        "field": {
+            "type": "object",
+            "allOf": [
+                { "anyOf": [{ "required": ["clave"] }, { "required": ["key"] }] },
+                { "required": ["quien_llena"] },
+                { "anyOf": [{ "required": ["contenido"] }, { "required": ["content"] }] }
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "clave": { "$ref": "#/$defs/key" },
+                "etiqueta": { "type": ["string", "null"], "maxLength": 180 },
+                "quien_llena": { "enum": ["carrera", "institucional"] },
+                "contenido": { "$ref": "#/$defs/html" },
+                "mostrar_si": { "$ref": "#/$defs/showIf" },
+                "max_caracteres": { "$ref": "#/$defs/maxCharacters" },
                 "key": { "$ref": "#/$defs/key" },
                 "label": { "type": ["string", "null"], "maxLength": 180 },
-                "quien_llena": { "enum": ["carrera", "institucional"] },
                 "content": { "$ref": "#/$defs/html" },
-                "show_if": {
-                    "type": ["object", "null"],
-                    "description": "Mostrar el campo solo si una respuesta anterior de elegir una o varias tiene alguna de estas opciones.",
-                    "required": ["response", "options"],
-                    "additionalProperties": false,
-                    "properties": {
-                        "response": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,40}$" },
-                        "options": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,40}$" } }
-                    }
-                },
-                "max_length": {
-                    "type": ["integer", "null"],
-                    "minimum": 1,
-                    "maximum": 50000,
-                    "description": "Límite de caracteres que el docente puede escribir en el campo: su texto libre y sus respuestas de texto. Solo en campos «carrera»."
-                }
+                "show_if": { "$ref": "#/$defs/showIf" },
+                "max_length": { "$ref": "#/$defs/maxCharacters" }
             }
         },
         "section": {
             "type": "object",
-            "required": ["key", "title"],
+            "allOf": [
+                { "anyOf": [{ "required": ["clave"] }, { "required": ["key"] }] },
+                { "anyOf": [{ "required": ["titulo"] }, { "required": ["title"] }] }
+            ],
             "additionalProperties": false,
             "properties": {
+                "clave": { "$ref": "#/$defs/key" },
+                "titulo": { "type": "string", "maxLength": 180 },
+                "orientacion": { "enum": ["vertical", "horizontal", "portrait", "landscape"] },
+                "campos": { "type": "array", "maxItems": 60, "items": { "$ref": "#/$defs/field" } },
                 "key": { "$ref": "#/$defs/key" },
                 "title": { "type": "string", "maxLength": 180 },
-                "orientation": { "enum": ["portrait", "landscape"] },
+                "orientation": { "enum": ["vertical", "horizontal", "portrait", "landscape"] },
                 "fields": { "type": "array", "maxItems": 60, "items": { "$ref": "#/$defs/field" } }
             }
         }

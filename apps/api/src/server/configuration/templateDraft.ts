@@ -18,6 +18,7 @@ import { defineDocumentStyle, documentWithLayout } from "./templateStyle"
 import { documentFromHtml } from "./documentHtml"
 import { DEFINITION_KEYS, defineTemplate, listLimitsOf, withBlocks, withListLimits } from "./templateDefinition"
 import { legacyUnitsDocument } from "./legacyUnits"
+import { templateFromAnyLanguage } from "./templateSpanish"
 
 export const FORMAT_VERSION = 2
 export { FIELD_LIMIT_INVALID, KEY_PATTERN, RESPONSIBLES }
@@ -95,7 +96,8 @@ function definingErrors<T>(work: () => T): T {
   }
 }
 
-export function prepareDraft(input: PhpRecord): PhpRecord {
+export function prepareDraft(raw: PhpRecord): PhpRecord {
+  const input = templateFromAnyLanguage(raw)
   const sections = input.sections
   if (!isPhpArray(sections)) return input
   const prepared = entries(sections).map(([index, section]): [string, unknown] => {

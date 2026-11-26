@@ -17,6 +17,7 @@ import { contentForField, DraftRequest, fieldDocument, prepareDraft, toRuntime, 
 import type { SyllabusTemplate } from "./templatePresentation"
 import { boundTemplate, FORBIDDEN, managesTemplates } from "./templateReads"
 import { normalizeFieldDocument, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
+import { errorsInSpanish, repeatedKeys, writtenInSpanish } from "./templateSpanish"
 import type { TemplateStore } from "../shared/templateStore"
 import type { DocumentSection, StoredField } from "./templateStructure"
 
@@ -185,9 +186,11 @@ export async function importTemplateJsonOf(original: Request, raw: PhpArray, bou
   const input = toRuntime(raw) as PhpRecord
   const current = bound.definition
   return guarded(original, deps, async () => {
+    const repeated = repeatedKeys(input)
+    if (Object.keys(repeated).length > 0) return validationError(repeated)
     const draft = new DraftRequest(prepareDraft(input), current)
     const errors = await draft.errors()
-    if (Object.keys(errors).length > 0) return validationError(errors)
+    if (Object.keys(errors).length > 0) return validationError(writtenInSpanish(input) ? errorsInSpanish(errors) : errors)
     const locked = await processLock(deps)
     if (locked !== null) return locked
     const sections = validatedSections(draft.input)

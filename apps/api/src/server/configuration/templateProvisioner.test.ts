@@ -185,4 +185,42 @@ describe("PUT /api/v1/admin/template/{template}/json", () => {
     expect(JSON.parse(response.text).errors.version).toEqual(["El valor seleccionado en versión no es válido."])
     expect((await read(await importTemplateJson(send("PUT", `/api/v1/admin/template/${TEMPLATE_ID}/json`, payload), TEMPLATE_ID, deps()))).text).toBe('{"message":"Proceso activo","errors":{"process":["Proceso activo"]}}')
   })
+
+  it("imports a JSON written in Spanish and reports its errors with the Spanish paths", async () => {
+    const spanish = { "versión": 2, secciones: [{ clave: "datos", titulo: "Datos", orientacion: "horizontal", campos: [{ clave: "resumen", etiqueta: "Resumen", quien_llena: "carrera", contenido: "<p>Escriba</p>" }] }] }
+    const put = async (body: unknown) => read(await importTemplateJson(send("PUT", `/api/v1/admin/template/${TEMPLATE_ID}/json`, body), TEMPLATE_ID, deps()))
+
+    expect(await put(spanish)).toEqual({ status: 200, text: '{"message":"Plantilla importada desde el JSON."}' })
+    expect(documents.at(-1)?.[0]).toMatchObject({ key: "datos", title: "Datos", orientation: "landscape" })
+
+    const wrongVersion = await put({ ...spanish, "versión": 3 })
+    expect(wrongVersion.status).toBe(422)
+    expect(JSON.parse(wrongVersion.text).errors).toEqual({ "versión": ["El valor seleccionado en versión no es válido."] })
+
+    const saved = documents.length
+    const twice = await put({ ...spanish, sections: [] })
+    expect(twice.status).toBe(422)
+    expect(JSON.parse(twice.text).errors).toEqual({ secciones: ["«secciones» y «sections» son el mismo dato: deje solo uno."] })
+    const twiceInside = await put({ ...spanish, secciones: [{ ...spanish.secciones[0], title: "Otro" }] })
+    expect(JSON.parse(twiceInside.text).errors).toEqual({ "secciones.0.titulo": ["«titulo» y «title» son el mismo dato: deje solo uno."] })
+    expect(documents.length).toBe(saved)
+
+    const badKey = await put({ ...spanish, secciones: [{ ...spanish.secciones[0], clave: "Datos" }] })
+    expect(Object.keys(JSON.parse(badKey.text).errors)).toEqual(["secciones.0.clave"])
+
+    const badPaper = await put({ ...spanish, documento: { papel: "a5", titulo: { alineacion: "centro" } } })
+    expect(JSON.parse(badPaper.text).errors).toEqual({ definition: ["«documento.papel»: use carta, a4, oficio."] })
+
+    const badAlignment = await put({ ...spanish, documento: { titulo: { alineacion: "arriba" } } })
+    expect(JSON.parse(badAlignment.text).errors).toEqual({ definition: ["«documento.titulo.alineacion»: use izquierda, centro, derecha, justificado."] })
+
+    const badVariable = await put({ ...spanish, variables: { carrera: { etiqueta: "Carrera", fuente: "identificacion.inventada" } } })
+    expect(JSON.parse(badVariable.text).errors).toEqual({ definition: ["variables.carrera.fuente: use una de las fuentes del sistema (ver el manual técnico)."] })
+
+    const badTable = await put({ ...spanish, tablas: { practicas: { titulo: "Prácticas", campos: { filas: { filas: "ocho", columnas: { tema: "texto" } } }, diseño: ["<p></p>"] } } })
+    expect(JSON.parse(badTable.text).errors).toEqual({ definition: ["tablas.practicas.campos.filas.filas: escriba el mínimo y el máximo de filas, por ejemplo «1-8»."] })
+
+    const english = await put({ version: 2, document: { paper: "a5" }, sections: [] })
+    expect(JSON.parse(english.text).errors).toEqual({ definition: ["«document.paper»: use letter, a4, legal."] })
+  })
 })

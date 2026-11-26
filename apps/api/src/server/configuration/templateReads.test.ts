@@ -9,8 +9,9 @@ import { exportTemplateJson, teacherPreview, type TemplateReadDeps } from "./tem
 import { documentLines } from "./documentHtml"
 import templateGolden from "./__fixtures__/template-golden.json"
 import { defineBlock } from "./blockDefinition"
-import { toRuntime } from "./templateDraft"
+import { DraftRequest, prepareDraft, toRuntime } from "./templateDraft"
 import { defineAnyBlock } from "./templateShortForm"
+import { templateInSpanish } from "./templateSpanish"
 
 const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
 
@@ -145,9 +146,13 @@ describe("GET admin/template/{template}/json", () => {
     expect(response.status).toBe(200)
     const body = JSON.parse(response.text) as Record<string, unknown>
     const wanted = JSON.parse(expected) as Record<string, unknown>
-    expect({ ...body, blocks: null }).toEqual({ ...wanted, blocks: null })
+    expect(Object.keys(body)).toEqual(["$schema", "versión", "politica_respuestas", "documento", "variables", "tablas", "secciones_obligatorias", "secciones_biblioteca", "campos_docente", "contenidos_predefinidos", "secciones"])
+    expect({ ...body, tablas: null }).toEqual({ ...templateInSpanish(wanted), tablas: null })
+    const asImported = (payload: Record<string, unknown>) => new DraftRequest(prepareDraft(toRuntime(payload) as Record<string, unknown>), goldenTemplate().definition).definition()
+    expect(asImported(wanted)).toEqual(asImported(body))
+    expect(asImported({ ...wanted, blocks: body.tablas })).toEqual(asImported(body))
     const variables = Object.keys(definition.variables as Record<string, unknown>)
-    const exported = body.blocks as Record<string, Record<string, unknown>>
+    const exported = body.tablas as Record<string, Record<string, unknown>>
     expect(Object.keys(exported)).toEqual(Object.keys(wanted.blocks as Record<string, unknown>))
     for (const [kind, full] of Object.entries(wanted.blocks as Record<string, unknown>)) {
       expect(exported[kind]).toHaveProperty("titulo")

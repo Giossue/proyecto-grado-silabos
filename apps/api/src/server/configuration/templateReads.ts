@@ -11,6 +11,7 @@ import { defineBlock } from "./blockDefinition"
 import { canonicalJson } from "../documents/canonicalJson"
 import { toRuntime } from "./templateDraft"
 import { defineAnyBlock, shortBlock } from "./templateShortForm"
+import { templateInSpanish } from "./templateSpanish"
 import { fieldConditions, fieldLimits, limitAllowed, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import { IDENTIFICATION_SAMPLE, syllabusSectionPayload, teacherFieldKeys, type SyllabusTemplate } from "./templatePresentation"
 import type { TemplateStore } from "../shared/templateStore"
@@ -131,7 +132,7 @@ export function templateExport(request: Request, template: SyllabusTemplate, def
   const limits = fieldLimits(definition)
   const variables = Object.keys(definition.variables)
   const blocks = Object.fromEntries(Object.entries(definition.blocks).map(([kind, block]) => [kind, exportedBlock(kind, record(block), variables)]))
-  return {
+  return templateInSpanish({
     $schema: schemaUrl(request),
     version: EXPORT_FORMAT_VERSION,
     ...(definition.response_policy === "protected" ? { response_policy: "protected" } : {}),
@@ -157,7 +158,7 @@ export function templateExport(request: Request, template: SyllabusTemplate, def
         })),
       ),
     })),
-  }
+  })
 }
 
 function given(value: unknown, key: string): unknown {

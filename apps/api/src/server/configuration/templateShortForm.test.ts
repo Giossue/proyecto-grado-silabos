@@ -65,7 +65,7 @@ function fullBlocks(definition: TemplateDefinition): PhpRecord {
 }
 
 function blocksOf(payload: PhpRecord): Record<string, PhpRecord> {
-  return payload.blocks as Record<string, PhpRecord>
+  return payload.tablas as Record<string, PhpRecord>
 }
 
 function definitionErrors(work: () => unknown): string[] {
@@ -165,7 +165,7 @@ describe("template JSON blocks in short form", () => {
     const definition = officialDefinition()
     const practices = practicesBlock(Object.keys(definition.variables))
     const withTable: TemplateDefinition = { ...definition, blocks: { ...definition.blocks, practicas: practices } }
-    const payload = { ...exported(withTable), blocks: asJson(fullBlocks(withTable)) }
+    const payload = { ...exported(withTable), tablas: asJson(fullBlocks(withTable)) }
 
     expect(imported(payload, withTable)).toEqual(withTable)
   })
@@ -243,14 +243,14 @@ describe("template JSON in Spanish", () => {
   it("imports a JSON that still names the unidades list «units», in short and in full form", () => {
     const definition = officialDefinition()
     const short = legacyUnits(exported(definition))
-    const full = legacyUnits({ ...exported(definition), blocks: asJson(fullBlocks(definition)) })
+    const full = legacyUnits({ ...exported(definition), tablas: asJson(fullBlocks(definition)) })
 
     expect(legacyUnitsText(short)).toMatch(/"campos":\{"units":/)
     expect(legacyUnitsText(full)).toMatch(/"value":\{"units":/)
     expect(legacyUnitsText(full)).toMatch(/"count":"units\.\*\.semanas"/)
     expect(imported(short)).toEqual(definition)
     expect(imported(full)).toEqual(definition)
-    const nodes = legacyUnits({ ...exported(definition), blocks: asJson(definition.blocks) })
+    const nodes = legacyUnits({ ...exported(definition), tablas: asJson(definition.blocks) })
     expect(legacyUnitsText(nodes)).toMatch(/"repeat":\{"value":"units"\}/)
     expect(imported(nodes)).toEqual(definition)
   })
@@ -342,5 +342,84 @@ describe("template styles live in document", () => {
     expect(header).toContain('"backgroundColor":"#C3D4EA"')
     expect(header).toContain('"bold":true')
     expect(imported(payload)).toEqual(definition)
+  })
+})
+
+describe("the whole template JSON in Spanish", () => {
+  const ROOT = ["$schema", "versión", "politica_respuestas", "documento", "variables", "tablas", "secciones_obligatorias", "secciones_biblioteca", "campos_docente", "contenidos_predefinidos", "secciones"]
+
+  it("writes every key and enumerated value in Spanish, as in the agreed example", () => {
+    const payload = exported()
+
+    expect(Object.keys(payload)).toEqual(ROOT)
+    expect(payload["versión"]).toBe(2)
+    expect(payload.politica_respuestas).toBe("protegida")
+    expect(payload.documento).toEqual({
+      papel: "carta",
+      orientacion: "vertical",
+      margen_cm: 1.5,
+      letra: "Arial",
+      interlineado: 1.15,
+      espacio_parrafos_pt: 6,
+      tamaños: { titulo: 14, seccion: 11, texto: 11 },
+      colores: { texto: "#000000", titulo: "#2F5496", fondo_encabezado_tabla: "#C3D4EA", texto_encabezado_tabla: "#000000", borde_tabla: "#333333", texto_vacio: "#595959" },
+      titulo: { texto: "PROGRAMA DE ASIGNATURA (SÍLABO)", negrita: true, cursiva: false, alineacion: "centro" },
+      titulo_seccion: { negrita: true, cursiva: false, alineacion: "izquierda" },
+      texto: { alineacion: "izquierda" },
+      encabezado: { logos: [{ fuente: "institucion", alto_pt: 36 }, { fuente: "facultad", alto_pt: 36 }], proporcion_izquierda: 0.638 },
+      texto_vacio: "Sin contenido",
+      opciones: { margen_cm: [1.5, 2, 2.5, 3], titulo: [10, 14, 16, 18], seccion: [10, 11, 12, 14], texto: [10, 11, 12] },
+    })
+    const variables = payload.variables as Record<string, PhpRecord>
+    expect(variables.nombre_facultad).toEqual({ etiqueta: "Nombre de la facultad", fuente: "identificacion.facultad", ejemplo: "Ciencias Administrativas, Gestión Empresarial e Informática" })
+    expect(Object.values(variables).find((variable) => variable.fuente === "identificacion.horas_acd")).toMatchObject({ formato: "numero" })
+    expect(Object.values(variables).find((variable) => variable.igual_a === "Unidad profesional")).toMatchObject({ fuente: "identificacion.unidad_organizacion" })
+    expect((payload.contenidos_predefinidos as PhpRecord[])[0]).toEqual({ clave: "identificacion", etiqueta: "Identificación institucional", campo: "asignatura" })
+    const section = (payload.secciones as PhpRecord[])[0]
+    expect(Object.keys(section)).toEqual(["clave", "titulo", "orientacion", "campos"])
+    expect(section).toMatchObject({ clave: "identificacion", orientacion: "vertical" })
+    const field = (section.campos as PhpRecord[])[0]
+    expect(Object.keys(field)).toEqual(["clave", "etiqueta", "quien_llena", "contenido"])
+    expect(blocksOf(payload)).toEqual(blocksOf(exported()))
+    const outsideBlocks = JSON.stringify({ ...payload, tablas: null, secciones: (payload.secciones as PhpRecord[]).map((item) => ({ ...item, campos: (item.campos as PhpRecord[]).map((one) => ({ ...one, contenido: null })) })) })
+    for (const english of ['"document"', '"sections"', '"fields"', '"label"', '"source"', '"sample"', '"paper"', '"letter"', '"portrait"', '"center"', '"left"', '"key"', '"title"', '"content"', '"identification.']) {
+      expect(outsideBlocks).not.toContain(english)
+    }
+  })
+
+  it("writes the field condition and character limit in Spanish and reads the limit back", () => {
+    const official = officialDefinition()
+    const definition = { ...official, field_conditions: { descripcion: { response: "modalidad", options: ["virtual"] } }, field_limits: { descripcion: 900 } } as TemplateDefinition
+    const fieldsOf = (payload: PhpRecord) => (payload.secciones as PhpRecord[]).flatMap((section) => section.campos as PhpRecord[])
+
+    expect(fieldsOf(exported(definition)).find((item) => item.clave === "descripcion")).toMatchObject({ mostrar_si: { respuesta: "modalidad", opciones: ["virtual"] }, max_caracteres: 900 })
+    const payload = exported(official)
+    const objective = fieldsOf(payload).find((item) => item.clave === "objetivo_general") as PhpRecord
+    objective.max_caracteres = 700
+    expect(imported(payload).field_limits).toEqual({ objetivo_general: 700 })
+  })
+
+  it("imports its own export back to the identical definition, with and without an admin-designed table", () => {
+    const official = officialDefinition()
+    const definition: TemplateDefinition = { ...official, blocks: { ...official.blocks, practicas: practicesBlock(Object.keys(official.variables)) } }
+
+    expect(imported(exported(official))).toEqual(official)
+    expect(imported(exported(definition), definition)).toEqual(definition)
+  })
+
+  it("accepts Spanish and English keys and values in any mix", () => {
+    const definition = officialDefinition()
+    const payload = exported(definition)
+    const documento = payload.documento as PhpRecord
+    const mixed: PhpRecord = {
+      ...payload,
+      documento: { ...documento, papel: "letter", orientation: "vertical", titulo: { ...(documento.titulo as PhpRecord), alignment: "centro" } },
+      sections: (payload.secciones as PhpRecord[]).map((section, index) => (index === 0 ? { key: section.clave, title: section.titulo, orientation: "portrait", fields: section.campos } : section)),
+    }
+    delete mixed.secciones
+    delete mixed["versión"]
+    mixed.version = 2
+
+    expect(imported(mixed)).toEqual(definition)
   })
 })
