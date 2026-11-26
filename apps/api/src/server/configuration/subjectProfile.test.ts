@@ -86,7 +86,8 @@ describe("GET academic/asignaturas/{asignatura}/ficha", () => {
 
     const values = `{"${fieldId(respuestas)}":${ok(goldenFields[respuestas].expected.follow)},"${fieldId(descripcion)}":${ok(goldenFields[descripcion].expected.follow)}}`
     expect(response.status).toBe(200)
-    expect(JSON.parse(response.text)).toEqual(JSON.parse(expectedBody(values, true)))
+    // The other career fields are still empty, so the project is not complete.
+    expect(JSON.parse(response.text)).toEqual(JSON.parse(expectedBody(values, false)))
   })
 
   it("a stored value that is not a document is listed as null", async () => {

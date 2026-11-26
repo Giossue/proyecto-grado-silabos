@@ -113,11 +113,11 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
         `{"id":"p-b","code":"B","shift":"nocturna","editable":true,"deletable":true,"sent_syllabus":false,"started_syllabus":false}],"editable":true},` +
         `{"subject_id":"${RETIRED_WITH_PARALLEL}","label":"SW-B1-003 · Retirada con paralelo","subject_code":"SW-B1-003","subject_name":"Retirada con paralelo","subject_cycle":null,"profile_complete":false,"generates_syllabus":false,"modality_name":null,"malla_name":"Malla SW-9","parallels":[` +
         `{"id":"p-r","code":"C","shift":"vespertina","editable":true,"deletable":true,"sent_syllabus":false,"started_syllabus":true}],"editable":true},` +
-        `{"subject_id":"${NETWORKS}","label":"SW-B2-004 · Redes","subject_code":"SW-B2-004","subject_name":"Redes","subject_cycle":2,"profile_complete":true,"generates_syllabus":true,"modality_name":"Presencial","malla_name":"Malla SW-8","parallels":[],"editable":true}],` +
+        `{"subject_id":"${NETWORKS}","label":"SW-B2-004 · Redes","subject_code":"SW-B2-004","subject_name":"Redes","subject_cycle":2,"profile_complete":false,"generates_syllabus":true,"modality_name":"Presencial","malla_name":"Malla SW-8","parallels":[],"editable":true}],` +
         `"options":{"faculties":[],"careers":[],"periods":[],"modalityOptions":${MODALITIES},"shiftOptions":${SHIFTS},"currentCurricula":[],` +
         `"activeSubjects":[` +
-        `{"id":"${ALGORITHMS}","codigo_asignatura":"SW-B1-001","nombre":"Algoritmos","ciclo":1,"malla_name":"Malla SW-9","generates_syllabus":true,"profile_complete":false,"profile_filled":12,"profile_total":13},` +
-        `{"id":"${NETWORKS}","codigo_asignatura":"SW-B2-004","nombre":"Redes","ciclo":2,"malla_name":"Malla SW-8","generates_syllabus":true,"profile_complete":true,"profile_filled":13,"profile_total":13}],` +
+        `{"id":"${ALGORITHMS}","codigo_asignatura":"SW-B1-001","nombre":"Algoritmos","ciclo":1,"malla_name":"Malla SW-9","generates_syllabus":true,"profile_complete":false,"profile_filled":0,"profile_total":13},` +
+        `{"id":"${NETWORKS}","codigo_asignatura":"SW-B2-004","nombre":"Redes","ciclo":2,"malla_name":"Malla SW-8","generates_syllabus":true,"profile_complete":false,"profile_filled":1,"profile_total":13}],` +
         `"scheduledSubjects":[],"parallels":[],"teacherUsers":[]}}`,
     )
   })

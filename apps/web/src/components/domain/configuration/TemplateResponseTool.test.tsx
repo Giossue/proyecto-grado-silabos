@@ -65,6 +65,46 @@ describe("Tipo de respuesta en la cinta de la plantilla", () => {
     ])
   })
 
+  it("sin «Insertar» (Coordinación), el espacio seleccionado en el editor cambia en su mismo sitio", async () => {
+    const { editor, last } = await editorFor({ type: "doc", content: [{ type: "paragraph", content: [
+      { type: "text", text: "Lugar: " }, { type: "response", attrs: { kind: "una", options: [{ const: "o1", title: "Aula" }], value: null } }, { type: "text", text: " y horario" },
+    ] }] })
+    let at = -1
+    editor.state.doc.descendants((node, position) => { if (node.type.name === "response") at = position })
+    editor.commands.setNodeSelection(at)
+    const tool = render(<TemplateResponseTool editor={editor} advanced={false} />)
+    await open(tool)
+    expect(document.querySelector('[role="radio"][aria-checked="true"]')!.textContent!.trim()).toBe("Elegir una")
+    await write("Opción 1", "Campo")
+    await press("[data-response-add-option]")
+    await write("Opción 2", "Taller")
+
+    expect(document.querySelector("[data-response-insert]")).toBeNull()
+    expect(nodesOfType(last(), "response").map((node) => JSON.parse(JSON.stringify(node.attrs)))).toEqual([
+      { kind: "una", options: [{ const: "o1", title: "Campo" }, { const: "o2", title: "Taller" }], value: null },
+    ])
+    expect(nodesOfType(last(), "text").map((node) => node.text)).toEqual(["Lugar: ", " y horario"])
+  })
+
+  it("en la plantilla de Administración la variable sigue en una línea con su tipo", async () => {
+    const { editor } = await editorFor({ type: "doc", content: [{ type: "paragraph", content: [{ type: "response", attrs: { kind: "una", options: [{ const: "o1", title: "Aula" }], value: null } }] }] })
+
+    expect(editor.view.dom.querySelector(".document-response")!.textContent).toBe("Elegir una: Aula")
+    expect(editor.view.dom.querySelector(".document-response__option")).toBeNull()
+  })
+
+  it("en el campo del coordinador no entra una segunda variable, ni pegándola", async () => {
+    const handle = createRef<FreeTextEditorHandle>()
+    render(<FreeTextEditor ref={handle} id="campo" label="Campo" value={{ type: "doc", content: [{ type: "paragraph" }] }} spaces />)
+    await flush()
+    const editor = handle.current!.editor!
+    const space = { type: "response", attrs: { kind: "una", options: [], value: null } }
+    editor.commands.insertContent(space)
+    editor.commands.insertContent(space)
+
+    expect(nodesOfType(editor.getJSON() as DocumentNode, "response")).toHaveLength(1)
+  })
+
   it("un texto libre no pide opciones y un campo Institucional no admite tipos de respuesta", async () => {
     const { editor, last } = await editorFor({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Horas: " }] }] })
     const blocked = mountTool(editor, false)

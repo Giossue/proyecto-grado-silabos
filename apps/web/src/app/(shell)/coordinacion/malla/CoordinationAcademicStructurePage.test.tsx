@@ -21,9 +21,10 @@ vi.mock("@/api/career-academics", async (importOriginal) => ({
   getTeacherAssignments: vi.fn(),
 }))
 vi.mock("@/components/domain/academic/curriculum/CurriculumCanvas", () => ({
-  CurriculumCanvas: ({ editing, onChanged, header }: { editing: boolean; onChanged: (message: string) => void; header?: ReactNode }) => (
+  CurriculumCanvas: ({ editing, onChanged, header, onBoardInset }: { editing: boolean; onChanged: (message: string) => void; header?: ReactNode; onBoardInset?: (inset: { left: number; right: number }) => void }) => (
     <div data-testid="canvas" data-editing={String(editing)}>
       {header}
+      <button type="button" data-measure onClick={() => onBoardInset?.({ left: 230, right: 180 })} />
       <button type="button" onClick={() => onChanged("Malla actualizada.")}>
         cambiar malla
       </button>
@@ -64,6 +65,14 @@ const curriculum = (editable = true, malla = MALLAS[0]): Curriculum =>
 
 const canvasEditing = (): string | null => document.querySelector('[data-testid="canvas"]')!.getAttribute("data-editing")
 const editButton = (): HTMLButtonElement => [...document.querySelectorAll("button")].find((button) => /Editar malla|Comprobando/.test(button.textContent ?? ""))!
+const titleColumn = (): HTMLElement => document.querySelector<HTMLElement>('[data-tour="page-header"]')!.firstElementChild as HTMLElement
+const titleInset = (): string => titleColumn().style.getPropertyValue("--page-title-inset")
+const actionsColumn = (): HTMLElement => document.querySelector<HTMLElement>('[data-tour="page-actions"]')!
+const actionsInset = (): string => actionsColumn().style.getPropertyValue("--page-actions-inset")
+const measureBoard = async (): Promise<void> => {
+  fireEvent.click(document.querySelector("[data-measure]")!)
+  await flush()
+}
 const mountPage = async () => {
   const view = renderWithProviders(<CoordinationAcademicStructurePage mode="curriculum" />)
   await flush()
@@ -98,7 +107,7 @@ describe("CoordinationAcademicStructurePage, edición de malla", () => {
     const pageHeader = document.querySelector('[data-tour="page-header"]')!
     expect(pageHeader.textContent).toContain("Volver a la vista")
     expect(pageHeader.querySelector('button[aria-label="Configurar ciclos"]')).toBeNull()
-    expect(pageHeader.querySelector('[data-tour="curriculum-data"]')!.textContent).toBe("Datos de la malla")
+    expect(pageHeader.querySelector('[data-tour="curriculum-data"]')!.textContent).toBe("Editar malla")
 
     fireEvent.click([...pageHeader.querySelectorAll("button")].find((button) => button.textContent?.includes("Volver a la vista"))!)
     await flush()
@@ -163,23 +172,26 @@ describe("CoordinationAcademicStructurePage, varias mallas", () => {
     expect(document.querySelector('[data-testid="import"]')!.getAttribute("data-malla")).toBe("malla-8")
   })
 
-  it("abre el diálogo para crear una malla", async () => {
+  it("«Nueva malla» en el selector abre el diálogo para crearla sin cambiar la malla elegida", async () => {
     await mountPage()
-    fireEvent.click([...document.querySelectorAll("button")].find((button) => button.textContent?.includes("Nueva malla"))!)
+    const selector = document.querySelector('[data-tour="malla-selector"]')!
+    fireEvent.click([...selector.querySelectorAll("[data-value]")].find((option) => option.textContent === "Nueva malla")!)
     await flush()
     expect(openMallaDialog()!.querySelector("[data-label]")!.textContent).toBe("nueva")
+    expect(selector.querySelector("[data-select]")!.getAttribute("data-selected")).toBe("malla-9")
+    expect(getCurriculum).toHaveBeenCalledTimes(1)
   })
 
-  it("en la vista, «Nueva malla» va arriba con los demás botones, el selector sobre la malla y «Datos de la malla» no aparece", async () => {
+  it("en la vista, «Nueva malla» no va arriba, el selector va sobre la malla y el botón de sus datos no aparece", async () => {
     await mountPage()
     const pageHeader = document.querySelector('[data-tour="page-header"]')!
-    expect([...pageHeader.querySelectorAll("button")].some((button) => button.textContent?.includes("Nueva malla"))).toBe(true)
+    expect([...pageHeader.querySelectorAll("button")].some((button) => button.textContent?.includes("Nueva malla"))).toBe(false)
     expect(document.querySelector('[data-testid="canvas"] [data-tour="malla-selector"]')).not.toBeNull()
     expect(document.querySelector('[data-tour="malla-selector"] button')).toBeNull()
-    expect([...document.querySelectorAll("button")].some((button) => button.textContent?.includes("Datos de la malla"))).toBe(false)
+    expect(document.querySelector('[data-tour="curriculum-data"]')).toBeNull()
   })
 
-  it("al editar la malla, «Datos de la malla» aparece arriba y abre la malla elegida", async () => {
+  it("al editar la malla, «Editar malla» aparece arriba y abre los datos de la malla elegida", async () => {
     await mountPage()
     fireEvent.click(document.querySelector('[data-tour="malla-selector"] [data-value="malla-8"]')!)
     await flush()
@@ -188,7 +200,7 @@ describe("CoordinationAcademicStructurePage, varias mallas", () => {
     expect(document.querySelector('[data-tour="malla-selector"]')).toBeNull()
     expect([...document.querySelectorAll("button")].some((button) => button.textContent?.includes("Nueva malla"))).toBe(false)
     const pageHeader = document.querySelector('[data-tour="page-header"]')!
-    fireEvent.click([...pageHeader.querySelectorAll("button")].find((button) => button.textContent?.includes("Datos de la malla"))!)
+    fireEvent.click([...pageHeader.querySelectorAll("button")].find((button) => button.textContent === "Editar malla")!)
     await flush()
     expect(openMallaDialog()!.querySelector("[data-label]")!.textContent).toBe("SW-8")
   })
@@ -197,7 +209,7 @@ describe("CoordinationAcademicStructurePage, varias mallas", () => {
     await mountPage()
     fireEvent.click(editButton())
     await flush()
-    fireEvent.click([...document.querySelectorAll("button")].find((button) => button.textContent?.includes("Datos de la malla"))!)
+    fireEvent.click(document.querySelector('[data-tour="curriculum-data"]')!)
     await flush()
     const dialog = openMallaDialog()!
     expect(dialog.querySelector("[data-label]")!.textContent).toBe("SW-9")
@@ -212,7 +224,10 @@ describe("CoordinationAcademicStructurePage, varias mallas", () => {
   it("muestra cada malla como «Malla <código>» en el selector, el título del editor y la importación", async () => {
     await mountPage()
     const selector = document.querySelector('[data-tour="malla-selector"]')!
-    expect([...selector.querySelectorAll("[data-value]")].map((option) => option.textContent)).toEqual(["Malla SW-9 · Vigente", "Malla SW-8 · Cerrada"])
+    const options = [...selector.querySelectorAll("[data-value]")].map((option) => option.textContent)
+    expect(options).toEqual(["Malla SW-9 · Vigente · 3 ciclos", "Malla SW-8 · Cerrada · 4 ciclos", "Nueva malla"])
+    // The state and the cycles live only inside the selector: no badge or text beside it.
+    expect(selector.textContent).toBe(options.join(""))
     expect(document.querySelector('[data-testid="import"]')!.getAttribute("data-title")).toBe("Importar materias a Malla SW-9")
 
     fireEvent.click(selector.querySelector('[data-value="malla-8"]')!)
@@ -221,6 +236,67 @@ describe("CoordinationAcademicStructurePage, varias mallas", () => {
     fireEvent.click(editButton())
     await flush()
     expect(document.querySelector('[data-tour="page-header"]')!.textContent).toContain("Malla SW-8 de Software")
+  })
+
+  it("mientras carga anticipa los dos botones de la cabecera", async () => {
+    vi.mocked(getCurriculum).mockImplementation(() => new Promise(() => undefined))
+    await mountPage()
+    expect(document.querySelector('[data-skeleton="page-actions"]')!.children).toHaveLength(2)
+  })
+
+  it("oculta la cabecera hasta saber dónde está la malla, para que no aparezca fuera de su sitio", async () => {
+    await mountPage()
+    const header = (): Element => document.querySelector('[data-tour="page-header"]')!
+    expect(header().classList).toContain("lg:invisible")
+
+    await measureBoard()
+    expect(header().classList).not.toContain("lg:invisible")
+  })
+
+  it.each([
+    ["la carrera no tiene mallas", () => vi.mocked(getMallas).mockResolvedValue([])],
+    ["la carga falla", () => vi.mocked(getCurriculum).mockRejectedValue(new Error("sin conexión"))],
+  ])("si %s, la cabecera se ve sin esperar a la malla", async (_case, arrange) => {
+    arrange()
+    await mountPage()
+    expect(document.querySelector('[data-tour="page-header"]')!.classList).not.toContain("lg:invisible")
+  })
+
+  it("alinea los botones con el borde derecho de la malla", async () => {
+    await mountPage()
+    expect(actionsInset()).toBe("")
+    expect(actionsColumn().classList).not.toContain("lg:pr-(--page-actions-inset)")
+
+    await measureBoard()
+    expect(actionsInset()).toBe("180px")
+    expect(actionsColumn().classList).toContain("lg:pr-(--page-actions-inset)")
+  })
+
+  it("alinea el título con el borde de la malla y lo mantiene al cambiar de malla", async () => {
+    await mountPage()
+    expect(titleInset()).toBe("")
+    expect(titleColumn().classList).not.toContain("lg:pl-(--page-title-inset)")
+
+    await measureBoard()
+    expect(titleInset()).toBe("230px")
+    expect(titleColumn().classList).toContain("lg:pl-(--page-title-inset)")
+
+    vi.mocked(getCurriculum).mockImplementation(() => new Promise(() => undefined))
+    fireEvent.click(document.querySelector('[data-tour="malla-selector"] [data-value="malla-8"]')!)
+    await flush()
+    expect(titleInset()).toBe("230px")
+  })
+
+  it("la descripción nombra la carrera", async () => {
+    await mountPage()
+    expect(document.querySelector('[data-tour="page-header"]')!.textContent).toContain("Malla curricular de Software")
+  })
+
+  it("la descripción nombra la carrera aunque todavía no tenga mallas", async () => {
+    vi.mocked(getMallas).mockResolvedValue([])
+    vi.mocked(getScheduledSubjects).mockResolvedValue({ career: { id: "career-1", name: "Software" } } as never)
+    await mountPage()
+    expect(document.querySelector('[data-tour="page-header"]')!.textContent).toContain("Malla curricular de Software")
   })
 
   it("el selector de malla no lleva etiqueta visible y conserva su nombre accesible", async () => {
@@ -260,6 +336,35 @@ describe("CoordinationAcademicStructurePage para una carrera elegida por Adminis
     expect(navigation.push).toHaveBeenLastCalledWith("/admin/estructura-academica/carreras/career-9/materias-asignaciones")
     view.unmount()
     expect(academicCareerScope()).toBeNull()
+  })
+
+  it("alinea con la malla la cabecera, los botones y las pestañas", async () => {
+    renderWithProviders(<CoordinationAcademicStructurePage mode="curriculum" careerId="career-9" />)
+    await flush()
+    const tabsRow = (): HTMLElement => document.querySelector<HTMLElement>('[aria-label="Trabajo de la carrera"]')!.closest<HTMLElement>("[data-career-tabs]")!
+    expect(tabsRow().getAttribute("style")).toBeNull()
+    expect(tabsRow().classList).toContain("lg:invisible")
+
+    await measureBoard()
+    expect(tabsRow().classList).not.toContain("lg:invisible")
+    expect(titleInset()).toBe("230px")
+    expect(actionsInset()).toBe("180px")
+    expect(tabsRow().style.getPropertyValue("--page-title-inset")).toBe("230px")
+    expect(tabsRow().style.getPropertyValue("--page-actions-inset")).toBe("180px")
+    expect(tabsRow().classList).toContain("lg:pl-(--page-title-inset)")
+    expect(tabsRow().classList).toContain("lg:pr-(--page-actions-inset)")
+
+    fireEvent.click(editButton())
+    await flush()
+    expect(titleInset()).toBe("230px")
+    expect(actionsInset()).toBe("180px")
+  })
+
+  it("las demás vistas de la carrera muestran cabecera y pestañas sin esperar a ninguna malla", async () => {
+    renderWithProviders(<CoordinationAcademicStructurePage mode="schedule" careerId="career-9" />)
+    await flush()
+    expect(document.querySelector('[data-tour="page-header"]')!.classList).not.toContain("lg:invisible")
+    expect(document.querySelector("[data-career-tabs]")!.classList).not.toContain("lg:invisible")
   })
 
   it("la vista de Coordinación sigue sin ámbito de carrera ni pestañas de Administración", async () => {

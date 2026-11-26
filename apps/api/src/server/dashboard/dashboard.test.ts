@@ -4,7 +4,7 @@ import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { dashboardDeadline, dashboardIndex, type ConvocationRecord, type DashboardRepository, type ProcessRecord, type TeacherSyllabus } from "./dashboard"
 import type { CareerReadinessFacts, SetupRepository } from "./setupChecklist"
-import { fakeTemplateStore, goldenTemplate } from "../configuration/testing"
+import { fakeTemplateStore, goldenTemplate, writtenCareerFields } from "../configuration/testing"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
 
 const SESSION_ID = golden.sessionId
@@ -116,7 +116,8 @@ async function call(handler: typeof dashboardDeadline, path: string, today = "20
     dashboard: repository(),
     today: () => today,
     setup: setupRepository(),
-    templates: fakeTemplateStore({ template, values: [] }),
+    // Coordinación has written every Carrera field of the official template.
+    templates: fakeTemplateStore({ template, values: writtenCareerFields(officialTemplate(), SUBJECTS) }),
   })
   const text = await response.text()
   return { status: response.status, text, json: response.status === 299 ? null : (JSON.parse(text) as Record<string, unknown>) }

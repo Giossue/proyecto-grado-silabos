@@ -195,7 +195,7 @@ test.describe.serial("coordination", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Proyecto de carrera de Cálculo I" })).toBeVisible()
     const editor = page.getByRole("textbox", { name: "2. Descripción de la asignatura" })
     const original = (await editor.innerText()).trim()
-    const save = page.getByRole("button", { name: "Guardar proyecto de carrera" })
+    const save = page.getByRole("button", { name: "Guardar información" })
 
     await editor.click()
     await page.keyboard.press("ControlOrMeta+End")

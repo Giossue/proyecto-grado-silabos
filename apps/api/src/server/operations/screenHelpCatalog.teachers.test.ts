@@ -2,6 +2,14 @@
 import { describe, expect, it } from "vitest"
 import catalog from "./screenHelpCatalog.json"
 
+describe("screen help about the career project of a subject", () => {
+  it("names the preview and save buttons as the screen does", () => {
+    const text = JSON.stringify(catalog)
+    expect(text).toContain("«Vista previa» muestra cómo recibirá el sílabo el docente. Pulse «Guardar información» antes de salir")
+    expect(text).not.toMatch(/El ojo muestra cómo recibirá|Guardar proyecto de carrera/)
+  })
+})
+
 describe("screen help about career teachers", () => {
   it("explains deactivating and reactivating, never removing from the career", () => {
     const texts = [...JSON.stringify(catalog).matchAll(/Pulse un docente[^"]*/g)].map(([text]) => text)

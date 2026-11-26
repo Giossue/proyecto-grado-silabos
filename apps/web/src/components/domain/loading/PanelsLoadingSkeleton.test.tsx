@@ -29,6 +29,13 @@ describe("esqueletos de paneles, ajustes y estructura académica", () => {
     expect(container.querySelectorAll('[data-skeleton="curriculum-level"]').length).toBeGreaterThan(1)
     expect(container.querySelectorAll('[data-skeleton="curriculum-subject"]').length).toBeGreaterThan(1)
     expect(container.querySelector("button")).toBeNull()
+    // Like the page: the malla selector sits over the board, and zoom, help and legend make five canvas buttons.
+    const board = container.querySelector('[data-skeleton="curriculum-board"]')!
+    expect(board.firstElementChild!.getAttribute("data-skeleton")).toBe("curriculum-selector")
+    expect(board.querySelectorAll('[data-skeleton="curriculum-level"]').length).toBeGreaterThan(1)
+    expect(container.querySelector('[data-skeleton="curriculum-controls"]')!.children).toHaveLength(5)
+    // The malla has no floating legend: it opens from the canvas buttons.
+    expect(container.querySelector(".top-3.right-3")).toBeNull()
   })
 
   it.each([

@@ -1,12 +1,11 @@
 "use client"
 
-import { ArrowLeft, ChevronLeft, ChevronRight, Eye } from "lucide-react"
+import { ArrowLeft, Eye, PencilLine, Save } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useEffectEvent, useState } from "react"
 import { ApiError } from "@/api/client"
 import { getScheduledSubjects, getSubjectProfile, getSubjectProfilePreview, saveSubjectProfile, type ScheduledSubjects, type SubjectProfileField, type SubjectProfilePreview } from "@/api/career-academics"
-import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
@@ -25,7 +24,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAcademicCareerScope } from "@/composables/useAcademicCareerScope"
 import { useDiscardConfirmation } from "@/composables/useDiscardConfirmation"
 import { goBack } from "@/lib/goBack"
-import { RESPONSE_NODE, responseAttrs, responseNeedsOptions } from "@silabos/shared/lib/responseKinds"
+import { RESPONSE_NODE, careerFieldUndecided, responseAttrs, responseNeedsOptions } from "@silabos/shared/lib/responseKinds"
 import { paths } from "@/lib/routes"
 import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { toast } from "@/lib/toast"
@@ -83,9 +82,6 @@ function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: 
   const career = data?.career ?? null
   const subjects = data?.subjects ?? []
   const fields = data?.fields ?? []
-  const subjectIndex = subjects.findIndex((subject) => subject.id === subjectId)
-  const previousSubject = subjectIndex > 0 ? subjects[subjectIndex - 1] : null
-  const nextSubject = subjectIndex >= 0 ? (subjects[subjectIndex + 1] ?? null) : null
   const byCycle = new Map<number, Subject[]>()
   for (const subject of subjects) byCycle.set(subject.ciclo, [...(byCycle.get(subject.ciclo) ?? []), subject])
   const subjectGroups = [...byCycle].map(([cycle, list]) => ({ cycle, list }))
@@ -96,7 +92,11 @@ function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: 
   const shownFields = fields.filter((field) => sectionOf(field) === activeSection)
   const missingOptions = (field: SubjectProfileField): boolean =>
     nodesOfType(values[field.id] ?? field.template ?? field.content, RESPONSE_NODE).some((node) => responseNeedsOptions(responseAttrs(node)))
-  const sectionMissing = (section: string): boolean => fields.some((field) => sectionOf(field) === section && missingOptions(field))
+  const undecided = (field: SubjectProfileField): boolean => {
+    const blank = (field.template ?? field.content) as DocumentNode
+    return careerFieldUndecided(blank, values[field.id] ?? blank)
+  }
+  const sectionPending = (section: string): boolean => fields.some((field) => sectionOf(field) === section && (undecided(field) || missingOptions(field)))
   const canSave = !saving && !locked && fields.length > 0 && changed
 
   const fetchProfile = useCallback(async (): Promise<void> => {
@@ -200,10 +200,13 @@ function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: 
   return (
     <PageFrame
       title={data?.subjectName ? `Proyecto de carrera de ${data.subjectName}` : "Proyecto de carrera"}
-      description="Lo que escriba le llega fijo al docente. Un campo que deje vacío lo escribe el docente"
-      size="wide"
+      description=""
+      withoutDescription
+      size="full"
+      // Wider than the usual page, so it starts further left without reaching the edge on large screens.
+      className="mx-auto w-full max-w-[90rem]"
       loading={loading && !loadError}
-      actionsSkeleton={loading ? ["w-9", "w-52"] : []}
+      actionsSkeleton={loading ? ["w-32", "w-48"] : []}
       eyebrow={
         <Button type="button" variant="link" size="sm" className="h-auto px-0" onClick={() => void leave(() => goBack(router, projectHref))}>
           <ArrowLeft aria-hidden="true" />
@@ -214,45 +217,13 @@ function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: 
       actions={
         !loading && !loadError && fields.length > 0 ? (
           <>
-            {subjects.length > 1 ? (
-              <div className="flex items-center gap-1">
-                <IconTooltip label="Materia anterior">
-                  <Button type="button" variant="ghost" size="icon" aria-label="Materia anterior" disabled={!previousSubject} onClick={() => previousSubject && openSubject(previousSubject.id)}>
-                    <ChevronLeft aria-hidden="true" />
-                  </Button>
-                </IconTooltip>
-                <Select value={subjectId} onValueChange={openSubject}>
-                  <SelectTrigger className="w-56" aria-label="Cambiar de materia">
-                    <SelectValue placeholder="Cambiar de materia" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subjectGroups.map((group) => (
-                      <SelectGroup key={group.cycle}>
-                        <SelectLabel>{cycleLabel(group.cycle)}</SelectLabel>
-                        {group.list.map((subject) => (
-                          <SelectItem key={subject.id} value={subject.id}>
-                            {subject.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <IconTooltip label="Materia siguiente">
-                  <Button type="button" variant="ghost" size="icon" aria-label="Materia siguiente" disabled={!nextSubject} onClick={() => nextSubject && openSubject(nextSubject.id)}>
-                    <ChevronRight aria-hidden="true" />
-                  </Button>
-                </IconTooltip>
-              </div>
-            ) : null}
-            <IconTooltip label={view === "vista-previa" ? "Volver a editar" : "Vista previa"}>
-              <Button type="button" variant={view === "vista-previa" ? "secondary" : "ghost"} size="icon" aria-label="Vista previa" aria-pressed={view === "vista-previa"} onClick={toggleView}>
-                <Eye aria-hidden="true" />
-              </Button>
-            </IconTooltip>
+            <Button type="button" variant={view === "vista-previa" ? "secondary" : "outline"} onClick={toggleView}>
+              {view === "vista-previa" ? <PencilLine data-icon="inline-start" aria-hidden="true" /> : <Eye data-icon="inline-start" aria-hidden="true" />}
+              {view === "vista-previa" ? "Volver a editar" : "Vista previa"}
+            </Button>
             <Button type="button" disabled={!canSave} onClick={() => void save()}>
-              {saving ? <Spinner data-icon="inline-start" /> : null}
-              Guardar proyecto de carrera
+              {saving ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" aria-hidden="true" />}
+              Guardar información
             </Button>
           </>
         ) : null
@@ -261,7 +232,7 @@ function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: 
       {loadError ? (
         <LoadErrorState message={loadError} onRetry={load} />
       ) : loading ? (
-        <LoadingSkeleton variant="form" rows={4} sidebar />
+        <LoadingSkeleton variant="form" rows={1} sidebar />
       ) : fields.length === 0 ? (
         <Alert>
           <AlertDescription>La plantilla no tiene campos de Carrera. Pídale a Administración que los agregue</AlertDescription>
@@ -273,44 +244,68 @@ function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: 
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
-          {view === "vista-previa" ? (
-            previewError ? (
-              <Alert variant="destructive">
-                <AlertDescription>{previewError}</AlertDescription>
-              </Alert>
-            ) : previewLoading || !preview ? (
-              <LoadingSkeleton variant="preview" />
-            ) : (
-              <SyllabusDocumentPreview presentation={preview.presentation} sections={previewSections} />
-            )
-          ) : null}
-          <div className={cn("flex flex-col gap-6 md:min-h-96 md:flex-row md:items-start", view !== "editar" && "hidden")}>
-            {sections.length > 1 ? (
-              <Tabs value={activeSection} onValueChange={setChosen} orientation="vertical" className="w-full shrink-0 md:sticky md:top-4 md:w-72">
-                <TabsList className="h-auto w-full flex-col items-stretch justify-start gap-1" aria-label="Secciones del proyecto de carrera">
-                  {sections.map((section) => (
-                    <TabsTrigger key={section} value={section} className="h-auto flex-none justify-start border-b-0 border-l-2 py-2 text-left whitespace-normal">
-                      {section}
-                      {sectionMissing(section) ? (
-                        <>
-                          <span className="ml-1 text-warning" aria-hidden="true">
-                            ●
-                          </span>
-                          <span className="sr-only"> (con espacios sin opciones)</span>
-                        </>
-                      ) : null}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
+          <div className={cn("flex flex-col gap-6", view === "editar" && "md:min-h-96 md:flex-row md:items-start")}>
+            {subjects.length > 1 || sections.length > 1 ? (
+              <div className={cn("flex w-full shrink-0 flex-col gap-3 md:w-72", view === "editar" && "md:sticky md:top-4")}>
+                {subjects.length > 1 ? (
+                  <Select value={subjectId} onValueChange={openSubject}>
+                    <SelectTrigger className="w-full" aria-label="Cambiar de materia">
+                      <SelectValue placeholder="Cambiar de materia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjectGroups.map((group) => (
+                        <SelectGroup key={group.cycle}>
+                          <SelectLabel>{cycleLabel(group.cycle)}</SelectLabel>
+                          {group.list.map((subject) => (
+                            <SelectItem key={subject.id} value={subject.id}>
+                              {subject.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+                {sections.length > 1 ? (
+                  <Tabs value={activeSection} onValueChange={setChosen} orientation="vertical" className={cn("w-full", view !== "editar" && "hidden")}>
+                    <TabsList className="h-auto w-full flex-col items-stretch justify-start gap-1" aria-label="Secciones del proyecto de carrera">
+                      {sections.map((section) => (
+                        <TabsTrigger key={section} value={section} className="h-auto flex-none justify-start border-b-0 border-l-2 py-2 text-left whitespace-normal">
+                          {section}
+                          {sectionPending(section) ? (
+                            <>
+                              <span className="ml-1 text-warning" aria-hidden="true">
+                                ●
+                              </span>
+                              <span className="sr-only"> (con campos pendientes)</span>
+                            </>
+                          ) : null}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
+                ) : null}
+              </div>
             ) : null}
-            <fieldset className="flex min-w-0 flex-1 flex-col gap-7 rounded-md bg-card p-6 text-card-foreground shadow-surface ring-1 ring-surface-ring" disabled={locked}>
+            {view === "vista-previa" ? (
+              previewError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{previewError}</AlertDescription>
+                </Alert>
+              ) : previewLoading || !preview ? (
+                <LoadingSkeleton variant="preview" />
+              ) : (
+                <SyllabusDocumentPreview presentation={preview.presentation} sections={previewSections} />
+              )
+            ) : null}
+            <fieldset className={cn("flex min-w-0 flex-1 flex-col gap-7 rounded-md bg-card p-6 text-card-foreground shadow-surface ring-1 ring-surface-ring", view !== "editar" && "hidden")} disabled={locked}>
               {shownFields.map((field) => (
                 <Field key={field.id}>
                   <div className="flex flex-wrap items-center gap-2">
                     <FieldLabel htmlFor={`ficha-${field.id}`} className={cn(!field.label.trim() && "sr-only")}>
                       {field.label.trim() || sectionOf(field)}
                     </FieldLabel>
+                    {undecided(field) ? <StatusBadge label="Sin definir" tone="warning" /> : null}
                     {missingOptions(field) ? <StatusBadge label="Faltan opciones" tone="warning" /> : null}
                   </div>
                   <FieldResponseEditor

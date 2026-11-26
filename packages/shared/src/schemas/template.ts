@@ -319,7 +319,7 @@ const wholeOrNull = (text: string): number | null => (/^\d+$/.test(text.trim()) 
 const inRange = (text: string, max: number): boolean => text.trim() === "" || ((wholeOrNull(text) ?? 0) >= 1 && (wholeOrNull(text) ?? 0) <= max)
 const optionCount = (count: number): string => (count === 1 ? "1 opción" : `${count} opciones`)
 
-type ResponseToolContext = { fixed: boolean; requireOptions: boolean; conditional: boolean; current: Pick<ResponseSettings, "minChoices" | "maxChoices"> | null }
+type ResponseToolContext = { fixed: boolean; conditional: boolean; current: Pick<ResponseSettings, "minChoices" | "maxChoices"> | null }
 type ResponseToolValues = { kind: string; options: unknown[]; maxLength: string; minChoices: string; maxChoices: string }
 
 function responseSettingsError({ kind, options, maxLength, minChoices, maxChoices }: ResponseToolValues, { fixed, current }: ResponseToolContext): string {
@@ -357,7 +357,7 @@ export function responseToolSchema(context: ResponseToolContext) {
       condition: z.object({ source: z.string(), options: z.array(z.string()) }),
     })
     .superRefine((values, issues) => {
-      if ((context.requireOptions || context.fixed) && responseHasOptions(values.kind) && values.options.length === 0) issues.addIssue({ code: "custom", path: ["options"], message: RESPONSE_OPTIONS_REQUIRED })
+      if (context.fixed && responseHasOptions(values.kind) && values.options.length === 0) issues.addIssue({ code: "custom", path: ["options"], message: RESPONSE_OPTIONS_REQUIRED })
       const settings = responseSettingsError(values, context)
       if (settings) issues.addIssue({ code: "custom", path: ["settings"], message: settings })
       if (context.conditional && values.condition.source && values.condition.options.length === 0) issues.addIssue({ code: "custom", path: ["condition"], message: RESPONSE_CONDITION_REQUIRED })

@@ -3,7 +3,7 @@ import Document from "@tiptap/extension-document"
 import { TableCell, TableHeader } from "@tiptap/extension-table"
 import { ReactNodeViewRenderer } from "@tiptap/react"
 import { DocumentBlockView } from "@/components/domain/syllabus/DocumentBlockView"
-import { RESPONSE_NODE, RESPONSE_SETTING_DEFAULTS, responseAttrs, responseLabel } from "@silabos/shared/lib/responseKinds"
+import { RESPONSE_KINDS, RESPONSE_NODE, RESPONSE_SETTING_DEFAULTS, responseAttrs, responseHasOptions, responseLabel, responseMany } from "@silabos/shared/lib/responseKinds"
 
 export const variableNode = (variable: { key: string; label: string }) => ({ type: "variable", attrs: { id: variable.key, label: variable.label } })
 
@@ -43,7 +43,7 @@ const parseResponse = (element: HTMLElement): Record<string, unknown> | false =>
   }
 }
 
-export const DocumentResponse = Node.create({
+export const DocumentResponse = Node.create<{ checks: boolean }>({
   name: RESPONSE_NODE,
   group: "inline",
   inline: true,
@@ -55,12 +55,18 @@ export const DocumentResponse = Node.create({
     value: { default: null, rendered: false },
     ...Object.fromEntries([...Object.keys(RESPONSE_SETTING_DEFAULTS), ...RESPONSE_LOGIC].map((name) => [name, { default: undefined, rendered: false }])),
   }),
+  /** `checks` draws the options as a checklist (round marks for one choice, square for several); otherwise one line with the type. */
+  addOptions: () => ({ checks: false }),
   parseHTML: () => [{ tag: "span[data-response]", getAttrs: parseResponse }],
   renderHTML({ node, HTMLAttributes }) {
+    const attrs = responseAttrs({ type: RESPONSE_NODE, attrs: node.attrs })
+    const shell = mergeAttributes(HTMLAttributes, { "data-response": JSON.stringify(node.attrs), class: "document-variable document-response", contenteditable: "false" })
+    if (!this.options.checks || !responseHasOptions(attrs.kind) || attrs.options.length === 0) return ["span", shell, responseLabel(attrs)]
+    const mark = responseMany(attrs.kind) ? "checkbox" : "radio"
     return [
       "span",
-      mergeAttributes(HTMLAttributes, { "data-response": JSON.stringify(node.attrs), class: "document-variable document-response", contenteditable: "false" }),
-      responseLabel(responseAttrs({ type: RESPONSE_NODE, attrs: node.attrs })),
+      mergeAttributes(shell, { class: "document-response--checks", role: "group", "aria-label": RESPONSE_KINDS[attrs.kind]!.label }),
+      ...attrs.options.map((option) => ["span", { class: "document-response__option", "data-mark": mark }, option.title]),
     ]
   },
 })

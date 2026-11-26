@@ -3,8 +3,8 @@ import type { ComponentProps } from "react"
 import { describe, expect, it, vi } from "vitest"
 import { FieldResponseEditor } from "@/components/domain/syllabus/FieldResponseEditor"
 import { setTemplateRuntime } from "@/lib/blocks/runtime"
+import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocument"
 import type { TemplateDefinitionPayload } from "@silabos/shared/lib/blocks/types"
-import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import definition from "@silabos/shared/test/fixtures/template-definition.json"
 import { flush } from "@/test/render"
 
@@ -41,10 +41,9 @@ const pick = async (kind: string): Promise<void> => {
   fireEvent.click(kinds().find((button) => button.textContent?.trim() === kind)!)
   await flush()
 }
-const insert = async (): Promise<void> => {
-  fireEvent.click(document.querySelector<HTMLButtonElement>("[data-response-insert]")!)
-  await flush()
-}
+const checkedKinds = (): string[] => kinds().filter((button) => button.getAttribute("aria-checked") === "true").map((button) => button.textContent!.trim())
+const insertButton = (): Element | null => document.querySelector("[data-response-insert]")
+const responsesOf = (document_: DocumentNode): unknown[] => nodesOfType(document_, "response").map((node) => JSON.parse(JSON.stringify(node.attrs)))
 const option = async (index: number, value: string): Promise<void> => {
   fireEvent.change(document.querySelector<HTMLInputElement>(`input[aria-label="Opción ${index}"]`)!, { target: { value } })
   await flush()
@@ -59,38 +58,93 @@ describe("El coordinador escribe un campo Carrera y deja espacios para el docent
     expect(last().content![0]).toEqual(template().content![0])
   })
 
-  it("con el botón de la cinta convierte una celda en un espacio de elegir con sus opciones y lo puede quitar", async () => {
+  it("una celda queda como espacio al elegir el tipo, se ve como en el cuadro de texto y se ajusta con el mismo botón", async () => {
     const { container, last, update } = mountSetup(template())
     expect(spaceButtons(container)).toHaveLength(3)
     await openSpace(container, 1)
     expect(kinds().map((button) => button.textContent?.trim())).toEqual(["Texto libre", "Elegir una", "Elegir varias"])
-    await pick("Elegir una")
-    expect(document.querySelector<HTMLButtonElement>("[data-response-insert]")!.disabled).toBe(true)
-    await option(1, "Taller")
-    await insert()
-    const cell = last().content![2]!.content![1]!.content![0]!
-    expect(cell.content![0]!.content).toEqual([{ type: "response", attrs: { kind: "una", options: [{ const: "o1", title: "Taller" }], value: null } }])
+    expect(checkedKinds()).toEqual([])
+    expect(insertButton()).toBeNull()
+    expect(document.querySelector("[data-response-more]")).toBeNull()
+    expect(document.body.textContent).not.toContain("solo responde")
 
+    await pick("Elegir una")
+    const cell = (): DocumentNode => last().content![2]!.content![1]!.content![0]!
+    expect(cell().content![0]!.content).toEqual([{ type: "response", attrs: { kind: "una", options: [], value: null } }])
     update({ value: last() })
     await flush()
-    expect(container.textContent).toContain("Espacio para el docente: Elegir una")
-    fireEvent.click(container.querySelector('button[aria-label="Quitar el espacio de Técnica, fila 1"]')!)
+    // The popover stays open: the options are written there, as in the text box.
+    expect(kinds()).toHaveLength(3)
+    await option(1, "Taller")
+    expect(cell().content![0]!.content).toEqual([{ type: "response", attrs: { kind: "una", options: [{ const: "o1", title: "Taller" }], value: null } }])
+    update({ value: last() })
+    await flush()
+
+    const space = container.querySelector("[data-career-space]")!
+    expect([...space.querySelectorAll(".document-response__option")].map((item) => [item.textContent, item.getAttribute("data-mark")])).toEqual([["Taller", "radio"]])
+    expect(spaceButtons(container)).toHaveLength(3)
+    expect(container.textContent).not.toContain("Espacio para el docente:")
+    expect(container.querySelector('input[aria-label="Opción 1"]')).toBeNull()
+    expect(container.querySelector('button[aria-label^="Quitar el espacio"]')).toBeNull()
+
+    await pick("Elegir una")
     expect(last()).toEqual(template())
   })
 
-  it("deja un espacio de texto libre en un párrafo", async () => {
+  it("al abrir el botón de una celda con espacio muestra su tipo y sus opciones", async () => {
+    const stored = template()
+    stored.content![2]!.content![1]!.content![0] = cellOf("tableCell", [{ type: "response", attrs: { kind: "varias", options: [{ const: "o1", title: "Foro" }], value: [] } }])
+    const { container } = mountSetup(template(), stored)
+    expect(container.querySelector("[data-career-space] .document-response__option")!.getAttribute("data-mark")).toBe("checkbox")
+    await openSpace(container, 1)
+
+    expect(checkedKinds()).toEqual(["Elegir varias"])
+    expect(document.querySelector<HTMLInputElement>('input[aria-label="Opción 1"]')!.value).toBe("Foro")
+  })
+
+  it("en una fila agregada también se puede poner y quitar un espacio", async () => {
+    const stored = template()
+    stored.content![2]!.content!.push(structuredClone(stored.content![2]!.content![1]!))
+    const { container, last, update } = mountSetup(template(), stored)
+    expect(spaceButtons(container)).toHaveLength(5)
+    await openSpace(container, 3)
+    await pick("Texto libre")
+    const added = (): DocumentNode => last().content![2]!.content![2]!.content![0]!
+    expect(added().content![0]!.content).toEqual([{ type: "response", attrs: { kind: "texto", options: [], value: "" } }])
+
+    update({ value: last() })
+    await flush()
+    await openSpace(container, 3)
+    await pick("Texto libre")
+    expect(added()).toEqual(cellOf("tableCell"))
+  })
+
+  it("deja un espacio de texto libre en un párrafo al elegirlo", async () => {
     const { container, last } = mountSetup(template())
     await openSpace(container, 0)
     await pick("Texto libre")
-    await insert()
     expect(last().content![1]!.content).toEqual([{ type: "response", attrs: { kind: "texto", options: [], value: "" } }])
   })
 
-  it("un campo vacío completo se escribe con el editor de texto y su cinta trae el botón de espacios", async () => {
-    const { container } = mountSetup({ type: "doc", content: [{ type: "paragraph" }] })
+  it("en el editor de texto el espacio se coloca al elegir el tipo y cambia en tiempo real, sin duplicarse", async () => {
+    const { container, last } = mountSetup({ type: "doc", content: [{ type: "paragraph" }] })
     await flush()
     await vi.waitFor(() => expect(container.querySelector('[aria-label="Negrita"]')).not.toBeNull())
-    expect(container.querySelector('[role="toolbar"] button[aria-label="Espacio para el docente"]')).not.toBeNull()
+    fireEvent.click(container.querySelector('[role="toolbar"] button[aria-label="Espacio para el docente"]')!)
+    await flush()
+    expect(checkedKinds()).toEqual([])
+    expect(document.body.textContent).not.toContain("solo responde")
+
+    await pick("Elegir una")
+    expect(responsesOf(last())).toEqual([{ kind: "una", options: [], value: null }])
+    await option(1, "Taller")
+    expect(responsesOf(last())).toEqual([{ kind: "una", options: [{ const: "o1", title: "Taller" }], value: null }])
+    await pick("Elegir varias")
+    expect(responsesOf(last())).toEqual([{ kind: "varias", options: [{ const: "o1", title: "Taller" }], value: [] }])
+    expect(insertButton()).toBeNull()
+    await pick("Texto libre")
+    expect(responsesOf(last())).toEqual([{ kind: "texto", options: [], value: "" }])
+    expect(kinds()).toHaveLength(0)
   })
 
   it("una respuesta que fijó Administración conserva su tipo y solo recibe las opciones que faltan", () => {
@@ -104,6 +158,108 @@ describe("El coordinador escribe un campo Carrera y deja espacios para el docent
     const { container } = mountSetup(template(), null, true)
     expect(spaceButtons(container).every((button) => button.disabled)).toBe(true)
     expect([...container.querySelectorAll("textarea")].every((area) => area.disabled)).toBe(true)
+  })
+})
+
+describe("El campo completo del coordinador admite un solo tipo de respuesta", () => {
+  const blank: DocumentNode = { type: "doc", content: [{ type: "paragraph" }] }
+  const written = (text: string): DocumentNode => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] })
+  const textsOf = (document_: DocumentNode): string[] => nodesOfType(document_, "text").map((node) => node.text!)
+  const mountField = async (value: DocumentNode | null = null) => {
+    const view = mountSetup(blank, value)
+    await flush()
+    await vi.waitFor(() => expect(view.container.querySelector('[aria-label="Negrita"]')).not.toBeNull())
+    const tool = (): HTMLButtonElement => view.container.querySelector<HTMLButtonElement>('[role="toolbar"] button[aria-label="Espacio para el docente"]')!
+    const toggleTool = async (): Promise<void> => {
+      fireEvent.click(tool())
+      await flush()
+    }
+    const canWrite = (): boolean => view.container.querySelector(".free-text-editor__content")!.getAttribute("contenteditable") === "true"
+    const bold = (): HTMLButtonElement => view.container.querySelector<HTMLButtonElement>('[aria-label="Negrita"]')!
+
+    return { ...view, tool, toggleTool, canWrite, bold }
+  }
+
+  it("«Elegir una» conserva el texto escrito, y al reabrir cambia la misma variable en vez de agregar otra", async () => {
+    const field = await mountField(written("Las clases serán en "))
+    await field.toggleTool()
+    await pick("Elegir una")
+    await option(1, "Aula")
+    expect(textsOf(field.last())).toEqual(["Las clases serán en "])
+    expect(responsesOf(field.last())).toEqual([{ kind: "una", options: [{ const: "o1", title: "Aula" }], value: null }])
+    expect(field.canWrite()).toBe(true)
+
+    await field.toggleTool()
+    await field.toggleTool()
+    expect(checkedKinds()).toEqual(["Elegir una"])
+    expect(document.querySelector<HTMLInputElement>('input[aria-label="Opción 1"]')!.value).toBe("Aula")
+    await pick("Elegir varias")
+    expect(responsesOf(field.last())).toEqual([{ kind: "varias", options: [{ const: "o1", title: "Aula" }], value: [] }])
+  })
+
+  it("las opciones de la variable se ven como casillas: círculos si se elige una y cuadros si se eligen varias", async () => {
+    const field = await mountField()
+    const marks = (): Array<[string, string | null]> =>
+      [...field.container.querySelectorAll(".free-text-editor__content .document-response__option")].map((item) => [item.textContent!, item.getAttribute("data-mark")])
+    const variable = (): string => field.container.querySelector(".free-text-editor__content .document-response")!.textContent!
+    await field.toggleTool()
+    await pick("Elegir una")
+    expect(variable()).toBe("Elegir una: sin opciones")
+
+    await option(1, "Aula")
+    fireEvent.click(document.querySelector<HTMLButtonElement>("[data-response-add-option]")!)
+    await flush()
+    await option(2, "Campo")
+    expect(marks()).toEqual([["Aula", "radio"], ["Campo", "radio"]])
+    expect(variable()).toBe("AulaCampo")
+    expect(field.container.querySelector(".free-text-editor__content .document-response")!.getAttribute("aria-label")).toBe("Elegir una")
+    expect(field.container.querySelector(".free-text-editor__content input")).toBeNull()
+
+    await pick("Elegir varias")
+    expect(marks()).toEqual([["Aula", "checkbox"], ["Campo", "checkbox"]])
+    expect(responsesOf(field.last())).toEqual([{ kind: "varias", options: [{ const: "o1", title: "Aula" }, { const: "o2", title: "Campo" }], value: [] }])
+    await pick("Texto libre")
+    expect(variable()).toBe("Texto libre")
+    expect(marks()).toEqual([])
+  })
+
+  it("volver a pulsar el tipo marcado lo quita y deja el texto", async () => {
+    const field = await mountField(written("Apuntes "))
+    await field.toggleTool()
+    await pick("Elegir una")
+    await pick("Elegir una")
+
+    expect(checkedKinds()).toEqual([])
+    expect(responsesOf(field.last())).toEqual([])
+    expect(textsOf(field.last())).toEqual(["Apuntes "])
+    expect(document.querySelector('input[aria-label="Opción 1"]')).toBeNull()
+  })
+
+  it("«Texto libre» borra lo escrito y cierra el campo al coordinador hasta que lo desmarque", async () => {
+    const field = await mountField(written("Apuntes del coordinador"))
+    await field.toggleTool()
+    await pick("Texto libre")
+
+    expect(textsOf(field.last())).toEqual([])
+    expect(responsesOf(field.last())).toEqual([{ kind: "texto", options: [], value: "" }])
+    expect(field.canWrite()).toBe(false)
+    expect(field.bold().disabled).toBe(true)
+    expect(field.tool().disabled).toBe(false)
+
+    await field.toggleTool()
+    expect(checkedKinds()).toEqual(["Texto libre"])
+    await pick("Texto libre")
+    expect(responsesOf(field.last())).toEqual([])
+    expect(field.canWrite()).toBe(true)
+    expect(field.bold().disabled).toBe(false)
+  })
+
+  it("un campo guardado con «Texto libre» se abre cerrado para el coordinador", async () => {
+    const field = await mountField({ type: "doc", content: [{ type: "paragraph", attrs: { textAlign: "left" }, content: [{ type: "response", attrs: { kind: "texto", options: [], value: "" } }] }] })
+
+    await vi.waitFor(() => expect(field.canWrite()).toBe(false))
+    expect(field.tool().disabled).toBe(false)
+    expect(() => field.last()).toThrow()
   })
 })
 
@@ -129,20 +285,18 @@ describe("El coordinador ajusta las opciones de una respuesta de la plantilla en
     await flush()
   }
 
-  it("la marca «De la plantilla» y el cuadro solo deja cambiar las opciones, no el tipo ni Más opciones", async () => {
+  it("la marca «De la plantilla» y el cuadro solo deja cambiar las opciones, no el tipo, y no trae «Más opciones»", async () => {
     const { container, last } = mountSetup(template([placed(base, null, { display: "desplegable" })]))
     expect(container.querySelector("[data-template-response]")!.textContent).toBe("De la plantilla")
     await openOptions(container)
     expect(kinds().every((button) => button.disabled || button.getAttribute("data-disabled") !== null)).toBe(true)
     expect(document.querySelector("[data-response-fixed]")?.textContent).toContain("Administración")
-    fireEvent.click(document.querySelector<HTMLButtonElement>("[data-response-more]")!)
-    await flush()
-    expect(document.querySelector<HTMLButtonElement>("[data-response-required]")!.disabled).toBe(true)
-    expect(document.querySelector<HTMLInputElement>("[data-response-help]")!.disabled).toBe(true)
-    expect(document.querySelector("[data-response-locked]")?.textContent).toContain("Administración")
+    expect(document.querySelector("[data-response-more]")).toBeNull()
+    expect(document.body.textContent).not.toContain("Más opciones")
+    expect(document.body.textContent).not.toContain("Estas opciones las fija Administración")
     expect(document.querySelector("[data-response-reset]")).toBeNull()
+    expect(insertButton()).toBeNull()
     await option(2, "Taller")
-    await insert()
     expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "una", options: [{ const: "o1", title: "Aula" }, { const: "o2", title: "Taller" }], value: null, display: "desplegable" })
   })
 
@@ -157,11 +311,23 @@ describe("El coordinador ajusta las opciones de una respuesta de la plantilla en
     expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "una", options: base, value: null })
   })
 
-  it("cambiar las opciones conserva lo elegido si la opción sigue", async () => {
-    const { container, last } = mountSetup(template([placed()]), template([placed(base, "o1")]))
+  it("cambiar las opciones se aplica al escribir y conserva lo elegido aunque la opción quede un momento vacía", async () => {
+    const { container, last, update } = mountSetup(template([placed()]), template([placed(base, "o2")]))
     await openOptions(container)
+    await option(2, "")
+    expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "una", options: [base[0]], value: null })
+    update({ value: last() })
+    await flush()
     await option(2, "Taller")
-    await insert()
-    expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "una", options: [{ const: "o1", title: "Aula" }, { const: "o2", title: "Taller" }], value: "o1" })
+    expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "una", options: [{ const: "o1", title: "Aula" }, { const: "o2", title: "Taller" }], value: "o2" })
+  })
+
+  it("sin ninguna opción no aplica el cambio y lo dice", async () => {
+    const { container, last } = mountSetup(template([placed()]))
+    await openOptions(container)
+    await option(1, "")
+    await option(2, "")
+    expect(last().content![1]!.content![0]!.attrs).toEqual({ kind: "una", options: [base[1]], value: null })
+    expect(document.body.textContent).toContain("Escriba al menos una opción")
   })
 })

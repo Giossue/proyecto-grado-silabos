@@ -71,7 +71,7 @@ export function MallaDialog({ open, onOpenChange, malla, onSaved }: MallaDialogP
       onOpenChange={onOpenChange}
       triggerLabel={editing ? "Editar malla" : "Nueva malla"}
       title={editing ? "Datos de la malla" : "Nueva malla"}
-      description={editing ? "Cambie el código, los ciclos o el estado" : "Una carrera puede tener varias mallas vigentes"}
+      description={editing ? "Cambie el código, los ciclos o el estado" : "Indique el código y la cantidad de ciclos"}
       showTrigger={false}
       narrow
     >
@@ -85,7 +85,7 @@ export function MallaDialog({ open, onOpenChange, malla, onSaved }: MallaDialogP
             ) : null}
             <Field data-invalid={fieldErrors("code") !== undefined}>
               <FieldLabel htmlFor="malla-code" required>
-                Código
+                Código de malla
               </FieldLabel>
               <Input id="malla-code" maxLength={CODE_MAX} aria-required="true" aria-invalid={fieldErrors("code") !== undefined} {...form.register("code")} />
               <FieldError errors={fieldErrors("code")} />

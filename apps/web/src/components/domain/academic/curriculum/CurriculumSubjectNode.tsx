@@ -92,7 +92,8 @@ export function CurriculumSubjectNode({ data, dragging }: { data: SubjectNodeDat
 
   return (
     <TooltipProvider>
-      <ConnectHandle editable={data.editable} type="target" />
+      {/* A requirement comes from an earlier cycle: nothing enters the first one or leaves the last one. */}
+      <ConnectHandle editable={data.editable && data.subject.cycle !== 1} type="target" />
       <article
         className={cn(
           "relative w-full overflow-hidden rounded-md bg-card text-card-foreground shadow-surface ring-1 ring-surface-ring data-[dragging=true]:shadow-menu data-[dragging=true]:ring-3 data-[dragging=true]:ring-ring/50",
@@ -199,7 +200,7 @@ export function CurriculumSubjectNode({ data, dragging }: { data: SubjectNodeDat
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <ConnectHandle editable={data.editable} type="source" />
+      <ConnectHandle editable={data.editable && data.subject.cycle !== data.curriculum.cycle_count} type="source" />
     </TooltipProvider>
   )
 }

@@ -21,7 +21,7 @@ export function CurriculumNavigationControls({ choice, zoom, onChoiceChange, chi
   const smaller = ZOOM_LEVELS.findLast((level) => level < zoom - 0.001) ?? null
 
   return (
-    <div className="absolute top-3 left-3 z-10 flex flex-col gap-1">
+    <div className="absolute bottom-1 left-3 z-10 flex flex-col gap-1">
       <div className="flex flex-col gap-1" role="group" aria-label="Zoom de la malla">
         <IconTooltip label="Acercar" side="right">
           <span className="inline-flex">

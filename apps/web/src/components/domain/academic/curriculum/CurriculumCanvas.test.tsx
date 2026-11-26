@@ -1,6 +1,6 @@
 import { act, fireEvent } from "@testing-library/react"
 import type { ReactNode } from "react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 import { buttonNamed, keepClosingDialogs } from "@/components/domain/academic/academicTestUtils"
 import { CurriculumCanvas } from "@/components/domain/academic/curriculum/CurriculumCanvas"
 import { laneStart, subjectStep } from "@/components/domain/academic/curriculum/curriculumCanvasLayout"
@@ -236,6 +236,8 @@ describe("CurriculumCanvas", () => {
     const column = zoom.parentElement!
     expect(column.classList).toContain("flex-col")
     expect(zoom.classList).toContain("flex-col")
+    expect(column.classList).toContain("bottom-1")
+    expect(column.classList).not.toContain("top-3")
     const buttons = [...column.querySelectorAll("button")]
     expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
       "Acercar la malla",
@@ -245,6 +247,56 @@ describe("CurriculumCanvas", () => {
       "Ver leyenda y totales de la malla",
     ])
     expect(buttons.every((button) => button.classList.contains("bg-card/90"))).toBe(true)
+  })
+
+  it("avisa dónde empieza la malla, también al cambiar el zoom, para alinear con ella el título de la página", async () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(private readonly report: ResizeObserverCallback) {}
+        observe(): void {
+          this.report([{ contentRect: { width: 2000 } } as ResizeObserverEntry], this as unknown as ResizeObserver)
+        }
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    )
+    onTestFinished(() => {
+      vi.unstubAllGlobals()
+    })
+    const onBoardInset = vi.fn()
+    renderWithProviders(<CurriculumCanvas {...baseProps({ editing: false, subjects: [subject("a", 0)] })} onBoardInset={onBoardInset} />)
+    await flush()
+    // Left: 56 px of the button column + (2000 − 1216) / 2 of centring + 48 px of board margin. Right: the same without the buttons
+    expect(onBoardInset).toHaveBeenLastCalledWith({ left: 496, right: 440 })
+
+    fireEvent.click(buttonNamed("Alejar la malla")!)
+    await flush()
+    // At 75 %: 56 + (2000 − 912) / 2 + 36
+    expect(onBoardInset).toHaveBeenLastCalledWith({ left: 636, right: 580 })
+  })
+
+  it("cuenta la barra de desplazamiento en el margen derecho de la malla", async () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(private readonly report: ResizeObserverCallback) {}
+        observe(target: Element): void {
+          Object.defineProperty(target, "offsetWidth", { configurable: true, value: 2015 })
+          Object.defineProperty(target, "clientWidth", { configurable: true, value: 2000 })
+          this.report([{ contentRect: { width: 2000 } } as ResizeObserverEntry], this as unknown as ResizeObserver)
+        }
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    )
+    onTestFinished(() => {
+      vi.unstubAllGlobals()
+    })
+    const onBoardInset = vi.fn()
+    renderWithProviders(<CurriculumCanvas {...baseProps({ editing: false, subjects: [subject("a", 0)] })} onBoardInset={onBoardInset} />)
+    await flush()
+    expect(onBoardInset).toHaveBeenLastCalledWith({ left: 496, right: 455 })
   })
 
   it("muestra la cabecera sobre la malla, alineada con su contenido, y sin cabecera no deja nada", () => {

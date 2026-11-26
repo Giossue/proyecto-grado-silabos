@@ -4,13 +4,14 @@ import { createContext, useContext, type ReactNode } from "react"
 const SelectContext = createContext<(value: string) => void>(() => undefined)
 
 export const selectStub = {
-  Select: ({ onValueChange, children }: { value?: string; onValueChange?: (value: string) => void; children?: ReactNode }) => (
+  Select: ({ value, onValueChange, children }: { value?: string; onValueChange?: (value: string) => void; children?: ReactNode }) => (
     <SelectContext.Provider value={onValueChange ?? (() => undefined)}>
-      <div data-select>{children}</div>
+      <div data-select data-selected={value}>{children}</div>
     </SelectContext.Provider>
   ),
   SelectTrigger: ({ children, "aria-label": label }: { children?: ReactNode; "aria-label"?: string }) => <div aria-label={label}>{children}</div>,
   SelectValue: () => <span />,
+  SelectSeparator: () => <hr />,
   SelectContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   SelectGroup: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   SelectLabel: ({ children }: { children?: ReactNode }) => <p>{children}</p>,

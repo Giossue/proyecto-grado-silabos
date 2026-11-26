@@ -202,7 +202,7 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
   const nameField = (
     <Field data-invalid={Boolean(errors.nombre)}>
       <FieldLabel htmlFor={nameId} required>
-        {entity === "facultad" ? "Nombre de facultad" : "Nombre"}
+        {entity === "facultad" ? "Nombre de facultad" : "Nombre de carrera"}
       </FieldLabel>
       <Input id={nameId} value={form.nombre} onChange={(event) => setField("nombre", event.target.value)} aria-required="true" />
       <FieldError errors={errors.nombre} />
@@ -260,12 +260,12 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
                 {selectField(
                   "faculty_id",
                   "catalog-faculty",
-                  "Facultad",
+                  "Facultad asociada",
                   "Seleccione una facultad",
                   faculties.map((item) => ({ value: item.id, label: item.nombre ?? "" })),
                   { value: NEW_FACULTY, label: "Registrar nueva facultad", onSelect: () => setNewFacultyOpen(true) },
                 )}
-                {selectField("modality", "catalog-modality", "Modalidad", "Seleccione la modalidad aprobada", options.modalityOptions)}
+                {selectField("modality", "catalog-modality", "Modalidad de carrera", "Seleccione la modalidad", options.modalityOptions)}
                 {nameField}
                 <div className="grid grid-cols-2 items-start gap-4">
                   <Field data-invalid={Boolean(errors.code)}>

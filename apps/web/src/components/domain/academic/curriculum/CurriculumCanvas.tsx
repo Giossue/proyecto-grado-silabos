@@ -49,11 +49,17 @@ type CurriculumCanvasProps = Pick<CurriculumBuilderProps, "curriculum" | "fixedF
   onChanged: (message: string) => void
   /** Shown above the board, aligned with its first column (the malla selector in the view). */
   header?: ReactNode
+  /** Reports how far from each side of the canvas the board starts and ends, so the page title and actions can line up with it. */
+  onBoardInset?: (inset: BoardInset) => void
 }
+
+export type BoardInset = { left: number; right: number }
 
 type DragPreview = { subjectId: string; cycle: number; index: number }
 
 const ZOOM_STORAGE_KEY = "curriculum-zoom"
+/** Width kept free for the column of canvas buttons; matches the `left-14` of the scroll area. */
+const CONTROLS_GUTTER = 56
 
 const storedZoom = (): ZoomChoice => {
   if (typeof window === "undefined") return "fit"
@@ -74,12 +80,13 @@ const withMeasures = (next: Node[], previous: Node[]): Node[] => {
 
 const sameList = (left: unknown[], right: unknown[]): boolean => left.length === right.length && left.every((value, index) => Object.is(value, right[index]))
 
-export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, subjects, requirements, career, editing, fullScreen = false, organizationUnits, modalityOptions, onChanged, header }: CurriculumCanvasProps) {
+export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, subjects, requirements, career, editing, fullScreen = false, organizationUnits, modalityOptions, onChanged, header, onBoardInset }: CurriculumCanvasProps) {
   const scrollElement = useRef<HTMLDivElement>(null)
   const canvasElement = useRef<HTMLDivElement>(null)
   const fillHeight = useFillHeight(canvasElement, !fullScreen)
   const legendAnchor = useRef<HTMLSpanElement>(null)
   const [canvasWidth, setCanvasWidth] = useState(0)
+  const [scrollbarWidth, setScrollbarWidth] = useState(0)
   const [legendOpen, setLegendOpen] = useState(false)
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null)
   const [draftCycle, setDraftCycle] = useState<number | null>(null)
@@ -115,7 +122,9 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
     if (!element) return
     const observer = new ResizeObserver((entries) => {
       const rect = entries[0]?.contentRect
-      if (rect) setCanvasWidth(rect.width)
+      if (!rect) return
+      setCanvasWidth(rect.width)
+      setScrollbarWidth(element.offsetWidth - element.clientWidth || 0)
     })
     observer.observe(element)
 
@@ -161,6 +170,15 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
   const boardWidth = laneWidth + navigationPadding * 2
   const boardHeight = contentHeight + navigationPadding * 2
   const zoom = zoomChoice !== "fit" ? zoomChoice : canvasWidth === 0 ? 1 : Math.min(CANVAS_ZOOM.max, Math.max(CANVAS_ZOOM.min, canvasWidth / boardWidth))
+
+  // The board is centred in the scroll area, so where it starts and ends depends on the width and the zoom.
+  const boardMargin = Math.max(0, (canvasWidth - boardWidth * zoom) / 2) + navigationPadding * zoom
+  const leftInset = canvasWidth === 0 ? null : Math.round(CONTROLS_GUTTER + boardMargin)
+  const rightInset = canvasWidth === 0 ? null : Math.round(boardMargin + scrollbarWidth)
+
+  useEffect(() => {
+    if (leftInset !== null && rightInset !== null) onBoardInset?.({ left: leftInset, right: rightInset })
+  }, [leftInset, rightInset, onBoardInset])
 
   const chooseZoom = (choice: ZoomChoice): void => {
     setZoomChoice(choice)
@@ -323,7 +341,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
         <Popover open={legendOpen} onOpenChange={setLegendOpen}>
           <PopoverAnchor asChild>
             <span ref={legendAnchor} className="inline-flex">
-              <IconTooltip label="Ver leyenda y totales de la malla">
+              <IconTooltip label="Ver leyenda y totales de la malla" side="right">
                 <Button
                   type="button"
                   variant="ghost"
@@ -340,7 +358,8 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
             </span>
           </PopoverAnchor>
           <PopoverContent
-            align="start"
+            side="right"
+            align="end"
             className="w-64 p-3"
             onInteractOutside={(event) => {
               if (event.target instanceof globalThis.Node && legendAnchor.current?.contains(event.target)) event.preventDefault()

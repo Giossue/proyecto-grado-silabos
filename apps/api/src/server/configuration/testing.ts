@@ -1,6 +1,7 @@
 import golden from "./__fixtures__/template-golden.json"
 import type { PhpRecord } from "./phpValues"
-import { trustedDefinition } from "./templateRuntime"
+import { normalizeFieldDocument, responseTemplate, trustedDefinition } from "./templateRuntime"
+import { profileFields } from "./subjectProfileFields"
 import type { SyllabusTemplate, TemplateSection } from "./templatePresentation"
 import type { LiveField, StoredValue, TemplateStore } from "../shared/templateStore"
 
@@ -77,3 +78,27 @@ export function withFormation(template: SyllabusTemplate = goldenTemplate()): Sy
   })
   return { ...template, definition: { ...template.definition, teacher_fields: ["formacion_docente"] }, sections }
 }
+
+type SlotNode = { type: string; content?: SlotNode[] }
+
+const blankSlot = (node: SlotNode): boolean => ["doc", "paragraph", "tableCell"].includes(node.type) && (node.content ?? []).every((child) => child.type === "paragraph" && blankSlot(child))
+
+/** Puts `piece` in every blank slot of a field document, leaving table headers alone. */
+export function fillSlots(node: SlotNode, piece: SlotNode): SlotNode {
+  if (node.type === "tableHeader") return node
+  if (blankSlot(node)) {
+    const paragraph = { type: "paragraph", content: [piece] }
+    return node.type === "paragraph" ? { ...node, content: [piece] } : { ...node, content: [paragraph] }
+  }
+  return node.content ? { ...node, content: node.content.map((child) => fillSlots(child, piece)) } : node
+}
+
+/** Stored values with every Carrera field of the subjects written by Coordinación. */
+export function writtenCareerFields(template: SyllabusTemplate, subjectIds: string[], piece: SlotNode = { type: "text", text: "Escrito" } as SlotNode): StoredValue[] {
+  const context = { template, definition: template.definition, store: fakeTemplateStore({ template, values: [] }) }
+  return profileFields(context).flatMap((field) => {
+    const blank = responseTemplate(normalizeFieldDocument(field.content, template.definition)) as unknown as SlotNode
+    return subjectIds.map((subjectId) => ({ fieldId: field.id, subjectId, value: fillSlots(blank, piece) }))
+  })
+}
+

@@ -17,7 +17,9 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { characterLimitPlugin } from "@/lib/editorCharacterLimit"
 import { pageSpacersPlugin } from "@/lib/editorPageSpacers"
+import { onlyTeacherWrites } from "@/lib/fieldResponses"
 import { DOCUMENT_CELL_COLORS, paintCell } from "@/lib/documentPalette"
+import { RESPONSE_NODE } from "@silabos/shared/lib/responseKinds"
 import type { DocumentNode, TemplateVariable } from "@silabos/shared/lib/templateDocument"
 import { cn } from "@/lib/utils"
 import { emptyDocument } from "@/types/configuration"
@@ -50,6 +52,25 @@ const SLASH_PATTERN = /(?:^|\s)\/([\p{L}\p{N}_ ]{0,24})$/u
 
 const PageSpacers = Extension.create({ name: "pageSpacers", addProseMirrorPlugins: () => [pageSpacersPlugin()] })
 
+const spaceCount = (document: { descendants: (visit: (node: { type: { name: string } }) => void) => void }): number => {
+  let count = 0
+  document.descendants((node) => {
+    if (node.type.name === RESPONSE_NODE) count += 1
+  })
+  return count
+}
+
+// The coordinator's field takes one space for the teacher, so pasting cannot add another. Loading a stored value is not an edit.
+const OneSpace = Extension.create({
+  name: "oneSpace",
+  addProseMirrorPlugins: () => [
+    new Plugin({
+      filterTransaction: (transaction, state) =>
+        !transaction.docChanged || Boolean(transaction.getMeta("preventUpdate")) || spaceCount(transaction.doc) <= Math.max(1, spaceCount(state.doc)),
+    }),
+  ],
+})
+
 type LimitStorage = { limit: number | null }
 type SlashStorage = { handle: ((event: KeyboardEvent) => boolean) | null }
 
@@ -74,9 +95,10 @@ const SlashKeys = Extension.create<unknown, SlashStorage>({
 const storageOf = (editor: Editor): { characterLimit: LimitStorage; slashKeys: SlashStorage } =>
   editor.storage as unknown as { characterLimit: LimitStorage; slashKeys: SlashStorage }
 
-type ExtensionOptions = { bare: boolean; align: boolean; blocks: "configure" | "fill"; labels: Record<string, string> }
+type ExtensionOptions = { bare: boolean; align: boolean; spaces: boolean; blocks: "configure" | "fill"; labels: Record<string, string> }
 
-const editorExtensions = ({ bare, align, blocks, labels }: ExtensionOptions) => [
+const editorExtensions = ({ bare, align, spaces, blocks, labels }: ExtensionOptions) => [
+  ...(spaces ? [OneSpace] : []),
   StarterKit.configure({ document: false, heading: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false, link: false, strike: false, ...(bare ? { trailingNode: false } : {}) }),
   ...(align ? [TextAlign.configure({ types: ["paragraph"], alignments: ["left", "center", "right", "justify"] })] : []),
   TextStyle,
@@ -91,7 +113,7 @@ const editorExtensions = ({ bare, align, blocks, labels }: ExtensionOptions) => 
   SlashKeys,
   DocumentBlock.configure({ mode: blocks }),
   DocumentVariable.configure({ labels }),
-  DocumentResponse,
+  DocumentResponse.configure({ checks: spaces }),
 ]
 
 const slashMatches = (variables: TemplateVariable[], query: string): TemplateVariable[] =>
@@ -156,7 +178,7 @@ export function FreeTextEditor({
       },
       attributes: { id, "aria-label": label, role: "textbox", "aria-multiline": "true", class: "free-text-editor__content" },
     },
-    extensions: editorExtensions({ bare, align, blocks, labels: Object.fromEntries(variables.map((item) => [item.key, item.label])) }),
+    extensions: editorExtensions({ bare, align, spaces, blocks, labels: Object.fromEntries(variables.map((item) => [item.key, item.label])) }),
   }))
 
   const editorProps = useMemo(() => ({ ...setup.editorProps, attributes: { ...setup.editorProps.attributes, "aria-label": label } }), [setup, label])
@@ -175,6 +197,9 @@ export function FreeTextEditor({
     onSelectionUpdate: ({ editor: current }) => refreshSlash(current),
     onBlur: () => closeSlash(),
   })
+
+  // With «Texto libre» only the teacher writes, so the field is closed to the coordinator.
+  const readOnly = disabled || (spaces && editor !== null && onlyTeacherWrites(editor.getJSON() as DocumentNode))
 
   const slashItems = slash.open ? slashMatches(variables, slash.query) : []
   const chooseSlash = (key: string): void => {
@@ -212,8 +237,9 @@ export function FreeTextEditor({
   useImperativeHandle(ref, () => ({ editor }), [editor])
 
   useEffect(() => {
-    if (editor && !editor.isDestroyed && editor.isEditable === disabled) editor.setEditable(!disabled)
-  }, [editor, disabled])
+    // The coordinator's field opens and closes without reporting a change: opening a saved one must not mark it as edited.
+    if (editor && !editor.isDestroyed && editor.isEditable === readOnly) editor.setEditable(!readOnly, !spaces)
+  }, [editor, readOnly, spaces])
 
   useEffect(() => {
     if (editor && !editor.isDestroyed && JSON.stringify(value ?? emptyDocument()) !== JSON.stringify(editor.getJSON())) {
@@ -245,20 +271,20 @@ export function FreeTextEditor({
     <div className={cn("free-text-editor flex min-w-0 flex-col", bare ? "bg-transparent" : "rounded-md border border-border bg-background")} data-disabled={disabled || undefined}>
       {editor && toolbar ? (
         <div role="toolbar" aria-label={`Formato de ${label}`} className="flex flex-wrap items-center gap-1 border-b p-1.5">
-          <ToolButton label="Negrita" pressed={editor.isActive("bold")} disabled={disabled} onClick={() => editor.chain().focus().toggleBold().run()}>
+          <ToolButton label="Negrita" pressed={editor.isActive("bold")} disabled={readOnly} onClick={() => editor.chain().focus().toggleBold().run()}>
             <Bold aria-hidden="true" />
           </ToolButton>
-          <ToolButton label="Cursiva" pressed={editor.isActive("italic")} disabled={disabled} onClick={() => editor.chain().focus().toggleItalic().run()}>
+          <ToolButton label="Cursiva" pressed={editor.isActive("italic")} disabled={readOnly} onClick={() => editor.chain().focus().toggleItalic().run()}>
             <Italic aria-hidden="true" />
           </ToolButton>
-          <ToolButton label="Subrayado" pressed={editor.isActive("underline")} disabled={disabled} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+          <ToolButton label="Subrayado" pressed={editor.isActive("underline")} disabled={readOnly} onClick={() => editor.chain().focus().toggleUnderline().run()}>
             <Underline aria-hidden="true" />
           </ToolButton>
           <Separator />
-          <ToolButton label="Lista con viñetas" pressed={editor.isActive("bulletList")} disabled={disabled} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+          <ToolButton label="Lista con viñetas" pressed={editor.isActive("bulletList")} disabled={readOnly} onClick={() => editor.chain().focus().toggleBulletList().run()}>
             <List aria-hidden="true" />
           </ToolButton>
-          <ToolButton label="Lista numerada" pressed={editor.isActive("orderedList")} disabled={disabled} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+          <ToolButton label="Lista numerada" pressed={editor.isActive("orderedList")} disabled={readOnly} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
             <ListOrdered aria-hidden="true" />
           </ToolButton>
           {spaces ? (
@@ -269,9 +295,8 @@ export function FreeTextEditor({
                 editor={editor}
                 disabled={disabled}
                 label="Espacio para el docente"
-                hint="El docente solo responde: no cambia el tipo ni las opciones"
+                hint=""
                 optionsHint="Escriba las opciones que podrá elegir el docente"
-                requireOptions
               />
             </>
           ) : null}

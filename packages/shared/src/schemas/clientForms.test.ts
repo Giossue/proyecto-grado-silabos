@@ -59,7 +59,7 @@ describe("response tool schema", () => {
   const two = [{ const: "o1", title: "Aula" }, { const: "o2", title: "Campo" }]
 
   it("checks the character limit and how many choices to pick against the options", async () => {
-    const free = responseToolSchema({ fixed: false, requireOptions: false, conditional: false, current: null })
+    const free = responseToolSchema({ fixed: false, conditional: false, current: null })
     expect(await schemaErrors(free, { ...values, maxLength: "5000" })).toEqual({ settings: ["El límite de caracteres va de 1 a 3000."] })
     expect(await schemaErrors(free, { ...values, kind: "varias", minChoices: "1" })).toEqual({ settings: ["Escriba las opciones antes de fijar cuántas elegir."] })
     expect(await schemaErrors(free, { ...values, kind: "varias", options: two, minChoices: "3" })).toEqual({ settings: ["Cuántas elegir va de 1 a 2, el número de opciones."] })
@@ -68,21 +68,21 @@ describe("response tool schema", () => {
   })
 
   it("asks for options and keeps the fixed choice counts when Administración fixed the response", async () => {
-    const fixed = responseToolSchema({ fixed: true, requireOptions: false, conditional: false, current: { minChoices: 3 } })
+    const fixed = responseToolSchema({ fixed: true, conditional: false, current: { minChoices: 3 } })
     expect(Object.keys(await schemaErrors(fixed, { ...values, kind: "varias" }))).toEqual(["options", "settings"])
     expect(await schemaErrors(fixed, { ...values, kind: "varias", options: two })).toEqual({ settings: ["Esta respuesta pide elegir al menos 3: deje al menos 3 opciones."] })
-    const capped = responseToolSchema({ fixed: true, requireOptions: false, conditional: false, current: { maxChoices: 1 } })
+    const capped = responseToolSchema({ fixed: true, conditional: false, current: { maxChoices: 1 } })
     expect(await schemaErrors(capped, { ...values, kind: "una", options: [] })).toEqual({ options: [RESPONSE_OPTIONS_REQUIRED], settings: ["Esta respuesta permite elegir hasta 1: deje al menos 1 opción."] })
   })
 
   it("asks for an option of «Mostrar solo si» only when the condition is shown", async () => {
     const condition = { source: "campo:0", options: [] }
-    expect(await schemaErrors(responseToolSchema({ fixed: false, requireOptions: false, conditional: true, current: null }), { ...values, condition })).toEqual({ condition: ["Elija al menos una opción para «Mostrar solo si»"] })
-    expect(await schemaErrors(responseToolSchema({ fixed: false, requireOptions: false, conditional: false, current: null }), { ...values, condition })).toEqual({})
+    expect(await schemaErrors(responseToolSchema({ fixed: false, conditional: true, current: null }), { ...values, condition })).toEqual({ condition: ["Elija al menos una opción para «Mostrar solo si»"] })
+    expect(await schemaErrors(responseToolSchema({ fixed: false, conditional: false, current: null }), { ...values, condition })).toEqual({})
   })
 
   it("turns the written settings into numbers", () => {
-    const parsed = responseToolSchema({ fixed: false, requireOptions: false, conditional: false, current: null }).parse({ ...values, kind: "varias", options: two, help: "Ayuda", minChoices: " 1 ", maxChoices: "" })
+    const parsed = responseToolSchema({ fixed: false, conditional: false, current: null }).parse({ ...values, kind: "varias", options: two, help: "Ayuda", minChoices: " 1 ", maxChoices: "" })
     expect(parsed.settings).toEqual({ required: true, help: "Ayuda", maxLength: undefined, minChoices: 1, maxChoices: undefined, display: "lista" })
   })
 })

@@ -14,8 +14,8 @@ import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { useCurriculumSubjectFieldValues } from "@/composables/useCurriculumSubjectFieldValues"
 import { SERVER_ERROR, errorMap, useSchemaForm } from "@/lib/forms"
-import { INHERITED_MODALITY } from "@/lib/studyModalities"
 import { subjectSchema } from "@silabos/shared/schemas/academic"
+import { requiredField } from "@silabos/shared/schemas/fields"
 import type { CurriculumBuilderProps, CurriculumBuilderSubject, FixedSubjectField } from "@/types/academic"
 
 type CurriculumVisualSubjectFormProps = {
@@ -31,19 +31,30 @@ type CurriculumVisualSubjectFormProps = {
   onSaved: (message?: string) => void
 }
 
-const schema = subjectSchema().pick({ code: true, nombre: true, organization_unit: true })
+// The select always asks for a modality; the API takes it empty when the subject inherits the career's.
+const schema = subjectSchema().pick({ code: true, nombre: true, organization_unit: true }).extend({ modality: requiredField("modalidad") })
 
 const errorKey = (field: FixedSubjectField): string => field.system_key
 
+// The total hours are not asked for: the API adds them up and the malla shows them.
+const asked = (field: FixedSubjectField): boolean => field.system_key !== "horas_totales"
+
 export function CurriculumVisualSubjectForm({ career, modalityOptions, curriculum, fixedFields, subject, cycle, position, organizationUnits, onCancel, onSaved }: CurriculumVisualSubjectFormProps) {
-  const [modality, setModality] = useState(subject?.modality ?? INHERITED_MODALITY)
+  const ownModality = subject?.modality ?? null
+  const careerModality = career.modality?.value ?? ""
   const [generatesSyllabus, setGeneratesSyllabus] = useState(subject?.generates_syllabus ?? true)
-  const form = useSchemaForm(schema, { defaultValues: { code: subject?.code ?? "", nombre: subject?.name ?? "", organization_unit: subject?.organization_unit ?? "" } })
+  const form = useSchemaForm(schema, {
+    defaultValues: { code: subject?.code ?? "", nombre: subject?.name ?? "", organization_unit: subject?.organization_unit ?? "", modality: ownModality ?? careerModality },
+  })
   const { isSubmitting: processing } = form.formState
   const errorLists = errorMap(form.formState.errors)
   const errors: Record<string, string | undefined> = Object.fromEntries(Object.entries(errorLists).map(([key, list]) => [key === "root.server" ? "record" : key, list[0]]))
   const organizationUnit = String(form.watch("organization_unit") ?? "")
+  const modality = String(form.watch("modality") ?? "")
+  // Choosing the career's modality is saved as inherited, so the subject keeps following it; one already stored on the subject stays.
+  const savedModality = modality === careerModality && modality !== ownModality ? "" : modality
   const { updateValue, valueFor } = useCurriculumSubjectFieldValues(subject, fixedFields)
+  const askedFields = fixedFields.filter(asked)
   const idPart = subject?.id ?? cycle
 
   const clearError = (key: string): void => form.clearErrors(key as "code")
@@ -64,7 +75,7 @@ export function CurriculumVisualSubjectForm({ career, modalityOptions, curriculu
           form.setError(SERVER_ERROR, { type: "server", message: "No se pudo guardar la materia" })
           return
         }
-        const shown = new Set(["code", "nombre", "organization_unit", "modality", "generates_syllabus", ...fixedFields.map(errorKey)])
+        const shown = new Set(["code", "nombre", "organization_unit", "modality", "generates_syllabus", ...askedFields.map(errorKey)])
         const entries = Object.entries(reason.errors).filter(([, list]) => list.length > 0)
         for (const [key, list] of entries) if (shown.has(key)) form.setError(key as "code", { type: "server", message: list[0] })
         const hidden = entries.find(([key]) => !shown.has(key))
@@ -130,21 +141,22 @@ export function CurriculumVisualSubjectForm({ career, modalityOptions, curriculu
         </Field>
 
         <Field data-invalid={Boolean(errors.modality)}>
-          <FieldLabel htmlFor={`visual-subject-modality-${idPart}`}>Modalidad</FieldLabel>
-          <input type="hidden" name="modality" value={modality === INHERITED_MODALITY ? "" : modality} />
+          <FieldLabel htmlFor={`visual-subject-modality-${idPart}`} required>
+            Modalidad
+          </FieldLabel>
+          <input type="hidden" name="modality" value={savedModality} />
           <Select
             value={modality}
             onValueChange={(value) => {
-              setModality(value)
+              form.setValue("modality", value)
               clearError("modality")
             }}
           >
-            <SelectTrigger id={`visual-subject-modality-${idPart}`} aria-invalid={Boolean(errors.modality)}>
-              <SelectValue />
+            <SelectTrigger id={`visual-subject-modality-${idPart}`} aria-required="true" aria-invalid={Boolean(errors.modality)}>
+              <SelectValue placeholder="Seleccione la modalidad" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value={INHERITED_MODALITY}>Igual que la carrera ({career.modality?.label ?? "sin modalidad"})</SelectItem>
                 {modalityOptions.map((item) => (
                   <SelectItem key={item.value} value={item.value}>
                     {item.label}
@@ -170,9 +182,9 @@ export function CurriculumVisualSubjectForm({ career, modalityOptions, curriculu
           <FieldError errors={[errors.generates_syllabus]} />
         </Field>
 
-        {fixedFields.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-            {fixedFields.map((field) => (
+        {askedFields.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {askedFields.map((field) => (
               <CurriculumSubjectFieldInput
                 key={field.id}
                 className="min-w-0 gap-1"

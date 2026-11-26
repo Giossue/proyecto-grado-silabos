@@ -103,7 +103,7 @@ export const screenTours: Record<string, TourStep[]> = {
     step('[aria-label="Zoom de la malla"]', 'Tamaño de la malla', 'Ajústela al ancho o elija 50 %, 75 % o 100 %. Se mueve con la rueda o las barras', 'right'),
     // Pasos del editor: solo aparecen mientras se edita.
     step('[data-tour="curriculum-back"]', 'Volver', 'Sale del editor', 'bottom'),
-    step('[data-tour="curriculum-data"]', 'Datos de la malla', 'Cambie el código, los ciclos o el estado', 'bottom'),
+    step('[data-tour="curriculum-data"]', 'Editar malla', 'Cambie el código, los ciclos o el estado', 'bottom'),
     step('[data-tour="curriculum-add"]', 'Agregar materia', 'Agrega una materia en ese ciclo. Arrastre de una materia a otra para unirlas como requisito', 'top'),
   ],
   '/biblioteca/revisiones': [

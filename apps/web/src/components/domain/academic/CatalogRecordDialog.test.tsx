@@ -228,6 +228,16 @@ describe("botón de crear y errores de campo", () => {
     expect(create().disabled).toBe(false)
   })
 
+  it("los campos de la carrera dicen a qué se refieren", async () => {
+    renderWithProviders(<Harness entity="carrera" />)
+    await flush()
+
+    const label = (id: string): string => document.body.querySelector(`label[for="${id}"]`)?.textContent ?? ""
+    expect(label("catalog-faculty")).toContain("Facultad asociada")
+    expect(label("catalog-modality")).toContain("Modalidad de carrera")
+    expect(label("catalog-career-name")).toContain("Nombre de carrera")
+  })
+
   it("el error del servidor de un campo se quita al cambiar ese campo", async () => {
     vi.mocked(createAcademicRecord).mockRejectedValue(new ApiError("Datos no válidos", 422, { code: ["Ya existe una carrera con ese código."], nombre: ["Revise el nombre."] }))
     renderWithProviders(<Harness entity="carrera" />)

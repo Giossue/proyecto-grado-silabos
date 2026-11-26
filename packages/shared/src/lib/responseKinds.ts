@@ -143,3 +143,20 @@ export const nextOptionKey = (options: ResponseOption[]): string => {
 
 export const withinResponse = (node: DocumentNode | null | undefined): boolean =>
     Boolean(node) && (node!.type === RESPONSE_NODE || (node!.content ?? []).some(withinResponse));
+
+/** What someone typed in a value; blank text and empty rows count as nothing. */
+const typedIn = (value: unknown): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'object') return Object.values(value).map(typedIn).join('');
+    return String(value).replace(/\s+/g, '');
+};
+
+const writtenIn = (node: DocumentNode): string => {
+    if (node.type === 'text') return typedIn(node.text);
+    if (node.type === 'documentBlock') return typedIn(node.attrs?.value);
+    return (node.content ?? []).map(writtenIn).join('');
+};
+
+/** A subject's Carrera field nobody has decided about: no type of answer in it and no text beyond the template's. */
+export const careerFieldUndecided = (template: DocumentNode, document: DocumentNode): boolean =>
+    !withinResponse(document) && writtenIn(document) === writtenIn(template);

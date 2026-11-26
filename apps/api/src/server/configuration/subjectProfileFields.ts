@@ -1,3 +1,5 @@
+import { careerFieldUndecided } from "@silabos/shared/lib/responseKinds"
+import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { phpEquals, type PhpRecord } from "./phpValues"
 import {
   followTemplate,
@@ -63,11 +65,16 @@ export async function profileValues(context: ProfileContext, subjectId: string):
   return values
 }
 
+/** A career field is pending while Coordinación has not decided it, or while one of its choices has no options. */
+function fieldPending(content: unknown, stored: unknown, definition: TemplateDefinition): boolean {
+  const blank = responseTemplate(normalizeFieldDocument(content, definition))
+  const document = profileTemplateOf(content, stored, definition) ?? blank
+  return pendingResponses(document).without_options > 0 || careerFieldUndecided(blank as unknown as DocumentNode, document as unknown as DocumentNode)
+}
+
 export async function profileProgress(context: ProfileContext, subjectIds: string[]): Promise<Map<string, { filled: number; total: number }>> {
   const fields = profileFields(context)
-  const missing = new Set(
-    fields.filter((field) => pendingResponses(normalizeFieldDocument(field.content, context.definition)).without_options > 0).map((field) => field.id),
-  )
+  const untouched = new Map(fields.map((field) => [field.id, fieldPending(field.content, null, context.definition)]))
   const stored =
     fields.length === 0 || subjectIds.length === 0
       ? []
@@ -86,8 +93,8 @@ export async function profileProgress(context: ProfileContext, subjectIds: strin
     const rows = bySubject.get(subjectId) ?? new Map<string, { value: unknown }>()
     let pending = 0
     for (const field of fields) {
-      const template = profileTemplateOf(field.content, rows.get(field.id)?.value ?? null, context.definition)
-      if (template !== null ? pendingResponses(template).without_options > 0 : missing.has(field.id)) pending++
+      const row = rows.get(field.id)
+      if (row === undefined ? untouched.get(field.id) : fieldPending(field.content, row.value, context.definition)) pending++
     }
     progress.set(subjectId, { filled: fields.length - pending, total: fields.length })
   }

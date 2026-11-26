@@ -17,8 +17,7 @@ type CurriculumSubjectFieldInputProps = {
 export function CurriculumSubjectFieldInput({ field, inputId, value, error, className, onValueChange }: CurriculumSubjectFieldInputProps) {
   const inputName = field.system_key
   const inputType = field.type === "numero" || field.type === "entero" ? "number" : "text"
-  const maxValue = inputType !== "number" ? undefined : field.system_key === "horas_totales" ? 32767 : field.type === "numero" ? 9999.99 : 9999
-  const isCalculatedTotal = field.system_key === "horas_totales"
+  const maxValue = inputType !== "number" ? undefined : field.type === "numero" ? 9999.99 : 9999
 
   return (
     <Field className={className} data-invalid={Boolean(error)}>
@@ -47,8 +46,6 @@ export function CurriculumSubjectFieldInput({ field, inputId, value, error, clas
           max={maxValue}
           value={value}
           placeholder={field.type === "texto" ? `Ej. ${field.label}` : undefined}
-          readOnly={isCalculatedTotal}
-          aria-readonly={isCalculatedTotal || undefined}
           aria-required="true"
           aria-invalid={Boolean(error)}
           onChange={(event) => onValueChange(event.target.value)}

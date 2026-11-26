@@ -1,12 +1,20 @@
 import type { DocumentNode } from '@silabos/shared/lib/templateDocument';
 import { blockFilledText } from '@/lib/blocks/runtime';
-import { RESPONSE_NODE, responseAnswered, responseAttrs, responseLines, responseNeedsOptions } from '@silabos/shared/lib/responseKinds';
+import { FREE_TEXT_KIND, RESPONSE_NODE, responseAnswered, responseAttrs, responseLines, responseNeedsOptions } from '@silabos/shared/lib/responseKinds';
 
 export const cloneResponse = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 export const blankResponse = (node: DocumentNode): boolean =>
     ['doc', 'paragraph', 'tableCell'].includes(node.type)
     && (node.content ?? []).every((child) => child.type === 'paragraph' && blankResponse(child));
+
+/** A field holding nothing but a «Texto libre» space: only the teacher writes in it. */
+export const onlyTeacherWrites = (document: DocumentNode): boolean => {
+    const blocks = document.content ?? [];
+    const inlines = blocks.flatMap((block) => block.content ?? []);
+    return blocks.every((block) => block.type === 'paragraph') && inlines.length === 1
+        && inlines[0]!.type === RESPONSE_NODE && responseAttrs(inlines[0]).kind === FREE_TEXT_KIND;
+};
 
 export const responseListTable = (node: DocumentNode): boolean => {
     const rows = [...(node.content ?? [])];

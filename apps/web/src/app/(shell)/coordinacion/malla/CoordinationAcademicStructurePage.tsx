@@ -1,11 +1,12 @@
 "use client"
 
-import { ArrowLeft, BookPlus, Pencil, PencilLine, UserPlus } from "lucide-react"
+import { ArrowLeft, Pencil, PencilLine, UserPlus } from "lucide-react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { useEffect, useState, type CSSProperties } from "react"
 import { type Curriculum } from "@/api/career-academics"
+import type { BoardInset } from "@/components/domain/academic/curriculum/CurriculumCanvas"
 import { AdminCareerBackLink, AdminCareerTabs } from "@/components/domain/academic/AdminCareerNavigation"
 import { MallaDialog } from "@/components/domain/academic/curriculum/MallaDialog"
 import { MallaToolbar, mallaLabel } from "@/components/domain/academic/curriculum/MallaToolbar"
@@ -23,6 +24,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "
 import { Spinner } from "@/components/ui/spinner"
 import { paths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
+import { cn } from "@/lib/utils"
 import { useAcademicCareerScope } from "@/composables/useAcademicCareerScope"
 import { curriculumEditorState } from "@/state/curriculumEditor"
 import { errorMessage, failedQuery } from "@/lib/queryClient"
@@ -45,7 +47,7 @@ const adminDescriptions: Record<AcademicStructureMode, string> = {
   schedule: "Materias, paralelos y docentes de la carrera",
   teachers: "Docentes de la carrera",
 }
-const actionSkeletons: Record<AcademicStructureMode, string[]> = { teachers: ["w-44", "w-36"], curriculum: ["w-32", "w-44", "w-32"], schedule: [] }
+const actionSkeletons: Record<AcademicStructureMode, string[]> = { teachers: ["w-44", "w-36"], curriculum: ["w-48", "w-32"], schedule: [] }
 const teacherColumns = [
   { key: "nombre", label: "Nombre" },
   { key: "correo", label: "Correo" },
@@ -94,6 +96,7 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
   const [openingEditor, setOpeningEditor] = useState(false)
   const [createMallaOpen, setCreateMallaOpen] = useState(false)
   const [editMallaOpen, setEditMallaOpen] = useState(false)
+  const [boardInset, setBoardInset] = useState<BoardInset | null>(null)
 
   const [seenCurriculum, setSeenCurriculum] = useState(curriculum)
   if (seenCurriculum !== curriculum) {
@@ -171,13 +174,23 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
   const ready = (curriculum || withoutMallas) && schedule && assignments
   const curriculumLocked = locked(curriculum)
   const careerName = curriculum?.career.name ?? null
+  // The schedule names the career too, which covers a career that has no malla yet.
+  const describedCareer = careerName ?? schedule?.career?.name
+  const coordinationDescription = mode === "curriculum" && describedCareer ? `Malla curricular de ${describedCareer}` : pageDescriptions[mode]
+  // Everything above the malla, Administration's tabs included, shares the board's edges.
+  const alignedInset = mode === "curriculum" && !withoutMallas ? boardInset : null
+  // Only the drawn malla knows its edges: until then the header and tabs stay hidden instead of showing out of place.
+  const awaitingBoard = mode === "curriculum" && !withoutMallas && !loadError && boardInset === null
   const title = editingCurriculum && curriculum ? `${mallaLabel(curriculum.malla)} de ${curriculum.career.name}` : adminCareerId && careerName ? `${pageTitles[mode]} de ${careerName}` : pageTitles[mode]
 
   return (
     <PageFrame
       title={title}
-      description={adminCareerId ? adminDescriptions[mode] : pageDescriptions[mode]}
+      description={adminCareerId ? adminDescriptions[mode] : coordinationDescription}
       size={mode === "curriculum" ? "full" : "wide"}
+      titleInset={alignedInset?.left}
+      actionsInset={alignedInset?.right}
+      awaitingInsets={awaitingBoard}
       loading={!ready && !loadError}
       actionsSkeleton={loading && !loadError ? actionSkeletons[mode] : []}
       banner={mode === "curriculum" && curriculum?.curriculum.lock_reason ? <ProcessLockAlert banner lock={curriculum.curriculum.lock} /> : null}
@@ -196,7 +209,7 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
           {mode === "curriculum" && editingCurriculum && selectedMalla ? (
             <Button variant="outline" data-tour="curriculum-data" onClick={() => setEditMallaOpen(true)}>
               <PencilLine data-icon="inline-start" aria-hidden="true" />
-              Datos de la malla
+              Editar malla
             </Button>
           ) : null}
           {mode === "teachers" && assignments?.canCreateTeacher ? (
@@ -206,12 +219,6 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
             <Button onClick={() => setTeacherOpen(true)}>
               <UserPlus data-icon="inline-start" aria-hidden="true" />
               Crear docente
-            </Button>
-          ) : null}
-          {mode === "curriculum" && !editingCurriculum && curriculum ? (
-            <Button variant="outline" onClick={() => setCreateMallaOpen(true)}>
-              <BookPlus data-icon="inline-start" aria-hidden="true" />
-              Nueva malla
             </Button>
           ) : null}
           {mode === "curriculum" && !editingCurriculum && curriculum && !curriculumLocked ? (
@@ -233,7 +240,15 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
         </>
       }
     >
-      {adminCareerId && !editingCurriculum ? <AdminCareerTabs careerId={adminCareerId} current={mode} /> : null}
+      {adminCareerId && !editingCurriculum ? (
+        <div
+          data-career-tabs
+          className={cn(alignedInset && "lg:pr-(--page-actions-inset) lg:pl-(--page-title-inset)", awaitingBoard && "lg:invisible")}
+          style={alignedInset ? ({ "--page-title-inset": `${alignedInset.left}px`, "--page-actions-inset": `${alignedInset.right}px` } as CSSProperties) : undefined}
+        >
+          <AdminCareerTabs careerId={adminCareerId} current={mode} />
+        </div>
+      ) : null}
       {actionError ? (
         <Alert variant="destructive">
           <AlertDescription>{actionError}</AlertDescription>
@@ -254,7 +269,7 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
           ) : null}
           {mode === "curriculum" && curriculum ? (
             <CurriculumCanvas
-              header={!editingCurriculum && mallas && selectedMalla ? <MallaToolbar mallas={mallas} selected={selectedMalla} onSelect={setChosenMallaId} /> : null}
+              header={!editingCurriculum && mallas && selectedMalla ? <MallaToolbar mallas={mallas} selected={selectedMalla} onSelect={setChosenMallaId} onCreate={() => setCreateMallaOpen(true)} /> : null}
               career={curriculum.career}
               modalityOptions={curriculum.modalityOptions}
               curriculum={curriculum.curriculum}
@@ -265,6 +280,7 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
               organizationUnits={curriculum.organizationUnitOptions}
               editing={editingCurriculum}
               onChanged={(message) => void handleCurriculumChanged(message)}
+              onBoardInset={setBoardInset}
             />
           ) : null}
           {mode === "schedule" ? (

@@ -134,7 +134,10 @@ describe("LoadingSkeleton", () => {
 
   it("anticipa la barra lateral de secciones del formulario cuando se pide", () => {
     expect(render(<LoadingSkeleton variant="form" rows={2} />).container.querySelector('[data-skeleton="form-sections"]')).toBeNull()
-    expect(render(<LoadingSkeleton variant="form" rows={2} sidebar />).container.querySelector('[data-skeleton="form-sections"]')).not.toBeNull()
+    const { container } = render(<LoadingSkeleton variant="form" rows={2} sidebar />)
+    // The select goes above the sections, and each field is an editor inside the card.
+    expect(container.querySelector('[data-skeleton="form-sections"]')!.firstElementChild!.getAttribute("data-skeleton")).toBe("form-subject-select")
+    expect(container.querySelectorAll('[data-skeleton="form-card"] [data-skeleton="form-editor"]')).toHaveLength(2)
   })
 
   it("dibuja las columnas de estado como un badge centrado", () => {

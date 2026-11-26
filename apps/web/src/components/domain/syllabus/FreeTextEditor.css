@@ -65,7 +65,44 @@
   cursor: pointer;
 }
 
+/* Outside the editor the variable is only a picture: it is changed with the button next to it. */
+.free-text-editor .document-response--static {
+  cursor: default;
+}
+
 .free-text-editor .document-response.ProseMirror-selectednode {
   outline: 2px solid var(--ring);
   outline-offset: 1px;
+}
+
+/* The coordinator's choices as a checklist: round marks for one, square for several. They are not controls. */
+.free-text-editor .document-response--checks {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+  max-width: 100%;
+  padding: 0.3rem 0.6rem;
+  vertical-align: top;
+}
+
+.free-text-editor .document-response__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--foreground);
+}
+
+.free-text-editor .document-response__option::before {
+  content: "";
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 40%, transparent);
+  border-radius: 4px;
+  background: var(--background);
+}
+
+.free-text-editor .document-response__option[data-mark="radio"]::before {
+  border-radius: 9999px;
 }

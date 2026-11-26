@@ -4,6 +4,7 @@ import type { Editor } from "@tiptap/core"
 import { ChevronDown, ListChecks, RotateCcw } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { Controller, useWatch } from "react-hook-form"
+import type { z } from "zod"
 import { ChoiceGroup } from "@/components/domain/ChoiceGroup"
 import { MenuTooltip } from "@/components/domain/MenuTooltip"
 import { ResponseOptionsEditor } from "@/components/domain/syllabus/ResponseOptionsEditor"
@@ -18,11 +19,13 @@ import { useOpened } from "@/composables/useModelOpen"
 import { fieldMessage, useSchemaForm } from "@/lib/forms"
 import { choiceOf, conditionSourceKey, conditionSources, newResponseId, responseIds, type ConditionChoice, type ConditionSource } from "@/lib/responseConditions"
 import {
+  FREE_TEXT_KIND,
   RESPONSE_DISPLAYS,
   RESPONSE_HELP_LENGTH,
   RESPONSE_NODE,
   RESPONSE_TEXT_LENGTH,
   emptyResponse,
+  keptAnswer,
   responseAttrs,
   responseHasOptions,
   responseKindOptions,
@@ -43,9 +46,9 @@ type TemplateResponseToolProps = {
   label?: string
   hint?: string
   optionsHint?: string
-  requireOptions?: boolean
   current?: ResponseAttrs | null
   fixed?: boolean
+  /** Only Administración: «Más opciones» and «Insertar». Without it, every change is written at once. */
   advanced?: boolean
   fixedReason?: string
   templateOptions?: ResponseOption[] | null
@@ -53,6 +56,8 @@ type TemplateResponseToolProps = {
   usedIds?: string[]
   claimSource?: ((source: ConditionSource) => string | null) | null
   onInsert?: (node: DocumentNode) => void
+  /** Live and without an editor: the marked type was unmarked. */
+  onRemove?: () => void
 }
 
 const NO_CONDITION: ConditionChoice = { source: "", options: [] }
@@ -93,7 +98,6 @@ export function TemplateResponseTool({
   label = "Tipo de respuesta",
   hint = "Quien llena el campo solo responde: no cambia el tipo ni las opciones",
   optionsHint = "Si las deja vacías, Coordinación las escribe en cada materia",
-  requireOptions = false,
   current = null,
   fixed = false,
   advanced = true,
@@ -103,17 +107,21 @@ export function TemplateResponseTool({
   usedIds = NO_IDS,
   claimSource = null,
   onInsert,
+  onRemove,
 }: TemplateResponseToolProps) {
   const id = useId()
   const [open, setOpen] = useState(false)
   const [more, setMore] = useState(false)
-  const locked = fixed || !advanced
   const [editing, setEditing] = useState(false)
   const [logicId, setLogicId] = useState<string | undefined>(undefined)
+  const [placedAt, setPlacedAt] = useState<number | null>(null)
+  const [openedAnswer, setOpenedAnswer] = useState<unknown>(null)
+  const live = !advanced
   const [allSources, setAllSources] = useState<ConditionSource[]>([])
 
   const showsCondition = sources !== null && !fixed
-  const form = useSchemaForm(responseToolSchema({ fixed, requireOptions, conditional: showsCondition, current }), {
+  const schema = responseToolSchema({ fixed, conditional: showsCondition, current })
+  const form = useSchemaForm(schema, {
     defaultValues: fresh(responseKindOptions[0]!.kind),
     mode: "onChange",
     reValidateMode: "onChange",
@@ -125,14 +133,15 @@ export function TemplateResponseTool({
   const errors = form.formState.errors
   const settingsError = fieldMessage(errors, "settings") ?? ""
   const conditionError = fieldMessage(errors, "condition") ?? ""
-  const missingOptions = Boolean(fieldMessage(errors, "options"))
+  const optionsError = fieldMessage(errors, "options") ?? ""
 
   useEffect(() => {
     void form.trigger()
-  }, [form, values, fixed, requireOptions, current, showsCondition])
+  }, [form, values, fixed, current, showsCondition])
 
   const standalone = editor === undefined
-  const ready = !disabled && allowed && (standalone || (editor !== null && editor !== undefined && !editor.isDestroyed && editor.isEditable))
+  // Live, a field closed by «Texto libre» takes no typing, but its type can still be changed here.
+  const ready = !disabled && allowed && (standalone || (editor !== null && editor !== undefined && !editor.isDestroyed && (live || editor.isEditable)))
   const tooltip = allowed ? label : `${label}: no va en campos Institucionales`
   const settingNames = responseSettingNames(kind)
   const resettable = fixed && templateOptions !== null && !sameResponseOptions(options, templateOptions)
@@ -142,6 +151,18 @@ export function TemplateResponseTool({
     return node?.type.name === RESPONSE_NODE ? responseAttrs({ type: RESPONSE_NODE, attrs: node.attrs as never }) : null
   }
   const anchor = (): number => (editor?.state.selection as { from: number } | undefined)?.from ?? 0
+  /** Live, the field holds a single space: the selected one or the only one, wherever the cursor is. */
+  const fieldSpace = (): { at: number; attrs: ResponseAttrs } | null => {
+    if (!live || !editor || editor.isDestroyed) return null
+    let at = selected() ? anchor() : -1
+    if (at < 0) {
+      editor.state.doc.descendants((node, position) => {
+        if (at < 0 && node.type.name === RESPONSE_NODE) at = position
+      })
+    }
+    const node = at < 0 ? null : editor.state.doc.nodeAt(at)
+    return node ? { at, attrs: responseAttrs({ type: RESPONSE_NODE, attrs: node.attrs as never }) } : null
+  }
   const ownSources = (): ConditionSource[] => {
     if (!editor || editor.isDestroyed) return []
     let before = 0
@@ -152,11 +173,15 @@ export function TemplateResponseTool({
   }
 
   useOpened(open, () => {
-    const attrs = current ?? selected()
+    const space = current ? null : fieldSpace()
+    const attrs = current ?? space?.attrs ?? selected()
     const found = sources === null ? [] : [...sources, ...ownSources()]
     const condition = choiceOf(attrs?.showIf, found)
     setEditing(attrs !== null)
-    form.reset(attrs ? fromAttrs({ ...attrs, kind: attrs.kind || form.getValues("kind") }, condition) : { ...fresh(form.getValues("kind")), condition })
+    // Live: a new space starts with no type chosen, because choosing one is what places it.
+    form.reset(attrs ? fromAttrs({ ...attrs, kind: attrs.kind || form.getValues("kind") }, condition) : { ...fresh(live ? "" : form.getValues("kind")), condition })
+    setPlacedAt(space?.at ?? null)
+    setOpenedAnswer(attrs?.value ?? null)
     setLogicId(attrs?.id)
     setAllSources(found)
     setMore(Boolean(attrs?.showIf))
@@ -179,8 +204,7 @@ export function TemplateResponseTool({
     return assigned
   }
 
-  const insert = form.handleSubmit(({ kind: chosenKind, options: chosen, settings, condition }) => {
-    if (!ready) return
+  const nodeFor = ({ kind: chosenKind, options: chosen, settings, condition }: z.output<typeof schema>): DocumentNode => {
     const logic: { id?: string; showIf?: { response: string; options: string[] } } = {}
     if (fixed && current) {
       if (current.id) logic.id = current.id
@@ -196,16 +220,69 @@ export function TemplateResponseTool({
       const showIf = current?.showIf ?? selected()?.showIf
       if (showIf) logic.showIf = showIf
     }
-    const node = emptyResponse(chosenKind, chosen, fixed && current ? responseSettings(chosenKind, current) : settings, logic)
+    return emptyResponse(chosenKind, chosen, fixed && current ? responseSettings(chosenKind, current) : settings, logic)
+  }
+
+  const insert = form.handleSubmit((parsed) => {
+    if (!ready) return
+    const node = nodeFor(parsed)
     if (standalone) onInsert?.(node)
     else editor!.chain().focus().insertContent(node).run()
-    form.reset({ ...fresh(chosenKind), condition })
+    form.reset({ ...fresh(parsed.kind), condition: parsed.condition })
     setOpen(false)
   })
+
+  // Without focusing the editor, which would close the popover; later changes rewrite the same node.
+  const writeInPlace = (node: DocumentNode): void => {
+    if (standalone) {
+      onInsert?.(node)
+      return
+    }
+    const target = editor!
+    // «Texto libre» leaves the whole field to the teacher: what was written goes.
+    if (responseAttrs(node).kind === FREE_TEXT_KIND) {
+      target.commands.setContent({ type: "doc", content: [{ type: "paragraph", content: [node] }] })
+      return
+    }
+    if (placedSpace() !== null) {
+      target.view.dispatch(target.state.tr.setNodeMarkup(placedAt!, undefined, node.attrs))
+      return
+    }
+    target.commands.insertContent(node)
+    setPlacedAt(target.state.selection.from - 1)
+  }
+
+  const placedSpace = (): number | null => (placedAt !== null && editor?.state.doc.nodeAt(placedAt)?.type.name === RESPONSE_NODE ? placedAt : null)
+
+  /** Unmarking the type removes the space; the text around it stays. */
+  const clear = (): void => {
+    if (standalone) {
+      if (ready) onRemove?.()
+      return
+    }
+    const at = placedSpace()
+    if (ready && at !== null) editor!.view.dispatch(editor!.state.tr.delete(at, at + 1))
+    setPlacedAt(null)
+  }
+
+  /** Writes the space as it is now. A template response stays as it was while the change is not valid. */
+  const apply = (chosenKind: string, chosen: ResponseOption[]): void => {
+    const parsed = schema.safeParse({ ...form.getValues(), kind: chosenKind, options: chosen })
+    if (!ready || !parsed.success) return
+    const node = nodeFor(parsed.data)
+    // The answer is kept from the one held on opening: an option being retyped does not lose it.
+    if (fixed) node.attrs = { ...node.attrs, value: keptAnswer(openedAnswer, chosen) as never }
+    writeInPlace(node)
+    // Close when nothing is left to write here.
+    if (!fixed && !responseHasOptions(chosenKind)) setOpen(false)
+  }
+
   const reset = (): void => {
     if (!templateOptions) return
-    form.setValue("options", templateOptions.map((option) => ({ ...option })))
-    void insert()
+    const restored = templateOptions.map((option) => ({ ...option }))
+    form.setValue("options", restored)
+    apply(kind, restored)
+    setOpen(false)
   }
 
   return (
@@ -216,110 +293,138 @@ export function TemplateResponseTool({
             <ListChecks aria-hidden="true" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="max-h-(--overlay-max-height) w-80 overflow-y-auto">
-          <form noValidate onSubmit={(event) => void insert(event)}>
+        <PopoverContent align="start" className="max-h-(--overlay-max-height) w-96 overflow-y-auto">
+          <form noValidate onSubmit={(event) => (live ? event.preventDefault() : void insert(event))}>
             <FieldGroup>
               <Field>
                 <FieldLabel>Tipo de respuesta</FieldLabel>
                 <Controller
                   control={form.control}
                   name="kind"
-                  render={({ field }) => <ChoiceGroup value={field.value} label="Tipo de respuesta" options={KINDS} disabled={fixed} onValueChange={field.onChange} />}
+                  render={({ field }) => (
+                    <ChoiceGroup
+                      value={field.value}
+                      label="Tipo de respuesta"
+                      options={KINDS}
+                      disabled={fixed}
+                      clearable={live}
+                      onValueChange={(next) => {
+                        field.onChange(next)
+                        if (!live) return
+                        if (next === "") clear()
+                        else apply(next, options)
+                      }}
+                    />
+                  )}
                 />
-                {fixed ? <FieldDescription data-response-fixed>{fixedReason}</FieldDescription> : <FieldDescription>{hint}</FieldDescription>}
+                {fixed ? <FieldDescription data-response-fixed>{fixedReason}</FieldDescription> : hint ? <FieldDescription>{hint}</FieldDescription> : null}
               </Field>
               {responseHasOptions(kind) ? (
                 <Field>
                   <FieldLabel>Opciones</FieldLabel>
-                  <Controller control={form.control} name="options" render={({ field }) => <ResponseOptionsEditor value={field.value} onValueChange={field.onChange} />} />
+                  <Controller
+                    control={form.control}
+                    name="options"
+                    render={({ field }) => (
+                      <ResponseOptionsEditor
+                        value={field.value}
+                        onValueChange={(next) => {
+                          field.onChange(next)
+                          if (live) apply(kind, next)
+                        }}
+                      />
+                    )}
+                  />
+                  {live && optionsError ? <FieldError data-response-options-error>{optionsError}</FieldError> : null}
                   {!fixed ? <FieldDescription>{optionsHint}</FieldDescription> : null}
                 </Field>
               ) : null}
-              <Collapsible open={more} onOpenChange={setMore}>
-                <CollapsibleTrigger asChild>
-                  <Button type="button" variant="ghost" size="sm" className="w-fit" data-response-more>
-                    Más opciones
-                    <ChevronDown data-icon="inline-end" aria-hidden="true" />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <FieldGroup className="pt-3">
-                    {!advanced ? <FieldDescription data-response-locked>Estas opciones las fija Administración</FieldDescription> : null}
-                    <Field orientation="horizontal">
-                      <FieldLabel htmlFor={`${id}-required`}>Obligatoria</FieldLabel>
-                      <Controller
-                        control={form.control}
-                        name="required"
-                        render={({ field }) => <Switch id={`${id}-required`} checked={field.value} disabled={locked} data-response-required onCheckedChange={field.onChange} />}
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor={`${id}-help`}>Ayuda</FieldLabel>
-                      <Input
-                        id={`${id}-help`}
-                        {...form.register("help")}
-                        maxLength={RESPONSE_HELP_LENGTH}
-                        autoComplete="off"
-                        placeholder="Se muestra debajo de la respuesta"
-                        disabled={locked}
-                        data-response-help
-                      />
-                    </Field>
-                    {settingNames.includes("maxLength") ? (
-                      <Field>
-                        <FieldLabel htmlFor={`${id}-max-length`}>Caracteres máximos</FieldLabel>
-                        <Input
-                          id={`${id}-max-length`}
-                          {...form.register("maxLength")}
-                          inputMode="numeric"
-                          autoComplete="off"
-                          placeholder={String(RESPONSE_TEXT_LENGTH)}
-                          disabled={locked}
-                          data-response-max-length
-                        />
-                      </Field>
-                    ) : null}
-                    {settingNames.includes("display") ? (
-                      <Field>
-                        <FieldLabel>Cómo se muestra</FieldLabel>
+              {advanced ? (
+                <Collapsible open={more} onOpenChange={setMore}>
+                  <CollapsibleTrigger asChild>
+                    <Button type="button" variant="ghost" size="sm" className="w-fit" data-response-more>
+                      Más opciones
+                      <ChevronDown data-icon="inline-end" aria-hidden="true" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <FieldGroup className="pt-3">
+                      <Field orientation="horizontal">
+                        <FieldLabel htmlFor={`${id}-required`}>Obligatoria</FieldLabel>
                         <Controller
                           control={form.control}
-                          name="display"
-                          render={({ field }) => <ChoiceGroup value={field.value} label="Cómo se muestra" options={DISPLAYS} disabled={locked} onValueChange={(value) => field.onChange(value as ResponseDisplay)} />}
+                          name="required"
+                          render={({ field }) => <Switch id={`${id}-required`} checked={field.value} disabled={fixed} data-response-required onCheckedChange={field.onChange} />}
                         />
                       </Field>
-                    ) : null}
-                    {settingNames.includes("minChoices") ? (
-                      <div className="grid grid-cols-2 gap-2">
+                      <Field>
+                        <FieldLabel htmlFor={`${id}-help`}>Ayuda</FieldLabel>
+                        <Input
+                          id={`${id}-help`}
+                          {...form.register("help")}
+                          maxLength={RESPONSE_HELP_LENGTH}
+                          autoComplete="off"
+                          placeholder="Se muestra debajo de la respuesta"
+                          disabled={fixed}
+                          data-response-help
+                        />
+                      </Field>
+                      {settingNames.includes("maxLength") ? (
                         <Field>
-                          <FieldLabel htmlFor={`${id}-min`}>Elegir al menos</FieldLabel>
+                          <FieldLabel htmlFor={`${id}-max-length`}>Caracteres máximos</FieldLabel>
                           <Input
-                            id={`${id}-min`}
-                            {...form.register("minChoices")}
+                            id={`${id}-max-length`}
+                            {...form.register("maxLength")}
                             inputMode="numeric"
                             autoComplete="off"
-                            placeholder="1"
-                            disabled={locked}
-                            data-response-min
+                            placeholder={String(RESPONSE_TEXT_LENGTH)}
+                            disabled={fixed}
+                            data-response-max-length
                           />
                         </Field>
+                      ) : null}
+                      {settingNames.includes("display") ? (
                         <Field>
-                          <FieldLabel htmlFor={`${id}-max`}>Como máximo</FieldLabel>
-                          <Input
-                            id={`${id}-max`}
-                            {...form.register("maxChoices")}
-                            inputMode="numeric"
-                            autoComplete="off"
-                            placeholder="Todas"
-                            disabled={locked}
-                            data-response-max
+                          <FieldLabel>Cómo se muestra</FieldLabel>
+                          <Controller
+                            control={form.control}
+                            name="display"
+                            render={({ field }) => <ChoiceGroup value={field.value} label="Cómo se muestra" options={DISPLAYS} disabled={fixed} onValueChange={(value) => field.onChange(value as ResponseDisplay)} />}
                           />
                         </Field>
-                      </div>
-                    ) : null}
-                  </FieldGroup>
-                </CollapsibleContent>
-              </Collapsible>
+                      ) : null}
+                      {settingNames.includes("minChoices") ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Field>
+                            <FieldLabel htmlFor={`${id}-min`}>Elegir al menos</FieldLabel>
+                            <Input
+                              id={`${id}-min`}
+                              {...form.register("minChoices")}
+                              inputMode="numeric"
+                              autoComplete="off"
+                              placeholder="1"
+                              disabled={fixed}
+                              data-response-min
+                            />
+                          </Field>
+                          <Field>
+                            <FieldLabel htmlFor={`${id}-max`}>Como máximo</FieldLabel>
+                            <Input
+                              id={`${id}-max`}
+                              {...form.register("maxChoices")}
+                              inputMode="numeric"
+                              autoComplete="off"
+                              placeholder="Todas"
+                              disabled={fixed}
+                              data-response-max
+                            />
+                          </Field>
+                        </div>
+                      ) : null}
+                    </FieldGroup>
+                  </CollapsibleContent>
+                </Collapsible>
+              ) : null}
               {showsCondition && more ? (
                 <Controller
                   control={form.control}
@@ -329,17 +434,21 @@ export function TemplateResponseTool({
               ) : null}
               {settingsError ? <FieldError data-response-settings-error>{settingsError}</FieldError> : null}
               {conditionError ? <FieldError data-response-condition-error>{conditionError}</FieldError> : null}
-              <div className="flex flex-wrap gap-2">
-                <Button type="submit" size="sm" className="w-fit" disabled={missingOptions || Boolean(settingsError) || Boolean(conditionError)} data-response-insert>
-                  {editing ? "Guardar cambios" : "Insertar"}
-                </Button>
-                {resettable ? (
-                  <Button type="button" variant="outline" size="sm" className="w-fit" data-response-reset onClick={reset}>
-                    <RotateCcw data-icon="inline-start" aria-hidden="true" />
-                    Restablecer opciones de la plantilla
-                  </Button>
-                ) : null}
-              </div>
+              {live && !resettable ? null : (
+                <div className="flex flex-wrap gap-2">
+                  {live ? null : (
+                    <Button type="submit" size="sm" className="w-fit" disabled={Boolean(optionsError || settingsError || conditionError)} data-response-insert>
+                      {editing ? "Guardar cambios" : "Insertar"}
+                    </Button>
+                  )}
+                  {resettable ? (
+                    <Button type="button" variant="outline" size="sm" className="w-fit" data-response-reset onClick={reset}>
+                      <RotateCcw data-icon="inline-start" aria-hidden="true" />
+                      Restablecer opciones de la plantilla
+                    </Button>
+                  ) : null}
+                </div>
+              )}
             </FieldGroup>
           </form>
         </PopoverContent>

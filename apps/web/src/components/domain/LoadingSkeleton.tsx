@@ -236,23 +236,33 @@ function LoadingBody({
   }
 
   if (variant === "form") {
-    return (
-      <div className={sidebar ? "flex flex-col gap-6 md:min-h-96 md:flex-row md:items-start" : "contents"}>
-        {sidebar ? (
+    if (sidebar) {
+      return (
+        <div className="flex flex-col gap-6 md:min-h-96 md:flex-row md:items-start">
           <div data-skeleton="form-sections" className="flex w-full shrink-0 flex-col gap-1 md:w-72">
+            <Skeleton data-skeleton="form-subject-select" className="mb-2 h-9 w-full" />
             {range(4).map((section) => (
               <div key={section} className="flex items-center border-l-2 px-3 py-2">
                 <Skeleton className="h-5 w-3/4" />
               </div>
             ))}
           </div>
-        ) : null}
+          <div data-skeleton="form-card" className="flex min-w-0 flex-1 flex-col gap-7 rounded-md bg-card p-6 shadow-surface ring-1 ring-surface-ring">
+            {range(rows).map((row) => (
+              <Skeleton key={row} data-skeleton="form-editor" className="h-43 w-full" />
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="contents">
         <div className="flex min-w-0 flex-1 flex-col gap-7">
           {range(rows).map((row) => (
             <div key={row} className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <Skeleton className="h-3.5 w-32" />
-                {sidebar ? <Skeleton className="h-5.5 w-20 rounded-full" /> : null}
               </div>
               <Skeleton className="h-9 w-full" />
             </div>

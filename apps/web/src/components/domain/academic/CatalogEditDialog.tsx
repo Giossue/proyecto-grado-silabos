@@ -241,7 +241,7 @@ export function CatalogEditDialog({
   const nameField = (
     <Field data-invalid={Boolean(errors.nombre)}>
       <FieldLabel htmlFor={`edit-name-${recordId}`} required>
-        {entity === "facultad" ? "Nombre de facultad" : "Nombre"}
+        {entity === "facultad" ? "Nombre de facultad" : "Nombre de carrera"}
       </FieldLabel>
       <Input id={`edit-name-${recordId}`} value={form.nombre} onChange={(event) => setField("nombre", event.target.value)} aria-required="true" disabled={readOnly} />
       <FieldError errors={errors.nombre} />
@@ -341,11 +341,11 @@ export function CatalogEditDialog({
                 {selectField(
                   "faculty_id",
                   `edit-faculty-${recordId}`,
-                  "Facultad",
+                  "Facultad asociada",
                   "Seleccione una facultad",
                   facultyOptions.map((faculty) => ({ value: faculty.id, label: faculty.activo ? faculty.nombre : `${faculty.nombre} (inactiva)` })),
                 )}
-                {selectField("modality", `edit-modality-${recordId}`, "Modalidad", "Seleccione la modalidad aprobada", modalityOptions)}
+                {selectField("modality", `edit-modality-${recordId}`, "Modalidad de carrera", "Seleccione la modalidad", modalityOptions)}
                 {nameField}
                 <Field data-invalid={Boolean(errors.code)}>
                   <FieldLabel htmlFor={`edit-code-${recordId}`} required>

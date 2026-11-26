@@ -1,13 +1,14 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { Plus, Trash2, X } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 import { Fragment, type ReactNode } from "react"
 import { TemplateResponseTool } from "@/components/domain/configuration/TemplateResponseTool"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { BlockForm } from "@/components/domain/syllabus/BlockForm"
 import { ResponseAnswer } from "@/components/domain/syllabus/ResponseAnswer"
 import { ResponseOptionsEditor } from "@/components/domain/syllabus/ResponseOptionsEditor"
+import { ResponseVariable } from "@/components/domain/syllabus/ResponseVariable"
 import { renderFreeText } from "@/components/domain/syllabus/freeTextRender"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,7 +22,6 @@ import { onlyHiddenResponses, responseShown } from "@/lib/responseConditions"
 import {
   RESPONSE_KINDS,
   RESPONSE_NODE,
-  keptAnswer,
   responseAdjustable,
   responseAnswered,
   responseAttrs,
@@ -115,13 +115,10 @@ export function FieldResponseEditor({
   const update = (path: number[], next: DocumentNode): void => {
     if (!disabled && document) onValueChange?.(replaceResponse(document, path, next))
   }
-  const placeSpace = (path: number[], node: DocumentNode): void => {
-    if (!template) return
-    const blank = cloneResponse(responseAt(template, path))
+  // `empty` is the template's slot: in a row added by the user the template has no node at that path.
+  const placeSpace = (path: number[], empty: DocumentNode, node: DocumentNode): void => {
+    const blank = cloneResponse(empty)
     update(path, blank.type === "paragraph" ? { ...blank, content: [node] } : { ...blank, content: [{ ...(blank.content?.[0] ?? { type: "paragraph" }), content: [node] }] })
-  }
-  const clearSpace = (path: number[]): void => {
-    if (template) update(path, cloneResponse(responseAt(template, path)))
   }
   const optionsEditor = (current: DocumentNode, path: number[], name: string): ReactNode => (
     <ResponseOptionsEditor
@@ -131,35 +128,19 @@ export function FieldResponseEditor({
       onValueChange={(options: ResponseOption[]) => update(path, { ...current, attrs: { ...current.attrs, options } })}
     />
   )
-  const spaceTool = (path: number[]): ReactNode => (
+  /** The one button of a slot: it places a space for the teacher, changes it, or removes it when its type is unmarked. */
+  const spaceTool = (path: number[], empty: DocumentNode, at: number[] | null): ReactNode => (
     <TemplateResponseTool
       advanced={false}
       label="Espacio para el docente"
-      hint="El docente solo responde: no cambia el tipo ni las opciones"
+      hint=""
       optionsHint="Escriba las opciones que podrá elegir el docente"
-      requireOptions
+      current={at ? responseAttrs(responseAt(document!, at)) : null}
       disabled={disabled}
-      onInsert={(node) => placeSpace(path, node)}
+      onInsert={(node) => (at ? update(at, node) : placeSpace(path, empty, node))}
+      onRemove={() => update(path, cloneResponse(empty))}
     />
   )
-  const careerSpace = (current: DocumentNode, path: number[], slotPath: number[], name: string): ReactNode => {
-    const attrs = responseAttrs(current)
-    return (
-      <div key={keyOf(path)} className="flex min-w-0 flex-col gap-2" data-career-space={attrs.kind}>
-        <div className="flex flex-wrap items-center gap-1">
-          <Badge variant="secondary" className="w-fit font-normal">{`Espacio para el docente: ${RESPONSE_KINDS[attrs.kind]?.label ?? "Respuesta"}`}</Badge>
-          <IconTooltip label="Quitar el espacio">
-            <span className="inline-flex">
-              <Button type="button" variant="ghost" size="icon-sm" disabled={disabled} aria-label={`Quitar el espacio de ${name}`} onClick={() => clearSpace(slotPath)}>
-                <X aria-hidden="true" />
-              </Button>
-            </span>
-          </IconTooltip>
-        </div>
-        {attrs.options.length || responseNeedsOptions(attrs) ? optionsEditor(current, path, name) : null}
-      </div>
-    )
-  }
   const templateSpace = (source: DocumentNode, current: DocumentNode, path: number[], name: string): ReactNode => {
     const base = responseAttrs(source).options
     const attrs = responseAttrs(current)
@@ -181,10 +162,7 @@ export function FieldResponseEditor({
             fixed
             templateOptions={base}
             disabled={disabled}
-            onInsert={(node) => {
-              const options = responseAttrs(node).options
-              update(path, { ...current, attrs: { ...node.attrs, value: keptAnswer(attrs.value, options) as never } })
-            }}
+            onInsert={(node) => update(path, { ...current, attrs: node.attrs })}
           />
         </div>
         <ResponseAnswer
@@ -384,21 +362,20 @@ export function FieldResponseEditor({
   const blankSlot = (source: DocumentNode, path: number[], name: string): ReactNode => {
     const current = responseAt(document!, path)
     if (career) {
-      const spaces = nodesOfType(current, RESPONSE_NODE)
-      if (spaces.length) {
-        const located = (node: DocumentNode, at: number[]): number[][] =>
-          node.type === RESPONSE_NODE ? [at] : (node.content ?? []).flatMap((child, index) => located(child, [...at, index]))
-        return (
-          <div key={keyOf(path)} className="flex min-w-0 flex-col gap-2">
-            {responseText(current).trim() ? <p className="text-sm text-muted-foreground">{responseText(current).trim()}</p> : null}
-            {located(current, path).map((at) => careerSpace(responseAt(document!, at), at, path, name))}
-          </div>
-        )
-      }
+      // The slot holds the coordinator's text or a space for the teacher; both rows keep the same button in place, so its popover stays open.
+      const located = (node: DocumentNode, at: number[]): number[][] =>
+        node.type === RESPONSE_NODE ? [at] : (node.content ?? []).flatMap((child, index) => located(child, [...at, index]))
+      const spaces = nodesOfType(current, RESPONSE_NODE).length ? located(current, path) : []
+      const rows: Array<number[] | null> = spaces.length ? spaces : [null]
       return (
-        <div key={keyOf(path)} className="flex min-w-0 items-start gap-1">
-          <div className="min-w-0 flex-1">{slot(source, path, name, false)}</div>
-          {spaceTool(path)}
+        <div key={keyOf(path)} className="flex min-w-0 flex-col gap-2">
+          {spaces.length && responseText(current).trim() ? <p className="text-sm text-muted-foreground">{responseText(current).trim()}</p> : null}
+          {rows.map((at, index) => (
+            <div key={index} className="flex min-w-0 items-start gap-1">
+              <div className="min-w-0 flex-1">{at ? <ResponseVariable attrs={responseAttrs(responseAt(document!, at))} /> : slot(source, path, name, false)}</div>
+              {spaceTool(path, source, at)}
+            </div>
+          ))}
         </div>
       )
     }

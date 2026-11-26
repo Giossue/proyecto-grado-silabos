@@ -14,9 +14,17 @@ import { cn } from "@/lib/utils"
 type PageFrameProps = {
   title: string
   description: string
+  /** For pages that never have a description, so loading does not reserve its line. */
+  withoutDescription?: boolean
   size?: "full" | "wide" | "narrow"
   headerWidth?: number
   headerClass?: string
+  /** Left space, in px, that lines the title up with content that starts further in (large screens only). */
+  titleInset?: number
+  /** Right space, in px, that lines the actions up with content that ends sooner (large screens only). */
+  actionsInset?: number
+  /** Keeps the header's space but hides it (large screens only) while those insets are still unknown, so it never shows out of place. */
+  awaitingInsets?: boolean
   icon?: LucideIcon
   hideIcon?: boolean
   loading?: boolean
@@ -48,9 +56,13 @@ const countActions = (nodes: ReactNode): number =>
 export function PageFrame({
   title,
   description,
+  withoutDescription = false,
   size = "full",
   headerWidth,
   headerClass,
+  titleInset,
+  actionsInset,
+  awaitingInsets = false,
   icon,
   hideIcon,
   loading = false,
@@ -101,10 +113,13 @@ export function PageFrame({
       >
         <header
           data-tour="page-header"
-          className={cn("flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between", tools && "max-sm:flex-row max-sm:items-start", headerWidth && "mx-auto", headerClass)}
+          className={cn("flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between", tools && "max-sm:flex-row max-sm:items-start", headerWidth && "mx-auto", awaitingInsets && "lg:invisible", headerClass)}
           style={headerStyle}
         >
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div
+            className={cn("flex min-w-0 flex-1 flex-col gap-2", titleInset !== undefined && "lg:pl-(--page-title-inset)")}
+            style={titleInset !== undefined ? ({ "--page-title-inset": `${titleInset}px` } as CSSProperties) : undefined}
+          >
             {eyebrow ? <div className="-mt-1">{eyebrow}</div> : null}
 
             <div className="flex items-center gap-3">
@@ -119,7 +134,7 @@ export function PageFrame({
                 <div className="flex min-w-0 flex-col gap-1">
                   {title ? <h1 className="sr-only">{title}</h1> : null}
                   <Skeleton data-skeleton="page-title" className="h-8 w-72 max-w-full" />
-                  <Skeleton data-skeleton="page-description" className="h-6 w-96 max-w-full" />
+                  {withoutDescription ? null : <Skeleton data-skeleton="page-description" className="h-6 w-96 max-w-full" />}
                 </div>
               ) : (
                 <div className="flex min-w-0 flex-col gap-1">
@@ -161,7 +176,9 @@ export function PageFrame({
                 "max-sm:right-(--page-mobile-actions-right) max-sm:bottom-(--page-mobile-actions-bottom)",
                 "max-sm:transition-[translate,opacity] max-sm:duration-200 max-sm:ease-out",
                 floatingHidden && "max-sm:pointer-events-none max-sm:translate-y-24 max-sm:opacity-0",
+                actionsInset !== undefined && "lg:pr-(--page-actions-inset)",
               )}
+              style={actionsInset !== undefined ? ({ "--page-actions-inset": `${actionsInset}px` } as CSSProperties) : undefined}
             >
               <div
                 className={cn(
