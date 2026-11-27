@@ -341,6 +341,8 @@ export async function updateSupportDocument(request: Request, documentId: string
     if (path !== null) await deps.storage.deleteDirectory(SUPPORT_DISK, phpDirname(path))
   }
 
+  let committed = false
+
   return finish(
     await settle(original, deps, async () => {
       try {
@@ -355,15 +357,20 @@ export async function updateSupportDocument(request: Request, documentId: string
           await tx.updateDocument(locked.id, { ...changes, file: { objectId, previewId: isPdf ? objectId : null, view: isPdf ? VIEW_READY : VIEW_PENDING } })
           await tx.deleteObjects(replaced)
           afterCommit(async () => {
+            committed = true
             for (const object of objects) {
-              await deps.storage.delete(object.disk, object.path)
-              if (phpDirname(object.path) !== directory) await deps.storage.deleteDirectory(object.disk, phpDirname(object.path))
+              try {
+                await deps.storage.delete(object.disk, object.path)
+                if (phpDirname(object.path) !== directory) await deps.storage.deleteDirectory(object.disk, phpDirname(object.path))
+              } catch (error) {
+                console.warn("No se pudo borrar el archivo anterior de un documento de apoyo.", { documento_apoyo_id: locked.id, error: error instanceof Error ? error.message : String(error) })
+              }
             }
             if (!isPdf) await deps.dispatchView(locked.id, objectId)
           })
         })
       } catch (error) {
-        await discard()
+        if (!committed) await discard()
         throw error
       }
       return apiJson({ message: "Documento actualizado." })

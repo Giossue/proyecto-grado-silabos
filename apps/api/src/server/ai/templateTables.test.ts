@@ -195,6 +195,14 @@ describe("template assistant tables in the short form", () => {
     expect(await draftValidator.errors(again)).toEqual([])
   })
 
+  it("describes who fills each field with the names on screen", () => {
+    const prompt = templateSystemPrompt()
+
+    expect(prompt).not.toMatch(/editable|¿Se puede editar|puede pasar a No/i)
+    expect(prompt).toContain("el responsable se elige en «¿Quién lo llena?»")
+    expect(prompt).toContain("Usted no puede elegir «Solo el docente»")
+  })
+
   it("explains the short form and the rule names in the knowledge", () => {
     const prompt = templateSystemPrompt()
 

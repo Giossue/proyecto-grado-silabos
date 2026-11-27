@@ -49,7 +49,7 @@ export const screenTours: Record<string, TourStep[]> = {
     // Pasos del editor: solo aparecen mientras se edita.
     step('[data-tour="template-back"]', 'Volver', 'Sale del editor. Si no guardó, le avisa antes', 'bottom'),
     step('[aria-label="Formato del texto"]', 'Formato', 'Negrita, colores, listas y tablas. Escriba dentro de un campo para usarlo', 'bottom'),
-    step('[data-tour="template-selection"]', 'Campo elegido', 'Pulse un campo de la hoja y aquí elige si se puede editar, lo mueve o lo borra', 'bottom'),
+    step('[data-tour="template-selection"]', 'Campo elegido', 'Pulse un campo de la hoja y aquí elige quién lo llena, lo mueve o lo borra', 'bottom'),
     step('[data-tour="template-more"]', 'Más', 'Editar JSON: descargue la plantilla o reemplácela con un archivo', 'bottom'),
     step('[data-tour="template-save"]', 'Guardar', 'Guarda sus cambios. Un punto en el botón le avisa que falta guardar', 'bottom'),
     step('[data-sheet]', 'La hoja', 'Así se verá el sílabo. Escriba directo sobre ella. Pase el ratón entre dos campos para agregar uno nuevo', 'left'),

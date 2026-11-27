@@ -1154,6 +1154,13 @@ export function withCurrentHeaders(template: unknown, value: unknown): unknown {
   return teacherEdits(template) && hasOwnText(value) ? withTemplateHeaders(record(template), record(value)) : value
 }
 
+export function withCorrectedHeaders(template: unknown, value: unknown, definition: TemplateDefinition): unknown {
+  if (teacherEdits(template) || !isDocument(template) || !isDocument(value)) return value
+  const current = normalizeFieldDocument(openShape(template), definition)
+  const headerShape = (document: PhpRecord) => tableNodes(document).map((table) => content(table).slice(0, headerRows(table)).map(rowShape))
+  return phpEquals(headerShape(current), headerShape(record(value))) ? withTemplateHeaders(current, record(value)) : value
+}
+
 function ownTextStands(template: unknown, value: unknown, definition: TemplateDefinition, definitionContent: unknown): boolean {
   if (!hasOwnText(value)) return false
   try {

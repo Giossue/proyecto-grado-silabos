@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import JSZip from "jszip"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { createRateLimiter } from "../http/throttle"
@@ -410,6 +410,36 @@ describe("POST /api/v1/coordination/support-documents/{document}", () => {
     expect(converted).toEqual([])
     await prepareSupportDocumentView(ID, viewDeps(), current().objectId)
     expect(current().view).toBe("lista")
+  })
+
+  it("encola la vista nueva y conserva el archivo nuevo aunque falle el borrado del anterior", async () => {
+    await update(change("Guía", { name: "primero.docx", content: fixture("habilidades.docx") }))
+    const previousPath = currentPath()
+    dispatched = []
+    const working = storage
+    storage = {
+      ...working,
+      delete: async () => {
+        throw new Error("disco ocupado")
+      },
+    }
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+    ids++
+    const response = await read(await updateSupportDocument(change("Guía", { name: "segundo.docx", content: fixture("habilidades.docx") }), ID, deps()))
+    expect(response.status).toBe(200)
+    expect(dispatched).toEqual([ID])
+    expect(currentPath()).not.toBe(previousPath)
+    expect(exists(currentPath())).toBe(true)
+    expect(warned).toHaveBeenCalledWith("No se pudo borrar el archivo anterior de un documento de apoyo.", { documento_apoyo_id: ID, error: "disco ocupado" })
+    warned.mockRestore()
+  })
+
+  it("no borra el archivo ya guardado si falla un paso posterior a la confirmación", async () => {
+    ids++
+    const failing = { ...deps(), dispatchView: async () => Promise.reject(new Error("cola caída")) }
+    expect((await updateSupportDocument(change("Guía", { name: "nuevo.docx", content: fixture("habilidades.docx") }), ID, failing)).status).toBe(500)
+    expect(current().view).toBe("pendiente")
+    expect(exists(currentPath())).toBe(true)
   })
 
   it("rechaza un nombre vacío o un archivo no permitido sin cambiar nada", async () => {

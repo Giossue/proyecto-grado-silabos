@@ -151,3 +151,23 @@ describe("fichaFieldValues (FichaFieldValues of Laravel)", () => {
     })
   })
 })
+
+describe("S4: una tabla de una sola columna", () => {
+  const cell = (type: string, text: string): PhpRecord => ({ type, content: [text === "" ? { type: "paragraph" } : { type: "paragraph", content: [{ type: "text", text }] }] })
+  const oneColumn = (...rows: string[]): PhpRecord => ({ type: "doc", content: [{ type: "table", content: [{ type: "tableRow", content: [cell("tableHeader", "Objetivo")] }, ...rows.map((text) => ({ type: "tableRow", content: [cell("tableCell", text)] }))] }] })
+
+  it("importa todas las filas del Excel", () => {
+    for (const policy of [null, "protected"] as const) {
+      const document = fichaDocument({ columns: ["Objetivo"], rows: [["Primero"], ["Segundo"], [""], ["Tercero"]] }, oneColumn(""), definitionWith(policy))
+      const table = (document.content as PhpRecord[])[0]
+      expect((table.content as PhpRecord[]).map((row) => plainText(row, definitionWith(policy)))).toEqual(["Objetivo", "Primero", "Segundo", "Tercero"])
+    }
+  })
+
+  it("conserva las filas de una tabla fija", () => {
+    const fixed: PhpRecord = { type: "doc", content: [{ type: "table", content: [{ type: "tableRow", content: [cell("tableHeader", "Objetivo")] }, { type: "tableRow", content: [cell("tableCell", "")] }, { type: "tableRow", content: [cell("tableCell", "")] }] }] }
+    const document = fichaDocument({ columns: ["Objetivo"], rows: [["Uno"], ["Dos"]] }, fixed, definitionWith("protected"))
+    expect(plainText(document, definitionWith("protected"))).toContain("Dos")
+    expect(plainText(document, definitionWith("protected"))).toContain("Uno")
+  })
+})

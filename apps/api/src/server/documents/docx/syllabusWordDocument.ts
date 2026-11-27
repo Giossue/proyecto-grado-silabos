@@ -142,6 +142,18 @@ function writeValueText(context: RenderContext, section: WordSection, value: unk
   }
 }
 
+function holdsSignature(node: unknown, definition: TemplateDefinition): boolean {
+  if (!isRecord(node)) return false
+  if (node.type === "variable") return String(definition.variables[String(record(node.attrs).id ?? "")]?.source ?? "").startsWith("signature.")
+  return isPhpArray(node.content) && list(node.content).some((child) => holdsSignature(child, definition))
+}
+
+function keepSignatureTables(node: PhpRecord, definition: TemplateDefinition): PhpRecord {
+  if (node.type === "table" && holdsSignature(node, definition)) return { ...node, keepTogether: true }
+  if (!isPhpArray(node.content)) return node
+  return { ...node, content: list(node.content).map((child) => (isRecord(child) ? keepSignatureTables(child, definition) : child)) }
+}
+
 function renderContainer(context: RenderContext, section: WordSection, container: PhpRecord, titled: boolean): void {
   const fields = arrayList(container.fields)
   const field = fields[0] ?? {}
@@ -150,7 +162,7 @@ function renderContainer(context: RenderContext, section: WordSection, container
     section.addText(label, { bold: true, size: numeric(context.appearance.field_font_size), color: context.color("text_color") }, { spaceBefore: 160, spaceAfter: 80, keepNext: true })
   }
   if (isPhpArray(container.document)) {
-    context.documentWriter().append(section, resolveDocument(record(container.document), context.templateVariables, context.definition, fields), context.contentWidth)
+    context.documentWriter().append(section, resolveDocument(keepSignatureTables(record(container.document), context.definition), context.templateVariables, context.definition, fields), context.contentWidth)
     return
   }
   if (field.hidden === true) return
@@ -167,7 +179,7 @@ function renderDocuments(context: RenderContext, section: WordSection, snapshotS
     if (label !== "" && phpTrim(label).toLowerCase() !== phpTrim(stringOr(snapshotSection.title, "")).toLowerCase()) {
       section.addText(label, { bold: true, size: numeric(context.appearance.field_font_size), color: context.color("text_color") }, { spaceBefore: 160, spaceAfter: 80, keepNext: true })
     }
-    const resolved = resolveDocument(historicalDocument(field), context.templateVariables, context.definition)
+    const resolved = resolveDocument(keepSignatureTables(historicalDocument(field), context.definition), context.templateVariables, context.definition)
     const document = fieldDocumentIsEmpty(resolved, context.definition) ? null : resolved
     if (field.type === "texto" || field.type === "ficha") context.writeBoxed(section, document)
     else context.writeDocument(section, document)

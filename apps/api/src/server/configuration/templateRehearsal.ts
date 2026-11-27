@@ -12,6 +12,7 @@ import {
   responsesEnabled,
   responseTemplate,
   teacherOwnText,
+  withCorrectedHeaders,
   withCurrentHeaders,
   TemplateValidationError,
   withoutOwnOptions,
@@ -148,7 +149,7 @@ export function sameStructure(template: PhpRecord, document: PhpRecord): boolean
 }
 
 function stillFits(field: TemplateField, stored: unknown, template: unknown, definition: TemplateDefinition): PhpRecord | null {
-  const value = withCurrentHeaders(template, writtenValue(template, stored))
+  const value = withCorrectedHeaders(template, withCurrentHeaders(template, writtenValue(template, stored)), definition)
   if (!isPhpArray(value) || (teacherEdits(template) && !hasOwnText(value))) return null
   let document: PhpRecord
   try {

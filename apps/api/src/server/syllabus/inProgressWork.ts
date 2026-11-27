@@ -14,6 +14,7 @@ import { profileFields, profileTemplates, profileValues, teacherTemplateOf, type
 import { isCareerField, teacherEditable, teacherTemplate, templateFields, type SyllabusTemplate, type TemplateField } from "../configuration/templatePresentation"
 import {
   fieldCarried,
+  withCorrectedHeaders,
   withCurrentHeaders,
   fieldFits,
   normalizeFieldDocument,
@@ -43,6 +44,8 @@ export const CONFIRMATION_FIELD = "confirm_purge"
 export const DEFAULT_REASON = "cambió la base institucional (malla, período académico o plantilla)"
 export const BACK_TO_DRAFT_EVENT = "silabo.devuelto_borrador"
 const SILENT_PATHS = ["subject.position", "curriculum.id", "curriculum.name", "curriculum.cycle_count", "career.code"]
+
+type HeldValue = { value: unknown; fieldId: string; live: boolean }
 
 type PendingChange = { syllabus: WorkSyllabus; context: PhpRecord; documents: Map<string, unknown>; backToDraft: boolean }
 
@@ -389,14 +392,26 @@ export class InProgressWork {
     await this.executor.$executeRaw(Prisma.sql`delete from valores_campo where silabo_id = ${syllabus.id}::uuid`)
     for (const field of templateFields(context.template)) {
       if (!isCareerField(field)) continue
-      const template = templates[field.id] ?? field.content
-      const document = teacherEditable(field, templates) ? this.stillFits(field, previous.get(field.key) ?? null, template, context) : template
-      const value = document === null || documentIsEmpty(document, context.definition) ? template : document
+      const value = this.adaptedValue(field, previous, templates, context)
       await this.executor.$executeRaw(Prisma.sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo, huella_definicion_campo)
         values (${uuid7()}::uuid, ${syllabus.id}::uuid, ${field.id}::uuid, ${JSON.stringify(phpShape(value))}::jsonb, ${fieldFingerprint(field.content)})`)
     }
     await this.executor.$executeRaw(Prisma.sql`update silabos set estado_silabo = ${state}, version_borrador = ${syllabus.version + 1}, guardado_en = to_timestamp(${this.now()})
       where silabo_id = ${syllabus.id}::uuid`)
+  }
+
+  private adaptedValue(field: TemplateField, previous: Map<string, HeldValue>, templates: Record<string, PhpRecord>, context: ProfileContext): unknown {
+    const template = templates[field.id] ?? field.content
+    const document = teacherEditable(field, templates) ? this.stillFits(field, previous.get(field.key)?.value ?? null, template, context) : template
+    return document === null || documentIsEmpty(document, context.definition) ? template : document
+  }
+
+  private restartedValue(field: TemplateField, previous: Map<string, HeldValue>, templates: Record<string, PhpRecord>, context: ProfileContext): unknown {
+    const template = templates[field.id] ?? field.content
+    const held = previous.get(field.key)
+    if (held === undefined || teacherTemplate(field, context.definition) === null) return template
+    const document = this.stillFits(field, held.value, template, context)
+    return document === null || documentIsEmpty(document, context.definition) ? template : document
   }
 
   private async restartKeepingTeacherText(syllabus: WorkSyllabus): Promise<void> {
@@ -408,47 +423,58 @@ export class InProgressWork {
     if (kept.length === 0) return
     const templates = await this.templatesOf(context, syllabus.parallelId)
     for (const field of kept) {
-      const template = templates[field.id] ?? field.content
-      const document = this.stillFits(field, previous.get(field.key), template, context)
-      if (document === null || documentIsEmpty(document, context.definition) || phpEquals(document, template)) continue
+      const document = this.restartedValue(field, previous, templates, context)
+      if (phpEquals(document, templates[field.id] ?? field.content)) continue
       await this.executor.$executeRaw(Prisma.sql`update valores_campo set valor_campo = ${JSON.stringify(phpShape(document))}::jsonb
         where silabo_id = ${fresh}::uuid and definicion_campo_id = ${field.id}::uuid`)
     }
   }
 
-  private async templatesOf(context: ProfileContext, parallelId: string): Promise<Record<string, PhpRecord>> {
+  private async subjectOf(parallelId: string): Promise<string> {
     const [subject] = await rowsOf<{ id: string }>(this.executor, Prisma.sql`select asignatura_id::text as id from paralelos where paralelo_id = ${parallelId}::uuid limit 1`)
     if (!subject) failServerError()
-    return profileTemplates(context, subject.id)
+    return subject.id
   }
 
-  private async heldByKey(syllabusId: string): Promise<Map<string, unknown>> {
+  private async templatesOf(context: ProfileContext, parallelId: string): Promise<Record<string, PhpRecord>> {
+    return profileTemplates(context, await this.subjectOf(parallelId))
+  }
+
+  private async heldByKey(syllabusId: string): Promise<Map<string, HeldValue>> {
     const stored = await rowsOf<{ field_id: string; value: string | null }>(
       this.executor,
-      Prisma.sql`select definicion_campo_id::text as field_id, valor_campo::text as value from valores_campo where silabo_id = ${syllabusId}::uuid`,
+      Prisma.sql`select definicion_campo_id::text as field_id, valor_campo::text as value from valores_campo where silabo_id = ${syllabusId}::uuid
+        order by definicion_campo_id asc`,
     )
     const fieldIds = [...new Set(stored.map((row) => row.field_id))]
-    const keys = new Map(
+    const definitions = new Map(
       (fieldIds.length === 0
         ? []
-        : await rowsOf<{ id: string; key: string | null }>(
+        : await rowsOf<{ id: string; key: string | null; live: boolean | null }>(
             this.executor,
-            Prisma.sql`select definicion.definicion_campo_id::text as id, campo.clave_campo_plantilla as key from definiciones_campo definicion
+            Prisma.sql`select definicion.definicion_campo_id::text as id, campo.clave_campo_plantilla as key,
+                (definicion.vigente_en_plantilla and campo.vigente_en_plantilla) as live
+              from definiciones_campo definicion
               left join campos_plantilla campo on campo.campo_plantilla_id = definicion.campo_plantilla_id
               where definicion.definicion_campo_id in (${uuidList(fieldIds)})`,
           )
-      ).map((row) => [row.id, row.key ?? ""]),
+      ).map((row) => [row.id, row]),
     )
-    const previous = new Map<string, unknown>()
-    for (const row of stored) {
-      const key = keys.get(row.field_id) ?? ""
-      if (key !== "") previous.set(key, phpJsonDecode(row.value))
-    }
-    return previous
+    const context = stored.length === 0 ? null : await this.profileContext()
+    const ranked = stored
+      .map((row) => {
+        const definition = definitions.get(row.field_id)
+        const value = phpJsonDecode(row.value)
+        const held: HeldValue = { value, fieldId: row.field_id, live: definition?.live === true }
+        const rank = (context !== null && !documentIsEmpty(value, context.definition) ? 2 : 0) + (held.live ? 1 : 0)
+        return { key: definition?.key ?? "", rank, held }
+      })
+      .sort((left, right) => left.rank - right.rank || left.held.fieldId.localeCompare(right.held.fieldId))
+    return new Map(ranked.filter((item) => item.key !== "").map((item) => [item.key, item.held]))
   }
 
   private stillFits(field: TemplateField, stored: unknown, template: unknown, context: ProfileContext): unknown {
-    const value = withCurrentHeaders(template, writtenValue(template, stored))
+    const value = withCorrectedHeaders(template, withCurrentHeaders(template, writtenValue(template, stored)), context.definition)
     if (!isPhpArray(value) || (teacherEdits(template) && !hasOwnText(value))) return null
     let document: PhpRecord
     try {
@@ -620,6 +646,7 @@ export class InProgressWork {
     const contents = pending.some((item) => item.documents.size > 0) ? new Map(templateFields((await this.profileContext()).template).map((field) => [field.id, field.content])) : new Map<string, unknown>()
     for (const item of pending) {
       const { syllabus } = item
+      let rewritten = false
       for (const [fieldId, document] of item.documents) {
         const fingerprint = contents.has(fieldId) ? fieldFingerprint(contents.get(fieldId)) : null
         const [existing] = await rowsOf<{ id: string; value: string | null }>(
@@ -629,9 +656,11 @@ export class InProgressWork {
         const encoded = JSON.stringify(phpShape(document))
         if (existing) {
           if (!phpIdentical(phpJsonDecode(existing.value), phpJsonDecode(encoded))) {
+            rewritten ||= !phpEquals(phpJsonDecode(existing.value), phpJsonDecode(encoded))
             await this.executor.$executeRaw(Prisma.sql`update valores_campo set valor_campo = ${encoded}::jsonb, huella_definicion_campo = ${fingerprint} where valor_campo_id = ${existing.id}::uuid`)
           }
         } else {
+          rewritten = true
           await this.executor.$executeRaw(Prisma.sql`insert into valores_campo (valor_campo_id, silabo_id, definicion_campo_id, valor_campo, huella_definicion_campo)
             values (${uuid7()}::uuid, ${syllabus.id}::uuid, ${fieldId}::uuid, ${encoded}::jsonb, ${fingerprint})`)
         }
@@ -647,6 +676,7 @@ export class InProgressWork {
           revisionNumber: null,
         })
       } else {
+        if (rewritten) await this.executor.$executeRaw(Prisma.sql`update silabos set version_borrador = ${syllabus.version + 1} where silabo_id = ${syllabus.id}::uuid`)
         await this.saveContext(syllabus, item.context)
       }
     }

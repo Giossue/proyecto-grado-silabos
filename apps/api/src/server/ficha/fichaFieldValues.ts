@@ -188,12 +188,20 @@ function fillTable(node: unknown, rows: PhpRecord[], state: { filled: boolean },
   return node
 }
 
+function bodyRows(block: PhpRecord): PhpRecord[] {
+  const content = nodes(block.content).map((node) => record(node))
+  if (nodeType(block) === "table") return content.slice(1)
+  return content
+    .filter((item) => nodeType(item) === "listItem")
+    .map((item) => ({ type: "tableRow", content: [{ type: "tableCell", attrs: { colspan: 1, rowspan: 1 }, content: item.content }] }))
+}
+
 export function fichaDocument(value: unknown, template: unknown, definition: TemplateDefinition): PhpRecord {
   if (isFilledTable(value)) {
     const columns = list(value.columns).map((label, index) => ({ key: String(index), label: String(label) }))
     const document = freeTextFromRows(columns, list(value.rows))
     if (template === null) return document
-    const rows = nodes(record(nodes(document.content)[0]).content).slice(1).map((row) => record(row))
+    const rows = bodyRows(record(nodes(document.content)[0]))
     return record(fillTable(template, rows, { filled: false }, definition))
   }
   if (template !== null && responsesEnabled(definition) && !blank(template)) {

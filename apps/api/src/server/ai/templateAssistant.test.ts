@@ -220,7 +220,7 @@ describe("template assistant", () => {
     const outcome = await run("Que en la descripción el docente escriba hasta 500 caracteres")
 
     const [institutional, outOfRange, valid] = gateway.toolResults(1)
-    expect(institutional).toContain("Solo un campo editable (Carrera) puede tener límite de caracteres.")
+    expect(institutional).toContain("Un campo «Nadie (texto fijo)» no puede tener límite de caracteres.")
     expect(outOfRange).toContain("El límite de caracteres debe ser un número entero entre 1 y 50 000.")
     expect(valid).toContain('"ok":true')
     expect(outcome.proposal?.changes).toContain("«Descripción» admitirá hasta 500 caracteres del docente.")

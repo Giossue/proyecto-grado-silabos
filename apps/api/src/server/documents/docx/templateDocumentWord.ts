@@ -114,20 +114,22 @@ export class TemplateDocumentWord {
     const outerKeepWithNext = this.keepWithNext
     let leadingHeader = true
     let leadingHeading = true
+    const keepTogether = node.keepTogether === true
     const table = target.addTable({ borderSize: 4, borderColor: this.tableBorder, cellMargin: 50, width: 5000, unit: "pct" })
     const merged = new Map<number, Merge>()
-    for (const source of rows) {
+    for (const [rowIndex, source] of rows.entries()) {
       const content = nodes(source.content)
       leadingHeader = leadingHeader && content.every((cell) => cell.type === "tableHeader")
       leadingHeading = leadingHeading && content[0]?.type === "tableHeader"
-      const row = table.addRow({ ...(leadingHeading ? { cantSplit: true } : {}), ...(leadingHeader ? { tblHeader: true } : {}) })
+      const row = table.addRow({ ...(leadingHeading || keepTogether ? { cantSplit: true } : {}), ...(leadingHeader ? { tblHeader: true } : {}) })
+      const keepRowWithNext = keepTogether ? rowIndex < rows.length - 1 : leadingHeading
       const cells = [...content]
       let column = 0
       while (column < count) {
         const merge = merged.get(column)
         if (merge !== undefined) {
           const continued = row.addCell(sumOf(column, merge.span), merge.options)
-          if (leadingHeading) continued.addTextRun({ spaceAfter: 0, keepNext: true })
+          if (keepRowWithNext) continued.addTextRun({ spaceAfter: 0, keepNext: true })
           merge.rows--
           if (merge.rows === 0) merged.delete(column)
           column += merge.span
@@ -148,7 +150,7 @@ export class TemplateDocumentWord {
           merged.set(column, { span, rows: height - 1, options: { ...options, vMerge: "continue" } })
         }
         const destination = row.addCell(cellWidth, options)
-        this.keepWithNext = leadingHeading
+        this.keepWithNext = keepRowWithNext
         const documentHeader = isHeader && given(attrs, "backgroundColor") === null
         const textAttrs = documentHeader && this.tableHeaderBackground !== null && typeof attrs.bold !== "boolean" ? { ...attrs, bold: true } : attrs
         for (const child of nodes(cell.content)) {

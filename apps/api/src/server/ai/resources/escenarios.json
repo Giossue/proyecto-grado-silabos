@@ -443,7 +443,7 @@
               {
                 "funcion": "responder",
                 "argumentos": {
-                  "mensaje": "Lo dejo vacío y editable."
+                  "mensaje": "Lo dejo vacío, para «Coordinación»."
                 }
               }
             ]
@@ -557,7 +557,7 @@
               {
                 "funcion": "responder",
                 "argumentos": {
-                  "mensaje": "Propongo el campo Competencias, editable."
+                  "mensaje": "Propongo el campo Competencias, en «Coordinación»."
                 }
               }
             ]
@@ -578,7 +578,7 @@
               {
                 "funcion": "responder",
                 "argumentos": {
-                  "mensaje": "Ya es Editable: Coordinación lo escribe en el proyecto de carrera y el docente solo llena los espacios que le deje."
+                  "mensaje": "Ya lo llena «Coordinación»: Coordinación lo escribe en el proyecto de carrera y el docente solo llena los espacios que le deje."
                 }
               }
             ]
@@ -682,7 +682,7 @@
               {
                 "funcion": "responder",
                 "argumentos": {
-                  "mensaje": "Si pasa a No editable, Coordinación deja de escribirla."
+                  "mensaje": "Si pasa a «Nadie (texto fijo)», Coordinación deja de escribirla."
                 }
               }
             ]
@@ -1703,13 +1703,13 @@
               {
                 "funcion": "responder",
                 "argumentos": {
-                  "mensaje": "Un campo No editable no lleva respuestas. Puedo hacerlo Editable si quiere."
+                  "mensaje": "Un campo «Nadie (texto fijo)» no lleva respuestas. Puedo pasarlo a «Coordinación» si quiere."
                 }
               }
             ]
           ],
           "errores": [
-            "Un campo No editable (institucional) no lleva respuestas"
+            "Un campo «Nadie (texto fijo)» (institucional) no lleva respuestas"
           ]
         }
       }
@@ -2006,7 +2006,7 @@
               {
                 "funcion": "responder",
                 "argumentos": {
-                  "mensaje": "La escala pasa a Editable."
+                  "mensaje": "La escala pasa a «Coordinación»."
                 }
               }
             ]

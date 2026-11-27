@@ -342,3 +342,39 @@ describe("InProgressWork reconstruye sílabos con tablas a las que el docente ag
     expect(JSON.stringify(work.stillFits(target, own, editing("Lectura"), { template, definition: template.definition }))).toContain("Taller")
   })
 })
+
+describe("S2: reescribir un borrador sin cambiar su estado invalida los guardados de una pestaña vieja", () => {
+  const FIELD = fieldId(8)
+  const text = (value: string) => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: value }] }] })
+
+  async function versionsAfter(held: unknown | null, rebuilt: unknown, state = "borrador"): Promise<unknown[]> {
+    const versions: unknown[] = []
+    const db = {
+      $queryRaw: async (query: Prisma.Sql) => (query.text.includes("from valores_campo") && held !== null ? [{ id: "value", value: JSON.stringify(held) }] : []),
+      $executeRaw: async (query: Prisma.Sql) => {
+        if (query.text.includes("update silabos") && query.text.includes("version_borrador")) versions.push(query.values[query.text.includes("datos_academicos_silabo") ? 1 : 0])
+        return 1
+      },
+    } as unknown as Db
+    const work = new InProgressWork(db, () => {}, { now: 0 } as never)
+    const template = goldenTemplate()
+    vi.spyOn(work, "profileContext").mockResolvedValue({ template, definition: template.definition, store: {} } as never)
+    vi.spyOn(work, "clearHistory").mockResolvedValue([])
+    const syllabus = { id: SYLLABUS, parallelId: PARALLEL, convocationId: CONVOCATION, state, context: {}, started: true, version: 3 }
+    const internal = work as unknown as { applyChanges(pending: unknown[]): Promise<void> }
+    await internal.applyChanges([{ syllabus, context: {}, documents: new Map([[FIELD, rebuilt]]), backToDraft: state !== "borrador" }])
+    return versions
+  }
+
+  it("sube la versión cuando cambia un valor guardado", async () => {
+    expect(await versionsAfter(text("Antes"), text("Después"))).toEqual([4])
+  })
+
+  it("sube la versión cuando agrega un valor", async () => {
+    expect(await versionsAfter(null, text("Nuevo"))).toEqual([4])
+  })
+
+  it("no la sube si el valor es el mismo con las claves en otro orden", async () => {
+    expect(await versionsAfter({ content: [{ content: [{ text: "Igual", type: "text" }], type: "paragraph" }], type: "doc" }, text("Igual"))).toEqual([])
+  })
+})

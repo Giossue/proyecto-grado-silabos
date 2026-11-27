@@ -22,14 +22,31 @@ describe("screen help about career teachers", () => {
   })
 })
 
-describe("screen help about bulk actions in the career project", () => {
-  it("explains both bulk actions on the coordination and administration lists", () => {
-    for (const path of ["/coordinacion/proyecto-carrera", "/admin/carreras/:career/proyecto-carrera"] as const) {
+const CAREER_PROJECT_SCREENS = [
+  "/coordinacion/proyecto-carrera",
+  "/admin/carreras/:career/proyecto-carrera",
+  "/coordinacion/proyecto-carrera/:malla/:subject",
+  "/admin/carreras/:career/proyecto-carrera/:malla/:subject",
+] as const
+
+describe("screen help about who fills each field", () => {
+  it("never names removed controls in the template or the career project", () => {
+    for (const path of ["/admin/plantilla", ...CAREER_PROJECT_SCREENS] as const) {
+      expect(JSON.stringify(catalog[path])).not.toMatch(/editable|Se puede editar|Acciones masivas|Restaurar texto original|El docente puede editar este texto|El docente llena esta tabla|Usar el texto de la plantilla|Que lo escriba el docente|«Elegir una» o/i)
+    }
+  })
+
+  it("describes the three choices of «¿Quién lo llena?» on the template screen", () => {
+    const text = JSON.stringify(catalog["/admin/plantilla"])
+    for (const name of ["«¿Quién lo llena?»", "«Nadie (texto fijo)»", "«Coordinación»", "«Solo el docente»"]) expect(text).toContain(name)
+  })
+
+  it("says which fields the career project lists and how the teacher sees the rest", () => {
+    for (const path of CAREER_PROJECT_SCREENS) {
       const text = JSON.stringify(catalog[path])
-      expect(text).toContain("«Acciones masivas»")
-      expect(text).toContain("«Usar el texto de la plantilla»")
-      expect(text).toContain("«Que lo escriba el docente»")
-      expect(text).toContain("los que ya están definidos no cambian")
+      expect(text).toContain("«¿Quién lo llena?»")
+      expect(text).toContain("«Solo el docente»")
+      expect(text).toContain("«Bloqueado»")
     }
   })
 })

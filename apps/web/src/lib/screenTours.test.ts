@@ -28,4 +28,9 @@ describe('screenTours', () => {
     expect(selectors).toContain('ul[aria-label="Mis sílabos"]');
     expect(selectors).not.toContain('[data-slot="table-container"]');
   });
+
+  it('la guía de la plantilla habla de quién llena el campo, no de si se puede editar', () => {
+    const selection = (screenTours['/admin/plantilla'] ?? []).find((item) => item.selector === '[data-tour="template-selection"]');
+    expect(selection?.description).toBe('Pulse un campo de la hoja y aquí elige quién lo llena, lo mueve o lo borra');
+  });
 });

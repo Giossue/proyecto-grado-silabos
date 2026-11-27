@@ -25,10 +25,10 @@ import { templateFromAnyLanguage } from "./templateSpanish"
 
 export const FORMAT_VERSION = 2
 export { FIELD_LIMIT_INVALID, KEY_PATTERN, RESPONSIBLES }
-const FIELD_LIMIT_ONLY_CAREER = "Solo un campo editable (Carrera) puede tener límite de caracteres."
+const FIELD_LIMIT_ONLY_CAREER = "Un campo «Nadie (texto fijo)» no puede tener límite de caracteres."
 const ROOT_KEYS = DEFINITION_KEYS
 const SOURCE_KINDS = ["una", "varias"]
-const INSTITUTIONAL_RESPONSES = "Un campo No editable no lleva tipos de respuesta. Hágalo Editable o quite la respuesta."
+const INSTITUTIONAL_RESPONSES = "Un campo «Nadie (texto fijo)» no lleva tipos de respuesta. Cambie «¿Quién lo llena?» o quite la respuesta."
 
 
 export type DraftProblem = { path: string; message: string; blocking: boolean }

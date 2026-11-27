@@ -56,7 +56,7 @@ export const END = "(final)"
 export const RESPONSIBLE_LABELS: Record<string, string> = { carrera: "Carrera", institucional: "Institucional" }
 
 const FIELD_LIMIT_INVALID = "El límite de caracteres debe ser un número entero entre 1 y 50 000."
-const FIELD_LIMIT_ONLY_CAREER = "Solo un campo editable (Carrera) puede tener límite de caracteres."
+const FIELD_LIMIT_ONLY_CAREER = "Un campo «Nadie (texto fijo)» no puede tener límite de caracteres."
 
 type Located = { section: AssistantSection; field: AssistantField }
 
@@ -685,7 +685,7 @@ export class AssistantDraft {
       contentForField(responsible, content)
     } catch (error) {
       if (error instanceof TemplateValidationError) {
-        throw new TemplateDraftError("Un campo No editable (institucional) no lleva respuestas. Hágalo Editable (carrera) o quite las respuestas.")
+        throw new TemplateDraftError("Un campo «Nadie (texto fijo)» (institucional) no lleva respuestas. Cámbielo a «Coordinación» (carrera) o quite las respuestas.")
       }
       throw error
     }

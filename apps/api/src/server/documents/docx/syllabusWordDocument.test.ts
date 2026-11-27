@@ -72,6 +72,46 @@ describe("Word document like PhpWordDocumentRenderer", () => {
     expect(xml).not.toContain("ab".repeat(16))
   })
 
+  it("keeps every table with an electronic signature on one page and lets other tables flow", async () => {
+    const cell = (type: string, ...content: PhpRecord[]) => ({ type, attrs: { colspan: 1, rowspan: 1 }, content: [{ type: "paragraph", content }] })
+    const row = (...content: PhpRecord[]) => ({ type: "tableRow", content })
+    const text = (value: string) => ({ type: "text", text: value })
+    const signatures = {
+      type: "doc",
+      content: [
+        {
+          type: "table",
+          content: [
+            row(cell("tableHeader", text("Elaborado por"))),
+            row(cell("tableCell", text("Firma:"), { type: "variable", attrs: { id: "firma_docente" } })),
+            row(cell("tableCell")),
+            row(cell("tableCell", text("Fecha de entrega"))),
+          ],
+        },
+      ],
+    }
+    const units = { type: "doc", content: [{ type: "table", content: [row(cell("tableHeader", text("Unidad"))), row(cell("tableCell", text("Primera unidad"))), row(cell("tableCell", text("Segunda unidad")))] }] }
+    const sections = [
+      { title: "Unidades", fields: [{ key: "unidades", label: "", type: "otro", document: units }] },
+      { title: "Revisión y aprobación", fields: [{ key: "firmas", label: "Revisión y aprobación", type: "otro", document: signatures }] },
+    ]
+    const xml = await documentXml(await renderDocx(inputOf(plantilla, { sections }), noLogos))
+    const tables = xml.match(/<w:tbl>.*?<\/w:tbl>/g) as string[]
+    const rowsOf = (marker: string) => (tables.find((table) => table.includes(marker)) as string).match(/<w:tr>.*?<\/w:tr>/g) as string[]
+    const signed = rowsOf("Elaborado por")
+    expect(signed).toHaveLength(4)
+    for (const [index, current] of signed.entries()) {
+      expect(current).toContain('<w:cantSplit w:val="1"/>')
+      const paragraphs = current.match(/<w:p>.*?<\/w:p>|<w:p\/>/g) as string[]
+      for (const paragraph of paragraphs) expect(paragraph.includes('<w:keepNext w:val="1"/>')).toBe(index < signed.length - 1)
+    }
+    const flowing = rowsOf("Primera unidad").slice(1)
+    for (const current of flowing) {
+      expect(current).not.toContain("cantSplit")
+      expect(current).not.toContain("keepNext")
+    }
+  })
+
   it("switches page orientation with a section break and keeps the last section properties at the end", async () => {
     const xml = await documentXml(await renderDocx(inputOf(plantilla), noLogos))
     expect(xml.match(/<w:sectPr>/g)).toHaveLength(3)

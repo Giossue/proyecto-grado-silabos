@@ -272,7 +272,7 @@ function SubjectProfile({ subjectId, adminCareer }: { subjectId: string; adminCa
         profileSkeleton
       ) : fields.length === 0 ? (
         <Alert>
-          <AlertDescription>La plantilla no tiene campos editables. Pídale a Administración que los agregue</AlertDescription>
+          <AlertDescription>La plantilla no tiene campos que llene Coordinación. Pídale a Administración que los agregue</AlertDescription>
         </Alert>
       ) : (
         <div className="flex flex-col gap-4">

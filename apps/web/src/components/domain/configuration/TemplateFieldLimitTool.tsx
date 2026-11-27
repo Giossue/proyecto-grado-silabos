@@ -30,7 +30,7 @@ export function TemplateFieldLimitTool({ limit = null, selected = false, editabl
   const form = useSchemaForm(limitSchema, { defaultValues: { limit: "" }, reValidateMode: "onChange" })
   const error = fieldMessage(form.formState.errors, "limit") ?? ""
   const tried = form.formState.isSubmitted
-  const tooltip = !selected ? `${LABEL}: elija un campo` : editable ? LABEL : `${LABEL}: solo en campos editables`
+  const tooltip = !selected ? `${LABEL}: elija un campo` : editable ? LABEL : `${LABEL}: no va en campos que nadie llena`
 
   useOpened(open, () => form.reset({ limit: limit ? String(limit) : "" }))
 
