@@ -65,7 +65,18 @@ export type SyllabusReading = {
 }
 
 export type TargetKind = "campo" | "espacio"
-export type AssistantTarget = { name: string; kind: TargetKind; space: number | null; path: number[]; mold: string; baseHash: string; text: string; maxCharacters: number | null }
+export type RowAnchor = { table: number[]; rows: string[] }
+export type AssistantTarget = {
+  name: string
+  kind: TargetKind
+  space: number | null
+  path: number[]
+  mold: string
+  baseHash: string
+  text: string
+  maxCharacters: number | null
+  row: RowAnchor | null
+}
 export type ReadableField = { field: TemplateField; sectionTitle: string; label: string; document: PhpRecord; text: string; limit: number | null; targets: AssistantTarget[] }
 export type AssistantSnapshot = SnapshotSource & { subject: SubjectData; fields: ReadableField[] }
 
@@ -161,6 +172,23 @@ function textSpaces(mold: PhpRecord, node: PhpRecord, path: number[], inTable: b
 
 const hashOf = (node: unknown): string => definitionHash(canonical(node))
 
+function comparable(node: PhpRecord): PhpRecord {
+  const bare = Object.fromEntries(Object.entries(node).filter(([name]) => name !== "content"))
+  const children = childrenOf(node).map(comparable)
+  return children.length === 0 ? bare : { ...bare, content: children }
+}
+
+function rowAnchor(document: PhpRecord, path: number[]): RowAnchor | null {
+  let node = document
+  for (const [depth, index] of path.entries()) {
+    if (node.type === "table") return { table: path.slice(0, depth), rows: childrenOf(node).map((row) => hashOf(comparable(row))) }
+    node = childrenOf(node)[index]
+  }
+  return null
+}
+
+const keepsRows = (made: RowAnchor, current: RowAnchor): boolean => phpEquals(made.table, current.table) && made.rows.every((row, index) => current.rows[index] === row)
+
 function targetsOf(key: string, source: unknown, document: PhpRecord, rendering: Omit<Rendering, "markers">): AssistantTarget[] {
   const { definition } = rendering
   const plain: Rendering = { ...rendering, markers: new Map() }
@@ -168,7 +196,7 @@ function targetsOf(key: string, source: unknown, document: PhpRecord, rendering:
   if (writtenWhole(source, definition)) {
     if (!plainOnly(document)) return []
     const mold = hashOf(answerShape(source, definition))
-    return [{ name: key, kind: "campo", space: null, path: [], mold, baseHash: hashOf(document), text: textOf(document), maxCharacters: null }]
+    return [{ name: key, kind: "campo", space: null, path: [], mold, baseHash: hashOf(document), text: textOf(document), maxCharacters: null, row: null }]
   }
   if (!responsesEnabled(definition)) return []
   return textSpaces(answerShape(source, definition), document, [], false, rendering.answers).map(({ path, mold, node }, index) => ({
@@ -180,6 +208,7 @@ function targetsOf(key: string, source: unknown, document: PhpRecord, rendering:
     baseHash: hashOf(node),
     text: textOf(node),
     maxCharacters: node.type === RESPONSE_NODE ? Number(record(node.attrs).maxLength ?? RESPONSE_CHARACTERS) : null,
+    row: rowAnchor(document, path),
   }))
 }
 
@@ -295,13 +324,26 @@ export function applyToTarget(snapshot: AssistantSnapshot, readable: ReadableFie
 export const PROPOSAL_UNAVAILABLE = "Este campo ya no está disponible para el asistente."
 export const PROPOSAL_CHANGED = "Ese texto cambió desde que se hizo la propuesta. Pida una nueva."
 
-export type PlacedProposal = { fieldId: string; target: { kind: TargetKind; space: number | null; path: number[]; mold: string }; baseHash: string; text: string }
+export type PlacedProposal = { fieldId: string; target: { kind: TargetKind; space: number | null; path: number[]; mold: string; row?: RowAnchor | null }; baseHash: string; text: string }
+export type Placement = { target: AssistantTarget; value: PhpRecord }
 
-export function placeProposal(snapshot: AssistantSnapshot, proposal: PlacedProposal): { value: PhpRecord } | { problem: string } {
+export function placeProposal(snapshot: AssistantSnapshot, proposal: PlacedProposal): Placement | { problem: string } {
   const readable = snapshot.fields.find((item) => item.field.id === proposal.fieldId)
   if (readable === undefined) return { problem: PROPOSAL_UNAVAILABLE }
-  const { kind, space, path, mold } = proposal.target
-  const target = readable.targets.find((item) => item.kind === kind && item.space === space && phpEquals(item.path, path))
+  const { kind, space, path, mold, row } = proposal.target
+  const target = readable.targets.find((item) => item.kind === kind && phpEquals(item.path, path) && (item.row !== null || item.space === space))
   if (target === undefined || target.mold !== mold || target.baseHash !== proposal.baseHash) return { problem: PROPOSAL_CHANGED }
-  return applyToTarget(snapshot, readable, target, proposal.text)
+  if (target.row !== null && (!row || !keepsRows(row, target.row))) return { problem: PROPOSAL_CHANGED }
+  const outcome = applyToTarget(snapshot, readable, target, proposal.text)
+  return "problem" in outcome ? outcome : { target, value: outcome.value }
+}
+
+export function rowsAfter(proposal: PlacedProposal, placement: Placement): RowAnchor | null {
+  const made = proposal.target.row
+  const current = placement.target.row
+  if (!made || current === null || phpEquals(proposal.target.path, placement.target.path) || !keepsRows(made, current)) return null
+  const changed = placement.target.path[current.table.length]
+  const placed = rowAnchor(placement.value, placement.target.path)
+  if (placed === null || changed >= made.rows.length) return null
+  return { table: made.table, rows: made.rows.map((row, index) => (index === changed ? placed.rows[index] : row)) }
 }

@@ -37,12 +37,27 @@ describe("teacher assistant store", () => {
     await tx.answerByKey(SYLLABUS, TEACHER, "k")
     await tx.openAnswer(SYLLABUS, TEACHER)
     await tx.replacePendingProposals(SYLLABUS, TEACHER, [{ fieldId: MESSAGE, space: null }])
+    await tx.fieldProposals(SYLLABUS, TEACHER, MESSAGE)
 
-    expect(queries).toHaveLength(5)
+    expect(queries).toHaveLength(6)
     for (const query of queries) {
       expect(text(query)).toMatch(/silabo_id = \$\d+::uuid and \S*usuario_id = \$\d+::uuid/)
       expect(query.values).toEqual(expect.arrayContaining([SYLLABUS, TEACHER]))
     }
+  })
+
+  it("locks the proposals of one field that can still be used, and rewrites only their target", async () => {
+    const { db, queries } = recordingDb()
+    const tx = teacherAssistantTx(db)
+    const target = { kind: "espacio" as const, space: 2, path: [0, 1, 1, 0, 0], mold: "m", row: { table: [0], rows: ["a", "b"] }, fieldKey: "descripcion", fieldLabel: "Descripción" }
+
+    await tx.fieldProposals(SYLLABUS, TEACHER, MESSAGE)
+    await tx.updateProposalTarget(MESSAGE, target)
+
+    expect(text(queries[0])).toMatch(/and p\.definicion_campo_id = \$3::uuid and p\.estado_propuesta in \('pendiente', 'aceptada'\) order by p\.creado_en, p\.posicion_propuesta for update of p$/)
+    expect(queries[0].values).toEqual([SYLLABUS, TEACHER, MESSAGE])
+    expect(text(queries[1])).toBe("update propuestas_ia_docente set destino_propuesta = $1::jsonb where propuesta_ia_docente_id = $2::uuid")
+    expect(queries[1].values).toEqual([JSON.stringify(target), MESSAGE])
   })
 
   it("takes a transaction lock for one teacher in one syllabus", async () => {

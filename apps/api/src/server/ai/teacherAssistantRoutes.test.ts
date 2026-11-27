@@ -574,6 +574,208 @@ describe("accepting a proposal", () => {
     expect(await accept(proposal.id)).toMatchObject({ status: 422, json: { errors: { proposal: [CHANGED] } } })
     expect(messagesOf(await show())[1].proposals[0]).toMatchObject({ status: "aceptada", usable: false })
   })
+
+  describe("for a cell of a table", () => {
+    type Node = { type: string; attrs?: PhpRecord; content?: Node[] }
+    type Row = [string, string]
+    const blank: Row = ["", ""]
+    const topics: Row[] = [["Tema A", ""], ["Tema B", ""], ["Tema C", ""]]
+    const span = { colspan: 1, rowspan: 1 }
+    const heading = (...titles: string[]) => ({ type: "tableRow", content: titles.map((title) => ({ type: "tableHeader", attrs: span, content: [para(words(title))] })) })
+    const cell = () => ({ type: "tableCell", attrs: span, content: [para(answerSpace())] })
+    const repeatable = () => ({ type: "table", content: [heading("Tema", "Detalle"), { type: "tableRow", content: [cell(), cell()] }] })
+    const tablesOf = (value: unknown) => (value as Node).content!.filter((node) => node.type === "table")
+    const spaceOf = (row: Node, column: number) => row.content![column].content![0].content![0]
+    const rowsIn = (value: unknown, table = 0) => tablesOf(value)[table].content!.slice(1).map((row) => [spaceOf(row, 0).attrs!.value, spaceOf(row, 1).attrs!.value])
+    const descriptionId = () => fieldByKey(world.template, "descripcion").id
+    const savedValue = () => structuredClone(world.values.get(descriptionId())) as Node
+
+    function withRows(value: Node, rows: Row[], table = 0): Node {
+      const found = tablesOf(value)[table]
+      const [header, first] = found.content!
+      found.content = [
+        header,
+        ...rows.map((texts) => {
+          const row = structuredClone(first)
+          texts.forEach((text, column) => (spaceOf(row, column).attrs!.value = text))
+          return row
+        }),
+      ]
+      return value
+    }
+
+    async function coordinationTable(document: PhpRecord, ...tables: Row[][]) {
+      coordinationWrites(world, "descripcion", document)
+      const value = structuredClone((await templatesOf(world))[descriptionId()]) as unknown as Node
+      tables.forEach((rows, table) => withRows(value, rows, table))
+      teacherWrites(world, "descripcion", value)
+    }
+
+    const started = (rows: Row[]) => coordinationTable(docOf(repeatable()), rows)
+
+    async function teacherSaves(value: unknown) {
+      expect((await patchDraft(descriptionId(), value)).status).toBe(200)
+    }
+
+    const listed = async (id: string) => messagesOf(await show()).flatMap((message) => message.proposals).find((item) => item.id === id)
+
+    async function use(id: string) {
+      expect(await listed(id)).toMatchObject({ usable: true, blocked_reason: null })
+      const response = await accept(id)
+      expect(response.status).toBe(200)
+      await teacherSaves(response.json.value)
+      return response.json.value
+    }
+
+    async function expectRefused(id: string) {
+      const before = written()
+      expect(await listed(id)).toMatchObject({ status: "pendiente", usable: false, blocked_reason: CHANGED })
+      expect(await accept(id)).toMatchObject({ status: 422, json: { message: CHANGED, errors: { proposal: [CHANGED] } } })
+      expect(written()).toEqual(before)
+      expect(world.proposals.find((item) => item.id === id)!.state).toBe("pendiente")
+    }
+
+    async function expectRefusedWhileUnsaved(id: string) {
+      expect(await listed(id)).toMatchObject({ usable: false, blocked_reason: CHANGED })
+      expect(await accept(id)).toMatchObject({ status: 422, json: { errors: { proposal: [CHANGED] } } })
+    }
+
+    it("refuses the detail of a deleted row instead of giving it to the row that moved up", async () => {
+      await started(topics)
+      const [proposal] = await answered([["descripcion#2", "Detalle del tema A"]])
+
+      await teacherSaves(withRows(savedValue(), topics.slice(1)))
+
+      await expectRefused(proposal.id)
+      expect(rowsIn(savedValue())).toEqual(topics.slice(1))
+    })
+
+    it.each<[string, Row[], string, Row[]]>([
+      ["a row above it is deleted", topics, "descripcion#4", [topics[1], topics[2]]],
+      ["its row is deleted and the rows read alike", [blank, blank, blank], "descripcion#2", [blank, blank]],
+      ["a row above it is deleted and a blank one added", [["Introducción", ""], blank, blank], "descripcion#4", [blank, blank, blank]],
+      ["its row is deleted and a blank one added after rows with a topic", [blank, ["Tema B", ""]], "descripcion#2", [["Tema B", ""], blank]],
+      ["its row changes places", [topics[0], topics[1]], "descripcion#2", [topics[1], topics[0]]],
+      ["the rows above it change places", topics, "descripcion#6", [topics[1], topics[0], topics[2]]],
+      ["the other cell of its row is rewritten", [topics[0]], "descripcion#2", [["Otro tema", ""]]],
+      ["the empty cell beside it is filled by hand", [blank], "descripcion#2", [["Tema escrito después", ""]]],
+      ["the other cell of its row is emptied", [topics[0]], "descripcion#2", [blank]],
+      ["a row above it is rewritten", topics, "descripcion#4", [["Tema A corregido", ""], topics[1], topics[2]]],
+      ["a row below it is rewritten", topics, "descripcion#2", [topics[0], ["Tema B corregido", ""], topics[2]]],
+      ["its row is deleted among blank ones and another is added, with a topic further down", [blank, blank, ["Tema C", ""]], "descripcion#2", [blank, ["Tema C", ""], blank]],
+    ])("refuses when %s", async (_case, before, destino, after) => {
+      await started(before)
+      const [proposal] = await answered([[destino, "Detalle propuesto"]])
+
+      await teacherSaves(withRows(savedValue(), after))
+
+      await expectRefused(proposal.id)
+    })
+
+    it.each([
+      ["the first cell first", [0, 1]],
+      ["the second cell first", [1, 0]],
+    ])("uses two proposals for one row one after the other, %s", async (_case, order) => {
+      await started([blank, blank])
+      const proposals = await answered([["descripcion#3", "Tema propuesto"], ["descripcion#4", "Detalle propuesto"]])
+
+      for (const index of order) await use(proposals[index].id)
+
+      expect(rowsIn(savedValue())).toEqual([blank, ["Tema propuesto", "Detalle propuesto"]])
+    })
+
+    it("refuses when the row an accepted proposal named is deleted and the table reads as it did at the start", async () => {
+      await started([blank, blank, blank])
+      const [topic, detail] = await answered([["descripcion#3", "Segundo tema"], ["descripcion#4", "Detalle del segundo"]])
+      await use(topic.id)
+
+      await teacherSaves(withRows(savedValue(), [blank, blank, blank]))
+
+      await expectRefused(detail.id)
+    })
+
+    it("offers the rest of a row only once the proposal used before it is saved", async () => {
+      await started([blank])
+      const [topic, detail] = await answered([["descripcion#1", "Tema propuesto"], ["descripcion#2", "Detalle propuesto"]])
+
+      const first = await accept(topic.id)
+
+      await expectRefusedWhileUnsaved(detail.id)
+      expect((await accept(topic.id)).json).toEqual(first.json)
+      await teacherSaves(first.json.value)
+      await use(detail.id)
+      expect(rowsIn(savedValue())).toEqual([["Tema propuesto", "Detalle propuesto"]])
+    })
+
+    it("uses a proposal after another one, from a later answer, filled the rest of its row", async () => {
+      await started([blank])
+      const [detail] = await answered([["descripcion#2", "Detalle propuesto"]])
+      const [topic] = await answered([["descripcion#1", "Tema propuesto"]], ["descripcion"], KEY(2))
+
+      await use(topic.id)
+      await use(detail.id)
+
+      expect(rowsIn(savedValue())).toEqual([["Tema propuesto", "Detalle propuesto"]])
+    })
+
+    it("uses the proposals for several rows one after the other", async () => {
+      await started(topics)
+      const proposals = await answered([["descripcion#2", "Detalle A"], ["descripcion#4", "Detalle B"], ["descripcion#6", "Detalle C"]])
+
+      for (const proposal of proposals) await use(proposal.id)
+
+      expect(rowsIn(savedValue())).toEqual([["Tema A", "Detalle A"], ["Tema B", "Detalle B"], ["Tema C", "Detalle C"]])
+    })
+
+    it("does not let a proposal made for another row make up for the change", async () => {
+      await started([topics[0], topics[1]])
+      const [stale] = await answered([["descripcion#2", "Detalle del tema A"]])
+      await teacherSaves(withRows(savedValue(), [topics[1], blank]))
+      const [fresh] = await answered([["descripcion#1", "Tema B revisado"]], ["descripcion"], KEY(2))
+
+      await use(fresh.id)
+
+      await expectRefused(stale.id)
+    })
+
+    it("does not let an accepted proposal of one row stand in the row above after a deletion", async () => {
+      await started([blank, blank, blank])
+      const [first, second, detail] = await answered([["descripcion#1", "Primer tema"], ["descripcion#3", "Segundo tema"], ["descripcion#4", "Detalle del segundo"]])
+      await use(first.id)
+      await use(second.id)
+
+      await teacherSaves(withRows(savedValue(), [["Segundo tema", ""], blank, blank]))
+
+      await expectRefused(detail.id)
+    })
+
+    it("keeps a proposal usable when text outside its table changes and rows are added after its row", async () => {
+      await coordinationTable(docOf(para(words("Enfoque: "), answerSpace()), repeatable(), line("Segunda parte."), repeatable()), [topics[0]], [topics[1], topics[2]])
+      const [proposal] = await answered([["descripcion#5", "Detalle del tema B"]])
+      const changed = withRows(savedValue(), [["Otro", "Cambiado"], blank, blank], 0)
+      changed.content![0].content![1].attrs!.value = "Aprendizaje por proyectos"
+      await teacherSaves(withRows(changed, [topics[1], topics[2], blank], 1))
+
+      expect(await listed(proposal.id)).toMatchObject({ space: 9 })
+      const value = await use(proposal.id)
+
+      expect(rowsIn(value, 0)).toEqual([["Otro", "Cambiado"], blank, blank])
+      expect(rowsIn(value, 1)).toEqual([["Tema B", "Detalle del tema B"], topics[2], blank])
+      expect(JSON.stringify(value)).toContain("Aprendizaje por proyectos")
+    })
+
+    it("is not disturbed by the empty list a browser may add to an untouched paragraph", async () => {
+      const note = { type: "tableCell", attrs: span, content: [para()] }
+      await coordinationTable(docOf({ type: "table", content: [heading("Tema", "Nota", "Detalle"), { type: "tableRow", content: [cell(), note, cell()] }] }))
+      const [proposal] = await answered([["descripcion#2", "Detalle propuesto"]])
+      const resent = savedValue()
+      tablesOf(resent)[0].content![1].content![1].content![0].content = []
+      await teacherSaves(resent)
+
+      expect(await listed(proposal.id)).toMatchObject({ usable: true })
+      expect((await accept(proposal.id)).status).toBe(200)
+    })
+  })
 })
 
 describe("discarding a proposal", () => {

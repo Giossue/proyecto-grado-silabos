@@ -113,6 +113,19 @@ export function fakeTeacherStore(world: StoreWorld): TeacherAssistantStore {
           return () => void (world.proposals = world.proposals.map((proposal) => (proposal.id === id ? before : proposal)))
         })
       },
+      fieldProposals: async (syllabusId, userId, fieldId) =>
+        copy(
+          world.proposals.filter(
+            (proposal) => proposal.syllabusId === syllabusId && proposal.userId === userId && proposal.fieldId === fieldId && ["pendiente", "aceptada"].includes(proposal.state),
+          ),
+        ),
+      updateProposalTarget: async (id, target) => {
+        write(() => {
+          const before = copy(world.proposals.find((proposal) => proposal.id === id)!)
+          world.proposals = world.proposals.map((proposal) => (proposal.id === id ? { ...proposal, target: stored(target) } : proposal))
+          return () => void (world.proposals = world.proposals.map((proposal) => (proposal.id === id ? before : proposal)))
+        })
+      },
       replacePendingProposals: async (syllabusId, userId, targets) => {
         world.proposals = world.proposals.map((proposal) =>
           proposal.syllabusId === syllabusId &&

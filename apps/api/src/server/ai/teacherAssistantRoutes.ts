@@ -23,7 +23,7 @@ import { editableState, mayEdit } from "../syllabus/policy"
 import { assistantSwitchedOn, failTeacherAssistant, type TeacherAccessDeps } from "./teacherAnswerJob"
 import { TEACHER_UNAVAILABLE } from "./teacherAssistant"
 import { OPEN_ANSWER_STATES, type TeacherAssistantStore, type TeacherMessage, type TeacherProposal } from "./teacherAssistantStore"
-import { placeProposal, readAssistantSnapshot, type AssistantSnapshot } from "./teacherContext"
+import { placeProposal, readAssistantSnapshot, rowsAfter, type AssistantSnapshot } from "./teacherContext"
 import { DAILY_REQUESTS, dailyRequestLimit } from "./teacherQuota"
 
 export const STALE_ANSWER_SECONDS = 900
@@ -110,7 +110,7 @@ function proposalView(proposal: TeacherProposal, snapshot: AssistantSnapshot | n
     field_key: proposal.target.fieldKey,
     field_label: proposal.target.fieldLabel,
     target: proposal.target.kind,
-    space: proposal.target.space,
+    space: outcome !== null && "value" in outcome ? outcome.target.space : proposal.target.space,
     text: proposal.text,
     basis: proposal.basis,
     usable: outcome !== null && "value" in outcome,
@@ -230,6 +230,10 @@ export function acceptTeacherProposalFor(request: Request, auth: TeacherAssistan
       const outcome = placeProposal(snapshot, found)
       if ("problem" in outcome) return reject(validationError({ proposal: [outcome.problem] }))
       await tx.decideProposal(found.id, "aceptada", deps.now())
+      for (const other of await tx.fieldProposals(auth.syllabus.id, auth.session.user.id, found.fieldId)) {
+        const row = rowsAfter(other, outcome)
+        if (row !== null) await tx.updateProposalTarget(other.id, { ...other.target, row })
+      }
       return apiJson({
         message: "Propuesta colocada en el campo. Revísela: se guarda con el autoguardado.",
         field_id: found.fieldId,

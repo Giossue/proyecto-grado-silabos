@@ -46,6 +46,8 @@ export interface TeacherAssistantTx {
   lockSyllabus(id: string): Promise<LockedSyllabus | null>
   lockProposal(id: string): Promise<TeacherProposal | null>
   decideProposal(id: string, state: TeacherProposalState, at: number): Promise<void>
+  fieldProposals(syllabusId: string, userId: string, fieldId: string): Promise<TeacherProposal[]>
+  updateProposalTarget(id: string, target: TeacherProposal["target"]): Promise<void>
   replacePendingProposals(syllabusId: string, userId: string, targets: ReplacedTarget[]): Promise<void>
   insertProposal(proposal: NewTeacherProposal): Promise<void>
 }
@@ -131,6 +133,14 @@ export function teacherAssistantTx(db: Db): TeacherAssistantTx {
     lockProposal: (id) => proposalWithId(db, id, true),
     async decideProposal(id, state, at) {
       await db.$executeRaw`update propuestas_ia_docente set estado_propuesta = ${state}, decidida_en = ${fromEpoch(at)} where propuesta_ia_docente_id = ${id}::uuid`
+    },
+    async fieldProposals(syllabusId, userId, fieldId) {
+      const rows = await db.$queryRaw<ProposalRow[]>`${PROPOSAL} where ${conversationOf("m", syllabusId, userId)} and p.definicion_campo_id = ${fieldId}::uuid
+        and p.estado_propuesta in ('pendiente', 'aceptada') order by p.creado_en, p.posicion_propuesta for update of p`
+      return rows.map(proposalOf)
+    },
+    async updateProposalTarget(id, target) {
+      await db.$executeRaw`update propuestas_ia_docente set destino_propuesta = ${jsonbValue(JSON.stringify(target))} where propuesta_ia_docente_id = ${id}::uuid`
     },
     async replacePendingProposals(syllabusId, userId, targets) {
       for (const target of targets) {
