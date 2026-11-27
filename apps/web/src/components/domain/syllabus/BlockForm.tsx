@@ -272,6 +272,7 @@ export function BlockForm({ id, kind, blockProps, value, disabled = false, requi
     const columns = Object.entries(rows.properties) as Array<[string, Scalar]>
     const rowPath = [...path.map((segment) => (typeof segment === "number" ? "*" : segment)), "*"].join(".")
     const totalled = columns.map(([key]) => summedPaths.has(`${rowPath}.${key}`))
+    const narrowText = columns.filter(([, column]) => column.type !== "number").length > 5
 
     return (
       <div className="flex min-w-0 flex-col gap-3">
@@ -279,7 +280,7 @@ export function BlockForm({ id, kind, blockProps, value, disabled = false, requi
           <TableHeader>
             <TableRow>
               {columns.map(([key, column]) => (
-                <TableHead key={key} className={column.type === "number" ? "w-20 text-center" : "min-w-48 whitespace-normal"}>
+                <TableHead key={key} className={column.type === "number" ? "w-20 text-center" : cn(narrowText ? "min-w-28" : "min-w-48", "whitespace-normal")}>
                   {column.title ?? key}
                 </TableHead>
               ))}

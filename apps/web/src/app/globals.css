@@ -802,15 +802,17 @@
         --document-table-header-strong-background: var(--muted);
         --document-table-total-background: var(--muted);
         --document-table-header-color: var(--foreground);
+        --form-table-header-background: color-mix(in oklab, var(--muted) 60%, var(--card));
     }
 
     .teacher-form table:not([data-slot='table']) {
         width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        overflow: hidden;
+        margin: 0 !important;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        border: 0 !important;
+        border-top: 1px solid var(--border) !important;
+        border-left: 1px solid var(--border) !important;
     }
 
     .teacher-form td,
@@ -818,7 +820,7 @@
         border: 0 !important;
         border-right: 1px solid var(--border) !important;
         border-bottom: 1px solid var(--border) !important;
-        background-color: transparent !important;
+        background-color: var(--card) !important;
         color: var(--foreground) !important;
         font-style: normal !important;
         font-weight: 400 !important;
@@ -827,19 +829,57 @@
         vertical-align: middle;
     }
 
+    .teacher-form th,
+    .teacher-form tfoot td {
+        background-color: var(--form-table-header-background) !important;
+    }
+
     .teacher-form th {
-        background-color: color-mix(in oklab, var(--muted) 60%, transparent) !important;
         font-weight: 500 !important;
         color: var(--muted-foreground) !important;
     }
 
-    .teacher-form tr > :last-child { border-right: 0 !important; }
-    .teacher-form tr:last-child > * { border-bottom: 0 !important; }
-    .teacher-form tfoot td[data-sticky-end] { background-color: color-mix(in oklab, var(--muted) 50%, var(--card)) !important; }
+    .teacher-form [data-slot='table'] tr > :last-child { border-right: 0 !important; }
+    .teacher-form [data-slot='table'] > :is(tbody, tfoot):last-child > tr:last-child > * { border-bottom: 0 !important; }
 }
 
 .teacher-form [data-slot='table-container'] {
-    --tw-ring-color: var(--border);
+    border-radius: 0;
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.teacher-form .free-text-editor__area {
+    min-height: 0;
+    padding: 0;
+}
+
+.teacher-form .free-text-editor .free-text-editor__area .free-text-editor__content {
+    min-height: 4rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.teacher-form .free-text-editor .free-text-editor__content > p:last-child {
+    margin-bottom: 0;
+}
+
+.teacher-form .free-text-editor:has(.free-text-editor__content > .tableWrapper:first-child) {
+    border: 0;
+    background-color: transparent;
+}
+
+.teacher-form .free-text-editor:has(.free-text-editor__content > .tableWrapper:first-child) :is([role='toolbar'], .free-text-editor__area ~ div) {
+    padding-inline: 0;
+}
+
+.teacher-form .free-text-editor .free-text-editor__area .free-text-editor__content:has(> .tableWrapper:first-child) {
+    min-height: 0;
+    padding: 0.5rem 1px 0;
+}
+
+.teacher-form .syllabus-readonly-field:has(.free-text-table) {
+    padding: 0 1px;
+    background-color: transparent;
+    box-shadow: none;
 }
 
 .field-response-editor {

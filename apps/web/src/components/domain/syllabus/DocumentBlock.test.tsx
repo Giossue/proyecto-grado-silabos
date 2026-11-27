@@ -1,6 +1,7 @@
 import { fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { searchLibraryCatalog } from "@/api/libraryCatalog"
+import { BlockForm } from "@/components/domain/syllabus/BlockForm"
 import { FreeTextContent } from "@/components/domain/syllabus/FreeTextContent"
 import { FreeTextEditor } from "@/components/domain/syllabus/FreeTextEditor"
 import { setTemplateRuntime } from "@/lib/blocks/runtime"
@@ -149,6 +150,23 @@ describe("bloques definidos en la plantilla", () => {
       expect([...container.querySelectorAll("th")].map((item) => item.textContent)).toEqual(["Autor", "Título", "Año", "Ciudad", "Editorial", "ISBN", "Código"])
       expect(container.querySelectorAll("tr")).toHaveLength(3)
       expect(container.textContent).toContain("9789563431063")
+    })
+
+    it("al llenarla, sus siete columnas usan un ancho mínimo corto para caber sin desplazarse", () => {
+      render(<BlockForm id="campo" kind="bibliografia" blockProps={{}} value={{ libros: [empty] }} disabled={false} required onValueChange={vi.fn()} />)
+      const heads = [...document.body.querySelectorAll('table[data-slot="table"] thead th')].filter((item) => item.textContent !== "Acciones")
+
+      expect(heads).toHaveLength(7)
+      for (const head of heads) expect(head, head.textContent!).toHaveClass("min-w-28")
+    })
+
+    it("las tablas con pocas columnas de texto, como las unidades, conservan su ancho", () => {
+      render(<BlockForm id="campo" kind="unidades" blockProps={{}} value={{ units: [{ nombre: "", resultado: "", semanas: [{ contenidos: "", acd_h: "", ape_h: "", aa_h: "", acd: "", ape: "", aa: "", evaluacion: "" }] }] }} disabled={false} required onValueChange={vi.fn()} />)
+      const heads = [...document.body.querySelectorAll('table[data-slot="table"] thead th')]
+      const wide = heads.filter((item) => item.classList.contains("min-w-48"))
+
+      expect(wide.length).toBeGreaterThan(0)
+      expect(heads.filter((item) => item.classList.contains("min-w-28"))).toHaveLength(0)
     })
 
     it("el docente escribe en las columnas y agrega o quita libros", async () => {

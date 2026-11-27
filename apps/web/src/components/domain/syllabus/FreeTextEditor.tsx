@@ -473,7 +473,7 @@ export function FreeTextEditor({
           ) : null}
         </div>
       ) : null}
-      <EditorContent editor={editor} className={cn("overflow-x-auto", !bare && "min-h-32 px-3 py-2 text-sm")} />
+      <EditorContent editor={editor} className={cn("overflow-x-auto", !bare && "free-text-editor__area min-h-32 px-3 py-2 text-sm")} />
       {editor && toolbar && hasTable && !disabled ? (
         <div className="px-3 pb-2">
           <Button type="button" variant="outline" size="sm" onMouseDown={(event) => event.preventDefault()} onClick={addTableRow}>
