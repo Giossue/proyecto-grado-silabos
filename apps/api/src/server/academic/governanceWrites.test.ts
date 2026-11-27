@@ -229,12 +229,13 @@ describe("POST /api/v1/admin/academic/{entity}", () => {
 
   it("creates a period whose weeks come from the dates unless corrected, named after its months", async () => {
     expect(periodWeeks("2027-04-05", "2027-08-20")).toBe(20)
-    expect(periodLabel("2026-11-02", "2027-03-12")).toBe("Noviembre-Marzo 2026-2027")
+    expect(periodLabel("2026-11-02", "2027-03-12")).toBe("NOVIEMBRE-MARZO 2026-2027")
+    expect(periodLabel("2026-08-03", "2026-12-18")).toBe("AGOSTO-DICIEMBRE 2026")
     expect((await create("periodo", { starts_on: "2027-04-05", ends_on: "2027-08-20" })).status).toBe(201)
     expect((await create("periodo", { starts_on: "2027-04-05", ends_on: "2027-08-20", teaching_weeks: 16 })).status).toBe(201)
     expect(created).toEqual([
-      { code: "Abril-Agosto 2027", startsOn: "2027-04-05", endsOn: "2027-08-20", weeks: 20 },
-      { code: "Abril-Agosto 2027", startsOn: "2027-04-05", endsOn: "2027-08-20", weeks: 16 },
+      { code: "ABRIL-AGOSTO 2027", startsOn: "2027-04-05", endsOn: "2027-08-20", weeks: 20 },
+      { code: "ABRIL-AGOSTO 2027", startsOn: "2027-04-05", endsOn: "2027-08-20", weeks: 16 },
     ])
   })
 

@@ -8,13 +8,13 @@ import { DatePicker } from "@/components/DatePicker"
 import { FormDialogFooter } from "@/components/domain/FormDialogActions"
 import { FormModal } from "@/components/domain/FormModal"
 import { Button } from "@/components/ui/button"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
 import { useFormSteps } from "@/composables/useFormSteps"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
 import { useInstitutionToday } from "@/composables/useInstitutionDate"
 import { applyApiErrors, errorMessages, useSchemaForm } from "@/lib/forms"
-import { periodSchema } from "@silabos/shared/schemas/academic"
+import { periodSchema, TEACHING_WEEKS_MAX } from "@silabos/shared/schemas/academic"
 import { processCreationSchema } from "@silabos/shared/schemas/syllabus"
 
 type ConvocationPeriodDialogProps = {
@@ -60,11 +60,14 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
   })
 
   const todayIso = useInstitutionToday()
-  const periodEndMinimum = form.starts_on || todayIso
+  // A period that already ended cannot be opened, even when its classes started in the past.
+  const periodEndMinimum = form.starts_on > todayIso ? form.starts_on : todayIso
   const dueMinimum = form.starts_at > todayIso ? form.starts_at : todayIso
   const periodEnd = form.ends_on || undefined
   const periodComplete = Boolean(form.starts_on && form.ends_on)
   const calendarWeeks = periodComplete ? Math.round((monday(form.ends_on) - monday(form.starts_on)) / 604_800_000) + 1 : null
+  const tooLong = calendarWeeks !== null && calendarWeeks > TEACHING_WEEKS_MAX
+  const endErrors = tooLong ? [`El período no puede superar ${TEACHING_WEEKS_MAX} semanas calendario`] : errors.ends_on
   const processComplete = Boolean(form.starts_at && form.due_at)
   const periodCreated = createdPeriodId !== null
 
@@ -83,7 +86,7 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
   const handleFormSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault()
     if (step === 1) {
-      if (periodComplete) goTo(2)
+      if (periodComplete && !tooLong) goTo(2)
       return
     }
     if (processComplete) void submitOrReturn(event)
@@ -116,10 +119,11 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
     }
   }
 
-  const description = (fallback: string): string => (periodCreated ? "El periodo ya quedó creado; solo falta abrirlo" : fallback)
+  const heading = step === 1 ? { title: "Periodo lectivo", description: "Elija cuándo empiezan y terminan las clases" } : { title: "Elaboración de sílabos", description: "Elija cuándo empieza la elaboración y hasta cuándo se entrega" }
+  const description = periodCreated ? "El periodo ya quedó creado; solo falta abrirlo" : heading.description
 
   return (
-    <FormModal open={isOpen} onOpenChange={setOpen} disabled={disabled} triggerLabel="Nuevo periodo académico" title="Nuevo periodo académico" description="Primero el periodo lectivo y después las fechas de los sílabos">
+    <FormModal open={isOpen} onOpenChange={setOpen} disabled={disabled} triggerLabel="Nuevo periodo académico" title={heading.title} description={description}>
       {({ close }) => (
         <form onSubmit={handleFormSubmit} noValidate>
           <FieldGroup>
@@ -131,8 +135,6 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
             <div className="relative overflow-hidden">
               {step === 1 ? (
                 <FieldSet key="period" className={stepClassName}>
-                  <FieldLegend>Periodo lectivo</FieldLegend>
-                  <FieldDescription>{description("Fechas de inicio y fin de clases; la etiqueta se genera con el rango de meses y año")}</FieldDescription>
                   <div className="grid grid-cols-2 items-start gap-4">
                     <Field data-invalid={Boolean(errors.starts_on)}>
                       <FieldLabel htmlFor="convocation-period-starts" required>
@@ -141,12 +143,12 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
                       <DatePicker id="convocation-period-starts" value={form.starts_on} onValueChange={(value) => update("starts_on", value)} disabled={periodCreated} required ariaInvalid={Boolean(errors.starts_on)} />
                       <FieldError errors={errors.starts_on} />
                     </Field>
-                    <Field data-invalid={Boolean(errors.ends_on)}>
+                    <Field data-invalid={Boolean(endErrors?.length)}>
                       <FieldLabel htmlFor="convocation-period-ends" required>
                         Fin de clases
                       </FieldLabel>
-                      <DatePicker id="convocation-period-ends" value={form.ends_on} onValueChange={(value) => update("ends_on", value)} minValue={periodEndMinimum} disabled={periodCreated} required ariaInvalid={Boolean(errors.ends_on)} />
-                      <FieldError errors={errors.ends_on} />
+                      <DatePicker id="convocation-period-ends" value={form.ends_on} onValueChange={(value) => update("ends_on", value)} minValue={periodEndMinimum} disabled={periodCreated} required ariaInvalid={Boolean(endErrors?.length)} />
+                      <FieldError errors={endErrors} />
                     </Field>
                   </div>
                   {calendarWeeks ? (
@@ -157,8 +159,6 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
                 </FieldSet>
               ) : (
                 <FieldSet key="syllabus" className={stepClassName}>
-                  <FieldLegend>Elaboración de sílabos</FieldLegend>
-                  <FieldDescription>{description("Elija cuándo empieza la elaboración y hasta cuándo se entrega")}</FieldDescription>
                   <div className="grid grid-cols-2 items-start gap-4">
                     <Field data-invalid={Boolean(errors.starts_at)}>
                       <FieldLabel htmlFor="convocation-starts" required>
@@ -191,7 +191,7 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
                 </Button>
               )}
               {step === 1 ? (
-                <Button type="submit" disabled={!periodComplete}>
+                <Button type="submit" disabled={!periodComplete || tooLong}>
                   Siguiente
                   <ArrowRight data-icon="inline-end" aria-hidden="true" />
                 </Button>

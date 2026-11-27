@@ -49,3 +49,6 @@ next-env.d.ts
 # local data
 /storage/
 /respaldos/
+
+# Material de referencia local (ejemplos, borradores); no se versiona
+/temp/

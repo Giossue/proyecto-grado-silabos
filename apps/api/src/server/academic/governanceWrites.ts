@@ -140,7 +140,8 @@ export function periodLabel(startsOn: string, endsOn: string): string {
   const [startYear, startMonth] = startsOn.split("-").map(Number)
   const [endYear, endMonth] = endsOn.split("-").map(Number)
   const year = startYear === endYear ? String(startYear) : `${startYear}-${endYear}`
-  return `${MONTHS[startMonth - 1]}-${MONTHS[endMonth - 1]} ${year}`
+  // Written as the university syllabus writes it: «AGOSTO-DICIEMBRE 2026».
+  return `${MONTHS[startMonth - 1]}-${MONTHS[endMonth - 1]} ${year}`.toUpperCase()
 }
 
 export function phpIntCast(value: PhpValue | undefined): number {

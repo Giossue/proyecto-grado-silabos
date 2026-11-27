@@ -14,7 +14,7 @@ vi.mock("@/api/processes", async (importOriginal) => ({ ...(await importOriginal
 
 vi.mock("@/components/DatePicker", () => ({
   DatePicker: (props: PickerProps) => (
-    <input data-date-picker id={props.id} value={props.value ?? ""} aria-required={props.required ? "true" : undefined} onChange={(event) => props.onValueChange?.(event.target.value)} />
+    <input data-date-picker data-min={props.minValue ?? ""} id={props.id} value={props.value ?? ""} aria-required={props.required ? "true" : undefined} onChange={(event) => props.onValueChange?.(event.target.value)} />
   ),
 }))
 
@@ -50,7 +50,70 @@ const mountDialog = async () => {
   return { ...view, onSaved }
 }
 
+const heading = (): [string, string] => {
+  const dialog = document.querySelector('[role="dialog"]')!
+  return [dialog.querySelector('[data-slot="dialog-title"]')!.textContent!, dialog.querySelector('[data-slot="dialog-description"]')!.textContent!]
+}
+const PERIOD_STEP: [string, string] = ["Periodo lectivo", "Elija cuándo empiezan y terminan las clases"]
+const DRAFTING_STEP: [string, string] = ["Elaboración de sílabos", "Elija cuándo empieza la elaboración y hasta cuándo se entrega"]
+
 describe("ConvocationPeriodDialog", () => {
+  it("«Fin de clases» no admite días anteriores a hoy ni al inicio, aunque las clases ya hayan empezado", async () => {
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(new Date())
+    const { unmount } = await mountDialog()
+    const [starts, ends] = pickers()
+    expect(ends!.dataset.min).toBe(today)
+
+    choose(starts!, "2020-03-02")
+    await flush()
+    expect(pickers()[1]!.dataset.min).toBe(today)
+
+    choose(starts!, "2099-03-02")
+    await flush()
+    expect(pickers()[1]!.dataset.min).toBe("2099-03-02")
+    expect(pickers()[0]!.dataset.min).toBe("")
+    unmount()
+  })
+
+  it("el título y la descripción del modal cambian con el paso, sin repetirlos dentro del formulario", async () => {
+    const { unmount } = await mountDialog()
+    expect(heading()).toEqual(PERIOD_STEP)
+    expect(document.querySelector("form")!.textContent).not.toContain("Periodo lectivo")
+    expect(document.querySelector("form")!.textContent).not.toContain("la etiqueta se genera")
+
+    const [starts, ends] = pickers()
+    choose(starts!, "2026-10-05")
+    choose(ends!, "2027-02-26")
+    await flush()
+    await submitForm()
+    expect(heading()).toEqual(DRAFTING_STEP)
+    expect(document.querySelector("form")!.textContent).not.toContain("Elaboración de sílabos")
+    expect(document.querySelector("form")!.textContent).not.toContain("Elija cuándo")
+    unmount()
+  })
+
+  it("con más de 52 semanas lo avisa en el primer paso y no deja avanzar; con 52 avanza", async () => {
+    const { unmount } = await mountDialog()
+    const [starts, ends] = pickers()
+    const next = (): HTMLButtonElement => [...document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Siguiente"))!
+    choose(starts!, "2026-10-05")
+    choose(ends!, "2027-10-04")
+    await flush()
+    expect(document.body.textContent).toContain("Serían 53 semanas")
+    expect(document.body.textContent).toContain("El período no puede superar 52 semanas calendario")
+    expect(next().disabled).toBe(true)
+    await submitForm()
+    expect(document.body.textContent).toContain("Periodo lectivo")
+
+    choose(ends!, "2027-10-01")
+    await flush()
+    expect(document.body.textContent).not.toContain("no puede superar")
+    expect(next().disabled).toBe(false)
+    await submitForm()
+    expect(document.body.textContent).toContain("Elaboración de sílabos")
+    unmount()
+  })
+
   it("pide el periodo primero, no avanza sin fechas y luego pide la elaboración", async () => {
     const { unmount } = await mountDialog()
     let current = pickers()
@@ -75,7 +138,7 @@ describe("ConvocationPeriodDialog", () => {
   it("el primer paso aparece quieto al abrir y solo se desliza al cambiar de paso", async () => {
     const { unmount } = await mountDialog()
     const step = (): HTMLElement => document.querySelector<HTMLElement>('[data-slot="field-set"]')!
-    expect(step().textContent).toContain("Periodo lectivo")
+    expect(heading()).toEqual(PERIOD_STEP)
     expect(step().className).not.toMatch(/animate-in|slide-in|convocation-step/)
 
     const [starts, ends] = pickers()
@@ -83,14 +146,14 @@ describe("ConvocationPeriodDialog", () => {
     choose(ends!, "2027-02-26")
     await flush()
     await submitForm()
-    expect(step().textContent).toContain("Elaboración de sílabos")
+    expect(heading()).toEqual(DRAFTING_STEP)
     expect(step().className).toContain("animate-in")
     expect(step().className).toContain("slide-in-from-right-8")
 
     const back = [...document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === "Atrás")!
     fireEvent.click(back)
     await flush()
-    expect(step().textContent).toContain("Periodo lectivo")
+    expect(heading()).toEqual(PERIOD_STEP)
     expect(step().className).toContain("slide-in-from-left-8")
     unmount()
   })

@@ -364,7 +364,7 @@ test.describe.serial("template editing during a paused convocation", () => {
 
       const periodsBefore = await query<{ code: string }>("select codigo_periodo_academico as code from periodos_academicos")
       await page.getByRole("button", { name: "Nuevo periodo académico" }).click()
-      const dialog = page.getByRole("dialog", { name: "Nuevo periodo académico" })
+      const dialog = page.getByRole("dialog")
       await pickDate(page, "convocation-period-starts", new Date(Date.UTC(2027, 3, 5)))
       await pickDate(page, "convocation-period-ends", new Date(Date.UTC(2027, 7, 27)))
       await dialog.getByRole("button", { name: "Siguiente" }).click()
