@@ -12,13 +12,13 @@ import { FieldResponseEditor } from "@/components/domain/syllabus/FieldResponseE
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Field, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { useOpened } from "@/composables/useModelOpen"
 import { queryErrorMessage } from "@/lib/queryClient"
-import { withoutFinalPeriod } from "@/lib/utils"
+import { cn, withoutFinalPeriod } from "@/lib/utils"
 import { BULK_NO_OPTIONS, BULK_UNDECIDED } from "@silabos/shared/schemas/imports"
 import { RESPONSE_NODE, careerFieldUndecided, responseAttrs, responseNeedsOptions } from "@silabos/shared/lib/responseKinds"
 import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocument"
@@ -162,20 +162,24 @@ export function BulkFieldDialog({ open, onOpenChange, subjects, onApplied }: Bul
                     <SelectTrigger id="bulk-field" className="w-full" aria-invalid={Boolean(problems.field)}>
                       <SelectValue placeholder="Elija qué campo llenar" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {sections.map((section) => (
-                        <SelectGroup key={section}>
-                          <SelectLabel>{section}</SelectLabel>
-                          {fields
-                            .filter((candidate) => sectionOf(candidate) === section)
-                            .map((candidate) => (
-                              <SelectItem key={candidate.id} value={candidate.id}>
-                                {nameOf(candidate)}
-                                <span className="text-muted-foreground"> · {missingIn(candidate) ? `falta en ${missingIn(candidate)}` : "todas ya lo tienen"}</span>
+                    <SelectContent className="max-w-(--radix-select-trigger-width)">
+                      {sections.map((section) => {
+                        const inSection = fields.filter((candidate) => sectionOf(candidate) === section)
+
+                        return (
+                          <SelectGroup key={section}>
+                            {inSection.length > 1 || nameOf(inSection[0]!) !== section ? <SelectLabel>{section}</SelectLabel> : null}
+                            {inSection.map((candidate) => (
+                              <SelectItem key={candidate.id} value={candidate.id} className="whitespace-normal">
+                                <span>
+                                  {nameOf(candidate)}
+                                  <span className="text-muted-foreground"> · {missingIn(candidate) ? `falta en ${missingIn(candidate)}` : "todas ya lo tienen"}</span>
+                                </span>
                               </SelectItem>
                             ))}
-                        </SelectGroup>
-                      ))}
+                          </SelectGroup>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                   {problems.field ? <FieldError errors={[problems.field]} /> : null}
@@ -212,12 +216,7 @@ export function BulkFieldDialog({ open, onOpenChange, subjects, onApplied }: Bul
                       </p>
                     ) : null}
                     {filledSubjects.length ? (
-                      <FieldSet className="gap-3 rounded-md p-3 ring-1 ring-surface-ring">
-                        <FieldLegend variant="label" className="mb-0">
-                          {filledSubjects.length === 1
-                            ? "1 ya tiene contenido y no cambia, salvo que la marque"
-                            : `${filledSubjects.length} ya tienen contenido y no cambian, salvo las que marque`}
-                        </FieldLegend>
+                      <FieldSet className="gap-3 rounded-md p-3 ring-1 ring-surface-ring" aria-label="Materias que ya tienen contenido">
                         {filledSubjects.length > 1 ? (
                           <Field orientation="horizontal">
                             <Checkbox
@@ -231,14 +230,17 @@ export function BulkFieldDialog({ open, onOpenChange, subjects, onApplied }: Bul
                             <FieldLabel htmlFor="bulk-replace-all">Reemplazar en todas</FieldLabel>
                           </Field>
                         ) : null}
-                        <ul className="grid max-h-48 gap-2 overflow-y-auto sm:grid-cols-2">
+                        <ul className={cn("flex flex-col gap-3", filledSubjects.length > 1 && "border-t pt-3")}>
                           {filledSubjects.map((subject) => (
                             <li key={subject.id}>
                               <Field orientation="horizontal">
                                 <Checkbox id={`bulk-replace-${subject.id}`} checked={replaced.includes(subject.id)} onCheckedChange={(checked) => toggle(subject.id, checked === true)} />
                                 <FieldLabel htmlFor={`bulk-replace-${subject.id}`} className="font-normal">
-                                  {subject.name}
-                                  <span className="text-muted-foreground"> · {subject.code}</span>
+                                  <span>
+                                    {filledSubjects.length === 1 ? "Reemplazar en " : null}
+                                    {subject.name}
+                                    <span className="text-muted-foreground"> · {subject.code}</span>
+                                  </span>
                                 </FieldLabel>
                               </Field>
                             </li>
@@ -252,7 +254,7 @@ export function BulkFieldDialog({ open, onOpenChange, subjects, onApplied }: Bul
               </FieldGroup>
             )}
           </div>
-          <DialogFooter className="border-t px-6 py-4">
+          <DialogFooter className="mx-0 border-t px-6 py-4">
             <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>
               {lockReason ? "Cerrar" : "Cancelar"}
             </Button>

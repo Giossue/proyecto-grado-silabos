@@ -73,6 +73,39 @@ describe("BulkFieldDialog", () => {
     expect(fillBulkField).not.toHaveBeenCalled()
   })
 
+  it("no repite el nombre de una sección que tiene un solo campo con ese mismo nombre", async () => {
+    await openDialog(catalog({ fields: [{ ...field("recursos", "Recursos", []), section: "Recursos" }, { ...field("metodos", "Métodos", []), section: "Metodología" }, { ...field("tecnicas", "Técnicas", []), section: "Metodología" }] }))
+
+    expect([...document.body.querySelectorAll("[data-select] p")].map((item) => item.textContent)).toEqual(["Metodología"])
+  })
+
+  it("las materias por reemplazar van en una sola lista, de arriba abajo y sin barra propia", async () => {
+    await openDialog()
+    await chooseField("tecnicas")
+    const list = replaceBox("s1")!.closest("ul")!
+
+    expect(list.className).toContain("flex-col")
+    expect(list.className).not.toMatch(/grid|columns|overflow|max-h/)
+    expect([...list.querySelectorAll("li")].map((item) => item.textContent)).toEqual(["Algoritmos · SW-1", "Álgebra · SW-2", "Cálculo · SW-3"])
+  })
+
+  it("cada materia por reemplazar muestra su nombre y su código juntos", async () => {
+    await openDialog()
+    await chooseField("metodos")
+    const label = document.body.querySelector('label[for="bulk-replace-s2"]')!
+
+    expect(label.children).toHaveLength(1)
+    expect(label.children[0]!.textContent).toBe("Reemplazar en Álgebra · SW-2")
+  })
+
+  it("la ventana y la lista de campos no se salen de su ancho", async () => {
+    await openDialog()
+    const footer = document.body.querySelector('[data-slot="dialog-footer"]')!
+
+    expect(footer.className).toContain("mx-0")
+    expect(footer.className).not.toContain("-mx-6")
+  })
+
   it("al elegir el campo abre el editor y separa las materias sin definir de las que ya tienen contenido", async () => {
     await openDialog()
     expect(document.body.querySelector('[data-value="metodos"]')!.textContent).toContain("falta en 2")
@@ -81,7 +114,8 @@ describe("BulkFieldDialog", () => {
 
     expect(document.body.querySelector("[data-editor]")!.getAttribute("data-document")).toBe(JSON.stringify(documents.blank))
     expect(text()).toContain("Se llenará en 2 materias sin definir")
-    expect(text()).toContain("1 ya tiene contenido y no cambia, salvo que la marque")
+    expect(text()).not.toContain("ya tiene contenido y no cambia")
+    expect(document.body.querySelector('label[for="bulk-replace-s2"]')!.textContent).toBe("Reemplazar en Álgebra · SW-2")
     expect(replaceBox("s2")!.getAttribute("aria-checked")).toBe("false")
     expect(replaceBox("s1")).toBeNull()
     expect(submitLabel()).toBe("Llenar 2 materias")
@@ -127,7 +161,8 @@ describe("BulkFieldDialog", () => {
     await chooseField("tecnicas")
     await press(buttonWithText("editor: escribir"))
 
-    expect(text()).toContain("3 ya tienen contenido y no cambian, salvo las que marque")
+    expect(text()).not.toContain("ya tienen contenido y no cambian")
+    expect(document.body.querySelector('label[for="bulk-replace-all"]')!.textContent).toBe("Reemplazar en todas")
     expect(submitLabel()).toBe("Llenar materias")
     await submit()
     expect(text()).toContain("Marque qué materias quiere reemplazar: todas ya tienen contenido")

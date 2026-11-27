@@ -21,9 +21,9 @@ Rama: `main`, commits locales sin push. Pruebas: vitest en `apps/api`, `apps/web
 ## Tasks
 
 - [x] T1 (S4) — en línea. Borrado verificado; sin commit (está fuera del repositorio).
-- [ ] T2 (S1) — en línea. Hecho sin commit: servidor (`subjectProfileBulk*`, rutas `ficha-bulk`, esquema compartido) y ventana (`BulkFieldDialog`, `api/ficha-bulk.ts`) con RED/GREEN. Falta: casillas y barra en la lista, guía, ayuda, esqueletos, docs y prueba en pantalla.
-- [ ] T3 (S2) — en línea: quitar la importación Excel del proyecto de carrera.
-- [ ] T4 (S3) — en línea. Hecho sin commit: pantalla, Excel de carreras, API, esquema y e2e, con RED/GREEN. Falta: `docs/sistema.md`, guías y ayuda.
+- [x] T2 (S1) — en línea. Servidor, ventana, casillas, barra, guía, ayuda, esqueleto y docs en `2bd8e51`. Arreglos de pantalla posteriores sin commit.
+- [x] T3 (S2) — en línea, en `2bd8e51`.
+- [x] T4 (S3) — en línea, en `2bd8e51`.
 - [ ] T5 — revisión independiente antes de subir (escribe datos guardados en grupo).
 
 ## Log
@@ -34,3 +34,9 @@ Rama: `main`, commits locales sin push. Pruebas: vitest en `apps/api`, `apps/web
 - L4 (2026-11-27) — T1: borrada la fila del mensaje del 26-11; integridad de la base correcta.
 - L5 (2026-11-27) — Otra sesión (proyecto-grado-silabos-nextjs-de) avisó que trabaja en el mismo árbol con cambios sin commit: cambia la regla de edición del proyecto de carrera (según relata, su usuario decidió allí que Coordinación edite antes de abrir y en pausa, no con el periodo abierto) y renombra `careerEditable` a `careerBlock`. Se le pidió hacer commit primero. Hasta entonces no se editan sus archivos ni se hace commit, porque el código nuevo depende de su cambio.
 - L6 (2026-11-27) — Evidencia: API 2808/2810 en la corrida completa (los 2 fallos, en `fichaImports.test.ts`, pasan solos 22/22: tiempo agotado por carga); `src/components/domain/academic` 225/225; shared 167/167; `BulkFieldDialog` 9/9; `subjectProfileBulk` 13/13; tsc sin errores. Siguiente: tras su commit, conectar la ventana a la lista, T3, docs y guías, prueba en pantalla, imagen web, commits y revisión independiente.
+- L7 (2026-11-27) — El commit `2bd8e51` (14:04) y su push (14:08) los hizo el usuario: «sisi fui yo, calma».
+- L8 (2026-11-27) — Evidencia en copias de la base local (borradas): 8 materias llenadas a la vez sin tocar otros campos; reemplaza solo la marcada; pide confirmar antes de devolver a borrador un sílabo aprobado y no escribe nada hasta entonces; un fallo a mitad no deja nada guardado.
+- L9 (2026-11-27) — En pantalla se corrigieron el pie que sobresalía, la lista de campos más ancha que la ventana, nombres de sección repetidos y el código separado del nombre.
+- L10 (2026-11-27) — El usuario, textual: «te detengo, porque me dijeron que está medio complejo esto». Se le propusieron «Copiar de una materia» o una ventana corta. Respondió, textual: «si pones mejor esto en orden estaría bien … o sea de arriba para abajo, en llista, veamos como queda». La lista de materias por reemplazar pasa a una sola columna sin barra propia. Pendiente: su visto bueno, imagen web y revisión independiente (T5).
+- L11 (2026-11-27) — El usuario, textual: «Borra eso que dice "7 ya tienen contenido y no cambian, salvo las que marque"». Se quita el encabezado de la lista; con una sola materia su casilla dice «Reemplazar en <materia>».
+- L12 (2026-11-27) — Aclarado que la ventana solo toma materias de la malla elegida, se propuso mostrar la malla y separar por ciclo. El usuario, textual: «ahhh, entendido, entonces así está bien». Queda sin ese cambio. Evidencia: web 1389/1389, tsc sin errores e imagen web construida con podman.
