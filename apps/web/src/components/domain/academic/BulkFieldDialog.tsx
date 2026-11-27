@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { CircleCheck, PencilLine } from "lucide-react"
+import { PencilLine } from "lucide-react"
 import { useState, type FormEvent } from "react"
 import { academicCareerScope } from "@/api/careerScope"
 import { ApiError } from "@/api/client"
@@ -10,15 +10,14 @@ import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { FieldResponseEditor } from "@/components/domain/syllabus/FieldResponseEditor"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { useOpened } from "@/composables/useModelOpen"
 import { queryErrorMessage } from "@/lib/queryClient"
-import { cn, withoutFinalPeriod } from "@/lib/utils"
+import { withoutFinalPeriod } from "@/lib/utils"
 import { BULK_NO_OPTIONS, BULK_UNDECIDED } from "@silabos/shared/schemas/imports"
 import { RESPONSE_NODE, careerFieldUndecided, responseAttrs, responseNeedsOptions } from "@silabos/shared/lib/responseKinds"
 import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocument"
@@ -32,10 +31,9 @@ type BulkFieldDialogProps = {
   onApplied: (message: string) => void
 }
 
-type Problems = { field?: string; value?: string; subjects?: string; request?: string }
+type Problems = { field?: string; value?: string; request?: string }
 
 const CHOOSE_FIELD = "Elija qué campo va a llenar"
-const CHOOSE_REPLACED = "Marque qué materias quiere reemplazar: todas ya tienen contenido"
 const GENERAL = "General"
 
 const sectionOf = (field: BulkField): string => field.section?.trim() || GENERAL
@@ -55,7 +53,6 @@ const focus = (id: string): void => document.getElementById(id)?.focus()
 export function BulkFieldDialog({ open, onOpenChange, subjects, onApplied }: BulkFieldDialogProps) {
   const [fieldId, setFieldId] = useState<string | null>(null)
   const [value, setValue] = useState<DocumentNode | null>(null)
-  const [replace, setReplace] = useState<string[]>([])
   const [problems, setProblems] = useState<Problems>({})
   const [saving, setSaving] = useState(false)
   const query = useQuery({ queryKey: ["career-academics", "bulk-fields", academicCareerScope()], queryFn: getBulkFields, enabled: open, staleTime: 0, gcTime: 0 })
@@ -63,7 +60,6 @@ export function BulkFieldDialog({ open, onOpenChange, subjects, onApplied }: Bul
   useOpened(open, () => {
     setFieldId(null)
     setValue(null)
-    setReplace([])
     setProblems({})
   })
 
@@ -73,22 +69,12 @@ export function BulkFieldDialog({ open, onOpenChange, subjects, onApplied }: Bul
   const field = fields.find((candidate) => candidate.id === fieldId) ?? null
   const sections = [...new Set(fields.map(sectionOf))]
   const missingIn = (candidate: BulkField): number => subjects.filter((subject) => !candidate.filled_subjects.includes(subject.id)).length
-  const undefinedSubjects = field ? subjects.filter((subject) => !field.filled_subjects.includes(subject.id)) : []
-  const filledSubjects = field ? subjects.filter((subject) => field.filled_subjects.includes(subject.id)) : []
-  const replaced = filledSubjects.filter((subject) => replace.includes(subject.id)).map((subject) => subject.id)
-  const total = undefinedSubjects.length + replaced.length
 
   const chooseField = (id: string): void => {
     if (id === fieldId) return
     setFieldId(id)
     setValue(null)
-    setReplace([])
     setProblems({})
-  }
-
-  const toggle = (id: string, checked: boolean): void => {
-    setReplace((previous) => (checked ? [...previous.filter((item) => item !== id), id] : previous.filter((item) => item !== id)))
-    setProblems((previous) => ({ ...previous, subjects: undefined }))
   }
 
   const submit = async (event: FormEvent): Promise<void> => {
@@ -106,16 +92,11 @@ export function BulkFieldDialog({ open, onOpenChange, subjects, onApplied }: Bul
       focus("bulk-value")
       return
     }
-    if (total === 0) {
-      setProblems({ subjects: CHOOSE_REPLACED })
-      focus(filledSubjects.length > 1 ? "bulk-replace-all" : `bulk-replace-${filledSubjects[0]?.id}`)
-      return
-    }
     setSaving(true)
     setProblems({})
     try {
-      const { applied } = await fillBulkField({ field_id: field.id, value: written, subjects: subjects.map((subject) => subject.id), replace: replaced })
-      onApplied(applied === 0 ? "Ninguna materia cambió: ya tenían contenido" : `Campo llenado en ${subjectsText(applied)}`)
+      const { applied } = await fillBulkField({ field_id: field.id, value: written, subjects: subjects.map((subject) => subject.id) })
+      onApplied(`Campo llenado en ${subjectsText(applied)}`)
       onOpenChange(false)
     } catch (reason) {
       if (!(reason instanceof ApiError)) setProblems({ request: "No se pudo llenar el campo" })
@@ -209,46 +190,6 @@ export function BulkFieldDialog({ open, onOpenChange, subjects, onApplied }: Bul
                         </div>
                       ) : null}
                     </Field>
-                    {undefinedSubjects.length ? (
-                      <p className="flex items-center gap-2 text-sm font-medium">
-                        <CircleCheck className="size-4 shrink-0 text-success" aria-hidden="true" />
-                        Se llenará en {subjectsText(undefinedSubjects.length)} sin definir
-                      </p>
-                    ) : null}
-                    {filledSubjects.length ? (
-                      <FieldSet className="gap-3 rounded-md p-3 ring-1 ring-surface-ring" aria-label="Materias que ya tienen contenido">
-                        {filledSubjects.length > 1 ? (
-                          <Field orientation="horizontal">
-                            <Checkbox
-                              id="bulk-replace-all"
-                              checked={replaced.length === filledSubjects.length ? true : replaced.length ? "indeterminate" : false}
-                              onCheckedChange={(checked) => {
-                                setReplace(checked === true ? filledSubjects.map((subject) => subject.id) : [])
-                                setProblems((previous) => ({ ...previous, subjects: undefined }))
-                              }}
-                            />
-                            <FieldLabel htmlFor="bulk-replace-all">Reemplazar en todas</FieldLabel>
-                          </Field>
-                        ) : null}
-                        <ul className={cn("flex flex-col gap-3", filledSubjects.length > 1 && "border-t pt-3")}>
-                          {filledSubjects.map((subject) => (
-                            <li key={subject.id}>
-                              <Field orientation="horizontal">
-                                <Checkbox id={`bulk-replace-${subject.id}`} checked={replaced.includes(subject.id)} onCheckedChange={(checked) => toggle(subject.id, checked === true)} />
-                                <FieldLabel htmlFor={`bulk-replace-${subject.id}`} className="font-normal">
-                                  <span>
-                                    {filledSubjects.length === 1 ? "Reemplazar en " : null}
-                                    {subject.name}
-                                    <span className="text-muted-foreground"> · {subject.code}</span>
-                                  </span>
-                                </FieldLabel>
-                              </Field>
-                            </li>
-                          ))}
-                        </ul>
-                        {problems.subjects ? <FieldError errors={[problems.subjects]} /> : null}
-                      </FieldSet>
-                    ) : null}
                   </>
                 ) : null}
               </FieldGroup>
@@ -261,7 +202,7 @@ export function BulkFieldDialog({ open, onOpenChange, subjects, onApplied }: Bul
             {query.data && !lockReason ? (
               <Button type="submit" disabled={saving}>
                 {saving ? <Spinner data-icon="inline-start" /> : <PencilLine data-icon="inline-start" aria-hidden="true" />}
-                {field && total ? `Llenar ${subjectsText(total)}` : "Llenar materias"}
+                {field ? `Llenar ${subjectsText(subjects.length)}` : "Llenar materias"}
               </Button>
             ) : null}
           </DialogFooter>

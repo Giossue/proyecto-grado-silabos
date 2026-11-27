@@ -11,12 +11,10 @@ export const subjectProfileBulkSchema = z
     field_id: requiredField("campo", [is.uuid()]),
     value: nullableField("contenido del campo", [is.array()]),
     subjects: requiredField("materias", [is.array(), is.min(1), is.max(500)]),
-    replace: sometimesField("materias que se reemplazan", [is.array()]),
     confirm_purge: sometimesField("confirmación de borrado", [is.boolean()]),
   })
   .superRefine(async (input, context) => {
     await checkItems(context, itemsAt(input.subjects, ["subjects"]), "materia", [is.uuid(), is.distinct()])
-    await checkItems(context, itemsAt(input.replace, ["replace"]), "materia que se reemplaza", [is.uuid(), is.distinct()])
   })
 
 export const subjectProfileValuesSchema = z

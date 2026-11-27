@@ -14,7 +14,7 @@ export type BulkFields = {
   lock_reason?: string | null;
 };
 
-export type BulkFill = { field_id: string; value: DocumentNode; subjects: string[]; replace: string[] };
+export type BulkFill = { field_id: string; value: DocumentNode; subjects: string[] };
 
 export const getBulkFields = () =>
   api<BulkFields>(fichaBulkPath()).then((response) => {
@@ -24,5 +24,5 @@ export const getBulkFields = () =>
 
 export const fillBulkField = (payload: BulkFill) =>
   withPurgeConfirmation((confirmPurge) =>
-    api<{ message: string; applied: number; skipped: number }>(fichaBulkPath(), { method: "POST", body: jsonBody(payload, confirmPurge) }),
+    api<{ message: string; applied: number }>(fichaBulkPath(), { method: "POST", body: jsonBody(payload, confirmPurge) }),
   );

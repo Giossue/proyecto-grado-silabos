@@ -46,7 +46,6 @@ const press = async (element: Element | undefined | null) => {
 const chooseField = (id: string) => press(document.body.querySelector(`[data-value="${id}"]`))
 const submit = () => press([...document.body.querySelectorAll<HTMLButtonElement>('button[type="submit"]')][0])
 const submitLabel = () => document.body.querySelector('button[type="submit"]')?.textContent?.trim()
-const replaceBox = (id: string) => document.body.querySelector<HTMLButtonElement>(`#bulk-replace-${id}`)
 
 async function openDialog(response: BulkFields = catalog()) {
   vi.mocked(getBulkFields).mockResolvedValue(response)
@@ -57,7 +56,7 @@ async function openDialog(response: BulkFields = catalog()) {
 describe("BulkFieldDialog", () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(fillBulkField).mockResolvedValue({ message: "Campo llenado.", applied: 2, skipped: 1 })
+    vi.mocked(fillBulkField).mockResolvedValue({ message: "Campo llenado.", applied: 3 })
   })
 
   it("dice cuántas materias se marcaron y pide el campo antes de aplicar, sin desactivar el botón", async () => {
@@ -79,25 +78,6 @@ describe("BulkFieldDialog", () => {
     expect([...document.body.querySelectorAll("[data-select] p")].map((item) => item.textContent)).toEqual(["Metodología"])
   })
 
-  it("las materias por reemplazar van en una sola lista, de arriba abajo y sin barra propia", async () => {
-    await openDialog()
-    await chooseField("tecnicas")
-    const list = replaceBox("s1")!.closest("ul")!
-
-    expect(list.className).toContain("flex-col")
-    expect(list.className).not.toMatch(/grid|columns|overflow|max-h/)
-    expect([...list.querySelectorAll("li")].map((item) => item.textContent)).toEqual(["Algoritmos · SW-1", "Álgebra · SW-2", "Cálculo · SW-3"])
-  })
-
-  it("cada materia por reemplazar muestra su nombre y su código juntos", async () => {
-    await openDialog()
-    await chooseField("metodos")
-    const label = document.body.querySelector('label[for="bulk-replace-s2"]')!
-
-    expect(label.children).toHaveLength(1)
-    expect(label.children[0]!.textContent).toBe("Reemplazar en Álgebra · SW-2")
-  })
-
   it("la ventana y la lista de campos no se salen de su ancho", async () => {
     await openDialog()
     const footer = document.body.querySelector('[data-slot="dialog-footer"]')!
@@ -106,19 +86,17 @@ describe("BulkFieldDialog", () => {
     expect(footer.className).not.toContain("-mx-6")
   })
 
-  it("al elegir el campo abre el editor y separa las materias sin definir de las que ya tienen contenido", async () => {
+  it("al elegir el campo solo abre el editor, sin avisos ni casillas, y cuenta todas las materias", async () => {
     await openDialog()
     expect(document.body.querySelector('[data-value="metodos"]')!.textContent).toContain("falta en 2")
     expect(document.body.querySelector('[data-value="tecnicas"]')!.textContent).toContain("todas ya lo tienen")
     await chooseField("metodos")
 
     expect(document.body.querySelector("[data-editor]")!.getAttribute("data-document")).toBe(JSON.stringify(documents.blank))
-    expect(text()).toContain("Se llenará en 2 materias sin definir")
-    expect(text()).not.toContain("ya tiene contenido y no cambia")
-    expect(document.body.querySelector('label[for="bulk-replace-s2"]')!.textContent).toBe("Reemplazar en Álgebra · SW-2")
-    expect(replaceBox("s2")!.getAttribute("aria-checked")).toBe("false")
-    expect(replaceBox("s1")).toBeNull()
-    expect(submitLabel()).toBe("Llenar 2 materias")
+    expect(text()).not.toContain("sin definir")
+    expect(text()).not.toContain("Reemplazar")
+    expect(document.body.querySelector('[role="checkbox"]')).toBeNull()
+    expect(submitLabel()).toBe("Llenar 3 materias")
   })
 
   it("no aplica un campo sin decidir", async () => {
@@ -134,57 +112,24 @@ describe("BulkFieldDialog", () => {
     expect(fillBulkField).not.toHaveBeenCalled()
   })
 
-  it("llena las materias sin definir y no pide reemplazar ninguna", async () => {
-    await openDialog()
-    await chooseField("metodos")
-    await press(buttonWithText("editor: escribir"))
-    await submit()
-
-    expect(fillBulkField).toHaveBeenCalledWith({ field_id: "metodos", value: documents.written, subjects: ["s1", "s2", "s3"], replace: [] })
-    expect(applied.mock.calls).toEqual([["Campo llenado en 2 materias"]])
-    expect(openChange).toHaveBeenCalledWith(false)
-  })
-
-  it("reemplaza una materia que ya tenía contenido solo cuando se marca", async () => {
-    await openDialog()
-    await chooseField("metodos")
-    await press(buttonWithText("editor: escribir"))
-    await press(replaceBox("s2"))
-    expect(submitLabel()).toBe("Llenar 3 materias")
-    await submit()
-
-    expect(fillBulkField).toHaveBeenCalledWith(expect.objectContaining({ replace: ["s2"] }))
-  })
-
-  it("si todas ya tienen contenido pide marcar cuáles reemplazar y permite marcarlas juntas", async () => {
+  it("llena todas las materias seleccionadas, aunque ya tuvieran contenido", async () => {
     await openDialog()
     await chooseField("tecnicas")
     await press(buttonWithText("editor: escribir"))
-
-    expect(text()).not.toContain("ya tienen contenido y no cambian")
-    expect(document.body.querySelector('label[for="bulk-replace-all"]')!.textContent).toBe("Reemplazar en todas")
-    expect(submitLabel()).toBe("Llenar materias")
     await submit()
-    expect(text()).toContain("Marque qué materias quiere reemplazar: todas ya tienen contenido")
-    expect(fillBulkField).not.toHaveBeenCalled()
 
-    await press(document.body.querySelector("#bulk-replace-all"))
-    expect(["s1", "s2", "s3"].map((id) => replaceBox(id)!.getAttribute("aria-checked"))).toEqual(["true", "true", "true"])
-    await submit()
-    expect(fillBulkField).toHaveBeenCalledWith(expect.objectContaining({ field_id: "tecnicas", replace: ["s1", "s2", "s3"] }))
+    expect(fillBulkField).toHaveBeenCalledWith({ field_id: "tecnicas", value: documents.written, subjects: ["s1", "s2", "s3"] })
+    expect(applied.mock.calls).toEqual([["Campo llenado en 3 materias"]])
+    expect(openChange).toHaveBeenCalledWith(false)
   })
 
-  it("al cambiar de campo empieza de nuevo, sin lo escrito ni lo marcado", async () => {
+  it("al cambiar de campo empieza de nuevo, sin lo escrito", async () => {
     await openDialog()
     await chooseField("metodos")
     await press(buttonWithText("editor: escribir"))
-    await press(replaceBox("s2"))
     await chooseField("recursos")
 
     expect(document.body.querySelector("[data-editor]")!.getAttribute("data-document")).toBe(JSON.stringify(documents.blank))
-    expect(text()).toContain("Se llenará en 3 materias sin definir")
-    await chooseField("metodos")
-    expect(replaceBox("s2")!.getAttribute("aria-checked")).toBe("false")
   })
 
   it("en solo lectura explica el motivo y no ofrece llenar", async () => {

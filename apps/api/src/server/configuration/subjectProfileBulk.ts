@@ -65,7 +65,7 @@ export async function showSubjectProfileBulk(request: Request, deps: SubjectProf
   }
 }
 
-async function fillSubjects(tx: SubjectProfileTx, session: AppSession, careerId: string, input: PhpArray, subjects: string[], replace: Set<string>, deps: SubjectProfileBulkDeps): Promise<number> {
+async function fillSubjects(tx: SubjectProfileTx, session: AppSession, careerId: string, input: PhpArray, subjects: string[], deps: SubjectProfileBulkDeps): Promise<number> {
   const ordered = subjects.toSorted()
   for (const subjectId of ordered) {
     if ((await lockCareerSubject(tx, session, subjectId, deps)) !== careerId) rejectWith({ subjects: [BULK_FOREIGN_SUBJECT] })
@@ -78,13 +78,9 @@ async function fillSubjects(tx: SubjectProfileTx, session: AppSession, careerId:
   if (document === null || phpEquals(document, responseTemplate(normalizeFieldDocument(field.content, context.definition))) || fieldPending(field.content, document, context.definition)) {
     rejectWith({ value: [BULK_UNDECIDED] })
   }
-  const rows = await tx.store.valuesForSubjects(ordered, [field.id])
-  const stored = new Map(rows.map((row) => [row.subjectId, row.value]))
-  const targets = ordered.filter((subjectId) => replace.has(subjectId) || !subjectKeepsWork(field, stored.get(subjectId) ?? null, context.definition))
-  if (targets.length === 0) return 0
-  return tx.keepContent(requestBoolean(input.confirm_purge), careerId, targets, async () => {
-    for (const subjectId of targets) await tx.saveValue(subjectId, field.id, document)
-    return targets.length
+  return tx.keepContent(requestBoolean(input.confirm_purge), careerId, ordered, async () => {
+    for (const subjectId of ordered) await tx.saveValue(subjectId, field.id, document)
+    return ordered.length
   })
 }
 
@@ -99,15 +95,14 @@ export async function applySubjectProfileBulk(request: Request, deps: SubjectPro
   const { errors } = await validateSchema(subjectProfileBulkSchema, input)
   if (errors !== null) return validationError(errors)
   const subjects = textList(input.subjects)
-  const replace = new Set(textList(input.replace))
   return settle(original, deps, async () => {
     const allowed = new Set(await deps.careerSubjects(careerId))
-    if (subjects.some((subjectId) => !allowed.has(subjectId)) || [...replace].some((subjectId) => !subjects.includes(subjectId))) {
+    if (subjects.some((subjectId) => !allowed.has(subjectId))) {
       return validationError({ subjects: [BULK_FOREIGN_SUBJECT] })
     }
     try {
-      const applied = await deps.transaction((tx) => fillSubjects(tx, session, careerId, input, subjects, replace, deps))
-      return apiJson({ message: "Campo llenado.", applied, skipped: subjects.length - applied })
+      const applied = await deps.transaction((tx) => fillSubjects(tx, session, careerId, input, subjects, deps))
+      return apiJson({ message: "Campo llenado.", applied })
     } catch (error) {
       if (error instanceof TemplateValidationError) return validationError(error.errors)
       throw error

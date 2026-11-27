@@ -168,27 +168,19 @@ describe("GET ficha-bulk", () => {
 })
 
 describe("POST ficha-bulk", () => {
-  it("fills only the subjects where the field is still undefined and leaves the others as they were", async () => {
-    const before = structuredClone(stored(WRITTEN))
-    const response = await apply(fill())
-    expect(response).toEqual({ status: 200, json: { message: "Campo llenado.", applied: 2, skipped: 1 } })
-    expect(stored(WRITTEN)).toEqual(before)
-    for (const id of [EMPTY, NO_OPTIONS_YET]) expect(JSON.stringify(stored(id))).toContain('"kind":"texto"')
-    expect(log).toEqual(["lock:a1", "lock:a2", "lock:a3", `keep:false:${CAREER}:a1,a3`, "save:a1", "save:a3"])
-  })
-
-  it("replaces a subject that already had something only when it is asked to", async () => {
-    const response = await apply(fill(choices(["Aula invertida", "Estudio de casos"]), { replace: [WRITTEN] }))
-    expect(response.json).toEqual({ message: "Campo llenado.", applied: 3, skipped: 0 })
-    expect(JSON.stringify(stored(WRITTEN))).toContain("Estudio de casos")
+  it("writes the field in every chosen subject, also over what it already had", async () => {
+    const response = await apply(fill(choices(["Aula invertida", "Estudio de casos"])))
+    expect(response).toEqual({ status: 200, json: { message: "Campo llenado.", applied: 3 } })
+    for (const id of ALL) expect(JSON.stringify(stored(id))).toContain("Estudio de casos")
     expect(JSON.stringify(stored(WRITTEN))).not.toContain("ya escribió")
     expect(JSON.stringify(stored(EMPTY, OBJETIVO))).toBe("null")
+    expect(log).toEqual(["lock:a1", "lock:a2", "lock:a3", `keep:false:${CAREER}:a1,a2,a3`, "save:a1", "save:a2", "save:a3"])
   })
 
-  it("writes nothing when every chosen subject already has something", async () => {
-    const response = await apply(fill(teacherWrites(), { subjects: [WRITTEN] }))
-    expect(response.json).toEqual({ message: "Campo llenado.", applied: 0, skipped: 1 })
-    expect(log).toEqual(["lock:a2"])
+  it("leaves the subjects that were not chosen as they were", async () => {
+    const before = structuredClone(stored(WRITTEN))
+    expect((await apply(fill(teacherWrites(), { subjects: [EMPTY] }))).json).toEqual({ message: "Campo llenado.", applied: 1 })
+    expect(stored(WRITTEN)).toEqual(before)
   })
 
   it("does not apply a field that is still undecided", async () => {
@@ -198,17 +190,15 @@ describe("POST ficha-bulk", () => {
       [choices([]), BULK_NO_OPTIONS],
     ]
     for (const [value, message] of cases) {
-      const response = await apply(fill(value, { replace: [WRITTEN] }))
+      const response = await apply(fill(value))
       expect({ status: response.status, errors: errorsOf(response.json) }).toEqual({ status: 422, errors: { value: [message] } })
     }
     expect(log.filter((entry) => entry.startsWith("save") || entry === "delete")).toEqual([])
   })
 
-  it("accepts only subjects of the career, replacements among them and fields filled by the career", async () => {
-    for (const body of [fill(teacherWrites(), { subjects: [EMPTY, FOREIGN] }), fill(teacherWrites(), { subjects: [EMPTY], replace: [WRITTEN] })]) {
-      const response = await apply(body)
-      expect({ status: response.status, errors: errorsOf(response.json) }).toEqual({ status: 422, errors: { subjects: [BULK_FOREIGN_SUBJECT] } })
-    }
+  it("accepts only subjects of the career and fields filled by the career", async () => {
+    const foreign = await apply(fill(teacherWrites(), { subjects: [EMPTY, FOREIGN] }))
+    expect({ status: foreign.status, errors: errorsOf(foreign.json) }).toEqual({ status: 422, errors: { subjects: [BULK_FOREIGN_SUBJECT] } })
     expect(errorsOf((await apply(fill(teacherWrites(), { field_id: INSTITUTIONAL }))).json)).toEqual({ field_id: [FIELD_GONE] })
     for (const body of [{}, fill(teacherWrites(), { subjects: [] }), fill(teacherWrites(), { subjects: [EMPTY, EMPTY] })]) expect((await apply(body)).status).toBe(422)
     expect(log.filter((entry) => entry.startsWith("save"))).toEqual([])
@@ -220,7 +210,7 @@ describe("POST ficha-bulk", () => {
     expect({ status: blocked.status, errors: errorsOf(blocked.json) }).toEqual({ status: 422, errors: { process: [await blockedReason()] } })
     expect(stored(EMPTY)).toBeNull()
     world.assignments = [makeAssignment({ role: "administrador", careerId: null })]
-    expect((await apply(fill(), CAREER)).json).toMatchObject({ applied: 2 })
+    expect((await apply(fill(), CAREER)).json).toMatchObject({ applied: 3 })
   })
 
   it("refuses other roles and a coordinator who names another career", async () => {
@@ -237,7 +227,7 @@ describe("POST ficha-bulk", () => {
     expect(warned.status).toBe(422)
     expect(errorsOf(warned.json).purge_mode).toEqual(["convocatoria_finalizada"])
     expect(stored(EMPTY)).toBeNull()
-    expect((await apply(fill(teacherWrites(), { confirm_purge: true }))).json).toMatchObject({ applied: 2 })
+    expect((await apply(fill(teacherWrites(), { confirm_purge: true }))).json).toMatchObject({ applied: 3 })
   })
 
   it("writes nothing when one of the subjects left the career in the meantime", async () => {

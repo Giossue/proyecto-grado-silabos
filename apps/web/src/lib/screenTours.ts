@@ -95,7 +95,7 @@ export const screenTours: Record<string, TourStep[]> = {
     step(TABS, 'Materias y documentos', 'Cambie entre el proyecto de cada materia y los documentos de apoyo', 'bottom'),
     step(MALLA, 'Malla', 'En «Materias» se ve una malla a la vez. Elija aquí cuál', 'bottom'),
     step(FILTERS, 'Buscar', 'Busque una materia o filtre por ciclo o si está completa', 'bottom'),
-    step('[data-tour="career-select"]', 'Varias a la vez', 'Seleccione materias o un ciclo entero y pulse «Llenar un campo»: lo escribe una sola vez. Las que ya tienen contenido no cambian si no las marca', 'bottom'),
+    step('[data-tour="career-select"]', 'Varias a la vez', 'Seleccione materias o un ciclo entero y pulse «Llenar un campo»: lo escribe una sola vez y reemplaza lo que esas materias tengan en el campo', 'bottom'),
     step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenar su proyecto. El docente lo recibe ya escrito', 'top'),
     step(ACTIONS, 'Subir documento', 'En «Documentos de apoyo», suba un archivo para sus docentes', 'left'),
     step(TABLE, 'Documentos de apoyo', 'Archivos para que sus docentes conozcan mejor sus materias. Pulse uno para verlo', 'top'),
@@ -174,7 +174,7 @@ for (const screen of ['malla', 'materias-asignaciones', 'docentes', 'proyecto-ca
 screenTours['/admin/carreras/:career/proyecto-carrera'] = [
   step(MALLA, 'Malla', 'Se ve una malla a la vez. Elija aquí cuál', 'bottom'),
   step(FILTERS, 'Buscar', 'Busque una materia o filtre por ciclo o si está completa', 'bottom'),
-  step('[data-tour="career-select"]', 'Varias a la vez', 'Seleccione materias o un ciclo entero y pulse «Llenar un campo»: lo escribe una sola vez. Las que ya tienen contenido no cambian si no las marca', 'bottom'),
+  step('[data-tour="career-select"]', 'Varias a la vez', 'Seleccione materias o un ciclo entero y pulse «Llenar un campo»: lo escribe una sola vez y reemplaza lo que esas materias tengan en el campo', 'bottom'),
   step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenar su proyecto. El docente lo recibe ya escrito', 'top'),
 ];
 

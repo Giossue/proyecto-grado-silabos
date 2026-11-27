@@ -20,7 +20,6 @@ const FILL = {
       field_id: { type: "string", format: "uuid" },
       value: { type: "object", description: "Documento del campo, el mismo que se guarda en la materia." },
       subjects: { type: "array", items: { type: "string", format: "uuid" } },
-      replace: { type: "array", items: { type: "string", format: "uuid" }, description: "Materias marcadas que ya tienen contenido y se reemplazan." },
       confirm_purge: { type: "boolean" },
     },
   },
@@ -39,7 +38,7 @@ export class FichaController {
   }
 
   @Post("coordination/ficha-bulk")
-  @ApiOperation({ summary: "Llena un campo en varias materias; las que ya tienen algo cambian solo si van en «replace»." })
+  @ApiOperation({ summary: "Llena un campo en las materias elegidas y reemplaza lo que tengan en él." })
   @ApiBody(FILL)
   @ApiUnprocessableEntityResponse(VALIDATION)
   bulkFill(@Req() request: ApiRequest): Promise<WebReply> {
