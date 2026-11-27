@@ -23,8 +23,8 @@ Supuestos: en la etapa 1 no se envían sílabos anteriores, comentarios de revis
 
 ## Tasks
 
-- [ ] T1 (S3, S4, S5, S7) — permisos por campo e interruptor general (base, API, editor de plantilla, ajustes) — delegada (contexto) — pendiente.
-- [ ] T2 (S2, S5, S6, S8–S12) — asistente en el servidor: contexto protegido, pedidos, trabajo en segundo plano, propuestas y límite — delegada (contexto) — pendiente.
+- [x] T1 (S3, S4, S5, S7) — permisos por campo e interruptor general (base, API, editor de plantilla, ajustes) — delegada (contexto) — commit 46941b0.
+- [ ] T2 (S2, S5, S6, S8–S12) — asistente en el servidor: contexto protegido, pedidos, trabajo en segundo plano, propuestas y límite — delegada (contexto) — en curso.
 - [ ] T3 (S2, S6, S7, S11) — panel en el sílabo del docente — delegada (contexto) — pendiente.
 - [ ] T4 (S1–S12) — verificación independiente de la etapa 1 (riesgo: datos guardados y datos enviados a un proveedor externo) — pendiente.
 
@@ -38,3 +38,5 @@ Supuestos: en la etapa 1 no se envían sílabos anteriores, comentarios de revis
 - L6 — «entonces?? en resumen?». Se le resumió el diseño y se preguntó si la IA puede ver nombre de la asignatura, horas, créditos y semanas, avisando que con un «sí» empezaba la primera parte (panel con propuestas de texto, permisos y protecciones).
 - L7 — «claro, sería genial que pueda hacer eso». Autorizada la etapa 1.
 - L8 — Contexto observado: el proveedor se configura solo por variables de entorno (`ai/config.ts`); los ajustes de IA de Administración solo se muestran y prueban la conexión. La plantilla se bloquea con un periodo abierto (`templateLocked`) y cualquier cambio de `definicion_plantilla` mueve `plantilla_modificada_en`. El campo `asignatura` contiene la tabla `identificacion` con `disability`. `origin/main` se ha actualizado por push desde este clon sin que lo hiciera el agente.
+- L9 (2026-11-27) — T1 hecha (46941b0). RED y GREEN por regla; api 2648/2648, web 1232/1232, shared 165/165, tsc limpio. La migración `20261127000000_permisos_ia_docente` se probó en una base temporal: carga los valores iniciales y no mueve `plantilla_modificada_en` (base ya eliminada). Aún no se aplica a la base local, así que guardar o importar la plantilla allí falla hasta aplicarla; en la base local la formación usa la clave `formacion_docente`. Una corrida completa de web falló una vez en una prueba de `AdminSystemSettingsPage` que ya existía; pasó sola tres veces y en la siguiente corrida completa. El esqueleto de «Sistema» se ajustó a cuatro filas.
+- L10 — Decisiones de T1: el permiso va por clave de campo (cada guardado recrea los ids) y se borra si el campo desaparece; el editor visual envía `new_fields` para que un campo nuevo con una clave reutilizada no herede permiso; con periodo abierto hay un botón «Lo que lee la IA» que abre el editor bloqueado; vaciar la plantilla borra los permisos; un campo «Nadie» no se puede activar; el bloqueo cubre también tipos de tabla desconocidos y tablas que mencionan discapacidad. Para T2: `aiReadableFields` y `holdsDisabilityData` (`server/ai/readableFields.ts`), `createAiReadPermissionStore`, `teacherAssistantEnabledOn`; `holdsDisabilityData` debe aplicarse a cada valor o texto de carrera antes de enviarlo. Riesgo T1: 1, 2, 3 y 6.

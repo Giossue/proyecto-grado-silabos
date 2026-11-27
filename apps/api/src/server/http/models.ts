@@ -16,6 +16,7 @@ export const MODELS = {
   subject: `${MODULES}\\Academic\\Infrastructure\\Persistence\\Models\\Subject`,
   supportDocument: `${MODULES}\\Academic\\Infrastructure\\Persistence\\Models\\SupportDocument`,
   proposal: `${MODULES}\\AiAssistance\\Infrastructure\\Persistence\\Models\\TemplateAssistantProposal`,
+  teacherProposal: `${MODULES}\\AiAssistance\\Infrastructure\\Persistence\\Models\\TeacherAssistantProposal`,
   field: `${MODULES}\\Configuration\\Infrastructure\\Persistence\\Models\\FieldDefinition`,
   template: `${MODULES}\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate`,
   artifact: `${MODULES}\\Documents\\Infrastructure\\Persistence\\Models\\ExportArtifact`,

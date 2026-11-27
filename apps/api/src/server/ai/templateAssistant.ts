@@ -70,8 +70,8 @@ export type LastProposal = { estado: string; cambios: string[]; secciones?: unkn
 
 export type HistoryMessage = { role: "user" | "assistant"; content: string }
 
-export function userTag(userId: string, appKey: string): string {
-  return `adm-${createHmac("sha256", appKey).update(userId).digest("hex").slice(0, 32)}`
+export function userTag(userId: string, appKey: string, prefix = "adm"): string {
+  return `${prefix}-${createHmac("sha256", appKey).update(userId).digest("hex").slice(0, 32)}`
 }
 
 export const draftValidator: DraftValidator = {

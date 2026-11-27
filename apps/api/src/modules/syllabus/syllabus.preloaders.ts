@@ -1,3 +1,4 @@
+import { teacherAssistantBinder, type TeacherAssistantRouteDeps } from "../../server/ai/teacherAssistantRoutes"
 import { resumableConvocationBinder, type ConvocationWriteDeps } from "../../server/syllabus/convocationWrites"
 import { convocationBinder, type ConvocationDeps } from "../../server/syllabus/convocations"
 import { comparisonBinder, type CoordinationReviewDeps } from "../../server/syllabus/coordinationReviews"
@@ -22,6 +23,7 @@ import {
   REVIEW_DETAIL_DEPS,
   SUBMISSION_DEPS,
   SYLLABUS_DETAIL_DEPS,
+  TEACHER_ASSISTANT_DEPS,
 } from "./syllabus.tokens"
 
 export const ConvocationPreloader = bindingPreloader<ConvocationDeps>(CONVOCATION_DEPS, (deps, params) => convocationBinder(params.convocation, deps))
@@ -38,6 +40,8 @@ export const DraftFieldPreloader = bindingPreloader<DraftFieldDeps>(DRAFT_FIELD_
 export const DraftValidationPreloader = bindingPreloader<DraftValidationDeps>(DRAFT_VALIDATION_DEPS, (deps, params) => draftValidationBinder(params.syllabus, deps))
 export const SubmissionPreloader = bindingPreloader<SubmissionDeps>(SUBMISSION_DEPS, (deps, params) => submissionBinder(params.syllabus, deps))
 
+export const TeacherAssistantPreloader = bindingPreloader<TeacherAssistantRouteDeps>(TEACHER_ASSISTANT_DEPS, (deps, params) => teacherAssistantBinder(params.syllabus, deps))
+
 export const SYLLABUS_PRELOADERS = [
   ConvocationPreloader,
   ResumableConvocationPreloader,
@@ -52,4 +56,5 @@ export const SYLLABUS_PRELOADERS = [
   DraftFieldPreloader,
   DraftValidationPreloader,
   SubmissionPreloader,
+  TeacherAssistantPreloader,
 ]

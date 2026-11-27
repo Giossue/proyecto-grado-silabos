@@ -42,6 +42,15 @@ export const draftFieldSchema = z.object({
   value: field("valor", [is.array()], { present: true, nullable: true }),
 })
 
+export const TEACHER_ASSISTANT_MESSAGE_MAX = 4000
+
+export function teacherAssistantRequestSchema(messageCharacters: number = TEACHER_ASSISTANT_MESSAGE_MAX) {
+  return z.object({
+    message: requiredField<string>("pedido", [is.string(), is.max(messageCharacters)]),
+    idempotency_key: requiredField<string>("clave del pedido", [is.uuid()]),
+  })
+}
+
 export const submissionSchema = z.object({
   version_bloqueo: lockVersion(),
   idempotency_key: requiredField("identificador de la solicitud", [is.uuid()]),

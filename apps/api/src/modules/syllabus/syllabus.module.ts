@@ -5,11 +5,12 @@ import { CoordinationReviewsController } from "./coordination-reviews.controller
 import { RouteAllowsGuard } from "./route-allows.guard"
 import { SYLLABUS_PRELOADERS } from "./syllabus.preloaders"
 import { SYLLABUS_DEPS_PROVIDERS } from "./syllabus.providers"
+import { TeacherAssistantController } from "./teacher-assistant.controller"
 import { TeacherController } from "./teacher.controller"
 
 @Module({
   imports: [AcademicModule],
-  controllers: [CoordinationConvocationsController, CoordinationReviewsController, TeacherController],
+  controllers: [CoordinationConvocationsController, CoordinationReviewsController, TeacherController, TeacherAssistantController],
   providers: [...SYLLABUS_DEPS_PROVIDERS, ...SYLLABUS_PRELOADERS, RouteAllowsGuard],
 })
 export class SyllabusModule {}

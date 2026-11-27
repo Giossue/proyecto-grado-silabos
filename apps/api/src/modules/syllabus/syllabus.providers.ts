@@ -1,6 +1,7 @@
 import type { Provider } from "@nestjs/common"
 import { defaultCatalogDeps, searchCatalog } from "../../server/library/catalogHandlers"
 import { teacherSupportDocuments } from "../../server/academic/supportDocuments"
+import { defaultTeacherAssistantRouteDeps } from "../../server/ai/teacherAssistantRoutes"
 import type { BridgeDeps } from "../../server/auth/types"
 import { defaultConvocationWriteDeps } from "../../server/syllabus/convocationWrites"
 import { defaultConvocationDeps } from "../../server/syllabus/convocations"
@@ -29,6 +30,7 @@ import {
   REVIEW_DETAIL_DEPS,
   SUBMISSION_DEPS,
   SYLLABUS_DETAIL_DEPS,
+  TEACHER_ASSISTANT_DEPS,
   TEACHER_RESOURCES,
   TEACHER_SYLLABUS_DEPS,
 } from "./syllabus.tokens"
@@ -55,6 +57,11 @@ export const SYLLABUS_DEPS_PROVIDERS: Provider[] = [
   withBridge(DRAFT_FIELD_DEPS, defaultDraftFieldDeps),
   withBridge(DRAFT_VALIDATION_DEPS, defaultDraftValidationDeps),
   withBridge(SUBMISSION_DEPS, defaultSubmissionDeps),
+  {
+    provide: TEACHER_ASSISTANT_DEPS,
+    useFactory: (bridge: BridgeDeps, prisma: PrismaService) => defaultTeacherAssistantRouteDeps(prisma, bridge),
+    inject: [AUTH_BRIDGE, PrismaService],
+  },
   {
     provide: TEACHER_RESOURCES,
     useFactory: (academic: AcademicDeps, prisma: PrismaService): TeacherResources => ({

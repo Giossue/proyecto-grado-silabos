@@ -20,6 +20,7 @@ import { ProcessesController } from "./processes/processes.controller"
 import { SettingsController } from "./settings/settings.controller"
 import { CoordinationConvocationsController } from "./syllabus/coordination-convocations.controller"
 import { CoordinationReviewsController } from "./syllabus/coordination-reviews.controller"
+import { TeacherAssistantController } from "./syllabus/teacher-assistant.controller"
 import { TeacherController } from "./syllabus/teacher.controller"
 import { TemplateAssetsController } from "./template/template-assets.controller"
 import { TemplateController } from "./template/template.controller"
@@ -36,6 +37,7 @@ export const PORTED_CONTROLLERS: readonly Type<unknown>[] = [
   CoordinationConvocationsController,
   CoordinationReviewsController,
   TeacherController,
+  TeacherAssistantController,
   TemplateAssistantController,
   TemplateController,
   TemplateAssetsController,

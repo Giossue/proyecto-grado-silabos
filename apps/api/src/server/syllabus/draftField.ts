@@ -27,6 +27,7 @@ import {
   type TemplateDefinition,
 } from "../configuration/templateRuntime"
 import { createTemplateStore, type TemplateStore } from "../shared/templateStore"
+import type { SyllabusTemplate } from "../configuration/templatePresentation"
 import { record, phpEquals, type PhpRecord } from "../configuration/phpValues"
 import { institutionToday } from "../shared/clock"
 import { identificationOf, type IdentificationSource } from "./identificationCard"
@@ -106,7 +107,7 @@ export function draftFieldBinder(syllabusId: string, fieldId: string, deps: Pick
   }
 }
 
-function conflict(request: Request, version: number): Response {
+export function draftConflict(request: Request, version: number): Response {
   return expectsJson(request)
     ? apiJson({ message: CONFLICT, code: "conflicto_version_borrador", version_bloqueo_actual: version }, 409)
     : apiJson({ message: CONFLICT }, 409)
@@ -121,10 +122,35 @@ function changesStored(template: unknown, stored: unknown, document: PhpRecord, 
   }
 }
 
+export const FIXED_BLOCKS = "Los bloques de este campo los define la plantilla; el docente solo los responde."
+export const NOT_TEACHER_FIELD = "Este campo pertenece a Coordinación o a la institución y el docente no puede cambiarlo."
+
+export function draftDocument(field: Pick<DraftFieldRecord, "content">, profileTemplate: unknown, value: unknown, definition: TemplateDefinition): PhpRecord {
+  const document = fieldResponseNormalize(profileTemplate ?? field.content, teacherEdits(profileTemplate) ? markOwnText(record(value)) : value, definition, "value", field.content)
+  if (!sameStructure(normalizeFieldDocument(field.content, definition), document)) throw new TemplateValidationError({ value: [FIXED_BLOCKS] })
+  return document
+}
+
+export function draftFieldLimit(field: Pick<DraftFieldRecord, "responsible" | "key">, profileTemplate: unknown, definition: TemplateDefinition): number | null {
+  return limitAllowed(field.responsible) && !teacherEdits(profileTemplate) ? (fieldLimits(definition)[field.key] ?? null) : null
+}
+
+export type DraftLimitContext = { template: SyllabusTemplate; field: Pick<DraftFieldRecord, "id" | "content">; templates: Record<string, unknown> }
+
+export function draftLimitProblem({ template, field, templates }: DraftLimitContext, limit: number, values: Map<string, unknown>, document: PhpRecord): string | null {
+  const definition = template.definition
+  const fieldTemplate = templates[field.id] ?? field.content
+  const conditions = (found: Map<string, unknown>) => syllabusConditions(template, fieldConditions(definition), found, templates)
+  const before = fieldLimitCount(fieldTemplate, values.get(field.id) ?? null, conditions(values).answers, definition)
+  const after = conditions(new Map([...values, [field.id, document]]))
+  const written = after.hidden.has(field.id) ? 0 : fieldLimitCount(fieldTemplate, document, after.answers, definition)
+  return written > limit && written > before ? fieldLimitMessage(limit) : null
+}
+
 async function save(input: PhpArray, auth: DraftFieldBound, deps: DraftFieldDeps, tx: DraftFieldTx, original: Request): Promise<{ version: number; savedAt: number; state: string; definition: TemplateDefinition }> {
   const locked = await tx.lockSyllabus(auth.syllabus.id)
   if (locked === null) throw new Missing(MODELS.syllabus, auth.syllabus.id)
-  if (locked.version !== phpIntCast(input.version_bloqueo)) throw new Rejected(conflict(original, locked.version))
+  if (locked.version !== phpIntCast(input.version_bloqueo)) throw new Rejected(draftConflict(original, locked.version))
   if (!editableState(locked.state, locked.started === true)) reject("syllabus", "El expediente no está en estado editable.")
   const template = await tx.templateStore.template()
   if (template === null) throw new Missing(MODELS.template)
@@ -133,24 +159,18 @@ async function save(input: PhpArray, auth: DraftFieldBound, deps: DraftFieldDeps
   if (field.templateId !== template.id || (!field.live && !(await tx.valueExists(locked.id, field.id)))) reject("field", "El campo no pertenece a la plantilla vigente.")
   const templates = await profileTemplates({ template, definition, store: tx.templateStore }, locked.subjectId)
   const asTemplateField = { id: field.id, responsible: field.responsible } as TemplateField
-  if (!teacherEditable(asTemplateField, templates)) reject("field", "Este campo pertenece a Coordinación o a la institución y el docente no puede cambiarlo.")
+  if (!teacherEditable(asTemplateField, templates)) reject("field", NOT_TEACHER_FIELD)
   const profileTemplate = templates[field.id]
-  const rewritable = teacherEdits(profileTemplate)
   const value = input.value === undefined || input.value === null ? EMPTY_DOCUMENT : input.value
-  const document = fieldResponseNormalize(profileTemplate ?? field.content, rewritable ? markOwnText(record(value)) : value, definition, "value", field.content)
-  if (!sameStructure(normalizeFieldDocument(field.content, definition), document)) reject("value", "Los bloques de este campo los define la plantilla; el docente solo los responde.")
-  const limit = limitAllowed(field.responsible) && !rewritable ? (fieldLimits(definition)[field.key] ?? null) : null
-  const fieldTemplate = templates[field.id] ?? field.content
-  const conditions = (values: Map<string, unknown>) => syllabusConditions(template, fieldConditions(definition), values, templates)
+  const document = draftDocument(field, profileTemplate, value, definition)
+  const limit = draftFieldLimit(field, profileTemplate, definition)
   const notStarted = locked.state === "sin_iniciar"
   const storedValues = limit === null && !notStarted ? null : await tx.values(locked.id)
-  const before = storedValues === null || limit === null ? 0 : fieldLimitCount(fieldTemplate, storedValues.get(field.id) ?? null, conditions(storedValues).answers, definition)
-  const state = notStarted && storedValues !== null && changesStored(fieldTemplate, storedValues.get(field.id), document, definition, field.content) ? "borrador" : locked.state
+  const state = notStarted && storedValues !== null && changesStored(templates[field.id] ?? field.content, storedValues.get(field.id), document, definition, field.content) ? "borrador" : locked.state
   await tx.saveValue(locked.id, field.id, document, deps.newId(), fieldFingerprint(field.content))
   if (limit !== null && storedValues !== null) {
-    const after = conditions(new Map([...storedValues, [field.id, document]]))
-    const written = after.hidden.has(field.id) ? 0 : fieldLimitCount(fieldTemplate, document, after.answers, definition)
-    if (written > limit && written > before) reject("value", fieldLimitMessage(limit))
+    const problem = draftLimitProblem({ template, field, templates }, limit, storedValues, document)
+    if (problem !== null) reject("value", problem)
   }
   const version = locked.version + 1
   const savedAt = deps.now()
