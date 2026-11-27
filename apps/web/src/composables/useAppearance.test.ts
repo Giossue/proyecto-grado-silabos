@@ -41,35 +41,34 @@ describe('tema visual', () => {
         document.documentElement.classList.remove('dark');
     });
 
-    it('sin una elección guardada sigue el tema oscuro del sistema', async () => {
+    it('sin una elección guardada empieza en claro aunque el sistema esté en oscuro', async () => {
         mockSystemScheme(true);
         const { initializeTheme } = await load();
 
         initializeTheme();
 
-        expect(document.documentElement.classList.contains('dark')).toBe(true);
+        expect(document.documentElement.classList.contains('dark')).toBe(false);
         expect(localStorage.getItem('appearance')).toBeNull();
     });
 
-    it('sin una elección guardada sigue el tema claro del sistema', async () => {
-        mockSystemScheme(false);
-        const { initializeTheme } = await load();
-
-        initializeTheme();
-
-        expect(document.documentElement.classList.contains('dark')).toBe(false);
-    });
-
-    it('cambia con el sistema mientras no haya una elección guardada', async () => {
+    it('no cambia cuando cambia el tema del sistema', async () => {
         mockSystemScheme(false);
         const { initializeTheme } = await load();
         initializeTheme();
 
         changeSystemScheme(true);
-        expect(document.documentElement.classList.contains('dark')).toBe(true);
 
-        changeSystemScheme(false);
         expect(document.documentElement.classList.contains('dark')).toBe(false);
+    });
+
+    it('conserva el oscuro que la persona eligió', async () => {
+        mockSystemScheme(false);
+        localStorage.setItem('appearance', 'dark');
+        const { initializeTheme } = await load();
+
+        initializeTheme();
+
+        expect(document.documentElement.classList.contains('dark')).toBe(true);
     });
 
     it('una elección guardada manda sobre el sistema', async () => {

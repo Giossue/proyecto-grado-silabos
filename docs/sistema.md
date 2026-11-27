@@ -367,7 +367,7 @@ Lee `STORAGE_PATH` (carpetas `private` y `public`) y usa las variables `S3_*`; e
   - guías *Modern Web Guidance* de Google Chrome, con objetivo Baseline 2024;
   - navegación con teclado, lectores de pantalla y movimiento reducido;
   - opciones de accesibilidad (alto contraste, tamaño del texto, sin animaciones y modo dislexia) guardadas solo en el navegador, sin pasar por el servidor;
-  - tema claro u oscuro según el sistema;
+  - tema claro al entrar, sin seguir el del sistema operativo; quien elige el oscuro lo conserva en su navegador;
   - tablas ordenables;
   - diseño adaptable a celular.
 
