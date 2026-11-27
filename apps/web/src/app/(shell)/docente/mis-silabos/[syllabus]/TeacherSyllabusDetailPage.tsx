@@ -1,7 +1,7 @@
 "use client"
 
 import { SupportDocumentsButton } from "@/components/domain/academic/SupportDocumentsButton"
-import { ArrowLeft, Copy, Eye, FileSignature, FileText, Send, Sparkles } from "lucide-react"
+import { ArrowLeft, Copy, Eye, FileSignature, FileText, Send } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react"
@@ -17,8 +17,7 @@ import {
   type SyllabusDetail,
   type SyllabusField,
 } from "@/api/syllabi"
-import { acceptTeacherProposal, type TeacherProposal } from "@/api/teacherAssistant"
-import { TeacherAssistant, type ProposalOutcome } from "@/components/domain/ai/TeacherAssistant"
+import { TeacherAssistant } from "@/components/domain/ai/TeacherAssistant"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { ProcessLockAlert } from "@/components/domain/ProcessLockAlert"
@@ -53,22 +52,13 @@ import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocu
 import { toast } from "@/lib/toast"
 import { handleUnauthorized } from "@/lib/unauthorized"
 import { teacherSyllabusQuery } from "@/queries/teacher"
-import { assistantFailure, assistantRefused, PROPOSAL_GONE, teacherAssistantKeys, teacherAssistantQuery } from "@/queries/teacherAssistant"
+import { assistantRefused, teacherAssistantKeys, teacherAssistantQuery } from "@/queries/teacherAssistant"
 import { scrollBehavior } from "@/lib/motion"
 
 type ValidationResult = { field_id: string | null; code: string; severity: string; message: string }
 type CopySource = { id: string; parallel: string }
 
 const PAUSED_MESSAGE = "El periodo académico está en pausa. Podrá seguir editando cuando se reanude"
-const CONFLICT_MESSAGE = "El borrador cambió en otra sesión. Recárguelo antes de continuar para evitar sobrescribir cambios"
-const SESSION_MESSAGE = "Su sesión caducó. Inicie sesión de nuevo para guardar los cambios pendientes"
-const PROPOSAL_CONFLICT = "No se colocó la propuesta: el borrador cambió en otra sesión. Cierre el asistente y pulse «Recargar borrador»"
-const PROPOSAL_FIELD_MISSING = "No se colocó la propuesta: su campo no está en el sílabo abierto. Recargue la página y pida una nueva"
-const PROPOSAL_WAIT = "No se colocó la propuesta. Espere a que termine la otra acción y pulse «Usar» otra vez"
-const PROPOSAL_FAILED = "No se pudo usar la propuesta. Revise su conexión y pulse «Usar» otra vez"
-const unsavedBeforeProposal = (problem: string | null): string =>
-  `No se colocó la propuesta porque antes hay que guardar sus cambios pendientes${problem ? ` y no se pudo: ${problem}` : ""}. Pulse «Usar» otra vez para reintentar`
-const notApplied = (reason: string): ProposalOutcome => ({ applied: false, reason })
 const EDITABLE_STATES = ["borrador", "correccion_solicitada"]
 const NO_RESULTS: ValidationResult[] = []
 
@@ -157,7 +147,6 @@ export default function TeacherSyllabusDetailPage() {
   const [saveFailed, setSaveFailed] = useState(false)
   const [editedHere, setEditedHere] = useState(false)
   const [assistantOpen, setAssistantOpen] = useState(false)
-  const [applyingFieldId, setApplyingFieldId, applyingRef] = useTracked<string | null>(null)
   const [chosenSectionId, setChosenSectionId] = useState<string | null>(null)
   const [previewHint] = useState(() => isSyllabusPreview(syllabusId))
   const [submitKey] = useState(attemptKey)
@@ -167,7 +156,6 @@ export default function TeacherSyllabusDetailPage() {
   const cardFieldEdited = useRef(false)
   const pendingSave = useRef<Promise<void>>(Promise.resolve())
   const inFlight = useRef(0)
-  const saveProblem = useRef<string | null>(null)
 
   const editBlockReason = blockReasonOf(syllabus, localBlockReason)
   const canEdit = canEditOf(syllabus, localBlockReason)
@@ -209,9 +197,6 @@ export default function TeacherSyllabusDetailPage() {
   const assistantQuery = useQuery({ ...teacherAssistantQuery(syllabusId), enabled: canEdit })
   const assistantChat = assistantRefused(assistantQuery.error) ? null : (assistantQuery.data ?? null)
   const assistantAvailable = canEdit && assistantChat?.available === true
-  const assistantBusy = assistantChat?.available === true && assistantChat.busy
-  const assistantSkeleton = assistantChat?.available === true ? ["w-9 lg:w-32"] : []
-  const applying = applyingFieldId !== null
 
   const hasUnsavedChanges = (): boolean => dirtyFields.current.size > 0
   const canEditNow = (): boolean => canEditOf(syllabusRef.current, localBlockRef.current)
@@ -270,29 +255,23 @@ export default function TeacherSyllabusDetailPage() {
       .then((response) => applyLoaded(response.syllabus))
       .catch(loadFailed)
 
-  const reportSaveProblem = (message: string): void => {
-    saveProblem.current = message
-    setError(message)
-  }
-
   const handleSaveFailure = (reason: unknown): void => {
     setSaveFailed(true)
     if (reason instanceof ApiError && (reason.status === 401 || reason.status === 419)) {
       handleUnauthorized(router)
-      reportSaveProblem(SESSION_MESSAGE)
+      setError("Su sesión caducó. Inicie sesión de nuevo para guardar los cambios pendientes")
       return
     }
     if (reason instanceof ApiError && reason.status === 409) {
       setConflict(true)
-      reportSaveProblem(CONFLICT_MESSAGE)
+      setError("El borrador cambió en otra sesión. Recárguelo antes de continuar para evitar sobrescribir cambios")
       return
     }
     if (reason instanceof ApiError && reason.status === 403) {
-      saveProblem.current = PAUSED_MESSAGE
       setLocalBlockReason(PAUSED_MESSAGE)
       return
     }
-    reportSaveProblem(reason instanceof ApiError ? reason.message : "No se pudo guardar el cambio")
+    setError(reason instanceof ApiError ? reason.message : "No se pudo guardar el cambio")
   }
 
   const queueSave = (markPending: () => void, operation: () => Promise<void>): void => {
@@ -375,63 +354,6 @@ export default function TeacherSyllabusDetailPage() {
     setLocalBlockReason(PAUSED_MESSAGE)
   }
 
-  const acceptInSaveOrder = (proposalId: string, field: SyllabusField): Promise<void> => {
-    inFlight.current += 1
-    const turn = pendingSave.current.then(async () => {
-      try {
-        const current = syllabusRef.current!
-        const accepted = await acceptTeacherProposal(current.id, proposalId, current.version_bloqueo)
-        updateValue(field, accepted.value)
-      } finally {
-        inFlight.current -= 1
-      }
-    })
-    pendingSave.current = turn.catch(() => undefined)
-
-    return turn
-  }
-
-  const refusedProposal = (reason: unknown): string => {
-    const status = reason instanceof ApiError ? reason.status : null
-    if (status === 401 || status === 419) {
-      handleUnauthorized(router)
-      setError(SESSION_MESSAGE)
-      return SESSION_MESSAGE
-    }
-    if (status === 409) {
-      setConflict(true)
-      setError(CONFLICT_MESSAGE)
-      return PROPOSAL_CONFLICT
-    }
-    if (status === 403) {
-      blockFromAssistant()
-      return PAUSED_MESSAGE
-    }
-
-    return assistantFailure(reason, { fallback: PROPOSAL_FAILED, missing: PROPOSAL_GONE })
-  }
-
-  const applyProposal = async (proposal: TeacherProposal): Promise<ProposalOutcome> => {
-    if (applyingRef.current !== null || processingAction) return notApplied(PROPOSAL_WAIT)
-    if (conflictRef.current) return notApplied(PROPOSAL_CONFLICT)
-    const field = fieldsOf(syllabusRef.current).find((item) => item.id === proposal.field_id)
-    if (!field || !isTeacherField(field) || !canEditNow()) return notApplied(PROPOSAL_FIELD_MISSING)
-    flushSync(() => setApplyingFieldId(field.id))
-    try {
-      saveProblem.current = null
-      if (!(await flushAutosave())) return notApplied(conflictRef.current ? PROPOSAL_CONFLICT : unsavedBeforeProposal(saveProblem.current))
-      await acceptInSaveOrder(proposal.id, field)
-    } catch (reason) {
-      return notApplied(refusedProposal(reason))
-    } finally {
-      setApplyingFieldId(null)
-    }
-    saveProblem.current = null
-    await flushAutosave()
-
-    return { applied: true, saveProblem: saveProblem.current }
-  }
-
   const confirmLeave = async (): Promise<boolean> => {
     if (!hasUnsavedChanges()) {
       await pendingSave.current
@@ -481,15 +403,6 @@ export default function TeacherSyllabusDetailPage() {
     if (!target) return
     target.scrollIntoView({ behavior: scrollBehavior(), block: "center" })
     target.querySelector<HTMLElement>("input, textarea, button, [contenteditable='true']")?.focus({ preventScroll: true })
-  }
-
-  const showProposalField = (fieldId: string): void => {
-    flushSync(() => setPreviewing(false))
-    goToPart(fieldId)
-    const target = document.getElementById(`field-${fieldId}`)
-    if (!target || target.contains(document.activeElement)) return
-    target.tabIndex = -1
-    target.focus({ preventScroll: true })
   }
 
   const showValidation = async (): Promise<void> => {
@@ -623,7 +536,7 @@ export default function TeacherSyllabusDetailPage() {
         title={syllabus?.subject ?? ""}
         description={syllabus?.period ?? ""}
         loading={loading}
-        actionsSkeleton={loading && !previewHint ? ["w-9 lg:w-32", ...assistantSkeleton, "w-24"] : []}
+        actionsSkeleton={loading && !previewHint ? ["w-9 lg:w-32", "w-24"] : []}
         headerClass="syllabus-editor-header"
         headerWidth={documentHeaderWidth}
         hideIcon
@@ -649,21 +562,6 @@ export default function TeacherSyllabusDetailPage() {
               >
                 <Eye aria-hidden="true" />
                 <span className="max-lg:sr-only">Vista previa</span>
-              </Button>
-            ) : null}
-            {assistantAvailable ? (
-              <Button
-                type="button"
-                variant="outline"
-                data-labeled-tool
-                className="max-lg:size-9 max-lg:has-[>svg]:px-0"
-                aria-label="Asistente IA"
-                aria-haspopup="dialog"
-                aria-expanded={assistantOpen}
-                onClick={openAssistant}
-              >
-                {assistantBusy ? <Spinner /> : <Sparkles aria-hidden="true" />}
-                <span className="max-lg:sr-only">Asistente IA</span>
               </Button>
             ) : null}
             {syllabus?.state === "aprobado" && syllabus.approved_revision_id ? (
@@ -693,7 +591,7 @@ export default function TeacherSyllabusDetailPage() {
               </span>
             ) : null}
             {copySources.map((source) => (
-              <Button key={source.id} type="button" variant="outline" disabled={processingAction || conflict || applying} onClick={() => setCopySource(source)}>
+              <Button key={source.id} type="button" variant="outline" disabled={processingAction || conflict} onClick={() => setCopySource(source)}>
                 <Copy aria-hidden="true" />
                 Copiar desde paralelo {source.parallel}
               </Button>
@@ -704,7 +602,7 @@ export default function TeacherSyllabusDetailPage() {
                   <>
                     <IconTooltip label={submitHint}>
                       <span className="inline-flex" tabIndex={0} aria-describedby="submit-hint">
-                        <Button disabled={processingAction || conflict || applying || emptyParts > 0} onClick={askSubmit}>
+                        <Button disabled={processingAction || conflict || emptyParts > 0} onClick={askSubmit}>
                             {processingAction ? <Spinner /> : mustSign ? <FileSignature aria-hidden="true" /> : <Send aria-hidden="true" />}
                             {submitLabel}
                   </Button>
@@ -715,7 +613,7 @@ export default function TeacherSyllabusDetailPage() {
                     </span>
                   </>
                 ) : (
-                  <Button disabled={processingAction || conflict || applying || emptyParts > 0} onClick={askSubmit}>
+                  <Button disabled={processingAction || conflict || emptyParts > 0} onClick={askSubmit}>
                     {processingAction ? <Spinner /> : mustSign ? <FileSignature aria-hidden="true" /> : <Send aria-hidden="true" />}
                     {submitLabel}
                   </Button>
@@ -751,7 +649,7 @@ export default function TeacherSyllabusDetailPage() {
               </div>
             ) : null}
             {startedOf(syllabus) || pausedEdit ? (
-              <div className={pausedEdit ? "mx-auto flex w-full max-w-screen-2xl min-w-0 flex-col gap-8" : "mx-auto flex w-full max-w-screen-2xl min-w-0 flex-col gap-8 pb-16"}>
+              <div className={pausedEdit ? "mx-auto flex w-full max-w-screen-2xl min-w-0 flex-col gap-8" : "mx-auto flex w-full max-w-screen-2xl min-w-0 flex-col gap-8 pb-36"}>
                 {showBlockReason && editableOf(syllabus) ? (
                   <div className="edit-blocked">
                     <ProcessLockAlert title="Edición no disponible" message={editBlockReason ?? undefined} hideAction />
@@ -762,7 +660,6 @@ export default function TeacherSyllabusDetailPage() {
                   <SyllabusTeacherForm
                     sections={syllabus.sections}
                     disabled={conflict || pausedEdit}
-                    lockedFieldId={applyingFieldId}
                     errors={visibleValidationMessages}
                     onValueChange={updateValue}
                     active={activeSectionId}
@@ -803,13 +700,9 @@ export default function TeacherSyllabusDetailPage() {
             syllabusId={syllabusId}
             chat={assistantChat}
             open={assistantOpen}
-            waitingElsewhere={processingAction || applying}
-            onOpenChange={setAssistantOpen}
+            onOpenChange={(next) => (next ? openAssistant() : setAssistantOpen(false))}
             onBeforeSend={flushAutosave}
             onForbidden={blockFromAssistant}
-            onUse={applyProposal}
-            hasField={(fieldId) => allFields.some((field) => field.id === fieldId && isTeacherField(field))}
-            onShowField={showProposalField}
           />
         ) : null}
         <SignatureDialog open={signOpen} onOpenChange={setSignOpen} title="Firmar y enviar" confirmLabel="Firmar y enviar" run={(sign) => submit(sign)} />

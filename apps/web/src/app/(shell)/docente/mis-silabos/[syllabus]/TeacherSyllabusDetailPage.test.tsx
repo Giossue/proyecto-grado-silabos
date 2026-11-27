@@ -26,7 +26,7 @@ const editors = vi.hoisted(() => ({ props: new Map<string, EditorProps>() }))
 vi.mock("next/navigation", async () => ({ ...(await import("@/test/nextNavigation")), useParams: () => route.params }))
 vi.mock("@/lib/unauthorized", () => ({ handleUnauthorized: vi.fn() }))
 vi.mock("@/api/session", () => ({ getSession: vi.fn() }))
-vi.mock("@/api/teacherAssistant", () => ({ getTeacherAssistant: vi.fn(async () => ({ available: false })), sendTeacherAssistantMessage: vi.fn(), acceptTeacherProposal: vi.fn(), discardTeacherProposal: vi.fn() }))
+vi.mock("@/api/teacherAssistant", () => ({ getTeacherAssistant: vi.fn(async () => ({ available: false })), sendTeacherAssistantMessage: vi.fn() }))
 vi.mock("@/components/domain/RoleDeadlineBanner", () => ({ RoleDeadlineBanner: () => <div data-testid="role-deadline-banner" /> }))
 vi.mock("@/components/domain/syllabus/FreeTextEditor", () => ({
   FreeTextEditor: function FreeTextEditorStub(props: EditorProps) {

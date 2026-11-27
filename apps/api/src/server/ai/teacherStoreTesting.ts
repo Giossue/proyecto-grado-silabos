@@ -66,7 +66,6 @@ export function fakeTeacherStore(world: StoreWorld): TeacherAssistantStore {
   const transactionOn = (held: (() => void)[], writes: (() => void)[]): TeacherAssistantTx => {
     const write = (change: () => () => void) => writes.push(change())
     return {
-      reading,
       async lockConversation(syllabusId, userId) {
         const key = `${syllabusId}:${userId}`
         const previous = locks.get(key) ?? Promise.resolve()
@@ -101,29 +100,6 @@ export function fakeTeacherStore(world: StoreWorld): TeacherAssistantStore {
             message.id === id ? { ...message, state: change.state, content: stored(change.content), sentFields: [...change.sentFields], errorCode: change.errorCode } : message,
           )
           return () => void (world.messages = world.messages.map((message) => (message.id === id ? before : message)))
-        })
-      },
-      lockSyllabus: async (id) =>
-        world.deleted.has(id) ? null : { id, state: world.facts.state, version: world.version, subjectId: world.facts.subjectId, started: world.facts.started },
-      lockProposal: async (id) => found(world.proposals, id),
-      decideProposal: async (id, state) => {
-        write(() => {
-          const before = copy(world.proposals.find((proposal) => proposal.id === id)!)
-          world.proposals = world.proposals.map((proposal) => (proposal.id === id ? { ...proposal, state } : proposal))
-          return () => void (world.proposals = world.proposals.map((proposal) => (proposal.id === id ? before : proposal)))
-        })
-      },
-      fieldProposals: async (syllabusId, userId, fieldId) =>
-        copy(
-          world.proposals.filter(
-            (proposal) => proposal.syllabusId === syllabusId && proposal.userId === userId && proposal.fieldId === fieldId && ["pendiente", "aceptada"].includes(proposal.state),
-          ),
-        ),
-      updateProposalTarget: async (id, target) => {
-        write(() => {
-          const before = copy(world.proposals.find((proposal) => proposal.id === id)!)
-          world.proposals = world.proposals.map((proposal) => (proposal.id === id ? { ...proposal, target: stored(target) } : proposal))
-          return () => void (world.proposals = world.proposals.map((proposal) => (proposal.id === id ? before : proposal)))
         })
       },
       replacePendingProposals: async (syllabusId, userId, targets) => {
@@ -168,7 +144,6 @@ export function fakeTeacherStore(world: StoreWorld): TeacherAssistantStore {
           sentFields: [...answer.sentFields],
         }))
     },
-    proposal: async (id) => found(world.proposals, id),
     async transaction(work) {
       const held: (() => void)[] = []
       const writes: (() => void)[] = []

@@ -37,27 +37,12 @@ describe("teacher assistant store", () => {
     await tx.answerByKey(SYLLABUS, TEACHER, "k")
     await tx.openAnswer(SYLLABUS, TEACHER)
     await tx.replacePendingProposals(SYLLABUS, TEACHER, [{ fieldId: MESSAGE, space: null }])
-    await tx.fieldProposals(SYLLABUS, TEACHER, MESSAGE)
 
-    expect(queries).toHaveLength(6)
+    expect(queries).toHaveLength(5)
     for (const query of queries) {
       expect(text(query)).toMatch(/silabo_id = \$\d+::uuid and \S*usuario_id = \$\d+::uuid/)
       expect(query.values).toEqual(expect.arrayContaining([SYLLABUS, TEACHER]))
     }
-  })
-
-  it("locks the proposals of one field that can still be used, and rewrites only their target", async () => {
-    const { db, queries } = recordingDb()
-    const tx = teacherAssistantTx(db)
-    const target = { kind: "espacio" as const, space: 2, path: [0, 1, 1, 0, 0], mold: "m", row: { table: [0], rows: ["a", "b"] }, fieldKey: "descripcion", fieldLabel: "Descripción" }
-
-    await tx.fieldProposals(SYLLABUS, TEACHER, MESSAGE)
-    await tx.updateProposalTarget(MESSAGE, target)
-
-    expect(text(queries[0])).toMatch(/and p\.definicion_campo_id = \$3::uuid and p\.estado_propuesta in \('pendiente', 'aceptada'\) order by p\.creado_en, p\.posicion_propuesta for update of p$/)
-    expect(queries[0].values).toEqual([SYLLABUS, TEACHER, MESSAGE])
-    expect(text(queries[1])).toBe("update propuestas_ia_docente set destino_propuesta = $1::jsonb where propuesta_ia_docente_id = $2::uuid")
-    expect(queries[1].values).toEqual([JSON.stringify(target), MESSAGE])
   })
 
   it("takes a transaction lock for one teacher in one syllabus", async () => {
@@ -69,18 +54,16 @@ describe("teacher assistant store", () => {
     expect(queries[0].values).toEqual([`mensajes_ia_docente:${SYLLABUS}:${TEACHER}`])
   })
 
-  it("closes only answers, never questions, and locks the rows it decides on", async () => {
+  it("closes only answers, never questions, and locks the message it answers", async () => {
     const { db, queries } = recordingDb()
     const tx = teacherAssistantTx(db)
 
     await tx.updateAnswer(MESSAGE, { state: "completado", content: { texto: "Listo." }, sentFields: [SYLLABUS], errorCode: null, completedAt: 1_800_000_000 })
     await tx.lockMessage(MESSAGE)
-    await tx.lockProposal(MESSAGE)
 
     expect(text(queries[0])).toMatch(/^update mensajes_ia_docente set .* where mensaje_ia_docente_id = \$\d+::uuid and rol = 'asistente'$/)
     expect(queries[0].values).toEqual(["completado", '{"texto":"Listo."}', [SYLLABUS], null, 1_800_000_000, MESSAGE])
     expect(text(queries[1])).toMatch(/for update$/)
-    expect(text(queries[2])).toMatch(/for update of p$/)
   })
 
   it("runs its writes with the shared transaction options", async () => {

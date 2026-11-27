@@ -152,7 +152,7 @@ describe("proposals", () => {
     expect(outcome.proposals).toEqual([
       {
         fieldId: await idOf("descripcion"),
-        target: { kind: "campo", space: null, path: [], mold: target.mold, row: null, fieldKey: "descripcion", fieldLabel: "Descripción" },
+        target: { kind: "campo", space: null, fieldKey: "descripcion", fieldLabel: "Descripción" },
         baseHash: target.baseHash,
         text: "Estudia las redes de computadoras.",
         basis: "El objetivo general y las horas de la asignatura.",

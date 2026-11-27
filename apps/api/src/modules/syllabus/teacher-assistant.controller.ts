@@ -2,7 +2,6 @@ import { Controller, Get, Inject, Post, Req } from "@nestjs/common"
 import {
   ApiAcceptedResponse,
   ApiBody,
-  ApiConflictResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiParam,
@@ -16,21 +15,19 @@ import { CurrentSession, Preloaded } from "../../common/decorators/current-sessi
 import { MessageDto, ValidationErrorDto } from "../../common/dtos/api-responses.dto"
 import type { ApiRequest } from "../../common/http/web-request"
 import {
-  acceptTeacherProposalFor,
-  discardTeacherProposalFor,
   sendTeacherAssistantMessageFor,
   showTeacherAssistantFor,
   type TeacherAssistantRouteDeps,
 } from "../../server/ai/teacherAssistantRoutes"
 import type { AppSession } from "../../server/auth/types"
 import type { DraftSyllabus } from "../../server/syllabus/draftField"
-import { LockVersionDto, TeacherAssistantRequestDto } from "./dto/syllabus.dto"
+import { TeacherAssistantRequestDto } from "./dto/syllabus.dto"
 import { respond } from "./queued-response"
 import { TeacherAssistantPreloader } from "./syllabus.preloaders"
 import { TEACHER_ASSISTANT_DEPS } from "./syllabus.tokens"
 
 const PRELOADED = { verified: true, activeRole: "required", preload: TeacherAssistantPreloader } as const
-const MISSING = { description: "El sílabo o la propuesta no existe.", type: MessageDto }
+const MISSING = { description: "El sílabo no existe.", type: MessageDto }
 const REFUSED = { description: "El asistente no está disponible o los datos no son válidos.", type: ValidationErrorDto }
 
 @ApiTags("Asistente del docente")
@@ -58,29 +55,5 @@ export class TeacherAssistantController {
   @ApiServiceUnavailableResponse({ description: "La cola no aceptó el pedido.", type: MessageDto })
   send(@Req() request: ApiRequest, @CurrentSession() session: AppSession, @Preloaded() syllabus: DraftSyllabus) {
     return respond(request, (web) => sendTeacherAssistantMessageFor(web, { session, syllabus }, this.deps))
-  }
-
-  @Post("proposals/:proposal/accept")
-  @Authenticated(PRELOADED)
-  @ApiParam({ name: "syllabus", format: "uuid" })
-  @ApiParam({ name: "proposal", format: "uuid" })
-  @ApiBody({ type: LockVersionDto })
-  @ApiOkResponse({ description: "Devuelve el valor que el cliente coloca en el campo; no guarda ni envía el sílabo." })
-  @ApiNotFoundResponse(MISSING)
-  @ApiConflictResponse({ description: "El borrador cambió en otra sesión (versión de edición distinta).", type: MessageDto })
-  @ApiUnprocessableEntityResponse(REFUSED)
-  accept(@Req() request: ApiRequest, @CurrentSession() session: AppSession, @Preloaded() syllabus: DraftSyllabus) {
-    return respond(request, (web) => acceptTeacherProposalFor(web, { session, syllabus }, String(request.params.proposal), this.deps))
-  }
-
-  @Post("proposals/:proposal/discard")
-  @Authenticated(PRELOADED)
-  @ApiParam({ name: "syllabus", format: "uuid" })
-  @ApiParam({ name: "proposal", format: "uuid" })
-  @ApiOkResponse({ description: "Descarta la propuesta.", type: MessageDto })
-  @ApiNotFoundResponse(MISSING)
-  @ApiUnprocessableEntityResponse(REFUSED)
-  discard(@Req() request: ApiRequest, @CurrentSession() session: AppSession, @Preloaded() syllabus: DraftSyllabus) {
-    return respond(request, () => discardTeacherProposalFor({ session, syllabus }, String(request.params.proposal), this.deps))
   }
 }

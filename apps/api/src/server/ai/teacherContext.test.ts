@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest"
 import type { PhpRecord } from "../configuration/phpValues"
 import { draftDocument } from "../syllabus/draftField"
-import { applyToTarget, assistantSnapshot, placeProposal, PROPOSAL_CHANGED, SYSTEM_DATA, type AssistantSnapshot, type ReadableField } from "./teacherContext"
+import { applyToTarget, assistantSnapshot, SYSTEM_DATA, type AssistantSnapshot, type ReadableField } from "./teacherContext"
 import {
   answerSpace,
   coordinationWrites,
@@ -217,21 +217,6 @@ describe("a field whose stored value is not shaped like its spaces", () => {
 
     expect(readableOf(snapshot, "descripcion").text).toBe("Texto anterior que ya no encaja.")
     expect(targetNames(snapshot, "descripcion")).toEqual([])
-  })
-})
-
-describe("a stored proposal for a table cell", () => {
-  it("is refused when nothing says which row it was made for", async () => {
-    const world = teacherWorld(["descripcion"])
-    const cell = { type: "tableCell", attrs: { colspan: 1, rowspan: 1 }, content: [para(answerSpace())] }
-    coordinationWrites(world, "descripcion", docOf({ type: "table", content: [{ type: "tableRow", content: [cell] }] }))
-    const snapshot = await snapshotOf(world)
-    const { field, targets } = readableOf(snapshot, "descripcion")
-    const { kind, space, path, mold, baseHash } = targets[0]
-    const stored = { fieldId: field.id, target: { kind, space, path, mold }, baseHash, text: "Detalle" }
-
-    expect(placeProposal(snapshot, stored)).toEqual({ problem: PROPOSAL_CHANGED })
-    expect(placeProposal(snapshot, { ...stored, target: { ...stored.target, row: targets[0].row } })).toHaveProperty("value")
   })
 })
 

@@ -68,9 +68,10 @@ describe("screen help about the assistant on the teacher syllabus", () => {
   it("explains the panel as the screen names it, what each button does, its limits and its notice", () => {
     const text = catalog["/docente/mis-silabos/:syllabus"].content
     for (const part of [
-      "Si Administración lo activa", "«Asistente IA»", "«Usar»", "«Descartar»", "A DeepSeek se envía", "discapacidad", "no reconoce los nombres escritos dentro de un texto", "20 pedidos al día",
-      "DeepSeek", "datos personales", "revíselas", "no envía el sílabo", "no busca en internet", "no cambia las tablas",
+      "Si Administración lo activa", "«Asistente»", "abajo a la derecha", "«Copiar»", "péguelo", "A DeepSeek se envía", "discapacidad", "no reconoce los nombres escritos dentro de un texto", "20 pedidos al día",
+      "DeepSeek", "datos personales", "revíselas", "no escribe en su sílabo", "no envía el sílabo", "no busca en internet", "ni en la biblioteca",
     ]) expect(text, part).toContain(part)
+    for (const gone of ["«Usar»", "«Descartar»", "en qué se basó", "junto a «Vista previa» verá"]) expect(text, gone).not.toContain(gone)
   })
 
   it("keeps what the screen already explained", () => {

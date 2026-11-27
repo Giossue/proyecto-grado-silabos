@@ -17,10 +17,10 @@ describe('screenTours', () => {
     expect(steps.at(-1)?.selector).toBe('[data-tour="syllabus-submit"]');
   });
 
-  it('la guía del sílabo del docente señala «Asistente IA» después de «Vista previa»', () => {
+  it('la guía del sílabo del docente señala el botón flotante «Asistente» después de «Vista previa»', () => {
     const steps = screenTours['/docente/mis-silabos/:syllabus'] ?? [];
-    expect(steps.map((item) => item.title)).toEqual(['Plazo', 'Correcciones', 'Secciones', 'Su parte', 'Vista previa', 'Asistente IA', 'Enviar']);
-    expect(steps.find((item) => item.title === 'Asistente IA')).toMatchObject({ selector: '[aria-label="Asistente IA"]', description: 'Pida ideas para sus textos. Usted decide cuáles usar' });
+    expect(steps.map((item) => item.title)).toEqual(['Plazo', 'Correcciones', 'Secciones', 'Su parte', 'Vista previa', 'Asistente', 'Enviar']);
+    expect(steps.find((item) => item.title === 'Asistente')).toMatchObject({ selector: '[data-tour="teacher-assistant"]', description: 'Pida ideas para sus textos. Copie la que le sirva y péguela en su campo', side: 'left' });
   });
 
   it('la guía de la plantilla señala el menú «Más» del editor, no «Opciones avanzadas»', () => {

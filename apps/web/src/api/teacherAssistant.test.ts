@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { acceptTeacherProposal, discardTeacherProposal, getTeacherAssistant, sendTeacherAssistantMessage } from "@/api/teacherAssistant"
+import { getTeacherAssistant, sendTeacherAssistantMessage } from "@/api/teacherAssistant"
 
 const answers = (payload: unknown) => {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -20,7 +20,7 @@ describe("API del asistente del docente", () => {
     vi.restoreAllMocks()
   })
 
-  it("consulta, envía, acepta y descarta en las rutas del sílabo", async () => {
+  it("consulta y envía en las rutas del sílabo", async () => {
     const sent = answers({ available: false })
 
     await expect(getTeacherAssistant("silabo-1")).resolves.toEqual({ available: false })
@@ -28,11 +28,5 @@ describe("API del asistente del docente", () => {
 
     await sendTeacherAssistantMessage("silabo-1", "Ideas", "clave-1")
     expect(sent()).toEqual({ url: "/api/v1/teacher/syllabi/silabo-1/assistant/messages", method: "POST", body: { message: "Ideas", idempotency_key: "clave-1" } })
-
-    await acceptTeacherProposal("silabo-1", "propuesta-1", 7)
-    expect(sent()).toEqual({ url: "/api/v1/teacher/syllabi/silabo-1/assistant/proposals/propuesta-1/accept", method: "POST", body: { version_bloqueo: 7 } })
-
-    await discardTeacherProposal("silabo-1", "propuesta-1")
-    expect(sent()).toEqual({ url: "/api/v1/teacher/syllabi/silabo-1/assistant/proposals/propuesta-1/discard", method: "POST", body: {} })
   })
 })

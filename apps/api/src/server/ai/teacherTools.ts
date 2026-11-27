@@ -1,7 +1,7 @@
 import { isPhpArray, list, record, type PhpRecord } from "../configuration/phpValues"
 import type { AiToolCall, AiToolSpec } from "./gateway"
 import { strLimit } from "./php"
-import { applyToTarget, proposalText, sendable, type AssistantSnapshot, type AssistantTarget, type ReadableField, type RowAnchor, type TargetKind } from "./teacherContext"
+import { applyToTarget, proposalText, sendable, type AssistantSnapshot, type AssistantTarget, type ReadableField, type TargetKind } from "./teacherContext"
 import { toolError, toolFinish, toolOk, ANSWER, type ToolResult } from "./templateTools"
 
 const FIELD_CHARACTERS = 20000
@@ -11,7 +11,7 @@ const MAX_PROPOSALS = 6
 const MESSAGE_CHARACTERS = 4000
 const BASIS_CHARACTERS = 600
 
-export type ProposalTarget = { kind: TargetKind; space: number | null; path: number[]; mold: string; row?: RowAnchor | null; fieldKey: string; fieldLabel: string }
+export type ProposalTarget = { kind: TargetKind; space: number | null; fieldKey: string; fieldLabel: string }
 export type OfferedProposal = { fieldId: string; target: ProposalTarget; baseHash: string; text: string; basis: string }
 
 export type TeacherToolSession = { snapshot: AssistantSnapshot; read: Set<string>; delivered: ReadonlySet<string>; proposals: OfferedProposal[] }
@@ -75,7 +75,7 @@ function proposalOf(raw: unknown, position: number, session: TeacherToolSession,
   if ("problem" in outcome) return refuse(sendable(outcome.problem, session.snapshot.template.definition))
   return {
     fieldId: readable.field.id,
-    target: { kind: target.kind, space: target.space, path: target.path, mold: target.mold, row: target.row, fieldKey: readable.field.key, fieldLabel: readable.label },
+    target: { kind: target.kind, space: target.space, fieldKey: readable.field.key, fieldLabel: readable.label },
     baseHash: target.baseHash,
     text,
     basis: strLimit(basis, BASIS_CHARACTERS),

@@ -1596,28 +1596,6 @@
     "methods": [
       "POST"
     ],
-    "uri": "api/v1/teacher/syllabi/{syllabus}/assistant/proposals/{proposal}/accept",
-    "wheres": {},
-    "bindings": {
-      "syllabus": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Syllabus",
-      "proposal": "App\\Modules\\AiAssistance\\Infrastructure\\Persistence\\Models\\TeacherAssistantProposal"
-    }
-  },
-  {
-    "methods": [
-      "POST"
-    ],
-    "uri": "api/v1/teacher/syllabi/{syllabus}/assistant/proposals/{proposal}/discard",
-    "wheres": {},
-    "bindings": {
-      "syllabus": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Syllabus",
-      "proposal": "App\\Modules\\AiAssistance\\Infrastructure\\Persistence\\Models\\TeacherAssistantProposal"
-    }
-  },
-  {
-    "methods": [
-      "POST"
-    ],
     "uri": "api/v1/teacher/syllabi/{syllabus}/submit",
     "wheres": {},
     "bindings": {

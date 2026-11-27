@@ -23,7 +23,6 @@ type Section = SyllabusDetail["sections"][number]
 export type SyllabusTeacherFormProps = {
   sections: Section[]
   disabled?: boolean
-  lockedFieldId?: string | null
   errors?: (fieldId: string) => string[]
   onValueChange?: (field: SyllabusField, value: DocumentNode) => void
   active?: string
@@ -38,7 +37,6 @@ const documentOf = (field: { template?: DocumentNode | null; value: DocumentNode
 export function SyllabusTeacherForm({
   sections,
   disabled = false,
-  lockedFieldId = null,
   errors = NO_ERRORS,
   onValueChange,
   active,
@@ -129,7 +127,7 @@ export function SyllabusTeacherForm({
                             label={fieldTitle(field, section)}
                             value={field.value}
                             id={`input-${field.id}`}
-                            disabled={disabled || field.id === lockedFieldId}
+                            disabled={disabled}
                             answers={conditions.answers}
                             limit={limit}
                             onValueChange={(value) => onValueChange?.(field, value)}

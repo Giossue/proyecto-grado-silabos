@@ -116,7 +116,7 @@ async function seedProposals(): Promise<void> {
     position,
     state: "pendiente",
     fieldId: fieldByKey(world.template, "descripcion").id,
-    target: { kind: target.kind, space: target.space, path: target.path, mold: target.mold, fieldKey: "descripcion", fieldLabel: "Descripción" },
+    target: { kind: target.kind, space: target.space, fieldKey: "descripcion", fieldLabel: "Descripción" },
     baseHash: target.baseHash,
     text: "Estudia redes.",
     basis: "Los datos.",
@@ -138,15 +138,14 @@ describe("the teacher assistant routes served by Nest", () => {
     expect(world.messages[0].content).toEqual({ texto: "Mejore la descripción" })
   })
 
-  it("accept and discard the proposal named in the address", async () => {
+  it("offer no way to apply or discard a proposal", async () => {
     await seedProposals()
 
     const accepted = await call("post", `${PATH}/proposals/${PROPOSAL}/accept`, { version_bloqueo: 3 })
     const discarded = await call("post", `${PATH}/proposals/${SECOND}/discard`)
 
-    expect([accepted.status, accepted.body.version_bloqueo, accepted.body.value.type]).toEqual([200, 3, "doc"])
-    expect([discarded.status, discarded.body]).toEqual([200, { message: "Propuesta descartada." }])
-    expect(world.proposals.map((item) => item.state)).toEqual(["aceptada", "descartada"])
+    expect([accepted.status, discarded.status]).toEqual([404, 404])
+    expect(world.proposals.map((item) => item.state)).toEqual(["pendiente", "pendiente"])
   })
 
   it("ask for a session and find the syllabus before anything else", async () => {

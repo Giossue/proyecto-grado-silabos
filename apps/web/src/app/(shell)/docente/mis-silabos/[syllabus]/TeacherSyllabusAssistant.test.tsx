@@ -1,12 +1,8 @@
 import { act, fireEvent, waitFor } from "@testing-library/react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ApiError } from "@/api/client"
 import { getTeacherSyllabus, saveTeacherField, startTeacherSyllabus, submitTeacherSyllabus, validateTeacherSyllabus, type SyllabusDetail, type SyllabusField } from "@/api/syllabi"
-import { acceptTeacherProposal, discardTeacherProposal, getTeacherAssistant, sendTeacherAssistantMessage, type TeacherAssistantChat, type TeacherAssistantMessage, type TeacherProposal } from "@/api/teacherAssistant"
-import { SyllabusDocumentPreview } from "@/components/domain/syllabus/SyllabusDocumentPreview"
-import { handleUnauthorized } from "@/lib/unauthorized"
-import { toast } from "@/lib/toast"
-import { teacherAssistantKeys } from "@/queries/teacherAssistant"
+import { getTeacherAssistant, sendTeacherAssistantMessage, type TeacherAssistantChat, type TeacherAssistantMessage, type TeacherProposal } from "@/api/teacherAssistant"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { navigation } from "@/test/nextNavigation"
 import { createTestQueryClient, flush, renderWithProviders } from "@/test/render"
@@ -14,13 +10,8 @@ import TeacherSyllabusDetailPage from "./TeacherSyllabusDetailPage"
 
 vi.mock("next/navigation", async () => ({ ...(await import("@/test/nextNavigation")), useParams: () => ({ syllabus: "syllabus-1" }) }))
 vi.mock("@/lib/unauthorized", () => ({ handleUnauthorized: vi.fn() }))
-vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn(), loading: vi.fn(), dismiss: vi.fn() } }))
 vi.mock("@/api/session", () => ({ getSession: vi.fn() }))
 vi.mock("@/components/domain/ai/avatar/RobotAvatar", () => ({ RobotAvatar: () => <span data-robot-avatar /> }))
-vi.mock("@/components/domain/syllabus/SyllabusDocumentPreview", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/components/domain/syllabus/SyllabusDocumentPreview")>()
-  return { ...actual, SyllabusDocumentPreview: vi.fn(actual.SyllabusDocumentPreview) }
-})
 vi.mock("@/api/support-documents", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getTeacherSupportDocuments: vi.fn(async () => ({ data: [{ id: "doc-1", title: "Guía", size: 10, view: "lista", uploaded_at: "2026-09-10T00:00:00Z" }] })),
@@ -36,8 +27,6 @@ vi.mock("@/api/syllabi", async (importOriginal) => ({
 vi.mock("@/api/teacherAssistant", () => ({
   getTeacherAssistant: vi.fn(),
   sendTeacherAssistantMessage: vi.fn(),
-  acceptTeacherProposal: vi.fn(),
-  discardTeacherProposal: vi.fn(),
 }))
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
@@ -68,21 +57,9 @@ const syllabus = (overrides: Partial<SyllabusDetail> = {}): SyllabusDetail => ({
   ...overrides,
 }) as unknown as SyllabusDetail
 
-const twoFields = (): SyllabusDetail => {
-  const detail = syllabus()
-  detail.sections[0]!.fields = [field("field-1"), field("field-3")]
-  return detail
-}
-
-const twoSections = (): SyllabusDetail => {
-  const detail = syllabus()
-  detail.sections.push({ id: "section-2", key: "metodologia", title: "Metodología", description: null, orientation: "portrait", fields: [field("field-2")] })
-  return detail
-}
-
 const proposal = (overrides: Partial<TeacherProposal> = {}): TeacherProposal => ({
   id: "p-1", status: "pendiente", field_id: "field-1", field_key: "campo_field-1", field_label: "Rótulo field-1", target: "campo", space: null,
-  text: "Texto propuesto", basis: "En las 4 horas de docencia y en los objetivos", usable: true, blocked_reason: null, ...overrides,
+  text: "Texto propuesto", basis: "En las 4 horas de docencia y en los objetivos", ...overrides,
 })
 
 const question: TeacherAssistantMessage = { id: "q-1", role: "usuario", status: "completado", content: "Deme ideas", error: null, created_at: "2026-11-27T10:00:00Z", proposals: [] }
@@ -104,7 +81,6 @@ const deferred = <T,>() => {
   return { promise, resolve, reject }
 }
 
-const accepted = (value: DocumentNode, fieldId = "field-1", version = 2) => ({ message: "Propuesta colocada en el campo.", field_id: fieldId, value, version_bloqueo: version })
 const saved = (version: number, document: DocumentNode = doc("guardado")) => ({ version_bloqueo: version, guardado_en: null, document })
 
 const mountPage = (queryClient = createTestQueryClient()) => renderWithProviders(<TeacherSyllabusDetailPage />, { queryClient })
@@ -158,11 +134,10 @@ const textOf = (value: unknown): string => {
 }
 
 const toolButtons = (page: Page): HTMLButtonElement[] => [...page.container.querySelectorAll<HTMLButtonElement>('[data-tour="page-tools"] button')]
-const assistantButton = (page: Page): HTMLButtonElement | undefined => toolButtons(page).find((button) => button.getAttribute("aria-label") === "Asistente IA")
+const assistantButton = (page: Page): HTMLButtonElement | undefined => page.container.querySelector<HTMLButtonElement>('[data-tour="teacher-assistant"]') ?? undefined
 const pageButton = (page: Page, name: string): HTMLButtonElement | undefined =>
   [...page.container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === name || button.getAttribute("aria-label") === name)
-const panel = (): HTMLElement | null =>
-  [...document.body.querySelectorAll<HTMLElement>('[role="dialog"]')].find((dialog) => dialog.querySelector('[data-slot="sheet-title"]')?.textContent === "Asistente IA") ?? null
+const panel = (): HTMLElement | null => document.body.querySelector<HTMLElement>('aside[aria-label="Asistente IA"]')
 const panelButtons = (name: string, within: ParentNode = panel()!): HTMLButtonElement[] =>
   [...within.querySelectorAll<HTMLButtonElement>("button")].filter((button) => button.textContent?.trim() === name)
 const panelButton = (name: string, within?: ParentNode): HTMLButtonElement | undefined => panelButtons(name, within ?? panel()!)[0]
@@ -182,13 +157,7 @@ const click = async (element: Element): Promise<void> => {
 const openPanel = async (page: Page): Promise<void> => {
   await click(assistantButton(page)!)
 }
-const openTab = async (page: Page, title: string): Promise<void> => {
-  const tab = [...page.container.querySelectorAll('[role="tab"]')].find((candidate) => candidate.textContent?.includes(title))!
-  fireEvent.mouseDown(tab, { button: 0 })
-  await settle()
-}
 const lastCall = (mock: { mock: { invocationCallOrder: number[] } }): number => mock.mock.invocationCallOrder.at(-1)!
-const previewValue = () => vi.mocked(SyllabusDocumentPreview).mock.lastCall![0].sections[0]!.fields[0]!
 
 beforeEach(() => {
   vi.useRealTimers()
@@ -199,12 +168,6 @@ beforeEach(() => {
   vi.mocked(validateTeacherSyllabus).mockReset()
   vi.mocked(getTeacherAssistant).mockReset().mockResolvedValue(chat())
   vi.mocked(sendTeacherAssistantMessage).mockReset().mockResolvedValue({ message: "El pedido quedó registrado.", assistant_message_id: "a-1" })
-  vi.mocked(acceptTeacherProposal).mockReset().mockResolvedValue(accepted(doc("Texto propuesto")))
-  vi.mocked(discardTeacherProposal).mockReset().mockResolvedValue({ message: "Propuesta descartada." })
-  vi.mocked(handleUnauthorized).mockReset()
-  vi.mocked(toast.error).mockReset()
-  vi.mocked(toast.success).mockReset()
-  vi.mocked(SyllabusDocumentPreview).mockClear()
   navigation.reset("/docente/mis-silabos/syllabus-1")
   window.sessionStorage.clear()
 })
@@ -221,17 +184,27 @@ describe("«Asistente IA» en el sílabo del docente: disponibilidad", () => {
     expect(page.container.textContent).not.toContain("Asistente")
     expect(getTeacherAssistant).toHaveBeenCalledTimes(1)
     expect(getTeacherAssistant).toHaveBeenCalledWith("syllabus-1")
-    for (const other of [sendTeacherAssistantMessage, acceptTeacherProposal, discardTeacherProposal, saveTeacherField]) expect(other).not.toHaveBeenCalled()
+    for (const other of [sendTeacherAssistantMessage, saveTeacherField]) expect(other).not.toHaveBeenCalled()
     page.unmount()
   })
 
-  it("disponible: un botón con icono y texto queda junto a «Vista previa», sin abrir nada", async () => {
+  it("disponible: un botón flotante como el de Administración queda abajo a la derecha, sin abrir nada", async () => {
+    const page = await open()
+    const button = assistantButton(page)!
+
+    expect(toolButtons(page).map((item) => item.getAttribute("aria-label") ?? item.textContent)).toEqual(["Documentos de apoyo", "Vista previa"])
+    expect(button.textContent).toBe("Asistente")
+    expect(button.querySelector("svg")).not.toBeNull()
+    expect(button.className.split(" ")).toEqual(expect.arrayContaining(["fixed", "right-6", "bottom-6", "rounded-full"]))
+    expect(panel()).toBeNull()
+    page.unmount()
+  })
+
+  it("mientras el asistente prepara una respuesta, el botón flotante lo indica aunque esté cerrado", async () => {
+    vi.mocked(getTeacherAssistant).mockResolvedValue(chat({ busy: true }))
     const page = await open()
 
-    expect(toolButtons(page).map((button) => button.getAttribute("aria-label") ?? button.textContent)).toEqual(["Documentos de apoyo", "Vista previa", "Asistente IA"])
-    expect(assistantButton(page)!.textContent).toBe("Asistente IA")
-    expect(assistantButton(page)!.querySelector("svg")).not.toBeNull()
-    expect(panel()).toBeNull()
+    expect(assistantButton(page)!.querySelector('[role="status"]')).not.toBeNull()
     page.unmount()
   })
 
@@ -274,22 +247,6 @@ describe("«Asistente IA» en el sílabo del docente: disponibilidad", () => {
     expect(locked("field-1")).toBe(false)
     page.unmount()
   })
-
-  it("mientras carga reserva el botón del asistente solo si ya sabe que está disponible", async () => {
-    vi.mocked(getTeacherSyllabus).mockReturnValue(new Promise(() => undefined))
-    const placeholders = (page: Page) => page.container.querySelector('[data-skeleton="page-actions"]')!.children.length
-    const unknown = mountPage()
-    await settle()
-    expect(placeholders(unknown)).toBe(2)
-    unknown.unmount()
-
-    const client = createTestQueryClient()
-    client.setQueryData(teacherAssistantKeys.chat("syllabus-1"), chat())
-    const known = mountPage(client)
-    await settle()
-    expect(placeholders(known)).toBe(3)
-    known.unmount()
-  })
 })
 
 describe("«Asistente IA» disponible: lo que la pantalla ya hacía sigue igual", () => {
@@ -316,25 +273,80 @@ describe("«Asistente IA» disponible: lo que la pantalla ya hacía sigue igual"
 
     expect(submitTeacherSyllabus).toHaveBeenCalledWith("syllabus-1", 4, expect.any(String), null)
     expect(assistantButton(page)).toBeUndefined()
-    for (const other of [sendTeacherAssistantMessage, acceptTeacherProposal, discardTeacherProposal]) expect(other).not.toHaveBeenCalled()
+    expect(sendTeacherAssistantMessage).not.toHaveBeenCalled()
     page.unmount()
   })
 })
 
-describe("«Asistente IA»: el panel, el aviso y los pedidos", () => {
+describe("«Asistente IA»: el panel y los pedidos", () => {
   it.each([
     ["sin conversación", false],
     ["con conversación", true],
-  ])("el panel queda limpio %s: un solo aviso corto de IA, sin listas ni explicaciones", async (_case, talking) => {
+  ])("el panel queda limpio %s: sin línea de aviso, listas ni explicaciones", async (_case, talking) => {
     if (talking) vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal()))
     const page = await open()
     await openPanel(page)
 
     const text = panel()!.textContent!
-    expect(text).toContain("La IA (DeepSeek) puede equivocarse: revise antes de usar y no escriba datos personales")
-    for (const extra of ["Qué se envía", "Se envía a DeepSeek", "No se envía", "Le propone textos", "discapacidad"]) expect(text, extra).not.toContain(extra)
-    expect(panelButton("Qué se envía")).toBeUndefined()
-    expect(panelButton("Cerrar")!.querySelector("svg")).not.toBeNull()
+    for (const extra of ["puede equivocarse", "datos personales", "DeepSeek", "Qué se envía", "Se envía a", "No se envía", "Le propone textos", "discapacidad", "En qué se basa"]) {
+      expect(text, extra).not.toContain(extra)
+    }
+    expect(panelButton("Cerrar")).toBeUndefined()
+    page.unmount()
+  })
+
+  it("se abre a un lado, como el de Administración, sin tapar ni bloquear el sílabo", async () => {
+    const page = await open()
+    await editorShown("field-1")
+    await openPanel(page)
+
+    expect(panel()!.className.split(" ")).toEqual(expect.arrayContaining(["fixed", "right-6", "bottom-24"]))
+    expect(document.body.querySelector('[role="dialog"], [data-slot="sheet-overlay"]')).toBeNull()
+    expect(page.container.closest("[aria-hidden='true'], [inert]")).toBeNull()
+    expect(document.body.style.pointerEvents).toBe("")
+    vi.useFakeTimers()
+    await write("field-1", " a la vez")
+    await advance(700)
+    expect(textOf(vi.mocked(saveTeacherField).mock.calls[0]![3])).toBe("Texto de field-1 a la vez")
+    expect(panel()).not.toBeNull()
+    page.unmount()
+  })
+
+  it("el botón flotante abre y cierra el panel y su texto lo dice", async () => {
+    const page = await open()
+    const button = assistantButton(page)!
+    expect(button.getAttribute("aria-expanded")).toBe("false")
+    expect(button.hasAttribute("aria-haspopup")).toBe(false)
+
+    await openPanel(page)
+    expect(button.getAttribute("aria-expanded")).toBe("true")
+    expect(button.getAttribute("aria-controls")).toBe(panel()!.id)
+    expect(button.textContent).toBe("Cerrar asistente")
+
+    await click(button)
+    expect(panel()).toBeNull()
+    expect(button.getAttribute("aria-expanded")).toBe("false")
+    expect(button.hasAttribute("aria-controls")).toBe(false)
+    expect(button.textContent).toBe("Asistente")
+    page.unmount()
+  })
+
+  it("al abrir el panel el foco entra en él; con Escape vuelve al botón y lo escrito sin enviar se conserva", async () => {
+    const page = await open()
+    await openPanel(page)
+    expect(panel()!.contains(document.activeElement)).toBe(true)
+    compose("Borrador del pedido")
+    await click(assistantButton(page)!)
+    await openPanel(page)
+    expect(composer().value).toBe("Borrador del pedido")
+
+    fireEvent.keyDown(document.body, { key: "Escape" })
+    await settle()
+    expect(panel()).not.toBeNull()
+    fireEvent.keyDown(composer(), { key: "Escape" })
+    await settle()
+    expect(panel()).toBeNull()
+    expect(document.activeElement).toBe(assistantButton(page))
     page.unmount()
   })
 
@@ -360,14 +372,14 @@ describe("«Asistente IA»: el panel, el aviso y los pedidos", () => {
   it("enviar vacío marca el campo con su mensaje y le pone el foco, sin pedir nada ni desactivar el botón", async () => {
     const page = await open()
     await openPanel(page)
-    expect(panelButton("Enviar pedido")!.disabled).toBe(false)
+    expect(panelButton("Enviar")!.disabled).toBe(false)
 
     await submitMessage()
 
     expect(panel()!.textContent).toContain("El campo pedido es obligatorio")
     expect(composer().getAttribute("aria-invalid")).toBe("true")
     expect(document.activeElement).toBe(composer())
-    expect(panelButton("Enviar pedido")!.disabled).toBe(false)
+    expect(panelButton("Enviar")!.disabled).toBe(false)
     expect(sendTeacherAssistantMessage).not.toHaveBeenCalled()
     page.unmount()
   })
@@ -401,7 +413,7 @@ describe("«Asistente IA»: el panel, el aviso y los pedidos", () => {
     expect(panel()!.textContent).not.toContain("Preparando la respuesta")
     await advance(20_000)
     expect(vi.mocked(getTeacherAssistant).mock.calls.length).toBe(before + 2)
-    expect(panelButton("Enviar pedido")!.disabled).toBe(false)
+    expect(panelButton("Enviar")!.disabled).toBe(false)
     page.unmount()
   })
 
@@ -419,8 +431,11 @@ describe("«Asistente IA»: el panel, el aviso y los pedidos", () => {
     expect(vi.mocked(getTeacherAssistant).mock.calls.length).toBe(calls)
     expect(panel()!.textContent).toContain("El asistente no está disponible por ahora")
     expect(panel()!.textContent).not.toContain("Preparando la respuesta")
-    expect(assistantButton(page)).toBeUndefined()
     expect(page.container.querySelector(".edit-blocked")).toBeNull()
+    expect(assistantButton(page)!.textContent).toBe("Cerrar asistente")
+    await click(assistantButton(page)!)
+    expect(panel()).toBeNull()
+    expect(assistantButton(page)).toBeUndefined()
     page.unmount()
   })
 
@@ -463,7 +478,7 @@ describe("«Asistente IA»: el panel, el aviso y los pedidos", () => {
 
     expect(panel()!.textContent).toContain("Llegó al límite de 20 pedidos de hoy al asistente. Podrá pedir otra vez mañana")
     expect(panel()!.querySelector("textarea")).toBeNull()
-    expect(panelButton("Enviar pedido")).toBeUndefined()
+    expect(panelButton("Enviar")).toBeUndefined()
     expect(panelButton("Intentar de nuevo")).toBeUndefined()
     page.unmount()
   })
@@ -526,7 +541,7 @@ describe("«Asistente IA»: el panel, el aviso y los pedidos", () => {
 
     expect(panel()!.textContent).toContain("El asistente no está disponible por ahora")
     expect(panel()!.querySelector("textarea")).toBeNull()
-    await click(panelButton("Cerrar")!)
+    await click(assistantButton(page)!)
     expect(panel()).toBeNull()
     expect(assistantButton(page)).toBeUndefined()
     page.unmount()
@@ -547,494 +562,106 @@ describe("«Asistente IA»: el panel, el aviso y los pedidos", () => {
 })
 
 describe("«Asistente IA»: las propuestas", () => {
-  it("cada propuesta dice su campo, el texto, en qué se basó y ofrece «Usar» y «Descartar», siempre como texto", async () => {
+  const writeText = vi.fn<(text: string) => Promise<void>>()
+  const useClipboard = (): void => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } })
+  }
+  const removeClipboard = (): void => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined })
+  }
+  const copyButton = (id = "p-1"): HTMLButtonElement => card(id)!.querySelector("button")!
+  const announced = (id = "p-1"): string => card(id)!.querySelector('[role="status"]')!.textContent!
+
+  beforeEach(() => {
+    writeText.mockReset().mockResolvedValue(undefined)
+    useClipboard()
+  })
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "clipboard")
+  })
+
+  it("cada propuesta dice su campo y su texto, siempre como texto, y solo ofrece «Copiar»", async () => {
     vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(
-      proposal({ text: "<img src=x onerror=alert(1)>\n- Primer punto", basis: "<b>En los objetivos</b>" }),
+      proposal({ text: "<img src=x onerror=alert(1)>\n- Primer punto" }),
       proposal({ id: "p-2", target: "espacio", space: 2, field_label: "Evaluación" }),
     ))
     const page = await open()
     await openPanel(page)
 
     expect(panel()!.querySelector("strong")!.textContent).toBe("objetivos")
+    expect(card()!.textContent).toContain("Propuesta para el campo")
     expect(card()!.textContent).toContain("Rótulo field-1")
     expect(card()!.textContent).toContain("<img src=x onerror=alert(1)>\n- Primer punto")
-    expect(card()!.textContent).toContain("En qué se basa: <b>En los objetivos</b>")
-    expect(card()!.textContent).toContain("Reemplaza todo el texto del campo")
+    expect(card("p-2")!.textContent).toContain("Propuesta para el espacio 2 del campo")
     expect(card("p-2")!.textContent).toContain("Evaluación")
-    expect(card("p-2")!.textContent).toContain("Llena el espacio 2 del campo")
-    expect(panel()!.querySelector("img, b")).toBeNull()
-    for (const name of ["Usar", "Descartar"]) expect(panelButton(name, card()!)!.querySelector("svg")).not.toBeNull()
+    expect(panel()!.querySelector("img")).toBeNull()
+    for (const id of ["p-1", "p-2"]) {
+      expect([...card(id)!.querySelectorAll("button")].map((button) => button.textContent)).toEqual(["Copiar"])
+      expect(copyButton(id).querySelector("svg")).not.toBeNull()
+      for (const gone of ["En qué se basa", "En las 4 horas", "Reemplaza todo", "Llena el espacio"]) {
+        expect(card(id)!.textContent, gone).not.toContain(gone)
+      }
+    }
     page.unmount()
   })
 
-  it("una propuesta que no se puede usar muestra el motivo, sin botones desactivados", async () => {
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal({ usable: false, blocked_reason: "Ese texto cambió desde que se hizo la propuesta. Pida una nueva." })))
+  it("«Copiar» lleva al portapapeles el texto exacto, lo confirma un momento y no toca el sílabo", async () => {
+    const text = "Primera línea\n- Segunda\n\nCuarta"
+    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal({ text }), proposal({ id: "p-2" })))
     const page = await open()
     await openPanel(page)
+    vi.useFakeTimers()
+    expect(announced()).toBe("")
 
-    expect(card()!.textContent).toContain("Ese texto cambió desde que se hizo la propuesta. Pida una nueva")
-    expect(panelButton("Usar", card()!)).toBeUndefined()
-    expect(panelButton("Descartar", card()!)).toBeDefined()
-    expect(card()!.querySelectorAll("button:disabled")).toHaveLength(0)
+    await click(copyButton())
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(text)
+    expect(copyButton().textContent).toBe("Copiado")
+    expect(copyButton().disabled).toBe(false)
+    expect(announced()).toBe("Texto copiado")
+    expect(copyButton("p-2").textContent).toBe("Copiar")
+
+    await advance(2_000)
+    expect(copyButton().textContent).toBe("Copiar")
+    expect(announced()).toBe("")
+    expect(saveTeacherField).not.toHaveBeenCalled()
+    expect(sendTeacherAssistantMessage).not.toHaveBeenCalled()
     page.unmount()
   })
 
-  it("una propuesta ya usada no se presenta como error; la reemplazada lo dice y la descartada no aparece", async () => {
+  it.each([
+    ["el navegador niega el permiso", () => writeText.mockRejectedValue(new Error("NotAllowedError"))],
+    ["el navegador no ofrece portapapeles", removeClipboard],
+  ])("si no se puede copiar porque %s, lo dice y se puede intentar otra vez", async (_case, arrange) => {
+    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal()))
+    const page = await open()
+    await openPanel(page)
+    arrange()
+    await click(copyButton())
+
+    expect(card()!.querySelector('[role="alert"]')!.textContent).toBe("No se pudo copiar. Seleccione el texto y cópielo a mano")
+    expect(copyButton().textContent).toBe("Copiar")
+    expect(copyButton().disabled).toBe(false)
+
+    useClipboard()
+    writeText.mockResolvedValue(undefined)
+    await click(copyButton())
+    expect(card()!.querySelector('[role="alert"]')).toBeNull()
+    expect(copyButton().textContent).toBe("Copiado")
+    page.unmount()
+  })
+
+  it("una propuesta reemplazada lo dice y no ofrece copiarla", async () => {
     vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(
-      proposal({ status: "aceptada", usable: false, blocked_reason: "Ese texto cambió desde que se hizo la propuesta. Pida una nueva." }),
-      proposal({ id: "p-2", status: "reemplazada", usable: false, field_label: "Evaluación" }),
-      proposal({ id: "p-3", status: "descartada", usable: false, text: "Texto descartado" }),
-      proposal({ id: "p-4", status: "aceptada", usable: true }),
+      proposal({ status: "reemplazada", field_label: "Evaluación" }),
+      proposal({ id: "p-2" }),
     ))
     const page = await open()
     await openPanel(page)
 
-    expect(card()!.textContent).toContain("Usada")
-    expect(card()!.textContent).not.toContain("Ese texto cambió")
-    expect(card()!.querySelector('[role="alert"]')).toBeNull()
-    expect(panelButton("Usar", card()!)).toBeUndefined()
-    expect(panelButton("Descartar", card()!)).toBeUndefined()
-    expect(panelButton("Ver en el campo", card()!)).toBeDefined()
-    expect(card("p-2")!.textContent).toContain("«Evaluación» se reemplazó por una más nueva")
-    expect(card("p-2")!.querySelectorAll("button")).toHaveLength(0)
-    expect(card("p-3")).toBeNull()
-    expect(panel()!.textContent).not.toContain("Texto descartado")
-    expect(panelButton("Usar", card("p-4")!)).toBeDefined()
-    expect(panelButton("Descartar", card("p-4")!)).toBeUndefined()
-    page.unmount()
-  })
-
-  it("«Descartar» quita la propuesta sin tocar el sílabo y solo se desactiva mientras se envía", async () => {
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal()))
-    const discarding = deferred<{ message: string }>()
-    vi.mocked(discardTeacherProposal).mockReturnValue(discarding.promise)
-    const page = await open()
-    await openPanel(page)
-
-    await click(panelButton("Descartar", card()!)!)
-    expect(panelButton("Usar", card()!)!.disabled).toBe(true)
-    expect(panelButton("Descartar", card()!)!.disabled).toBe(true)
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal({ status: "descartada", usable: false })))
-    discarding.resolve({ message: "Propuesta descartada." })
-    await settle()
-
-    expect(discardTeacherProposal).toHaveBeenCalledWith("syllabus-1", "p-1")
-    expect(card()).toBeNull()
-    expect(acceptTeacherProposal).not.toHaveBeenCalled()
-    expect(saveTeacherField).not.toHaveBeenCalled()
-    page.unmount()
-  })
-
-  it.each([
-    ["Usar", new ApiError("Server Error", 500), "No se pudo usar la propuesta"],
-    ["Usar", new ApiError("No query results for model [TeacherAssistantProposal] p-1", 404), "Esa propuesta ya no existe"],
-    ["Descartar", new ApiError("Server Error", 500), "No se pudo descartar la propuesta"],
-    ["Descartar", new ApiError("No query results for model [TeacherAssistantProposal] p-1", 404), "Esa propuesta ya no existe"],
-  ])("«%s» no muestra el texto técnico del servidor: %s", async (action, failure, shown) => {
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal()))
-    vi.mocked(acceptTeacherProposal).mockRejectedValue(failure)
-    vi.mocked(discardTeacherProposal).mockRejectedValue(failure)
-    const page = await open()
-    await openPanel(page)
-    await click(panelButton(action, card()!)!)
-
-    expect(card()!.querySelector('[role="alert"]')!.textContent).toContain(shown)
-    expect(panel()!.textContent).not.toMatch(/Server Error|No query results/)
-    expect(saveTeacherField).not.toHaveBeenCalled()
-    page.unmount()
-  })
-
-  it("si no se puede descartar, dice por qué", async () => {
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal()))
-    vi.mocked(discardTeacherProposal).mockRejectedValue(new ApiError("Datos no válidos", 422, { proposal: ["Esta propuesta ya no está pendiente."] }))
-    const page = await open()
-    await openPanel(page)
-    await click(panelButton("Descartar", card()!)!)
-
-    expect(card()!.querySelector('[role="alert"]')!.textContent).toContain("Esta propuesta ya no está pendiente")
-    expect(panelButton("Descartar", card()!)!.disabled).toBe(false)
-    page.unmount()
-  })
-})
-
-describe("«Asistente IA»: «Usar» sin perder lo escrito", () => {
-  beforeEach(() => {
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal()))
-  })
-
-  it("guarda lo pendiente, bloquea el campo, acepta con la versión vigente, lo muestra, lo guarda y recién entonces refresca el asistente", async () => {
-    const firstSave = deferred<ReturnType<typeof saved>>()
-    const secondSave = deferred<ReturnType<typeof saved>>()
-    const accepting = deferred<ReturnType<typeof accepted>>()
-    vi.mocked(saveTeacherField).mockReset().mockReturnValueOnce(firstSave.promise).mockReturnValueOnce(secondSave.promise)
-    vi.mocked(acceptTeacherProposal).mockReturnValue(accepting.promise)
-    const page = await open()
-    await editorShown("field-1")
-    await openPanel(page)
-    await write("field-1", " tecleado")
-
-    await click(panelButton("Usar", card()!)!)
-    expect(locked("field-1")).toBe(true)
-    expect(saveTeacherField).toHaveBeenCalledTimes(1)
-    expect(textOf(vi.mocked(saveTeacherField).mock.calls[0]![3])).toBe("Texto de field-1 tecleado")
-    expect(acceptTeacherProposal).not.toHaveBeenCalled()
-    expect(panelButton("Usar", card()!)!.disabled).toBe(true)
-
-    firstSave.resolve(saved(3))
-    await settle()
-    expect(acceptTeacherProposal).toHaveBeenCalledWith("syllabus-1", "p-1", 3)
-    expect(locked("field-1")).toBe(true)
-    expect(editorElement("field-1")!.textContent).toBe("Texto de field-1 tecleado")
-
-    const consultations = vi.mocked(getTeacherAssistant).mock.calls.length
-    const value = doc("Texto propuesto")
-    accepting.resolve(accepted(value, "field-1", 3))
-    await settle()
-    await waitFor(() => expect(editorElement("field-1")!.textContent).toBe("Texto propuesto"))
-    expect(locked("field-1")).toBe(false)
-    expect(saveTeacherField).toHaveBeenCalledTimes(2)
-    expect(saveTeacherField).toHaveBeenLastCalledWith("syllabus-1", "field-1", 3, value)
-    expect(vi.mocked(getTeacherAssistant).mock.calls.length).toBe(consultations)
-
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal({ status: "aceptada", usable: false, blocked_reason: "Ese texto cambió desde que se hizo la propuesta. Pida una nueva." })))
-    secondSave.resolve(saved(4, value))
-    await settle()
-
-    expect(vi.mocked(getTeacherAssistant).mock.calls.length).toBe(consultations + 1)
-    expect(card()!.textContent).toContain("Colocada en el campo")
-    expect(card()!.textContent).not.toContain("Ese texto cambió")
-    expect(panelButton("Usar", card()!)).toBeUndefined()
-    expect(submitTeacherSyllabus).not.toHaveBeenCalled()
-    expect(validateTeacherSyllabus).not.toHaveBeenCalled()
-    expect(saveTeacherField).toHaveBeenCalledTimes(2)
-    page.unmount()
-  })
-
-  it("lo que se escribe después de usarla se guarda con el autoguardado de siempre", async () => {
-    vi.mocked(saveTeacherField).mockReset().mockResolvedValueOnce(saved(3)).mockResolvedValueOnce(saved(4))
-    const page = await open()
-    await editorShown("field-1")
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-    await waitFor(() => expect(editorElement("field-1")!.textContent).toBe("Texto propuesto"))
-    await write("field-1", " y editado")
-
-    await waitFor(() => expect(saveTeacherField).toHaveBeenCalledTimes(2), { timeout: 2000 })
-    const [, fieldId, version, value] = vi.mocked(saveTeacherField).mock.calls[1]!
-    expect([fieldId, version, textOf(value)]).toEqual(["field-1", 3, "Texto propuesto y editado"])
-    page.unmount()
-  })
-
-  it("nunca usa el valor aceptado como documento: la vista previa recibe el que devuelve el guardado", async () => {
-    const detail = syllabus()
-    detail.sections[0]!.fields = [field("field-1", { document: doc("Documento anterior") })]
-    const saving = deferred<ReturnType<typeof saved>>()
-    vi.mocked(saveTeacherField).mockReset().mockReturnValue(saving.promise)
-    const page = await open(detail)
-    await click(pageButton(page, "Vista previa")!)
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-
-    expect(previewValue().value).toEqual(doc("Texto propuesto"))
-    expect(previewValue().document).toEqual(doc("Documento anterior"))
-    saving.resolve(saved(3, doc("Documento resuelto")))
-    await settle()
-    expect(previewValue().document).toEqual(doc("Documento resuelto"))
-    page.unmount()
-  })
-
-  it.each([
-    ["un error del guardado", new ApiError("Error temporal", 500), "Error temporal"],
-    ["un conflicto de versión", new ApiError("El borrador cambió", 409), "otra sesión"],
-  ])("si lo pendiente no se puede guardar por %s, no acepta nada, conserva lo escrito y dice por qué", async (_name, failure, shown) => {
-    vi.mocked(saveTeacherField).mockReset().mockRejectedValue(failure)
-    const page = await open()
-    await editorShown("field-1")
-    await openPanel(page)
-    await write("field-1", " tecleado")
-    await click(panelButton("Usar", card()!)!)
-
-    expect(acceptTeacherProposal).not.toHaveBeenCalled()
-    expect(editorElement("field-1")!.textContent).toBe("Texto de field-1 tecleado")
-    const alert = card()!.querySelector('[role="alert"]')!.textContent
-    expect(alert).toContain("No se colocó la propuesta")
-    expect(alert).toContain(shown)
-    expect(pageButton(page, "Reintentar")).toBeDefined()
-    for (const call of vi.mocked(saveTeacherField).mock.calls) expect(textOf(call[3])).toBe("Texto de field-1 tecleado")
-    page.unmount()
-  })
-
-  it("un conflicto al aceptar no cambia nada y deja el aviso de conflicto de siempre", async () => {
-    vi.mocked(acceptTeacherProposal).mockRejectedValue(new ApiError("El borrador cambió en otra sesión", 409, {}, { code: "conflicto_version_borrador", version_bloqueo_actual: 9 }))
-    const page = await open()
-    await editorShown("field-1")
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-
-    expect(editorElement("field-1")!.textContent).toBe("Texto de field-1")
-    expect(saveTeacherField).not.toHaveBeenCalled()
-    expect(page.container.querySelector(".feedback.error")!.textContent).toContain("otra sesión")
-    expect(page.container.querySelector(".feedback.error button")!.textContent).toBe("Recargar borrador")
-    expect(card()!.querySelector('[role="alert"]')!.textContent).toContain("«Recargar borrador»")
-    page.unmount()
-  })
-
-  it("si el servidor no acepta la propuesta, no cambia nada y muestra el motivo una sola vez", async () => {
-    const reason = "Ese texto cambió desde que se hizo la propuesta. Pida una nueva."
-    vi.mocked(acceptTeacherProposal).mockRejectedValue(new ApiError("Datos no válidos", 422, { proposal: [reason] }))
-    const page = await open()
-    await editorShown("field-1")
-    await openPanel(page)
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal({ usable: false, blocked_reason: reason })))
-    await click(panelButton("Usar", card()!)!)
-
-    expect(card()!.textContent.split("Ese texto cambió").length - 1).toBe(1)
-    expect(editorElement("field-1")!.textContent).toBe("Texto de field-1")
-    expect(locked("field-1")).toBe(false)
-    expect(saveTeacherField).not.toHaveBeenCalled()
-    expect(page.container.querySelector(".feedback.error")).toBeNull()
-    page.unmount()
-  })
-
-  it("si el servidor ya no permite editar, no coloca nada y el sílabo dice por qué", async () => {
-    vi.mocked(acceptTeacherProposal).mockRejectedValue(new ApiError("This action is unauthorized", 403))
-    const page = await open()
-    await editorShown("field-1")
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-
-    expect(panel()).toBeNull()
-    expect(page.container.querySelector(".edit-blocked")!.textContent).toContain("El periodo académico está en pausa")
-    expect(editorElement("field-1")!.textContent).toBe("Texto de field-1")
-    expect(saveTeacherField).not.toHaveBeenCalled()
-    page.unmount()
-  })
-
-  it("con la sesión caducada al aceptar, lleva al inicio de sesión sin cambiar nada", async () => {
-    vi.mocked(acceptTeacherProposal).mockRejectedValue(new ApiError("No autenticado", 401))
-    const page = await open()
-    await editorShown("field-1")
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-
-    expect(handleUnauthorized).toHaveBeenCalled()
-    expect(saveTeacherField).not.toHaveBeenCalled()
-    expect(editorElement("field-1")!.textContent).toBe("Texto de field-1")
-    page.unmount()
-  })
-
-  it("una propuesta para un campo que no está en la pantalla no se acepta", async () => {
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal({ field_id: "field-9" })))
-    const page = await open()
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-
-    expect(acceptTeacherProposal).not.toHaveBeenCalled()
-    expect(card()!.querySelector('[role="alert"]')!.textContent).toContain("Recargue la página")
-    page.unmount()
-  })
-
-  it("si se coloca pero no se puede guardar, lo dice y queda para reintentar", async () => {
-    vi.mocked(saveTeacherField).mockReset().mockRejectedValueOnce(new ApiError("Error temporal", 500)).mockResolvedValueOnce(saved(3))
-    const page = await open()
-    await editorShown("field-1")
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-
-    await waitFor(() => expect(editorElement("field-1")!.textContent).toBe("Texto propuesto"))
-    const alert = card()!.querySelector('[role="alert"]')!.textContent
-    expect(alert).toContain("pero no se pudo guardar")
-    expect(alert).toContain("Error temporal")
-    await click(panelButton("Cerrar")!)
-    await click(pageButton(page, "Reintentar")!)
-    expect(saveTeacherField).toHaveBeenLastCalledWith("syllabus-1", "field-1", 2, doc("Texto propuesto"))
-    page.unmount()
-  })
-
-  it("mientras acepta, lo escrito en otro campo se guarda después y nunca a la vez", async () => {
-    const accepting = deferred<ReturnType<typeof accepted>>()
-    vi.mocked(acceptTeacherProposal).mockReturnValue(accepting.promise)
-    vi.mocked(saveTeacherField).mockReset().mockResolvedValueOnce(saved(3)).mockResolvedValueOnce(saved(4))
-    const page = await open(twoFields())
-    await editorShown("field-3")
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-    expect(locked("field-1")).toBe(true)
-    expect(locked("field-3")).toBe(false)
-
-    vi.useFakeTimers()
-    await write("field-3", " mientras tanto")
-    await advance(5000)
-    expect(saveTeacherField).not.toHaveBeenCalled()
-
-    accepting.resolve(accepted(doc("Texto propuesto")))
-    await settle(8)
-    await advance(700)
-
-    expect(vi.mocked(saveTeacherField).mock.calls.map(([, id, version]) => [id, version])).toEqual([["field-3", 2], ["field-1", 3]])
-    expect(textOf(vi.mocked(saveTeacherField).mock.calls[0]![3])).toBe("Texto de field-3 mientras tanto")
-    expect(textOf(vi.mocked(saveTeacherField).mock.calls[1]![3])).toBe("Texto propuesto")
-    expect(lastCall(vi.mocked(acceptTeacherProposal))).toBeLessThan(vi.mocked(saveTeacherField).mock.invocationCallOrder[0]!)
-    expect(card()!.querySelector('[role="alert"]')).toBeNull()
-    page.unmount()
-  })
-
-  it("«Enviar» y «Usar» de otra propuesta esperan mientras se coloca una", async () => {
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal(), proposal({ id: "p-2" })))
-    const accepting = deferred<ReturnType<typeof accepted>>()
-    vi.mocked(acceptTeacherProposal).mockReturnValue(accepting.promise)
-    const page = await open()
-    await openPanel(page)
-    expect(pageButton(page, "Enviar")!.disabled).toBe(false)
-    await click(panelButton("Usar", card()!)!)
-
-    expect(pageButton(page, "Enviar")!.disabled).toBe(true)
-    expect(panelButton("Usar", card("p-2")!)!.disabled).toBe(true)
-    accepting.resolve(accepted(doc("Texto propuesto")))
-    await settle()
-
-    expect(pageButton(page, "Enviar")!.disabled).toBe(false)
-    expect(panelButton("Usar", card("p-2")!)!.disabled).toBe(false)
-    expect(acceptTeacherProposal).toHaveBeenCalledTimes(1)
-    expect(submitTeacherSyllabus).not.toHaveBeenCalled()
-    page.unmount()
-  })
-
-  it("salir mientras se coloca espera a que quede guardada", async () => {
-    const accepting = deferred<ReturnType<typeof accepted>>()
-    vi.mocked(acceptTeacherProposal).mockReturnValue(accepting.promise)
-    const page = await open()
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-    await click(panelButton("Cerrar")!)
-
-    const unload = new Event("beforeunload", { cancelable: true })
-    window.dispatchEvent(unload)
-    expect(unload.defaultPrevented).toBe(true)
-    await click(pageButton(page, "Volver a mis sílabos")!)
-    expect(navigation.back).not.toHaveBeenCalled()
-    expect(navigation.push).not.toHaveBeenCalled()
-
-    accepting.resolve(accepted(doc("Texto propuesto")))
-    await settle(8)
-
-    expect(saveTeacherField).toHaveBeenCalledWith("syllabus-1", "field-1", 2, doc("Texto propuesto"))
-    expect(navigation.back.mock.calls.length + navigation.push.mock.calls.length).toBe(1)
-    expect(toast.success).toHaveBeenCalledWith("Propuesta colocada en «Rótulo field-1»")
-    page.unmount()
-  })
-
-  it("si se cierra el panel antes de un rechazo, el motivo se avisa igual", async () => {
-    const accepting = deferred<ReturnType<typeof accepted>>()
-    vi.mocked(acceptTeacherProposal).mockReturnValue(accepting.promise)
-    const page = await open()
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-    await click(panelButton("Cerrar")!)
-    accepting.reject(new ApiError("Datos no válidos", 422, { proposal: ["Esta propuesta ya no está pendiente."] }))
-    await settle()
-
-    expect(toast.error).toHaveBeenCalledWith("Esta propuesta ya no está pendiente")
-    expect(saveTeacherField).not.toHaveBeenCalled()
-    page.unmount()
-  })
-
-  it("si el campo está en una sección que nunca se abrió, su editor muestra el texto nuevo al abrirla", async () => {
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal({ field_id: "field-2" })))
-    vi.mocked(acceptTeacherProposal).mockResolvedValue(accepted(doc("Método propuesto"), "field-2"))
-    const page = await open(twoSections())
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-
-    expect(saveTeacherField).toHaveBeenCalledWith("syllabus-1", "field-2", 2, doc("Método propuesto"))
-    await click(panelButton("Cerrar")!)
-    await openTab(page, "Metodología")
-    await waitFor(() => expect(editorElement("field-2")!.textContent).toBe("Método propuesto"))
-    page.unmount()
-  })
-
-  it("si la sección ya se había abierto, al volver muestra el texto nuevo", async () => {
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal({ field_id: "field-2" })))
-    vi.mocked(acceptTeacherProposal).mockResolvedValue(accepted(doc("Método propuesto"), "field-2"))
-    const page = await open(twoSections())
-    await openTab(page, "Metodología")
-    await editorShown("field-2")
-    await openTab(page, "Descripción")
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-    await click(panelButton("Cerrar")!)
-    await openTab(page, "Metodología")
-
-    await waitFor(() => expect(editorElement("field-2")!.textContent).toBe("Método propuesto"))
-    expect(saveTeacherField).toHaveBeenCalledTimes(1)
-    page.unmount()
-  })
-
-  it("un editor de texto propio, con sus tablas protegidas, también muestra una propuesta en lista", async () => {
-    const detail = syllabus()
-    detail.sections[0]!.fields = [field("field-1", { teacher_edits: true } as Partial<SyllabusField>)]
-    const value: DocumentNode = { type: "doc", content: [{ type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Primer punto" }] }] }] }] }
-    vi.mocked(acceptTeacherProposal).mockResolvedValue(accepted(value))
-    const page = await open(detail)
-    await editorShown("field-1")
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-
-    await waitFor(() => expect(editorElement("field-1")!.querySelector("ul li")!.textContent).toBe("Primer punto"))
-    expect(saveTeacherField).toHaveBeenCalledTimes(1)
-    expect(saveTeacherField).toHaveBeenCalledWith("syllabus-1", "field-1", 2, value)
-    page.unmount()
-  })
-
-  it("en un espacio del campo, el texto aparece en ese espacio, se bloquea mientras se coloca y se guarda el documento completo", async () => {
-    const space = (answerText: string | null): DocumentNode => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Se evaluará con " }, { type: "response", attrs: { kind: "texto", options: [], value: answerText, id: "r1" } }] }] })
-    const detail = syllabus()
-    detail.sections[0]!.fields = [field("field-1", { template: space(null), value: space("rúbricas") })]
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal({ target: "espacio", space: 1, text: "portafolios" })))
-    const accepting = deferred<ReturnType<typeof accepted>>()
-    vi.mocked(acceptTeacherProposal).mockReturnValue(accepting.promise)
-    const page = await open(detail)
-    const answerBox = () => page.container.querySelector<HTMLTextAreaElement>("#field-field-1 textarea")!
-    await openPanel(page)
-    await click(panelButton("Usar", card()!)!)
-    expect(answerBox().disabled).toBe(true)
-
-    accepting.resolve(accepted(space("portafolios")))
-    await settle()
-
-    expect(answerBox().value).toBe("portafolios")
-    expect(answerBox().disabled).toBe(false)
-    expect(saveTeacherField).toHaveBeenCalledWith("syllabus-1", "field-1", 2, space("portafolios"))
-    page.unmount()
-  })
-
-  it("«Ver en el campo» cierra el panel y abre la sección del campo, también desde la vista previa", async () => {
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal({ status: "aceptada", usable: false, field_id: "field-2" })))
-    const page = await open(twoSections())
-    await click(pageButton(page, "Vista previa")!)
-    await openPanel(page)
-    await click(panelButton("Ver en el campo", card()!)!)
-
-    await waitFor(() => expect(page.container.querySelector("#field-field-2")).not.toBeNull())
-    expect(panel()).toBeNull()
-    expect(pageButton(page, "Vista previa")!.getAttribute("aria-pressed")).toBe("false")
-    await waitFor(() => expect(document.activeElement!.closest("#field-field-2")).not.toBeNull())
-    page.unmount()
-  })
-
-  it("al cerrar el panel, el foco vuelve al botón y lo escrito sin enviar se conserva", async () => {
-    const page = await open()
-    assistantButton(page)!.focus()
-    await openPanel(page)
-    compose("Borrador del pedido")
-    await click(panelButton("Cerrar")!)
-    await waitFor(() => expect(document.activeElement).toBe(assistantButton(page)))
-    await openPanel(page)
-
-    expect(composer().value).toBe("Borrador del pedido")
-    fireEvent.keyDown(composer(), { key: "Escape" })
-    await settle()
-    expect(panel()).toBeNull()
+    expect(card()!.textContent).toContain("«Evaluación» se reemplazó por una más nueva")
+    expect(card()!.querySelectorAll("button")).toHaveLength(0)
+    expect(copyButton("p-2").textContent).toBe("Copiar")
     page.unmount()
   })
 })

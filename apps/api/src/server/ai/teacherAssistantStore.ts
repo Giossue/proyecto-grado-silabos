@@ -4,7 +4,7 @@ import type { PrismaService } from "../../prisma/prisma.service"
 import { fromEpoch, jsonbValue, jsonText } from "../../prisma/sql"
 import { phpJsonDecode, type PhpRecord } from "../configuration/phpValues"
 import { createTemplateStore } from "../shared/templateStore"
-import type { DraftSyllabus, LockedSyllabus } from "../syllabus/draftField"
+import type { DraftSyllabus } from "../syllabus/draftField"
 import { draftTx, syllabusFacts } from "../syllabus/draftFieldStore"
 import { allowedAiKeysOn } from "./readPermissionStore"
 import type { HistoryTurn, OfferedProposal } from "./teacherAssistant"
@@ -36,18 +36,12 @@ export type TeacherProposal = NewTeacherProposal & { syllabusId: string; userId:
 export type ReplacedTarget = { fieldId: string; space: number | null }
 
 export interface TeacherAssistantTx {
-  reading: SyllabusReading
   lockConversation(syllabusId: string, userId: string): Promise<void>
   answerByKey(syllabusId: string, userId: string, key: string): Promise<string | null>
   openAnswer(syllabusId: string, userId: string): Promise<TeacherMessage | null>
   insertMessage(message: NewTeacherMessage): Promise<void>
   lockMessage(id: string): Promise<TeacherMessage | null>
   updateAnswer(id: string, change: AnswerChange): Promise<void>
-  lockSyllabus(id: string): Promise<LockedSyllabus | null>
-  lockProposal(id: string): Promise<TeacherProposal | null>
-  decideProposal(id: string, state: TeacherProposalState, at: number): Promise<void>
-  fieldProposals(syllabusId: string, userId: string, fieldId: string): Promise<TeacherProposal[]>
-  updateProposalTarget(id: string, target: TeacherProposal["target"]): Promise<void>
   replacePendingProposals(syllabusId: string, userId: string, targets: ReplacedTarget[]): Promise<void>
   insertProposal(proposal: NewTeacherProposal): Promise<void>
 }
@@ -58,7 +52,6 @@ export interface TeacherAssistantStore {
   message(id: string): Promise<TeacherMessage | null>
   conversation(syllabusId: string, userId: string, limit: number): Promise<{ messages: TeacherMessage[]; proposals: TeacherProposal[] }>
   earlierTurns(question: TeacherMessage, limit: number): Promise<HistoryTurn[]>
-  proposal(id: string): Promise<TeacherProposal | null>
   transaction<T>(work: (tx: TeacherAssistantTx) => Promise<T>): Promise<T>
 }
 
@@ -87,11 +80,6 @@ async function messageWhere(db: Db, where: Prisma.Sql, lock = false): Promise<Te
   return row ? messageOf(row) : null
 }
 
-async function proposalWithId(db: Db, id: string, lock = false): Promise<TeacherProposal | null> {
-  const [row] = await db.$queryRaw<ProposalRow[]>`${PROPOSAL} where p.propuesta_ia_docente_id = ${id}::uuid limit 1 ${lock ? Prisma.sql`for update of p` : Prisma.empty}`
-  return row ? proposalOf(row) : null
-}
-
 function readingOn(db: Db): SyllabusReading {
   return {
     templates: createTemplateStore(db),
@@ -106,7 +94,6 @@ function readingOn(db: Db): SyllabusReading {
 
 export function teacherAssistantTx(db: Db): TeacherAssistantTx {
   return {
-    reading: readingOn(db),
     async lockConversation(syllabusId, userId) {
       await db.$executeRaw`select pg_advisory_xact_lock(hashtextextended(${`mensajes_ia_docente:${syllabusId}:${userId}`}, 0))`
     },
@@ -128,19 +115,6 @@ export function teacherAssistantTx(db: Db): TeacherAssistantTx {
           campos_enviados = ${change.sentFields}::uuid[], codigo_error = ${change.errorCode},
           completado_en = ${change.completedAt === null ? Prisma.sql`null` : fromEpoch(change.completedAt)}
         where mensaje_ia_docente_id = ${id}::uuid and rol = 'asistente'`
-    },
-    lockSyllabus: (id) => draftTx(db).lockSyllabus(id),
-    lockProposal: (id) => proposalWithId(db, id, true),
-    async decideProposal(id, state, at) {
-      await db.$executeRaw`update propuestas_ia_docente set estado_propuesta = ${state}, decidida_en = ${fromEpoch(at)} where propuesta_ia_docente_id = ${id}::uuid`
-    },
-    async fieldProposals(syllabusId, userId, fieldId) {
-      const rows = await db.$queryRaw<ProposalRow[]>`${PROPOSAL} where ${conversationOf("m", syllabusId, userId)} and p.definicion_campo_id = ${fieldId}::uuid
-        and p.estado_propuesta in ('pendiente', 'aceptada') order by p.creado_en, p.posicion_propuesta for update of p`
-      return rows.map(proposalOf)
-    },
-    async updateProposalTarget(id, target) {
-      await db.$executeRaw`update propuestas_ia_docente set destino_propuesta = ${jsonbValue(JSON.stringify(target))} where propuesta_ia_docente_id = ${id}::uuid`
     },
     async replacePendingProposals(syllabusId, userId, targets) {
       for (const target of targets) {
@@ -189,7 +163,6 @@ export function createTeacherAssistantStore(prisma: PrismaService): TeacherAssis
         proposals: proposals.filter((proposal) => proposal.messageId === id).map((proposal) => ({ label: proposal.target.fieldLabel, state: proposal.state, text: proposal.text })),
       }))
     },
-    proposal: (id) => proposalWithId(prisma, id),
     transaction: (work) => inTransaction(prisma, (tx) => work(teacherAssistantTx(tx))),
   }
 }

@@ -1,30 +1,29 @@
 "use client"
 
-import { Lightbulb, RotateCcw, Send, X } from "lucide-react"
+import { Bot, Lightbulb, RotateCcw, Send, X } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { ApiError } from "@/api/client"
-import { discardTeacherProposal, sendTeacherAssistantMessage, type TeacherAssistantChat, type TeacherAssistantMessage, type TeacherProposal } from "@/api/teacherAssistant"
+import { sendTeacherAssistantMessage, type TeacherAssistantChat, type TeacherAssistantMessage } from "@/api/teacherAssistant"
 import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation"
 import { Message, MessageContent } from "@/components/ai-elements/message"
 import { RobotAvatar } from "@/components/domain/ai/avatar/RobotAvatar"
 import { useAvatarController } from "@/components/domain/ai/avatar/useAvatarController"
 import { renderChatMarkdown } from "@/components/domain/ai/chatMarkdown"
-import { TeacherProposalCard, type ProposalAction, type ProposalOutcome } from "@/components/domain/ai/TeacherProposalCard"
+import { TeacherProposalCard } from "@/components/domain/ai/TeacherProposalCard"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Empty, EmptyContent, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
+import { useScrollDirection } from "@/composables/useScrollDirection"
 import { errorMessages, useSchemaForm } from "@/lib/forms"
-import { toast } from "@/lib/toast"
-import { withoutFinalPeriod } from "@/lib/utils"
-import { assistantFailure, PROPOSAL_GONE, teacherAssistantKeys } from "@/queries/teacherAssistant"
+import { cn, withoutFinalPeriod } from "@/lib/utils"
+import { assistantFailure, teacherAssistantKeys } from "@/queries/teacherAssistant"
 import { TEACHER_ASSISTANT_MESSAGE_MAX, teacherAssistantRequestSchema } from "@silabos/shared/schemas/syllabus"
 
-export type { ProposalOutcome }
 
 const SUGGESTIONS = [
   "Mejore la redacción de lo que ya escribí",
@@ -32,9 +31,9 @@ const SUGGESTIONS = [
   "Compare mis textos con las horas y semanas",
 ]
 
+const PANEL_ID = "teacher-assistant-panel"
 const UNAVAILABLE = "El asistente no está disponible por ahora. Puede seguir editando su sílabo"
 const SEND_FAILURE = { fallback: "No se pudo enviar el pedido. Revise su conexión e inténtelo de nuevo", missing: "No encontramos este sílabo. Recargue la página" }
-const DISCARD_FAILURE = { fallback: "No se pudo descartar la propuesta. Inténtelo de nuevo", missing: PROPOSAL_GONE }
 
 const messageSchema = teacherAssistantRequestSchema().pick({ message: true })
 
@@ -45,51 +44,36 @@ const remainingText = (remaining: number): string => (remaining === 1 ? "Le qued
 const questionBefore = (messages: TeacherAssistantMessage[], index: number): string | null =>
   messages.slice(0, index).findLast((item) => item.role === "usuario")?.content ?? null
 
-const announce = (proposal: TeacherProposal, outcome: ProposalOutcome): void => {
-  if (!outcome.applied) toast.error(outcome.reason)
-  else if (outcome.saveProblem !== null) toast.error(`La propuesta se colocó en «${proposal.field_label}», pero no se pudo guardar: ${outcome.saveProblem}`)
-  else toast.success(`Propuesta colocada en «${proposal.field_label}»`)
-}
-
 type Request = { text: string; typed: boolean }
 
 type TeacherAssistantProps = {
   syllabusId: string
   chat: TeacherAssistantChat | null
   open: boolean
-  waitingElsewhere: boolean
   onOpenChange: (open: boolean) => void
   onBeforeSend: () => Promise<unknown>
   onForbidden: () => void
-  onUse: (proposal: TeacherProposal) => Promise<ProposalOutcome>
-  hasField: (fieldId: string) => boolean
-  onShowField: (fieldId: string) => void
 }
 
-export function TeacherAssistant({ syllabusId, chat, open, waitingElsewhere, onOpenChange, onBeforeSend, onForbidden, onUse, hasField, onShowField }: TeacherAssistantProps) {
+export function TeacherAssistant({ syllabusId, chat, open, onOpenChange, onBeforeSend, onForbidden }: TeacherAssistantProps) {
   const queryClient = useQueryClient()
   const form = useSchemaForm(messageSchema, { defaultValues: { message: "" } })
   const messageField = form.register("message")
   const messageErrors = errorMessages(form.formState.errors.message)
   const [sendProblem, setSendProblem] = useState<string | null>(null)
-  const [working, setWorking] = useState<{ id: string; action: ProposalAction } | null>(null)
-  const [outcomes, setOutcomes] = useState<Record<string, ProposalOutcome | null>>({})
   const [engaged, setEngaged] = useState(false)
   const [wasOpen, setWasOpen] = useState(open)
-  const openNow = useRef(open)
-  const opener = useRef<HTMLElement | null>(null)
-  const fieldToShow = useRef<string | null>(null)
+  const panel = useRef<HTMLElement>(null)
+  const toggleButton = useRef<HTMLButtonElement>(null)
+  const { hidden } = useScrollDirection()
 
   if (wasOpen !== open) {
     setWasOpen(open)
-    if (open) {
-      setOutcomes({})
-      setSendProblem(null)
-    }
+    if (open) setSendProblem(null)
   }
 
   useEffect(() => {
-    openNow.current = open
+    if (open) panel.current?.focus()
   }, [open])
 
   const refresh = (): Promise<void> => queryClient.invalidateQueries({ queryKey: teacherAssistantKeys.chat(syllabusId) })
@@ -127,37 +111,9 @@ export function TeacherAssistant({ syllabusId, chat, open, waitingElsewhere, onO
     if (!waitingAnswer) sending.mutate({ text: String(message).trim(), typed: true })
   })
 
-  const remember = (id: string, outcome: ProposalOutcome | null): void => setOutcomes((current) => ({ ...current, [id]: outcome }))
-
-  const use = async (proposal: TeacherProposal): Promise<void> => {
-    setWorking({ id: proposal.id, action: "usar" })
-    remember(proposal.id, null)
-    const outcome = await onUse(proposal)
-    remember(proposal.id, outcome)
-    if (!openNow.current) announce(proposal, outcome)
-    await refresh()
-    setWorking(null)
-  }
-
-  const discard = async (proposal: TeacherProposal): Promise<void> => {
-    setWorking({ id: proposal.id, action: "descartar" })
-    remember(proposal.id, null)
-    try {
-      await discardTeacherProposal(syllabusId, proposal.id)
-    } catch (reason) {
-      if (forbidden(reason)) {
-        onForbidden()
-        return
-      }
-      remember(proposal.id, { applied: false, reason: assistantFailure(reason, DISCARD_FAILURE) })
-    }
-    await refresh()
-    setWorking(null)
-  }
-
-  const showField = (fieldId: string): void => {
-    fieldToShow.current = fieldId
+  const close = (): void => {
     onOpenChange(false)
+    toggleButton.current?.focus()
   }
 
   const suggest = (suggestion: string): void => {
@@ -166,145 +122,143 @@ export function TeacherAssistant({ syllabusId, chat, open, waitingElsewhere, onO
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        dismissable
-        className="top-0 right-0 left-auto h-dvh max-h-dvh w-full max-w-full translate-x-0 translate-y-0 gap-0 rounded-none pt-[env(safe-area-inset-top)] sm:max-w-md data-[state=closed]:slide-out-to-right data-[state=closed]:zoom-out-100 data-[state=open]:slide-in-from-right data-[state=open]:zoom-in-100"
-        onEscapeKeyDown={() => onOpenChange(false)}
-        onOpenAutoFocus={() => {
-          opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-        }}
-        onCloseAutoFocus={(event) => {
-          event.preventDefault()
-          const fieldId = fieldToShow.current
-          fieldToShow.current = null
-          if (fieldId) onShowField(fieldId)
-          else opener.current?.focus()
-        }}
-      >
-        <SheetHeader className="shrink-0 flex-row flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3">
-          <RobotAvatar {...avatar.state} className="h-9 w-11 shrink-0" />
-          <SheetTitle className="flex-1 whitespace-nowrap">Asistente IA</SheetTitle>
-          <SheetClose asChild>
-            <Button type="button" variant="outline" size="sm" className="ml-auto">
-              <X data-icon="inline-start" aria-hidden="true" />
-              Cerrar
-            </Button>
-          </SheetClose>
-        </SheetHeader>
-        <Conversation aria-label="Conversación con el asistente" className="min-h-24 flex-1">
-          <ConversationContent scrollClassName="[scrollbar-gutter:auto]!" className="gap-5 px-4 py-4">
-            {available && !messages.length ? (
-              <Empty className="justify-start gap-3 p-0 md:p-0">
-                <EmptyHeader className="max-w-full">
-                  <EmptyTitle>¿Con qué le ayudo?</EmptyTitle>
-                </EmptyHeader>
-                {exhausted ? null : (
-                  <EmptyContent className="max-w-full gap-2" data-suggestions>
-                    {SUGGESTIONS.map((suggestion) => (
-                      <Button key={suggestion} type="button" variant="outline" className="h-auto w-full justify-start py-2 text-left whitespace-normal" onClick={() => suggest(suggestion)}>
-                        <Lightbulb data-icon="inline-start" aria-hidden="true" />
-                        {suggestion}
-                      </Button>
-                    ))}
-                  </EmptyContent>
-                )}
-              </Empty>
-            ) : null}
-            {messages.map((item, index) => {
-              const retry = index === messages.length - 1 && item.role === "asistente" && item.status === "fallido" ? questionBefore(messages, index) : null
-              return (
-                <Message key={item.id} from={item.role === "usuario" ? "user" : "assistant"} className={item.role === "usuario" ? "max-w-[85%] min-w-0" : "max-w-full min-w-0"}>
-                  <MessageContent className={item.role === "usuario" ? "max-w-full min-w-0" : "w-full max-w-full min-w-0"}>
-                    <p className="text-xs font-medium text-muted-foreground">{item.role === "usuario" ? "Usted" : "Asistente"}</p>
-                    {item.content && item.role === "asistente" ? (
-                      <div className="flex flex-col gap-2 break-words">{renderChatMarkdown(item.content)}</div>
-                    ) : item.content ? (
-                      <p className="break-words whitespace-pre-wrap">{item.content}</p>
-                    ) : null}
-                    {item.status === "pendiente" || item.status === "en_ejecucion" ? (
-                      <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Spinner />
-                        Preparando la respuesta…
-                      </p>
-                    ) : null}
-                    {item.status === "fallido" ? (
-                      <Alert variant="destructive">
-                        <AlertDescription>{withoutFinalPeriod(item.error ?? "No se pudo completar el pedido")}</AlertDescription>
-                      </Alert>
-                    ) : null}
-                    {retry && !busy && !exhausted && available ? (
-                      <Button type="button" variant="outline" size="sm" className="w-fit" disabled={sending.isPending} onClick={() => sending.mutate({ text: retry, typed: false })}>
-                        {sending.isPending ? <Spinner data-icon="inline-start" /> : <RotateCcw data-icon="inline-start" aria-hidden="true" />}
-                        Intentar de nuevo
-                      </Button>
-                    ) : null}
-                    {item.proposals.map((proposal) => (
-                      <TeacherProposalCard
-                        key={proposal.id}
-                        proposal={proposal}
-                        outcome={outcomes[proposal.id] ?? null}
-                        working={working?.id === proposal.id ? working.action : null}
-                        waiting={working !== null || waitingElsewhere}
-                        fieldOnScreen={hasField(proposal.field_id)}
-                        onUse={() => void use(proposal)}
-                        onDiscard={() => void discard(proposal)}
-                        onShowField={() => showField(proposal.field_id)}
-                      />
-                    ))}
-                  </MessageContent>
-                </Message>
-              )
-            })}
-          </ConversationContent>
-          <ConversationScrollButton />
-        </Conversation>
-        <div className="flex shrink-0 flex-col gap-3 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-          {!available ? (
-            <Alert>
-              <AlertDescription>{UNAVAILABLE}</AlertDescription>
-            </Alert>
-          ) : exhausted ? (
-            <Alert>
-              <AlertDescription>Llegó al límite de {available.limit} pedidos de hoy al asistente. Podrá pedir otra vez mañana</AlertDescription>
-            </Alert>
-          ) : (
-            <form onSubmit={(event) => void send(event)} noValidate className="flex flex-col gap-3">
-              {sendProblem ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{sendProblem}</AlertDescription>
+    <>
+      {open ? (
+        <aside
+          ref={panel}
+          id={PANEL_ID}
+          tabIndex={-1}
+          aria-label="Asistente IA"
+          className="fixed right-6 bottom-24 scroll-lock-offset z-40 h-[min(var(--layout-assistant-height),calc(100dvh-7rem))] w-(--layout-syllabus-aside-width) max-w-[calc(100vw-2rem)] outline-hidden max-sm:inset-x-4 max-sm:top-20 max-sm:right-4 max-sm:bottom-[calc(var(--page-mobile-actions-bottom)+4.25rem)] max-sm:h-auto max-sm:w-auto"
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && !event.defaultPrevented) close()
+          }}
+        >
+          <Card className="assistant-panel gap-0 overflow-hidden py-0 shadow-menu">
+            <CardHeader className="flex shrink-0 flex-row items-center gap-3 border-b px-4 py-3">
+              <RobotAvatar {...avatar.state} className="h-9 w-11 shrink-0" />
+              <CardTitle className="min-w-0 flex-1">Asistente IA</CardTitle>
+            </CardHeader>
+            <Conversation aria-label="Conversación con el asistente" className="min-h-24 flex-1">
+              <ConversationContent scrollClassName="[scrollbar-gutter:auto]!" className="gap-5 px-4 py-4">
+                {available && !messages.length ? (
+                  <Empty className="justify-start gap-3 p-0 md:p-0">
+                    <EmptyHeader className="max-w-full">
+                      <EmptyTitle>¿Con qué le ayudo?</EmptyTitle>
+                    </EmptyHeader>
+                    {exhausted ? null : (
+                      <EmptyContent className="max-w-full gap-2" data-suggestions>
+                        {SUGGESTIONS.map((suggestion) => (
+                          <Button key={suggestion} type="button" variant="outline" className="h-auto w-full justify-start py-2 text-left whitespace-normal" onClick={() => suggest(suggestion)}>
+                            <Lightbulb data-icon="inline-start" aria-hidden="true" />
+                            {suggestion}
+                          </Button>
+                        ))}
+                      </EmptyContent>
+                    )}
+                  </Empty>
+                ) : null}
+                {messages.map((item, index) => {
+                  const retry = index === messages.length - 1 && item.role === "asistente" && item.status === "fallido" ? questionBefore(messages, index) : null
+                  return (
+                    <Message key={item.id} from={item.role === "usuario" ? "user" : "assistant"} className={item.role === "usuario" ? "max-w-[85%] min-w-0" : "max-w-full min-w-0"}>
+                      <MessageContent className={item.role === "usuario" ? "max-w-full min-w-0" : "w-full max-w-full min-w-0"}>
+                        <p className="text-xs font-medium text-muted-foreground">{item.role === "usuario" ? "Usted" : "Asistente"}</p>
+                        {item.content && item.role === "asistente" ? (
+                          <div className="flex flex-col gap-2 break-words">{renderChatMarkdown(item.content)}</div>
+                        ) : item.content ? (
+                          <p className="break-words whitespace-pre-wrap">{item.content}</p>
+                        ) : null}
+                        {item.status === "pendiente" || item.status === "en_ejecucion" ? (
+                          <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Spinner />
+                            Preparando la respuesta…
+                          </p>
+                        ) : null}
+                        {item.status === "fallido" ? (
+                          <Alert variant="destructive">
+                            <AlertDescription>{withoutFinalPeriod(item.error ?? "No se pudo completar el pedido")}</AlertDescription>
+                          </Alert>
+                        ) : null}
+                        {retry && !busy && !exhausted && available ? (
+                          <Button type="button" variant="outline" size="sm" className="w-fit" disabled={sending.isPending} onClick={() => sending.mutate({ text: retry, typed: false })}>
+                            {sending.isPending ? <Spinner data-icon="inline-start" /> : <RotateCcw data-icon="inline-start" aria-hidden="true" />}
+                            Intentar de nuevo
+                          </Button>
+                        ) : null}
+                        {item.proposals.map((proposal) => (
+                          <TeacherProposalCard key={proposal.id} proposal={proposal} />
+                        ))}
+                      </MessageContent>
+                    </Message>
+                  )
+                })}
+              </ConversationContent>
+              <ConversationScrollButton />
+            </Conversation>
+            <CardContent className="flex shrink-0 flex-col gap-3 border-t px-4 py-3">
+              {!available ? (
+                <Alert>
+                  <AlertDescription>{UNAVAILABLE}</AlertDescription>
                 </Alert>
-              ) : null}
-              <Field data-invalid={Boolean(messageErrors)}>
-                <FieldLabel htmlFor="teacher-assistant-message" className="sr-only">Su pedido al asistente</FieldLabel>
-                <Textarea
-                  id="teacher-assistant-message"
-                  {...messageField}
-                  rows={2}
-                  maxLength={TEACHER_ASSISTANT_MESSAGE_MAX}
-                  className="max-h-32 resize-none"
-                  placeholder="Escriba lo que necesita"
-                  aria-invalid={Boolean(messageErrors)}
-                  onFocus={() => setEngaged(true)}
-                  onBlur={(event) => {
-                    setEngaged(false)
-                    void messageField.onBlur(event)
-                  }}
-                />
-                <FieldError errors={messageErrors} />
-              </Field>
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                <p className="text-xs text-muted-foreground" aria-live="polite">{remainingText(available.remaining)}</p>
-                <Button type="submit" className="ml-auto" disabled={waitingAnswer}>
-                  {waitingAnswer ? <Spinner data-icon="inline-start" /> : <Send data-icon="inline-start" aria-hidden="true" />}
-                  Enviar pedido
-                </Button>
-              </div>
-            </form>
-          )}
-  <SheetDescription className="text-center text-xs leading-snug">La IA (DeepSeek) puede equivocarse: revise antes de usar y no escriba datos personales.</SheetDescription>
-        </div>
-      </SheetContent>
-    </Sheet>
+              ) : exhausted ? (
+                <Alert>
+                  <AlertDescription>Llegó al límite de {available.limit} pedidos de hoy al asistente. Podrá pedir otra vez mañana</AlertDescription>
+                </Alert>
+              ) : (
+                <form onSubmit={(event) => void send(event)} noValidate className="flex flex-col gap-3">
+                  {sendProblem ? (
+                    <Alert variant="destructive">
+                      <AlertDescription>{sendProblem}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                  <Field data-invalid={Boolean(messageErrors)}>
+                    <FieldLabel htmlFor="teacher-assistant-message" className="sr-only">Su pedido al asistente</FieldLabel>
+                    <Textarea
+                      id="teacher-assistant-message"
+                      {...messageField}
+                      rows={2}
+                      maxLength={TEACHER_ASSISTANT_MESSAGE_MAX}
+                      className="max-h-32 resize-none"
+                      placeholder="Escriba lo que necesita"
+                      aria-invalid={Boolean(messageErrors)}
+                      onFocus={() => setEngaged(true)}
+                      onBlur={(event) => {
+                        setEngaged(false)
+                        void messageField.onBlur(event)
+                      }}
+                    />
+                    <FieldError errors={messageErrors} />
+                  </Field>
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                    <p className="text-xs text-muted-foreground" aria-live="polite">{remainingText(available.remaining)}</p>
+                    <Button type="submit" className="ml-auto" disabled={waitingAnswer}>
+                      {waitingAnswer ? <Spinner data-icon="inline-start" /> : <Send data-icon="inline-start" aria-hidden="true" />}
+                      Enviar
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+        </aside>
+      ) : null}
+      <Button
+        ref={toggleButton}
+        type="button"
+        data-tour="teacher-assistant"
+        className={cn(
+          "fixed right-6 bottom-6 scroll-lock-offset z-40 h-12 rounded-full px-5 shadow-menu transition-[color,background-color,box-shadow,translate,opacity]",
+          "max-sm:right-[calc(var(--page-mobile-actions-right)+4.25rem)] max-sm:bottom-[calc(var(--page-mobile-actions-bottom)+0.25rem)]",
+          !open && hidden && "max-sm:pointer-events-none max-sm:translate-y-24 max-sm:opacity-0",
+        )}
+        aria-expanded={open}
+        aria-controls={open ? PANEL_ID : undefined}
+        onClick={() => onOpenChange(!open)}
+      >
+        {open ? <X data-icon="inline-start" aria-hidden="true" /> : waitingAnswer ? <Spinner data-icon="inline-start" /> : <Bot data-icon="inline-start" aria-hidden="true" />}
+        {open ? "Cerrar asistente" : "Asistente"}
+      </Button>
+    </>
   )
 }

@@ -8,8 +8,6 @@ export const teacherAssistantKeys = {
   chat: (syllabusId: string) => ["teacher-assistant", syllabusId] as const,
 }
 
-export const PROPOSAL_GONE = "Esa propuesta ya no existe. Pida una nueva"
-
 export const assistantFailure = (reason: unknown, { fallback, missing }: { fallback: string; missing: string }): string => {
   if (!(reason instanceof ApiError)) return fallback
   if (reason.status === 404) return missing
