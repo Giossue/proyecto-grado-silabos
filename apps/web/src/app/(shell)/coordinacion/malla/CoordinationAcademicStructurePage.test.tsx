@@ -390,6 +390,15 @@ describe("CoordinationAcademicStructurePage, varias mallas", () => {
     expect(document.querySelector('[data-tour="page-header"]')!.textContent).toContain("Malla curricular de Software")
   })
 
+  it.each([
+    ["sin mallas usa el mismo ancho centrado que las demás pestañas", [], true],
+    ["con una malla dibujada usa todo el ancho", null, false],
+  ])("%s", async (_case, mallas, centered) => {
+    if (mallas) vi.mocked(getMallas).mockResolvedValue(mallas)
+    await mountPage()
+    expect(document.querySelector('[data-tour="page-header"]')!.closest(".overflow-x-clip")!.classList.contains("max-w-6xl")).toBe(centered)
+  })
+
   it("la descripción nombra la carrera aunque todavía no tenga mallas", async () => {
     vi.mocked(getMallas).mockResolvedValue([])
     vi.mocked(getScheduledSubjects).mockResolvedValue({ career: { id: "career-1", name: "Software" } } as never)

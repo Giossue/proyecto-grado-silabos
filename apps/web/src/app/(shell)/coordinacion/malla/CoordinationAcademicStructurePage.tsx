@@ -260,7 +260,7 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
     <PageFrame
       title={title}
       description={adminCareerId ? adminDescriptions[mode] : coordinationDescription}
-      size={mode === "curriculum" ? "full" : "wide"}
+      size={mode === "curriculum" && !withoutMallas ? "full" : "wide"}
       titleInset={alignedInset?.left}
       actionsInset={alignedInset?.right}
       awaitingInsets={awaitingBoard}
