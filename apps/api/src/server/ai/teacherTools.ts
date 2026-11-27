@@ -87,14 +87,14 @@ const respond: TeacherTool = {
     name: ANSWER,
     description: "Termina el turno con un mensaje para el docente y, si corresponde, sus propuestas.",
     parameters: object({
-      mensaje: { type: "string", description: "Respuesta para el docente: qué revisó y qué recomienda, o su pregunta." },
+      mensaje: { type: "string", description: "Respuesta para el docente en hasta tres frases cortas: lo principal o su pregunta." },
       propuestas: {
         type: "array",
         description: `De 0 a ${MAX_PROPOSALS} propuestas.`,
         items: object({
           destino: { type: "string", description: "Destino tal como lo devolvió leer_campos." },
-          texto: { type: "string", description: "Texto plano propuesto." },
-          fundamento: { type: "string", description: "En qué datos y campos se basa." },
+          texto: { type: "string", description: "Contenido final tal como quedará en el sílabo, en texto plano, sin instrucciones ni consejos." },
+          fundamento: { type: "string", description: "Una frase corta con los datos y campos usados." },
         }),
       },
     }),

@@ -205,6 +205,20 @@ describe("proposals", () => {
     expect(outcome.proposals.map((item) => item.text)).toEqual(["Estudia las redes."])
   })
 
+  it("asks for proposals that are the final syllabus text, never advice, no invented facts and short answers", async () => {
+    script([answer("Hola.")])
+
+    await run()
+
+    for (const rule of [
+      "contenido final, exactamente como quedará en el sílabo",
+      "Nunca escribas ahí instrucciones, consejos ni notas para el docente",
+      "no propongas nada para ese campo",
+      "una sola frase corta",
+      "como máximo tres frases cortas",
+    ]) expect(gateway.requests[0]!.system, rule).toContain(rule)
+  })
+
   it("tells the model never to write the hidden-data markers in a proposal", async () => {
     script([answer("Hola.")])
 
