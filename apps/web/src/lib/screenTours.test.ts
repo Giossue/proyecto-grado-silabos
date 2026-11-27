@@ -37,6 +37,12 @@ describe('screenTours', () => {
     expect(JSON.stringify(screenTours['/admin/carreras/:career/proyecto-carrera'])).not.toContain('apoyo');
   });
 
+  it('el paso del Excel avisa que lo que quitaría opciones viene sin marcar', () => {
+    for (const screen of ['/coordinacion/proyecto-carrera', '/admin/carreras/:career/proyecto-carrera']) {
+      expect(stepOf(screen, '[data-tour="page-actions"]')?.description, screen).toContain('Antes de aplicar, revise los cambios: lo que quitaría opciones viene sin marcar');
+    }
+  });
+
   it('en «Sistema» se señala el interruptor del asistente del docente', () => {
     expect(stepOf('/admin/configuracion/sistema', '[data-tour="settings-teacher-ai"]')?.description).toContain('Empieza apagado');
   });

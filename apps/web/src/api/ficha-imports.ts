@@ -17,6 +17,7 @@ export type FichaWorkbookSubject = {
   missing?: FichaMissingField[];
   replaces: boolean;
   current: Record<string, string>;
+  removed_options?: Record<string, string[]>;
 };
 
 export type FichaWorkbookPreview = {

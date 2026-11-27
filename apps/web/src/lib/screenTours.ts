@@ -94,7 +94,7 @@ export const screenTours: Record<string, TourStep[]> = {
   ],
   '/coordinacion/proyecto-carrera': [
     step(TABS, 'Materias y documentos', 'Cambie entre el proyecto de cada materia y los documentos de apoyo', 'bottom'),
-    step(ACTIONS, 'Excel o documentos', 'En «Materias», llene varias a la vez con un Excel. En «Documentos de apoyo», suba un archivo', 'left'),
+    step(ACTIONS, 'Excel o documentos', 'En «Materias», llene varias a la vez con un Excel. Antes de aplicar, revise los cambios: lo que quitaría opciones viene sin marcar. En «Documentos de apoyo», suba un archivo', 'left'),
     step(MALLA, 'Malla', 'En «Materias» se ve una malla a la vez. Elija aquí cuál', 'bottom'),
     step(FILTERS, 'Buscar', 'Busque una materia o filtre por ciclo o si está completa', 'bottom'),
     step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenar su proyecto. El docente lo recibe ya escrito', 'top'),
@@ -172,7 +172,7 @@ for (const screen of ['malla', 'materias-asignaciones', 'docentes', 'proyecto-ca
   screenTours[`/admin/carreras/:career/${screen}`] = screenTours[`/coordinacion/${screen}`]!;
 }
 screenTours['/admin/carreras/:career/proyecto-carrera'] = [
-  step(ACTIONS, 'Excel', 'Llene varias materias a la vez con un Excel', 'left'),
+  step(ACTIONS, 'Excel', 'Llene varias materias a la vez con un Excel. Antes de aplicar, revise los cambios: lo que quitaría opciones viene sin marcar', 'left'),
   step(MALLA, 'Malla', 'Se ve una malla a la vez. Elija aquí cuál', 'bottom'),
   step(FILTERS, 'Buscar', 'Busque una materia o filtre por ciclo o si está completa', 'bottom'),
   step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenar su proyecto. El docente lo recibe ya escrito', 'top'),

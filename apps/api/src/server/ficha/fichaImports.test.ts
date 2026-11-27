@@ -9,7 +9,7 @@ import { careerProfileEditable } from "../configuration/subjectProfile"
 import type { PhpRecord } from "../configuration/phpValues"
 import { profileTemplates } from "../configuration/subjectProfileFields"
 import { teacherEditable, templateFields } from "../configuration/templatePresentation"
-import { keepOwnOptions, normalizeFieldDocument, plainText, responseTemplate, TemplateValidationError } from "../configuration/templateRuntime"
+import { careerResponse, foundResponses, keepOwnOptions, normalizeFieldDocument, plainText, responseTemplate, TemplateValidationError } from "../configuration/templateRuntime"
 import { fakeTemplateStore, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import { createRateLimiter } from "../http/throttle"
 import { GenerationRejected } from "../syllabus/inProgressWorkHelpers"
@@ -290,6 +290,7 @@ describe("FichaImportTest", () => {
     const entry = entryOf(detail, SUBJECTS[0].id)
     expect(entry.replaces).toBe(true)
     expect((entry.current as PhpRecord).descripcion).toBe("Descripción que ya estaba")
+    expect(entry.removed_options).toEqual({})
     expect(entryOf(detail, SUBJECTS[1].id).current).toEqual({})
 
     expect((await apply(file, detail, [[`fields[${SUBJECTS[0].id}][]`, "objetivos_especificos"]])).status).toBe(200)
@@ -454,6 +455,62 @@ describe("FichaImportOwnOptionsTest", () => {
     expect(attrs.value).toBe("o1")
     expect((attrs.options as PhpRecord[]).map((option) => option.title)).toEqual(["Aula"])
     expect(attrs.customOptions).toBe(true)
+  })
+})
+
+describe("FichaImportRemovedOptionsTest", () => {
+  const METHODS = ["Aprendizaje basado en problemas", "Aula invertida"]
+
+  function question(kind: "una" | "varias", options: string[]): PhpRecord {
+    return { type: "response", attrs: { kind, options: options.map((title, index) => ({ const: `o${index + 1}`, title })), value: kind === "varias" ? [] : null } }
+  }
+
+  const line = (node: PhpRecord): PhpRecord => ({ type: "paragraph", content: [node] })
+
+  function savedByCoordination(key: string, content: PhpRecord[]): void {
+    const value = careerResponse(field(key).content, { type: "doc", content }, templates.template!.definition!, "value")
+    templates.values.push({ fieldId: field(key).id, subjectId: SUBJECTS[0].id, value })
+  }
+
+  it("warns about the answer options Coordination added and the workbook would remove", async () => {
+    savedByCoordination("descripcion", [line(question("varias", METHODS))])
+    savedByCoordination("objetivo_general", [line({ type: "text", text: "Elija el enfoque" }), line(question("una", ["Teórico"]))])
+    const before = structuredClone(templates.values)
+    const file = await workbook({ descripcion: { D4: "Texto del Excel", D5: "Texto de la otra materia" }, objetivo_general: { D4: "Objetivo del Excel" } })
+    const detail = await preview(file)
+    const entry = entryOf(detail, SUBJECTS[0].id)
+    expect(entry.removed_options).toEqual({ descripcion: METHODS, objetivo_general: ["Teórico"] })
+    expect(entry.replaces).toBe(true)
+    expect(entry.current).toEqual({ objetivo_general: "Elija el enfoque" })
+    expect(entryOf(detail, SUBJECTS[1].id).removed_options).toEqual({})
+    expect(entryOf(detail, SUBJECTS[1].id).replaces).toBe(false)
+    expect(templates.values).toEqual(before)
+
+    expect((await apply(file, detail)).status).toBe(200)
+    expect(foundResponses(stored(SUBJECTS[0].id, "descripcion"))).toEqual([])
+    expect(foundResponses(stored(SUBJECTS[0].id, "objetivo_general"))).toEqual([])
+  })
+
+  it("warns about a choice that has no options yet", async () => {
+    savedByCoordination("descripcion", [line(question("varias", []))])
+    const entry = entryOf(await preview(await workbook({ descripcion: { D4: "Texto del Excel" } })), SUBJECTS[0].id)
+    expect(entry.removed_options).toEqual({ descripcion: [] })
+    expect(entry.replaces).toBe(true)
+  })
+
+  it("does not warn for a field the workbook leaves empty", async () => {
+    savedByCoordination("descripcion", [line(question("varias", METHODS))])
+    const entry = entryOf(await preview(await workbook({ objetivo_general: { D4: "Objetivo del Excel" } })), SUBJECTS[0].id)
+    expect(entry.removed_options).toEqual({})
+    expect(entry.replaces).toBe(false)
+  })
+
+  it("does not warn when the import keeps the options", async () => {
+    withResponseField()
+    templates.values.push({ fieldId: field("metodologia").id, subjectId: SUBJECTS[0].id, value: ownSetup(OWN) })
+    const detail = await preview(await workbook({ metodologia: { D4: "Exposición", E4: "4", D44: "Debate", E44: "2" } }))
+    expect(entryOf(detail, SUBJECTS[0].id).removed_options).toEqual({})
+    expect(entryOf(detail, SUBJECTS[1].id).removed_options).toEqual({})
   })
 })
 

@@ -4,12 +4,12 @@ import { activeCareerId, resolveCareerScope } from "../academic/careerScope"
 import type { AppSession } from "../auth/types"
 import { freeTextNormalize } from "../configuration/freeText"
 import { markTeacherEdits, teacherEdits } from "../configuration/teacherText"
-import { phpTrim, type PhpRecord } from "../configuration/phpValues"
+import { list, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
 import { careerProfileLockReason, profileContext } from "../configuration/subjectProfile"
 import { profileFields } from "../configuration/subjectProfileFields"
 import { fieldResponseNormalize } from "../configuration/templateRehearsal"
 import { fieldSection, type TemplateField } from "../configuration/templatePresentation"
-import { responseWithin, careerResponse, isDocument, keepOwnOptions, keepTeacherFills, plainText, responseIsEmpty, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
+import { responseWithin, careerResponse, foundResponses, hasOptions, isDocument, keepOwnOptions, keepTeacherFills, plainText, responseIsEmpty, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
 import type { TemplateStore } from "../shared/templateStore"
 import { importSession, readUpload, type ImportDeps, type ImportFileRules } from "../excel/importRequest"
 import { xlsxDownload } from "../excel/workbook"
@@ -132,7 +132,7 @@ export async function fichaTemplate(request: Request, deps: FichaImportDeps, req
   }
 }
 
-type Preview = { definition: FichaDefinition; fileHash: string; subjects: FichaEntry[] }
+type Preview = Context & { fileHash: string; subjects: FichaEntry[] }
 
 async function previewWorkbook(file: UploadedFile, session: AppSession, deps: FichaImportDeps, requestedCareerId: string | null): Promise<Preview | Response> {
   const careerId = await careerContext(session, deps.store, requestedCareerId)
@@ -140,15 +140,62 @@ async function previewWorkbook(file: UploadedFile, session: AppSession, deps: Fi
   const closed = await closedFor(session, careerId, deps.store.careerEditable)
   if (closed !== null) return closed
   try {
-    const { definition } = await fichaContext(careerId, deps.store)
-    const subjects = readFichaWorkbook(file.bytes, definition)
-    if (fichaFingerprint((await fichaContext(careerId, deps.store)).definition) !== fichaFingerprint(definition)) {
+    const context = await fichaContext(careerId, deps.store)
+    const subjects = readFichaWorkbook(file.bytes, context.definition)
+    if (fichaFingerprint((await fichaContext(careerId, deps.store)).definition) !== fichaFingerprint(context.definition)) {
       return validationError({ file: ["La plantilla o las materias cambiaron durante la lectura. Descargue un Excel nuevo."] })
     }
-    return { definition, fileHash: createHash("sha256").update(file.bytes).digest("hex"), subjects }
+    return { ...context, fileHash: createHash("sha256").update(file.bytes).digest("hex"), subjects }
   } catch (error) {
     return contextFailure(error, careerId)
   }
+}
+
+function excelDocument(field: TemplateField, value: unknown, definition: TemplateDefinition): PhpRecord | null {
+  const columns = fichaSchema(field, "", definition).columns
+  const document = fichaDocument(fichaClean(value, columns), field.content, definition)
+  return responseIsEmpty(field.content, fieldResponseNormalize(field.content, document, definition, "value"), definition) ? null : document
+}
+
+function importedDocument(field: TemplateField, document: PhpRecord, stored: unknown, definition: TemplateDefinition): PhpRecord {
+  const kept = keepOwnOptions(field.content, document, stored, definition, "file")
+  return freeTextNormalize(careerResponse(field.content, kept, definition, "value"))
+}
+
+function choiceQuestions(document: unknown): { kind: string; titles: string[] }[] {
+  return foundResponses(document)
+    .map((attrs) => record(attrs))
+    .filter((attrs) => hasOptions(String(attrs.kind)))
+    .map((attrs) => ({ kind: String(attrs.kind), titles: list(attrs.options ?? []).map((option) => String(record(option).title)) }))
+}
+
+function removedOptions(field: TemplateField, value: unknown, stored: unknown, definition: TemplateDefinition): string[] | null {
+  const before = choiceQuestions(stored)
+  if (before.length === 0) return null
+  try {
+    const document = excelDocument(field, value, definition)
+    if (document === null) return null
+    const after = choiceQuestions(importedDocument(field, document, stored, definition)).map((question) => JSON.stringify(question))
+    const lost = before.filter((question) => {
+      const kept = after.indexOf(JSON.stringify(question))
+      if (kept >= 0) after.splice(kept, 1)
+      return kept < 0
+    })
+    return lost.length === 0 ? null : lost.flatMap((question) => question.titles)
+  } catch (error) {
+    if (error instanceof TemplateValidationError) return null
+    throw error
+  }
+}
+
+function removedBySubject(preview: Preview, entry: FichaEntry, stored: Map<string, unknown>): Record<string, string[]> {
+  const removed: Record<string, string[]> = {}
+  for (const field of preview.fields) {
+    if (!Object.prototype.hasOwnProperty.call(entry.values, field.key)) continue
+    const options = removedOptions(field, entry.values[field.key], stored.get(`${entry.subject_id}:${field.id}`), preview.template as TemplateDefinition)
+    if (options !== null) removed[field.key] = options
+  }
+  return removed
 }
 
 async function previewDetail(preview: Preview, deps: FichaImportDeps): Promise<PhpRecord> {
@@ -159,6 +206,7 @@ async function previewDetail(preview: Preview, deps: FichaImportDeps): Promise<P
     preview.subjects.map((entry) => entry.subject_id),
     preview.definition.fields.map((field) => field.id),
   )
+  const stored = new Map(rows.map((row) => [`${row.subjectId}:${row.fieldId}`, row.value]))
   for (const row of rows) {
     const text = isDocument(row.value) ? phpTrim(plainText(freeTextNormalize(row.value), NO_BLOCKS)) : ""
     if (text === "") continue
@@ -171,17 +219,21 @@ async function previewDetail(preview: Preview, deps: FichaImportDeps): Promise<P
     fingerprint: fichaFingerprint(preview.definition),
     file_hash: preview.fileHash,
     fields,
-    subjects: preview.subjects.map((entry) => ({
-      subject_id: entry.subject_id,
-      code: entry.code,
-      name: entry.name,
-      cycle: entry.cycle,
-      state: entry.state,
-      values: entry.values,
-      replaces: current.has(entry.subject_id),
-      current: current.get(entry.subject_id) ?? {},
-      ...fichaCoverage(entry, fields),
-    })),
+    subjects: preview.subjects.map((entry) => {
+      const removed = removedBySubject(preview, entry, stored)
+      return {
+        subject_id: entry.subject_id,
+        code: entry.code,
+        name: entry.name,
+        cycle: entry.cycle,
+        state: entry.state,
+        values: entry.values,
+        replaces: current.has(entry.subject_id) || Object.keys(removed).length > 0,
+        current: current.get(entry.subject_id) ?? {},
+        removed_options: removed,
+        ...fichaCoverage(entry, fields),
+      }
+    }),
   }
 }
 
@@ -261,12 +313,10 @@ async function applyEntries(
       if (chosen !== null && !chosen.includes(key)) continue
       const field = fields.get(key)
       if (field === undefined) continue
-      const columns = fichaSchema(field, "", definition).columns
-      const document = fichaDocument(fichaClean(value, columns), field.content, definition)
-      if (responseIsEmpty(field.content, fieldResponseNormalize(field.content, document, definition, "value"), definition)) continue
+      const document = excelDocument(field, value, definition)
+      if (document === null) continue
       const stored = await tx.storedValue(entry.subject_id, field.id)
-      const career = careerResponse(field.content, keepOwnOptions(field.content, document, stored, definition, "file"), definition, "value")
-      const imported = freeTextNormalize(career)
+      const imported = importedDocument(field, document, stored, definition)
       await tx.saveValue(entry.subject_id, field.id, teacherEdits(stored) && !responseWithin(imported) ? markTeacherEdits(imported) : keepTeacherFills(field.content, imported, stored, definition))
       changed = true
     }

@@ -18,6 +18,28 @@ const ready: FichaWorkbookPreview = {
   ],
 } as FichaWorkbookPreview
 
+const withOptions = (values: Record<string, string>, options: string[]) =>
+  ({
+    ...ready,
+    fields: [
+      { key: "descripcion", label: "Descripción" },
+      { key: "metodos", label: "Métodos de enseñanza" },
+    ],
+    subjects: [{ subject_id: "s1", code: "SW-1", name: "Algoritmos", cycle: 1, state: "lista", values, replaces: true, current: {}, removed_options: { metodos: options } }],
+  }) as FichaWorkbookPreview
+
+const box = (id: string): HTMLButtonElement => document.body.querySelector<HTMLButtonElement>(`#ficha-${id}`)!
+const press = async (element: HTMLElement) => {
+  fireEvent.click(element)
+  await flush()
+}
+const reviewing = async (preview: FichaWorkbookPreview) => {
+  vi.mocked(previewFichaWorkbook).mockResolvedValue({ preview })
+  vi.mocked(applyFichaWorkbook).mockReset()
+  vi.mocked(applyFichaWorkbook).mockResolvedValue({ message: "ok", applied: 1 })
+  await openDialog()
+}
+
 const excel = new File(["contenido"], "proyecto.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
 const applied = vi.fn()
 const openDialog = async (review = true) => {
@@ -55,6 +77,7 @@ describe("FichaImportDialog", () => {
     expect(document.body.textContent).toContain("Vista previa del Excel para 1 de 2 materias")
     expect(document.body.textContent).toContain("1 de 1 campos con contenido")
     expect(document.body.textContent).toContain("0 de 1 campos con contenido")
+    expect(document.body.textContent).not.toContain("opciones")
     expect([...document.body.querySelectorAll('button:not([data-slot="dialog-close-x"])')].some((item) => item.textContent?.includes("Cerrar"))).toBe(false)
     expect(buttonContaining("Descartar")).toBeTruthy()
     fireEvent.click(buttonContaining("Aplicar a 1 materias")!)
@@ -98,6 +121,77 @@ describe("FichaImportDialog", () => {
     await flush()
 
     expect(applyFichaWorkbook).toHaveBeenCalledWith(excel, replacing, ["s1"], { s1: ["bibliografia"] })
+  })
+
+  it("avisa y deja sin marcar el campo cuyas opciones quitaría el Excel", async () => {
+    const preview = withOptions({ descripcion: "Texto propuesto", metodos: "Texto de métodos" }, ["Aula invertida", "Estudio de casos"])
+    await reviewing(preview)
+
+    expect(document.body.textContent).toContain("Algunos campos tienen opciones para elegir y el Excel las quitaría. Por eso vienen sin marcar")
+    expect(document.body.textContent).toContain("Sin marcar para no quitar opciones: Métodos de enseñanza")
+    expect(box("s1").getAttribute("aria-checked")).toBe("true")
+    await press(buttonContaining("Comparar con el proyecto de carrera actual")!)
+
+    expect(box("s1-metodos").getAttribute("aria-checked")).toBe("false")
+    expect(box("s1-descripcion").getAttribute("aria-checked")).toBe("true")
+    const listed = [...document.body.querySelectorAll("li li, li ul li")].map((item) => item.textContent)
+    expect(listed).toEqual(expect.arrayContaining(["Aula invertida", "Estudio de casos"]))
+    expect(document.body.textContent).toContain("Si marca este campo, se quitan sus opciones y queda el texto del Excel")
+    await press(buttonContaining("Aplicar a 1 materias")!)
+
+    expect(applyFichaWorkbook).toHaveBeenCalledWith(excel, preview, ["s1"], { s1: ["descripcion"] })
+  })
+
+  it("reemplaza las opciones solo cuando la persona marca el campo", async () => {
+    const preview = withOptions({ descripcion: "Texto propuesto", metodos: "Texto de métodos" }, ["Aula invertida"])
+    await reviewing(preview)
+    await press(buttonContaining("Comparar con el proyecto de carrera actual")!)
+    await press(box("s1-metodos"))
+
+    expect(document.body.textContent).toContain("Se quitarán las opciones de: Métodos de enseñanza")
+    expect(document.body.textContent).not.toContain("Sin marcar para no quitar opciones")
+    await press(buttonContaining("Aplicar a 1 materias")!)
+
+    expect(applyFichaWorkbook).toHaveBeenCalledWith(excel, preview, ["s1"], undefined)
+  })
+
+  it("una materia que solo cambiaría opciones empieza sin marcar y al pulsarla muestra el campo", async () => {
+    const preview = withOptions({ metodos: "Texto de métodos" }, [])
+    await reviewing(preview)
+
+    expect(box("s1").getAttribute("aria-checked")).toBe("false")
+    expect(buttonContaining("Aplicar a 0 materias")!.disabled).toBe(true)
+    await press(box("s1"))
+
+    expect(box("s1").getAttribute("aria-checked")).toBe("false")
+    expect(box("s1-metodos").getAttribute("aria-checked")).toBe("false")
+    expect(box("s1-metodos").disabled).toBe(false)
+    expect(document.body.textContent).toContain("Elección sin opciones todavía")
+    await press(box("s1-metodos"))
+
+    expect(box("s1").getAttribute("aria-checked")).toBe("true")
+    await press(buttonContaining("Aplicar a 1 materias")!)
+
+    expect(applyFichaWorkbook).toHaveBeenCalledWith(excel, preview, ["s1"], undefined)
+  })
+
+  it("al volver a marcar una materia recupera sus campos y deja los de opciones sin marcar", async () => {
+    const preview = withOptions({ descripcion: "Texto propuesto", metodos: "Texto de métodos" }, ["Aula invertida"])
+    await reviewing(preview)
+    await press(buttonContaining("Comparar con el proyecto de carrera actual")!)
+    await press(box("s1-descripcion"))
+
+    expect(box("s1").getAttribute("aria-checked")).toBe("false")
+    await press(box("s1"))
+
+    expect(box("s1").getAttribute("aria-checked")).toBe("true")
+    expect(box("s1-descripcion").getAttribute("aria-checked")).toBe("true")
+    expect(box("s1-metodos").getAttribute("aria-checked")).toBe("false")
+    await press(box("s1"))
+
+    expect(box("s1").getAttribute("aria-checked")).toBe("false")
+    expect(box("s1-descripcion").disabled).toBe(true)
+    expect(buttonContaining("Aplicar a 0 materias")).toBeTruthy()
   })
 
   it("muestra cobertura parcial, tablas y motivos de los campos pendientes", async () => {

@@ -12,6 +12,7 @@ const fixture = (name: string) => readFileSync(path.join(__dirname, "__fixtures_
 const definition = golden.definition as unknown as FichaDefinition
 const cases = golden.cases as Record<string, { subjects?: unknown; errors?: Record<string, string[]> }>
 
+const renamed = (xml: string) => xml.replace("No borran contenido de las fichas.", "No borran contenido del proyecto de carrera.")
 const masked = (xml: string) => xml.replace(/([pP]assword)="[0-9A-F]+"/g, '$1="X"')
 
 function outcome(bytes: Buffer): unknown {
@@ -32,7 +33,13 @@ describe("fichaWorkbook (FichaWorkbook of Laravel)", () => {
     const mine = await parts(await createFichaWorkbook(definition, { now: 1_795_000_000 }))
     const theirs = await parts(fixture("ficha-template.xlsx"))
     expect([...mine.keys()].sort()).toEqual([...theirs.keys()].sort())
-    for (const [name, xml] of theirs) expect(masked(mine.get(name) ?? ""), name).toBe(masked(xml))
+    for (const [name, xml] of theirs) expect(masked(mine.get(name) ?? ""), name).toBe(masked(renamed(xml)))
+  })
+
+  it("tells the user about the career project and never says «fichas»", async () => {
+    const written = [...(await parts(await createFichaWorkbook(definition, { now: 1_795_000_000 }))).values()].join("\n")
+    expect(written).toContain("No borran contenido del proyecto de carrera.")
+    expect(written).not.toContain("fichas")
   })
 
   it("writes a different random password for every protected sheet and the workbook", async () => {

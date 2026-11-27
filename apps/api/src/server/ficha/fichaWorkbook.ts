@@ -113,7 +113,7 @@ export async function createFichaWorkbook(definition: FichaDefinition, options: 
     ["Proyecto de carrera", definition.careerName],
     ["1", "Complete las celdas de contenido de cada hoja. Cada hoja corresponde a un campo de la plantilla."],
     ["2", "No cambie los nombres de las hojas, los encabezados ni los datos de las materias."],
-    ["3", "Las celdas vacías conservan los valores actuales. No borran contenido de las fichas."],
+    ["3", "Las celdas vacías conservan los valores actuales. No borran contenido del proyecto de carrera."],
     ["4", "Para listas, escriba un elemento por línea empezando con «- ». Para párrafos, use saltos de línea normales."],
     ["5", "Las tablas de listas admiten hasta 40 filas por materia. Las tablas fijas conservan sus filas y rótulos."],
     ["6", "Cargue el archivo en el sitio, revise la vista previa y confirme qué materias y campos aplicar."],
