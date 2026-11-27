@@ -75,6 +75,18 @@ describe("Responder un tipo de respuesta", () => {
     expect(last()).toEqual(["o1"])
   })
 
+  it("lo elegido se ve como una lista de arriba abajo y el botón dice para qué sirve", () => {
+    const many = answer({ kind: "varias", options, value: ["o1", "o2"] })
+    const list = many.container.querySelector('ul[aria-label="Elegido en Técnica"]')!
+    expect(list).toHaveClass("flex-col")
+    expect(list).not.toHaveClass("flex-wrap")
+    expect([...list.querySelectorAll("li")].map((item) => item.textContent)).toEqual(["Clase magistral", "Taller"])
+    expect(button(many.container, "Elegir en Técnica").textContent).toBe("Agregar o quitar")
+
+    expect(button(answer({ kind: "una", options, value: "o1" }).container, "Elegir en Técnica").textContent).toBe("Elegir otra")
+    expect(button(answer({ kind: "varias", options, value: [] }).container, "Elegir en Técnica").textContent).toBe("Elegir varias")
+  })
+
   it("sin opciones escritas pide que el coordinador las escriba", () => {
     const { container } = answer({ kind: "una", options: [], value: null })
     expect(container.textContent).toContain("No hay opciones para elegir: pídalas al coordinador")

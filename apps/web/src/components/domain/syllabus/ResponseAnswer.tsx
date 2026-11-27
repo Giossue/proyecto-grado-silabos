@@ -3,7 +3,6 @@
 import { Check, ListChecks, X } from "lucide-react"
 import { useId, useState } from "react"
 import { IconTooltip } from "@/components/domain/IconTooltip"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -122,17 +121,16 @@ export function ResponseAnswer({ attrs, label, disabled = false, askFor = "al co
       ) : (
         <div className="flex min-w-0 flex-col gap-1.5" role="group" aria-label={label}>
           {chosen.length ? (
-            <ul className="flex flex-wrap gap-1.5" aria-label={`Elegido en ${label}`}>
+            <ul className="flex flex-col gap-1" aria-label={`Elegido en ${label}`}>
               {chosen.map((key) => (
-                <li key={key}>
-                  <Badge variant="secondary" className="gap-1 py-0.5 pr-0.5 text-sm font-normal" data-response-chosen>
-                    {title(key)}
-                    <IconTooltip label={`Quitar «${title(key)}»`}>
-                      <Button type="button" variant="ghost" size="icon-sm" className="size-5" aria-label={`Quitar «${title(key)}»`} disabled={disabled} onClick={() => remove(key)}>
-                        <X aria-hidden="true" />
-                      </Button>
-                    </IconTooltip>
-                  </Badge>
+                <li key={key} className="flex min-w-0 items-center gap-2 text-sm" data-response-chosen>
+                  <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                  <span className="min-w-0 break-words">{title(key)}</span>
+                  <IconTooltip label={`Quitar «${title(key)}»`}>
+                    <Button type="button" variant="ghost" size="icon-sm" className="size-6 shrink-0 text-muted-foreground" aria-label={`Quitar «${title(key)}»`} disabled={disabled} onClick={() => remove(key)}>
+                      <X aria-hidden="true" />
+                    </Button>
+                  </IconTooltip>
                 </li>
               ))}
             </ul>
@@ -150,7 +148,7 @@ export function ResponseAnswer({ attrs, label, disabled = false, askFor = "al co
                 disabled={disabled || attrs.options.length === 0}
               >
                 <ListChecks data-icon="inline-start" aria-hidden="true" />
-                {chosen.length ? "Cambiar" : (RESPONSE_KINDS[attrs.kind]?.label ?? "Elegir")}
+                {chosen.length ? (many ? "Agregar o quitar" : "Elegir otra") : (RESPONSE_KINDS[attrs.kind]?.label ?? "Elegir")}
               </Button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-72 p-0">
