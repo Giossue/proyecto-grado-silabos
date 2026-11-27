@@ -7,9 +7,9 @@ import { IconTooltip } from "@/components/domain/IconTooltip"
 import { MenuTooltip } from "@/components/domain/MenuTooltip"
 import { TemplateRibbonDivider, TemplateRibbonGroup } from "@/components/domain/configuration/TemplateRibbonGroup"
 import { Button } from "@/components/ui/button"
-import { TemplateEditabilityToggle, TemplateFieldNameInput } from "@/components/domain/configuration/TemplateFieldControls"
+import { TemplateFillerToggle, TemplateFieldNameInput } from "@/components/domain/configuration/TemplateFieldControls"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import type { FieldResponsible } from "@/types/configuration"
+import type { FieldFiller } from "@/types/configuration"
 
 export type TemplateSelection =
   | { kind: "field"; field: TemplateField; canMoveUp: boolean; canMoveDown: boolean }
@@ -23,7 +23,7 @@ type TemplateSelectionToolsProps = {
   busy: boolean
   targets?: TemplateSectionTarget[]
   children?: ReactNode
-  onResponsible: (value: FieldResponsible) => void
+  onFiller: (value: FieldFiller) => void
   onName: (label: string) => void
   onMove: (direction: -1 | 1) => void
   onRemove: () => void
@@ -67,7 +67,7 @@ export function TemplatePresetTool({ presets, allowed, disabled = false, onPrese
   )
 }
 
-export function TemplateSelectionTools({ selection, locked, busy, targets, children, onResponsible, onName, onMove, onRemove, onOrientation, onDuplicate, onMoveTo }: TemplateSelectionToolsProps) {
+export function TemplateSelectionTools({ selection, locked, busy, targets, children, onFiller, onName, onMove, onRemove, onOrientation, onDuplicate, onMoveTo }: TemplateSelectionToolsProps) {
   if (selection?.kind === "field") {
     const fieldName = nameOf(selection.field)
     return (
@@ -76,8 +76,8 @@ export function TemplateSelectionTools({ selection, locked, busy, targets, child
           <TemplateFieldNameInput field={selection.field} disabled={locked} className="w-44" onName={onName} />
         </TemplateRibbonGroup>
         <TemplateRibbonDivider />
-        <TemplateRibbonGroup label="Edición">
-          <TemplateEditabilityToggle field={selection.field} disabled={locked} onResponsible={onResponsible} />
+        <TemplateRibbonGroup label="¿Quién lo llena?">
+          <TemplateFillerToggle field={selection.field} disabled={locked} onFiller={onFiller} />
         </TemplateRibbonGroup>
         {children ? (
           <>

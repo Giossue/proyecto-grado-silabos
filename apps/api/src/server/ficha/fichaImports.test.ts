@@ -264,6 +264,24 @@ describe("FichaImportTest", () => {
     expect(await zip.file("xl/workbook.xml")!.async("string")).toContain('lockStructure="true"')
   })
 
+  it("keeps «El docente llena esta tabla» when the workbook leaves the table unwritten, and drops it when it writes", async () => {
+    const table = field("tecnicas_ensenanza")
+    const cell = (type: string, text: string): PhpRecord => ({ type, content: [text === "" ? { type: "paragraph" } : { type: "paragraph", content: [{ type: "text", text }] }] })
+    const definition = templates.template!.definition!
+    table.content = normalizeFieldDocument({ type: "doc", content: [{ type: "table", content: [{ type: "tableRow", content: [cell("tableHeader", "Técnica"), cell("tableHeader", "Horas")] }, { type: "tableRow", content: [cell("tableCell", ""), cell("tableCell", "")] }] }] }, definition) as never
+    const marked = { ...responseTemplate(normalizeFieldDocument(table.content, definition)), attrs: { teacherFills: true } }
+    templates.values.push({ fieldId: table.id, subjectId: SUBJECTS[0].id, value: marked })
+
+    const other = await workbook({ descripcion: { D4: "Ficha completada en Excel" } })
+    expect((await apply(other, await preview(other))).status).toBe(200)
+    expect(stored(SUBJECTS[0].id, "tecnicas_ensenanza")).toEqual(marked)
+
+    const written = await workbook({ tecnicas_ensenanza: { D4: "Seminario" } })
+    expect((await apply(written, await preview(written))).status).toBe(200)
+    expect(JSON.stringify(stored(SUBJECTS[0].id, "tecnicas_ensenanza"))).toContain("Seminario")
+    expect((stored(SUBJECTS[0].id, "tecnicas_ensenanza")!.attrs as PhpRecord | undefined)?.teacherFills).toBeUndefined()
+  })
+
   it("the proposal shows the current profile and applies only the chosen fields", async () => {
     const description = field("descripcion")
     templates.values.push({ fieldId: description.id, subjectId: SUBJECTS[0].id, value: freeTextFromText("Descripción que ya estaba") })

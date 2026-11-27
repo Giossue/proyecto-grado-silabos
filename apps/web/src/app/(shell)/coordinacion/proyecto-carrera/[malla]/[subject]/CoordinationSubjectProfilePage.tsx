@@ -14,7 +14,6 @@ import { ProcessLockAlert } from "@/components/domain/ProcessLockAlert"
 import { StatusBadge } from "@/components/domain/StatusBadge"
 import { FieldResponseEditor } from "@/components/domain/syllabus/FieldResponseEditor"
 import { SyllabusDocumentPreview } from "@/components/domain/syllabus/SyllabusDocumentPreview"
-import { TeacherEditsToggle } from "@/components/domain/syllabus/TeacherEditsToggle"
 import { useLeaveGuard } from "@/components/domain/syllabus/useLeaveGuard"
 import { UnsavedChangesDialog } from "@/components/domain/UnsavedChangesDialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -27,8 +26,8 @@ import { useAcademicCareerScope } from "@/composables/useAcademicCareerScope"
 import { sameCode, useCodeLookup } from "@/composables/useCodeLookup"
 import { useDiscardConfirmation } from "@/composables/useDiscardConfirmation"
 import { goBack } from "@/lib/goBack"
-import { RESPONSE_NODE, careerFieldUndecided, responseAttrs, responseNeedsOptions, teacherEditsAllowed } from "@silabos/shared/lib/responseKinds"
-import { keepTeacherEdits, withoutDocumentMarks } from "@/lib/teacherEdits"
+import { RESPONSE_NODE, careerFieldUndecided, responseAttrs, responseNeedsOptions } from "@silabos/shared/lib/responseKinds"
+import { keepDocumentMarks, withoutDocumentMarks } from "@/lib/teacherEdits"
 import { paths } from "@/lib/routes"
 import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { toast } from "@/lib/toast"
@@ -46,6 +45,8 @@ const sectionOf = (field: SubjectProfileField): string => field.section?.trim() 
 const cycleLabel = (cycle: number): string => (cycle ? `Ciclo ${cycle}` : "Sin ciclo")
 const valuesFrom = (fields: SubjectProfileField[], stored: Record<string, DocumentNode | null | undefined>): Values =>
   Object.fromEntries(fields.map((field) => [field.id, stored[field.id] ?? field.template ?? field.content ?? null]))
+
+const blankOf = (field: SubjectProfileField): DocumentNode => (field.template ?? field.content) as DocumentNode
 
 const PAGE_TITLE = "Proyecto de carrera"
 // Wider than the usual page, so it starts further left without reaching the edge on large screens.
@@ -136,10 +137,7 @@ function SubjectProfile({ subjectId, adminCareer }: { subjectId: string; adminCa
   const shownFields = fields.filter((field) => sectionOf(field) === activeSection)
   const missingOptions = (field: SubjectProfileField): boolean =>
     nodesOfType(values[field.id] ?? field.template ?? field.content, RESPONSE_NODE).some((node) => responseNeedsOptions(responseAttrs(node)))
-  const undecided = (field: SubjectProfileField): boolean => {
-    const blank = (field.template ?? field.content) as DocumentNode
-    return careerFieldUndecided(blank, values[field.id] ?? blank)
-  }
+  const undecided = (field: SubjectProfileField): boolean => careerFieldUndecided(blankOf(field), values[field.id] ?? blankOf(field))
   const sectionPending = (section: string): boolean => fields.some((field) => sectionOf(field) === section && (undecided(field) || missingOptions(field)))
   const canSave = !saving && !locked && fields.length > 0 && changed
 
@@ -355,18 +353,7 @@ function SubjectProfile({ subjectId, adminCareer }: { subjectId: string; adminCa
                     career
                     askFor="a Administración"
                     value={values[field.id] ? withoutDocumentMarks(values[field.id]!) : values[field.id]}
-                    onValueChange={(next) => setValues((current) => ({ ...current, [field.id]: keepTeacherEdits(next, teacherEditsAllowed(current[field.id])) }))}
-                  />
-                  <TeacherEditsToggle
-                    id={field.id}
-                    document={values[field.id] ?? field.template}
-                    disabled={locked}
-                    onChange={(allowed) =>
-                      setValues((current) => {
-                        const document = current[field.id] ?? field.template
-                        return document ? { ...current, [field.id]: keepTeacherEdits(document, allowed) } : current
-                      })
-                    }
+                    onValueChange={(next) => setValues((current) => ({ ...current, [field.id]: keepDocumentMarks(next, current[field.id], blankOf(field)) }))}
                   />
                 </Field>
               ))}

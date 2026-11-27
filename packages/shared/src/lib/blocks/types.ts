@@ -4,12 +4,12 @@ export type Condition =
     | { not: Condition }
     | ({ value?: string; prop?: string; item?: string; variable?: string } & ({ equals: string | number | null } | { empty: boolean } | { zero: boolean }));
 
-type SchemaBase = { title?: string; errorMessage?: string; keep_if?: Condition; copy_of?: string };
+type SchemaBase = { title?: string; errorMessage?: string; keep_if?: Condition };
 export type TextSchema = SchemaBase & { type: 'string'; maxLength: number; minLength?: number; multiline: boolean; oneOf?: undefined };
 export type ChoiceSchema = SchemaBase & { type: 'string'; oneOf: Array<{ const: string; title: string }> };
 export type NumberSchema = SchemaBase & { type: 'number'; maximum: number; multipleOf: number };
 export type ObjectSchema = SchemaBase & { type: 'object'; properties: Record<string, ValueSchema> };
-export type ListSchema = SchemaBase & { type: 'array'; minItems: number; maxItems: number; initial: number; items: ValueSchema; rows_from?: string; row_ids?: boolean };
+export type ListSchema = SchemaBase & { type: 'array'; minItems: number; maxItems: number; initial: number; items: ValueSchema };
 export type ValueSchema = TextSchema | NumberSchema | ChoiceSchema | ObjectSchema | ListSchema;
 export type PropSchema = TextSchema;
 

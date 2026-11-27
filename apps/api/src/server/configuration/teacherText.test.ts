@@ -43,8 +43,8 @@ describe("coordinación marca «El docente puede editar este texto»", () => {
     expect(fieldPending(institutional, null, definition)).toBe(true)
   })
 
-  it("no la admite en un campo con espacios de respuesta", () => {
-    expect(() => careerResponse(institutional, marked(space()), definition)).toThrow()
+  it("en un campo con espacios de respuesta la marca antigua se descarta", () => {
+    expect(teacherEdits(careerResponse(institutional, marked(space()), definition))).toBe(false)
   })
 
   it("sin la marca, el texto sigue bloqueado para el docente", () => {

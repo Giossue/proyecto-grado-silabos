@@ -212,7 +212,6 @@
                 "title": { "$ref": "#/$defs/title" },
                 "errorMessage": { "$ref": "#/$defs/errorMessage" },
                 "keep_if": { "$ref": "#/$defs/condition" },
-                "copy_of": { "$ref": "#/$defs/key", "description": "Columna que copia de la lista de origen («desde»)." },
                 "maxLength": { "type": "integer", "minimum": 1, "maximum": 20000 },
                 "minLength": { "enum": [0, 1], "description": "1: obligatorio." },
                 "multiline": { "type": "boolean", "description": "Extensión propia: la pantalla muestra un cuadro de varias líneas." }
@@ -227,7 +226,6 @@
                 "title": { "$ref": "#/$defs/title" },
                 "errorMessage": { "$ref": "#/$defs/errorMessage" },
                 "keep_if": { "$ref": "#/$defs/condition" },
-                "copy_of": { "$ref": "#/$defs/key", "description": "Columna que copia de la lista de origen («desde»)." },
                 "oneOf": {
                     "type": "array",
                     "minItems": 1,
@@ -250,7 +248,6 @@
                 "title": { "$ref": "#/$defs/title" },
                 "errorMessage": { "$ref": "#/$defs/errorMessage" },
                 "keep_if": { "$ref": "#/$defs/condition" },
-                "copy_of": { "$ref": "#/$defs/key", "description": "Columna que copia de la lista de origen («desde»)." },
                 "maximum": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1000000000 },
                 "multipleOf": { "enum": [1, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001] }
             }
@@ -279,9 +276,7 @@
                 "minItems": { "type": "integer", "minimum": 0, "maximum": 100 },
                 "maxItems": { "type": "integer", "minimum": 1, "maximum": 100 },
                 "initial": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Extensión propia: cuántos elementos tiene al empezar." },
-                "rows_from": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,40}\\.[a-z][a-z0-9_]{0,40}$", "description": "Lista «tabla.lista» de la que toma sus filas («filas_desde»)." },
-                "items": { "$ref": "#/$defs/value" },
-                "row_ids": { "type": "boolean", "description": "Lo calcula el sistema cuando otra tabla toma las filas de esta lista; al importar se ignora." }
+                "items": { "$ref": "#/$defs/value" }
             }
         },
         "value": {
@@ -375,7 +370,6 @@
                 "titulo": { "$ref": "#/$defs/title" },
                 "error": { "$ref": "#/$defs/errorMessage" },
                 "solo_si": { "$ref": "#/$defs/condition" },
-                "desde": { "$ref": "#/$defs/key", "description": "Solo en una columna de una lista con «filas_desde»: clave de la columna de origen que se copia." },
                 "max": { "type": "number", "description": "Texto: máximo de caracteres (1000 por defecto). Número: valor máximo (999.99 por defecto)." },
                 "min": { "enum": [0, 1], "description": "Solo texto. 1: obligatorio." },
                 "decimales": { "type": "integer", "minimum": 0, "maximum": 6, "description": "Solo número u horas. 2 por defecto." }
@@ -389,7 +383,6 @@
                 "titulo": { "$ref": "#/$defs/title" },
                 "error": { "$ref": "#/$defs/errorMessage" },
                 "solo_si": { "$ref": "#/$defs/condition" },
-                "desde": { "$ref": "#/$defs/key", "description": "Solo en una columna de una lista con «filas_desde»: clave de la columna de origen que se copia." },
                 "opciones": {
                     "type": "object",
                     "minProperties": 1,
@@ -405,7 +398,6 @@
             "additionalProperties": false,
             "properties": {
                 "titulo": { "$ref": "#/$defs/title", "description": "Nombre de cada fila (por ejemplo «unidad»)." },
-                "filas_desde": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,40}\\.[a-z][a-z0-9_]{0,40}$", "description": "Lista de otra tabla de la que toma sus filas, «tabla.lista» (por ejemplo «unidades.unidades»). Nadie agrega ni quita filas: use un mínimo de 0." },
                 "filas": { "type": "string", "pattern": "^\\s*\\d{1,3}\\s*-\\s*\\d{1,3}\\s*$", "description": "Mínimo y máximo de filas, por ejemplo «1-8». Sin «filas»: 0-100." },
                 "al_empezar": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Filas al empezar. Por defecto, el mínimo." },
                 "error": { "$ref": "#/$defs/errorMessage" },

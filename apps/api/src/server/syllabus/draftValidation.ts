@@ -1,4 +1,4 @@
-import { openShape, teacherEdits, writtenValue } from "../configuration/teacherText"
+import { addsNothing, openShape, teacherDefault, teacherEdits, writtenValue } from "../configuration/teacherText"
 import { HttpFailure, Missing } from "../http/failures"
 import type { PrismaService } from "../../prisma/prisma.service"
 import { ruleFailures } from "@silabos/shared/lib/blocks/rules"
@@ -14,6 +14,8 @@ import { profileTemplates } from "../configuration/subjectProfileFields"
 import { documentIsEmpty, fieldResponseNormalize } from "../configuration/templateRehearsal"
 import { resolveVariables, teacherEditable, type TemplateField } from "../configuration/templatePresentation"
 import {
+  awaitsRows,
+  normalizeFieldDocument,
   fieldDocumentIsEmpty,
   blank,
   fieldConditions,
@@ -134,8 +136,9 @@ function fieldIssues(
   const rewritable = teacherEdits(original)
   const template = clearHidden(original, answers, true)
   const shown = clearHidden(stored, answers, true)
+  const unfilledRows = rewritable && teacherDefault(original) && awaitsRows(original, definition) && (!isDocument(stored) || addsNothing(normalizeFieldDocument(original, definition), normalizeFieldDocument(stored, definition)))
   const empty = rewritable
-    ? fieldDocumentIsEmpty(isDocument(stored) ? stored : original, definition)
+    ? unfilledRows || fieldDocumentIsEmpty(isDocument(stored) ? stored : original, definition)
     : responseIsEmpty(template, shown, definition) && (!responsesEnabled(definition) || asksForAnswer(responseTemplate(record(template))))
   const shownAnswers = shownResponses(isDocument(stored) ? stored : original, answers)
   const pending = pendingResponses(shownAnswers)
@@ -146,7 +149,7 @@ function fieldIssues(
   for (const violation of violations(shownAnswers)) issue("respuesta_fuera_de_limite", `«${name}»: ${violation}`)
   if (responsesEnabled(definition) && isPhpArray(stored)) {
     try {
-      fieldResponseNormalize(original, stored, definition)
+      fieldResponseNormalize(original, stored, definition, "value", field.content)
     } catch (error) {
       if (!(error instanceof TemplateValidationError)) throw error
       issue("estructura_respuesta_modificada", "El formato de este campo cambió. Complete las respuestas en la estructura vigente.")

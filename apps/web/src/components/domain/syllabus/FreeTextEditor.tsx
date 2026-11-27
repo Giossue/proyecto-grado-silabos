@@ -1,13 +1,14 @@
 "use client"
 
 import { Extension, type Editor } from "@tiptap/core"
+import type { Node as ProseNode } from "@tiptap/pm/model"
 import { Plugin } from "@tiptap/pm/state"
 import { Table, TableRow } from "@tiptap/extension-table"
 import TextAlign from "@tiptap/extension-text-align"
 import { Color, TextStyle } from "@tiptap/extension-text-style"
 import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
-import { Bold, Braces, ChevronDown, Italic, List, ListOrdered, Plus, Settings, Table2, Underline } from "lucide-react"
+import { Bold, Braces, ChevronDown, Italic, List, ListOrdered, Plus, Settings, Table2, Trash2, Underline } from "lucide-react"
 import { useEffect, useImperativeHandle, useMemo, useState, type ReactNode, type Ref } from "react"
 import { TemplateResponseTool } from "@/components/domain/configuration/TemplateResponseTool"
 import { IconTooltip } from "@/components/domain/IconTooltip"
@@ -42,12 +43,16 @@ type FreeTextEditorProps = {
   spaces?: boolean
   lockTables?: boolean
   limit?: number | null
+  rowTables?: Array<DocumentNode | null>
   ref?: Ref<FreeTextEditorHandle>
 }
 
 type Slash = { open: boolean; left: number; top: number; query: string; index: number }
 
 const NO_VARIABLES: TemplateVariable[] = []
+const NO_ROW_TABLES: Array<DocumentNode | null> = []
+const ROW_ADDED = "rowAdded"
+const MAX_TABLE_ROWS = 100
 const CLOSED: Slash = { open: false, left: 0, top: 0, query: "", index: 0 }
 const SLASH_PATTERN = /(?:^|\s)\/([\p{L}\p{N}_ ]{0,24})$/u
 
@@ -67,36 +72,89 @@ const OneSpace = Extension.create({
   addProseMirrorPlugins: () => [
     new Plugin({
       filterTransaction: (transaction, state) =>
-        !transaction.docChanged || Boolean(transaction.getMeta("preventUpdate")) || spaceCount(transaction.doc) <= Math.max(1, spaceCount(state.doc)),
+        !transaction.docChanged || Boolean(transaction.getMeta("preventUpdate")) || Boolean(transaction.getMeta(ROW_ADDED)) || spaceCount(transaction.doc) <= Math.max(1, spaceCount(state.doc)),
     }),
   ],
 })
 
-type ShapeNode = { type: { name: string }; attrs: Record<string, unknown>; textContent: string; descendants: (visit: (node: ShapeNode) => boolean | void) => void }
+const isHeaderRow = (row: ProseNode): boolean => {
+  for (let index = 0; index < row.childCount; index++) if (row.child(index).type.name !== "tableHeader") return false
+  return true
+}
 
-// Tables and blocks that come with the template keep their shape and headers; only what is written inside the cells changes.
-const fixedShape = (document: ShapeNode): string => {
+const childrenOf = (node: ProseNode): ProseNode[] => Array.from({ length: node.childCount }, (_, index) => node.child(index))
+
+const headerCount = (table: ProseNode): number => {
+  const first = childrenOf(table).findIndex((row) => !isHeaderRow(row))
+  return first < 0 ? table.childCount : first
+}
+
+const rowShape = (row: ProseNode): string =>
+  JSON.stringify(childrenOf(row).map((cell) => [cell.type.name, cell.attrs.colspan ?? 1, cell.attrs.rowspan ?? 1, cell.type.name === "tableHeader" ? cell.textContent : null]))
+
+const fixedShape = (document: ProseNode, admitsRows: boolean[]): string => {
   const parts: unknown[] = []
+  let table = 0
   document.descendants((node) => {
     if (node.type.name === "documentBlock") parts.push(["block", node.attrs.kind, node.attrs.props])
-    if (["table", "tableRow"].includes(node.type.name)) parts.push(node.type.name)
-    if (["tableCell", "tableHeader"].includes(node.type.name)) {
-      parts.push([node.type.name, node.attrs.colspan ?? 1, node.attrs.rowspan ?? 1, node.type.name === "tableHeader" ? node.textContent : null])
-      return false
-    }
+    if (node.type.name !== "table") return true
+    const rows = childrenOf(node).map(rowShape)
+    if (admitsRows[table++]) {
+      const headers = headerCount(node)
+      const body = rows.slice(headers)
+      parts.push(["table", rows.slice(0, headers), body.length > 0 ? [...new Set(body)] : null])
+    } else parts.push(["table", rows])
+    return false
   })
   return JSON.stringify(parts)
 }
 
-const ProtectedTables = Extension.create({
-  name: "protectedTables",
-  addProseMirrorPlugins: () => [
-    new Plugin({
-      filterTransaction: (transaction, state) =>
-        !transaction.docChanged || Boolean(transaction.getMeta("preventUpdate")) || fixedShape(transaction.doc as unknown as ShapeNode) === fixedShape(state.doc as unknown as ShapeNode),
-    }),
-  ],
-})
+const protectedTables = (admitsRows: boolean[]) =>
+  Extension.create({
+    name: "protectedTables",
+    addProseMirrorPlugins: () => [
+      new Plugin({
+        filterTransaction: (transaction, state) =>
+          !transaction.docChanged || Boolean(transaction.getMeta("preventUpdate")) || fixedShape(transaction.doc, admitsRows) === fixedShape(state.doc, admitsRows),
+      }),
+    ],
+  })
+
+type RowPlace = { table: ProseNode; position: number; index: number | null }
+
+const rowPlace = (editor: Editor, rowTables: Array<DocumentNode | null>): RowPlace | null => {
+  const cursor = editor.state.selection.from
+  const found: RowPlace[] = []
+  let under: RowPlace | null = null
+  let count = 0
+  editor.state.doc.descendants((node, position) => {
+    if (node.type.name !== "table") return true
+    if (rowTables[count++]) {
+      const place: RowPlace = { table: node, position, index: null }
+      let start = position + 1
+      childrenOf(node).forEach((row, index) => {
+        if (cursor > start && cursor < start + row.nodeSize) under = { ...place, index: index < headerCount(node) ? null : index }
+        start += row.nodeSize
+      })
+      found.push(place)
+    }
+    return false
+  })
+  return under ?? found[0] ?? null
+}
+
+const rowPosition = (place: RowPlace, index: number): number =>
+  childrenOf(place.table).slice(0, index).reduce((position, row) => position + row.nodeSize, place.position + 1)
+
+const rowTemplateOf = (editor: Editor, place: RowPlace, rowTables: Array<DocumentNode | null>): DocumentNode | null => {
+  const tables: number[] = []
+  editor.state.doc.descendants((node, position) => {
+    if (node.type.name !== "table") return true
+    tables.push(position)
+    return false
+  })
+  return rowTables[tables.indexOf(place.position)] ?? null
+}
 
 type LimitStorage = { limit: number | null }
 type SlashStorage = { handle: ((event: KeyboardEvent) => boolean) | null }
@@ -122,11 +180,11 @@ const SlashKeys = Extension.create<unknown, SlashStorage>({
 const storageOf = (editor: Editor): { characterLimit: LimitStorage; slashKeys: SlashStorage } =>
   editor.storage as unknown as { characterLimit: LimitStorage; slashKeys: SlashStorage }
 
-type ExtensionOptions = { bare: boolean; align: boolean; spaces: boolean; lockTables: boolean; blocks: "configure" | "fill"; labels: Record<string, string> }
+type ExtensionOptions = { bare: boolean; align: boolean; spaces: boolean; lockTables: boolean; admitsRows: boolean[]; blocks: "configure" | "fill"; labels: Record<string, string> }
 
-const editorExtensions = ({ bare, align, spaces, lockTables, blocks, labels }: ExtensionOptions) => [
+const editorExtensions = ({ bare, align, spaces, lockTables, admitsRows, blocks, labels }: ExtensionOptions) => [
   ...(spaces ? [OneSpace] : []),
-  ...(spaces || lockTables ? [ProtectedTables] : []),
+  ...(spaces || lockTables ? [protectedTables(admitsRows)] : []),
   StarterKit.configure({ document: false, heading: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false, link: false, strike: false, ...(bare ? { trailingNode: false } : {}) }),
   ...(align ? [TextAlign.configure({ types: ["paragraph"], alignments: ["left", "center", "right", "justify"] })] : []),
   TextStyle,
@@ -176,6 +234,7 @@ export function FreeTextEditor({
   spaces = false,
   lockTables = false,
   limit = null,
+  rowTables = NO_ROW_TABLES,
   ref,
 }: FreeTextEditorProps) {
   const [slash, setSlash] = useState<Slash>(CLOSED)
@@ -207,7 +266,7 @@ export function FreeTextEditor({
       },
       attributes: { id, "aria-label": label, role: "textbox", "aria-multiline": "true", class: "free-text-editor__content" },
     },
-    extensions: editorExtensions({ bare, align, spaces, lockTables, blocks, labels: Object.fromEntries(variables.map((item) => [item.key, item.label])) }),
+    extensions: editorExtensions({ bare, align, spaces, lockTables, admitsRows: rowTables.map(Boolean), blocks, labels: Object.fromEntries(variables.map((item) => [item.key, item.label])) }),
   }))
 
   const editorProps = useMemo(() => ({ ...setup.editorProps, attributes: { ...setup.editorProps.attributes, "aria-label": label } }), [setup, label])
@@ -266,9 +325,8 @@ export function FreeTextEditor({
   useImperativeHandle(ref, () => ({ editor }), [editor])
 
   useEffect(() => {
-    // The coordinator's field opens and closes without reporting a change: opening a saved one must not mark it as edited.
-    if (editor && !editor.isDestroyed && editor.isEditable === readOnly) editor.setEditable(!readOnly, !spaces)
-  }, [editor, readOnly, spaces])
+    if (editor && !editor.isDestroyed && editor.isEditable === readOnly) editor.setEditable(!readOnly, false)
+  }, [editor, readOnly])
 
   useEffect(() => {
     if (editor && !editor.isDestroyed && JSON.stringify(value ?? emptyDocument()) !== JSON.stringify(editor.getJSON())) {
@@ -289,6 +347,20 @@ export function FreeTextEditor({
       if (node.type.name === "tableCell" || node.type.name === "tableHeader") lastCell = position
     })
     if (lastCell >= 0) editor.chain().focus().setTextSelection(lastCell + 2).addRowAfter().run()
+  }
+  const place = editor && rowTables.some(Boolean) ? rowPlace(editor, rowTables) : null
+  const bodyRows = place ? place.table.childCount - headerCount(place.table) : 0
+  const addRow = (): void => {
+    if (!editor || !place || readOnly) return
+    const row = rowTemplateOf(editor, place, rowTables)
+    if (!row) return
+    const at = rowPosition(place, place.index === null ? place.table.childCount : place.index + 1)
+    editor.view.dispatch(editor.state.tr.insert(at, editor.schema.nodeFromJSON(row)).setMeta(ROW_ADDED, true))
+  }
+  const removeRow = (): void => {
+    if (!editor || !place || place.index === null || bodyRows <= 1 || readOnly) return
+    const at = rowPosition(place, place.index)
+    editor.view.dispatch(editor.state.tr.delete(at, at + place.table.child(place.index).nodeSize))
   }
   const insertVariable = (key: string): void => {
     const variable = variables.find((item) => item.key === key)
@@ -407,6 +479,18 @@ export function FreeTextEditor({
           <Button type="button" variant="outline" size="sm" onMouseDown={(event) => event.preventDefault()} onClick={addTableRow}>
             <Plus data-icon="inline-start" aria-hidden="true" />
             Agregar fila
+          </Button>
+        </div>
+      ) : null}
+      {toolbar && place && !readOnly ? (
+        <div className="flex flex-wrap gap-2 px-3 pb-2">
+          <Button type="button" variant="outline" size="sm" disabled={place.table.childCount >= MAX_TABLE_ROWS} onMouseDown={(event) => event.preventDefault()} onClick={addRow}>
+            <Plus data-icon="inline-start" aria-hidden="true" />
+            Agregar fila
+          </Button>
+          <Button type="button" variant="outline" size="sm" disabled={place.index === null || bodyRows <= 1} onMouseDown={(event) => event.preventDefault()} onClick={removeRow}>
+            <Trash2 data-icon="inline-start" aria-hidden="true" />
+            Quitar fila
           </Button>
         </div>
       ) : null}

@@ -40,7 +40,7 @@ describe("teacher fields in the template definition", () => {
       ["correquisitos_asignatura", "Correquisitos", "carrera"],
       ["formacion_docente", "Formación y experiencia académica-investigativa", "carrera"],
     ])
-    expect(officialDefinition().teacher_fields).toEqual(["nombre_campus", "correquisitos_asignatura", "formacion_docente"])
+    expect(officialDefinition().teacher_fields).toEqual(["asignatura", "nombre_campus", "correquisitos_asignatura", "formacion_docente", "unidades", "contribucion_perfil", "conducta_etica", "bibliografia", "bibliografia_complementaria"])
   })
 
   it("feeds the campus and the corequisites of the card from what the teacher writes, not from the curriculum", () => {

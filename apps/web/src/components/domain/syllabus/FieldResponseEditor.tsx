@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { templateRuntime } from "@/lib/blocks/runtime"
 import { fieldCharacters, fitCharacters, textCharacters } from "@/lib/fieldLimits"
-import { blankResponse, cloneResponse, replaceResponse, responseAt, responseDocument, responseListTable, responseText } from "@/lib/fieldResponses"
+import { blankResponse, cloneResponse, emptiedRows, replaceResponse, responseAt, responseDocument, responseListTable, responseText, templateRows } from "@/lib/fieldResponses"
 import { onlyHiddenResponses, responseShown } from "@/lib/responseConditions"
 import {
   RESPONSE_NODE,
@@ -38,6 +38,7 @@ type FieldResponseEditorProps = {
   required?: boolean
   career?: boolean
   rewrite?: boolean
+  rowTables?: boolean[]
   askFor?: string
   answers?: Record<string, unknown> | null
   limit?: number | null
@@ -83,6 +84,7 @@ export function FieldResponseEditor({
   required = false,
   career = false,
   rewrite = false,
+  rowTables,
   askFor = "al coordinador",
   answers = null,
   limit = null,
@@ -90,11 +92,31 @@ export function FieldResponseEditor({
 }: FieldResponseEditorProps) {
   if (career) {
     return (
-      <FreeTextEditor id={id} label={label} value={value ?? template} disabled={disabled} allowTables={false} spaces onValueChange={(next) => onValueChange?.(next)} />
+      <FreeTextEditor
+        id={id}
+        label={label}
+        value={value ?? template}
+        disabled={disabled}
+        allowTables={false}
+        spaces
+        rowTables={template ? templateRows(template) : undefined}
+        onValueChange={(next) => onValueChange?.(next)}
+      />
     )
   }
   if (rewrite) {
-    return <FreeTextEditor id={id} label={label} value={value} disabled={disabled} allowTables={false} lockTables onValueChange={(next) => onValueChange?.(next)} />
+    return (
+      <FreeTextEditor
+        id={id}
+        label={label}
+        value={value}
+        disabled={disabled}
+        allowTables={false}
+        lockTables
+        rowTables={rowTables && value ? emptiedRows(value, rowTables) : undefined}
+        onValueChange={(next) => onValueChange?.(next)}
+      />
+    )
   }
   const document = template ? responseDocument(template, value) : value
   const used = limit === null ? 0 : fieldCharacters(template, document, answers ?? {})

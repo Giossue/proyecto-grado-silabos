@@ -84,11 +84,11 @@ describe("El coordinador edita en un solo editor todo el campo Editable", () => 
     await editorReady(container)
     fireEvent.click(container.querySelector('[role="toolbar"] button[aria-label="Configurar campo"]')!)
     await flush()
-    await pick("Elegir una")
+    await pick("Elegir varias")
 
     expect(nodesOfType(last(), "text").map((node) => node.text)).toContain("Estrategias de la asignatura")
     expect(nodesOfType(last(), "table")).toHaveLength(1)
-    expect(responsesOf(last())).toEqual([{ kind: "una", options: [], value: null }])
+    expect(responsesOf(last())).toEqual([{ kind: "varias", options: [], value: [] }])
   })
 
   it("en el editor de texto el espacio se coloca al elegir el tipo y cambia en tiempo real, sin duplicarse", async () => {
@@ -100,11 +100,9 @@ describe("El coordinador edita en un solo editor todo el campo Editable", () => 
     expect(checkedKinds()).toEqual([])
     expect(document.body.textContent).not.toContain("solo responde")
 
-    await pick("Elegir una")
-    expect(responsesOf(last())).toEqual([{ kind: "una", options: [], value: null }])
-    await option(1, "Taller")
-    expect(responsesOf(last())).toEqual([{ kind: "una", options: [{ const: "o1", title: "Taller" }], value: null }])
     await pick("Elegir varias")
+    expect(responsesOf(last())).toEqual([{ kind: "varias", options: [], value: [] }])
+    await option(1, "Taller")
     expect(responsesOf(last())).toEqual([{ kind: "varias", options: [{ const: "o1", title: "Taller" }], value: [] }])
     expect(insertButton()).toBeNull()
     await pick("Texto libre")
@@ -120,10 +118,15 @@ describe("El coordinador edita en un solo editor todo el campo Editable", () => 
   })
 })
 
-describe("En el proyecto de carrera las tablas de la plantilla quedan protegidas", () => {
+describe("En el proyecto de carrera las tablas de filas fijas quedan protegidas", () => {
   type Editor = import("@tiptap/core").Editor
+  const fixedRows = (): DocumentNode => {
+    const source = template()
+    const table = source.content![2]!
+    return { ...source, content: [source.content![0]!, source.content![1]!, { ...table, content: [...table.content!, table.content![1]!] }] }
+  }
   const mountTable = async () => {
-    const view = mountSetup(template())
+    const view = mountSetup(fixedRows())
     await flush()
     await vi.waitFor(() => expect(view.container.querySelector('[aria-label="Negrita"]')).not.toBeNull())
     const editor = (view.container.querySelector(".free-text-editor__content") as unknown as { editor: Editor }).editor
@@ -157,7 +160,7 @@ describe("En el proyecto de carrera las tablas de la plantilla quedan protegidas
       await flush()
       expect(JSON.stringify(editor.getJSON())).toBe(before)
     }
-    expect(tablesIn(editor.getJSON() as DocumentNode)[0]!.content).toHaveLength(2)
+    expect(tablesIn(editor.getJSON() as DocumentNode)[0]!.content).toHaveLength(3)
 
     const cells: number[] = []
     editor.state.doc.descendants((node, at) => {
@@ -207,30 +210,29 @@ describe("El campo completo del coordinador admite un solo tipo de respuesta", (
     return { ...view, tool, toggleTool, canWrite, bold }
   }
 
-  it("«Elegir una» conserva el texto escrito, y al reabrir cambia la misma variable en vez de agregar otra", async () => {
+  it("«Elegir varias» conserva el texto escrito, y al reabrir muestra la misma variable en vez de agregar otra", async () => {
     const field = await mountField(written("Las clases serán en "))
     await field.toggleTool()
-    await pick("Elegir una")
+    await pick("Elegir varias")
     await option(1, "Aula")
     expect(textsOf(field.last())).toEqual(["Las clases serán en "])
-    expect(responsesOf(field.last())).toEqual([{ kind: "una", options: [{ const: "o1", title: "Aula" }], value: null }])
+    expect(responsesOf(field.last())).toEqual([{ kind: "varias", options: [{ const: "o1", title: "Aula" }], value: [] }])
     expect(field.canWrite()).toBe(true)
 
     await field.toggleTool()
     await field.toggleTool()
-    expect(checkedKinds()).toEqual(["Elegir una"])
+    expect(checkedKinds()).toEqual(["Elegir varias"])
     expect(document.querySelector<HTMLInputElement>('input[aria-label="Opción 1"]')!.value).toBe("Aula")
-    await pick("Elegir varias")
-    expect(responsesOf(field.last())).toEqual([{ kind: "varias", options: [{ const: "o1", title: "Aula" }], value: [] }])
+    await option(1, "Taller")
+    expect(responsesOf(field.last())).toEqual([{ kind: "varias", options: [{ const: "o1", title: "Taller" }], value: [] }])
   })
 
   it("las opciones de la variable se ven como casillas: círculos si se elige una y cuadros si se eligen varias", async () => {
-    const field = await mountField()
+    const field = await mountField({ type: "doc", content: [{ type: "paragraph", attrs: { textAlign: "left" }, content: [{ type: "response", attrs: { kind: "una", options: [], value: null } }] }] })
     const marks = (): Array<[string, string | null]> =>
       [...field.container.querySelectorAll(".free-text-editor__content .document-response__option")].map((item) => [item.textContent!, item.getAttribute("data-mark")])
     const variable = (): string => field.container.querySelector(".free-text-editor__content .document-response")!.textContent!
     await field.toggleTool()
-    await pick("Elegir una")
     expect(variable()).toBe("Elegir una: sin opciones")
 
     await option(1, "Aula")
@@ -253,8 +255,8 @@ describe("El campo completo del coordinador admite un solo tipo de respuesta", (
   it("volver a pulsar el tipo marcado lo quita y deja el texto", async () => {
     const field = await mountField(written("Apuntes "))
     await field.toggleTool()
-    await pick("Elegir una")
-    await pick("Elegir una")
+    await pick("Elegir varias")
+    await pick("Elegir varias")
 
     expect(checkedKinds()).toEqual([])
     expect(responsesOf(field.last())).toEqual([])

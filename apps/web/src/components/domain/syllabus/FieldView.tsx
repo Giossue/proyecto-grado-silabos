@@ -1,6 +1,6 @@
 import { FreeTextContent } from "@/components/domain/syllabus/FreeTextContent"
 import { Badge } from "@/components/ui/badge"
-import { editabilityLabel, type DocumentField } from "@/types/configuration"
+import { fieldFiller, fillerLabel, type DocumentField } from "@/types/configuration"
 
 type FieldViewProps = { field: DocumentField; badge?: string; bare?: boolean; id?: string }
 
@@ -10,7 +10,7 @@ export function FieldView({ field, badge, bare = false, id }: FieldViewProps) {
       {!bare ? (
         <div className="flex flex-wrap items-center gap-2 font-medium">
           {field.label.trim() ? <span>{field.label}</span> : null}
-          <Badge variant="outline">{badge ?? editabilityLabel(field.quien_llena)}</Badge>
+          <Badge variant="outline">{badge ?? fillerLabel(fieldFiller(field))}</Badge>
         </div>
       ) : null}
       <FreeTextContent value={field.document ?? field.value} />

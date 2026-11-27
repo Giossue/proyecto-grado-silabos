@@ -1,9 +1,10 @@
-import { hasOwnText, markOwnText, markTeacherEdits, openShape, teacherEdits, writtenValue } from "./teacherText"
+import { teacherFillsAllowed } from "@silabos/shared/lib/responseKinds"
+import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
+import { hasOwnText, markOwnText, markTeacherEdits, markTeacherFills, openShape, teacherDefault, teacherEdits, teacherFills, writtenValue } from "./teacherText"
 import { ruleFailures } from "@silabos/shared/lib/blocks/rules"
 import { holds } from "@silabos/shared/lib/blocks/condition"
 import { Scope } from "@silabos/shared/lib/blocks/scope"
 import type { BlockDefinition as LibBlockDefinition, BlockRule, Condition } from "@silabos/shared/lib/blocks/types"
-import { ROW_ID } from "@silabos/shared/lib/blocks/values"
 import { filledText, resolveBlock, toDocument } from "@silabos/shared/lib/blocks/walk"
 import {
   isList,
@@ -470,25 +471,6 @@ function emptyFor(schema: PhpRecord, props: PhpRecord): unknown {
   return null
 }
 
-const STORED_ROW_ID = /^[A-Za-z0-9_-]{1,64}$/
-
-function withRowIds(rows: PhpRecord[], received: unknown[]): PhpRecord[] {
-  const used = new Set<string>()
-  const kept = rows.map((_, index) => {
-    const id = at(received[index], ROW_ID)
-    if (typeof id !== "string" || !STORED_ROW_ID.test(id) || used.has(id)) return null
-    used.add(id)
-    return id
-  })
-  let number = 0
-  const free = (): string => {
-    let id = `r${++number}`
-    while (used.has(id)) id = `r${++number}`
-    return id
-  }
-  return rows.map((row, index) => ({ [ROW_ID]: kept[index] ?? free(), ...row }))
-}
-
 function schemaValue(schema: PhpRecord, raw: unknown, props: PhpRecord, fresh: boolean): unknown {
   const label = typeof schema.title === "string" ? schema.title : "Una celda"
   const error = typeof schema.errorMessage === "string" ? schema.errorMessage : null
@@ -518,7 +500,7 @@ function schemaValue(schema: PhpRecord, raw: unknown, props: PhpRecord, fresh: b
     const count = !givenList && fresh ? Number(schema.initial) : Math.max(items.length, Number(schema.minItems))
     const clean: unknown[] = []
     for (let index = 0; index < count; index++) clean.push(schemaValue(record(schema.items), items[index] ?? null, props, !givenList && fresh))
-    return schema.row_ids === true ? withRowIds(clean as PhpRecord[], items) : clean
+    return clean
   }
   return null
 }
@@ -971,11 +953,85 @@ function withoutExtraTail(template: PhpRecord, document: PhpRecord): PhpRecord {
   return { ...document, content: children }
 }
 
-function tablesOf(node: unknown): unknown[] {
-  if (nodeType(node) === "table") {
-    return [content(node).map((row) => content(row).map((cell) => [nodeType(cell), given(at(cell, "attrs"), "colspan") ?? 1, given(at(cell, "attrs"), "rowspan") ?? 1]))]
+function tableNodes(node: unknown): PhpRecord[] {
+  return nodeType(node) === "table" ? [record(node)] : content(node).flatMap(tableNodes)
+}
+
+function rowShape(row: unknown): unknown[] {
+  return content(row).map((cell) => [nodeType(cell), given(at(cell, "attrs"), "colspan") ?? 1, given(at(cell, "attrs"), "rowspan") ?? 1])
+}
+
+export function withinBlock(node: unknown): boolean {
+  return nodeType(node) === "documentBlock" || content(node).some(withinBlock)
+}
+
+function emptyRowsTable(table: PhpRecord): boolean {
+  const rows = content(table)
+  const headers = headerRows(table)
+  const body = rows.slice(headers)
+  return (
+    headers > 0 &&
+    body.length > 0 &&
+    body.every((row) => phpEquals(rowShape(row), rowShape(body[0])) && content(row).every((cell) => nodeType(cell) === "tableCell" && blank(cell) && (given(at(cell, "attrs"), "rowspan") ?? 1) === 1))
+  )
+}
+
+export function rowTables(definitionContent: unknown, definition: TemplateDefinition, teacherOnly = false): boolean[] {
+  return tableNodes(responseTemplate(normalizeFieldDocument(definitionContent, definition))).map((table) => listTable(table) || (teacherOnly && emptyRowsTable(table)))
+}
+
+export function awaitsRows(template: unknown, definition: TemplateDefinition): boolean {
+  return tableNodes(normalizeFieldDocument(template, definition)).some(emptyRowsTable)
+}
+
+function headerRows(table: PhpRecord): number {
+  const rows = content(table)
+  const first = rows.findIndex((row) => content(row).some((cell) => nodeType(cell) !== "tableHeader"))
+  return first < 0 ? rows.length : first
+}
+
+function sameTable(template: PhpRecord, document: PhpRecord, admitsRows: boolean): boolean {
+  const expected = content(template).map(rowShape)
+  const actual = content(document).map(rowShape)
+  if (!admitsRows) return phpEquals(expected, actual)
+  const headers = headerRows(template)
+  return (
+    actual.length > headers &&
+    phpEquals(expected.slice(0, headers), actual.slice(0, headers)) &&
+    actual.slice(headers).every((row) => phpEquals(expected[headers], row))
+  )
+}
+
+function sameTables(template: PhpRecord, document: PhpRecord, admitsRows: boolean[]): boolean {
+  const expected = tableNodes(template)
+  const actual = tableNodes(document)
+  return expected.length === actual.length && expected.every((table, index) => sameTable(table, actual[index], admitsRows[index] === true))
+}
+
+function withTableRows(template: PhpRecord, document: PhpRecord): PhpRecord {
+  const tables = tableNodes(document)
+  let index = 0
+  const visit = (node: PhpRecord): PhpRecord => {
+    if (nodeType(node) === "table") return { ...node, content: expandedRows(node, content(tables[index++])) }
+    return isList(node.content) ? { ...node, content: node.content.map((child) => visit(record(child))) } : node
   }
-  return content(node).flatMap(tablesOf)
+  return visit(template)
+}
+
+function withoutBlankRows(template: PhpRecord, document: PhpRecord): PhpRecord {
+  const admitsRows = tableNodes(template).map(listTable)
+  let index = 0
+  const visit = (node: PhpRecord): PhpRecord => {
+    if (nodeType(node) === "table") {
+      if (!admitsRows[index++]) return node
+      const rows = content(node)
+      const headers = headerRows(node)
+      const untouched = rows.slice(headers).every((row) => content(row).every((cell) => blank(cell)))
+      return untouched ? { ...node, content: rows.slice(0, headers + 1) } : node
+    }
+    return isList(node.content) ? { ...node, content: node.content.map((child) => visit(record(child))) } : node
+  }
+  return visit(document)
 }
 
 const TABLES_FIXED = "Las tablas de este campo las define Administración: escriba dentro de sus celdas, sin quitar ni agregar filas o columnas."
@@ -1004,9 +1060,9 @@ function withTemplateHeaders(template: PhpRecord, document: PhpRecord): PhpRecor
   return visit(document)
 }
 
-function assertCareerEdit(template: PhpRecord, document: PhpRecord, attribute: string, saving: boolean): void {
+function assertCareerEdit(template: PhpRecord, document: PhpRecord, attribute: string, saving: boolean, admitsRows: boolean[]): void {
   if (!phpIdentical(blocksOf(template), blocksOf(document))) fail(BLOCKS_FIXED, attribute)
-  if (!phpEquals(tablesOf(template), tablesOf(document))) fail(TABLES_FIXED, attribute)
+  if (!sameTables(template, document, admitsRows)) fail(TABLES_FIXED, attribute)
   if (saving && !phpEquals(headersOf(template).map(textIn), headersOf(document).map(textIn))) fail(HEADERS_FIXED, attribute)
   const known = variablesOf(template)
   if (saving && variablesOf(document).some((id) => !known.includes(id))) fail(VARIABLES_FIXED, attribute)
@@ -1067,30 +1123,41 @@ function followCurrent(template: PhpRecord, stored: PhpRecord): PhpRecord {
   return matches(template, followed, "career") ? followed : template
 }
 
-const SPACES_WITH_TEACHER_EDITS = "Quite los espacios de respuesta para que el docente pueda editar todo el texto."
 const NO_NEW_SPACES = "No agregue espacios de respuesta: escriba directamente en el texto."
 
-export function careerResponse(definitionContent: unknown, value: unknown, definition: TemplateDefinition, attribute = "value", saving = true): PhpRecord {
-  const shaped = careerShape(definitionContent, value, definition, attribute, saving)
-  if (!teacherEdits(value)) return shaped
-  if (foundResponses(shaped).length === 0) return markTeacherEdits(shaped)
-  if (saving) fail(SPACES_WITH_TEACHER_EDITS, attribute)
-  return shaped
+function fillable(definitionContent: unknown, document: PhpRecord, definition: TemplateDefinition): boolean {
+  const template = responseTemplate(normalizeFieldDocument(definitionContent, definition))
+  return teacherFillsAllowed(template as unknown as DocumentNode, document as unknown as DocumentNode)
 }
 
-export function teacherOwnText(template: unknown, value: unknown, definition: TemplateDefinition, attribute = "value"): PhpRecord {
+export function keepTeacherFills(definitionContent: unknown, document: PhpRecord, stored: unknown, definition: TemplateDefinition): PhpRecord {
+  return teacherFills(stored) && fillable(definitionContent, document, definition) ? markTeacherFills(document) : document
+}
+
+export function careerResponse(definitionContent: unknown, value: unknown, definition: TemplateDefinition, attribute = "value", saving = true): PhpRecord {
+  const written = careerShape(definitionContent, value, definition, attribute, saving)
+  const shaped = saving ? withoutBlankRows(responseTemplate(normalizeFieldDocument(definitionContent, definition)), written) : written
+  if (teacherEdits(value)) return foundResponses(shaped).length === 0 ? markTeacherEdits(shaped) : shaped
+  return keepTeacherFills(definitionContent, shaped, value, definition)
+}
+
+export function teacherOwnText(template: unknown, value: unknown, definition: TemplateDefinition, attribute = "value", definitionContent: unknown = null): PhpRecord {
   const base = normalizeFieldDocument(template, definition, attribute)
   const document = normalizeFieldDocument(value, definition, attribute)
-  if (phpEquals(withoutExtraTail(base, document), base)) return base
+  if (phpEquals(withoutExtraTail(base, document), base)) return teacherDefault(template) ? record(template) : base
   if (foundResponses(document).length > 0) fail(NO_NEW_SPACES, attribute)
-  assertCareerEdit(base, document, attribute, true)
+  assertCareerEdit(base, document, attribute, true, definitionContent === null ? [] : rowTables(definitionContent, definition, teacherDefault(template)))
   return markOwnText(document)
 }
 
-function ownTextStands(template: unknown, value: unknown, definition: TemplateDefinition): boolean {
+export function withCurrentHeaders(template: unknown, value: unknown): unknown {
+  return teacherEdits(template) && hasOwnText(value) ? withTemplateHeaders(record(template), record(value)) : value
+}
+
+function ownTextStands(template: unknown, value: unknown, definition: TemplateDefinition, definitionContent: unknown): boolean {
   if (!hasOwnText(value)) return false
   try {
-    teacherOwnText(template, value, definition)
+    teacherOwnText(template, value, definition, "value", definitionContent)
     return true
   } catch (error) {
     if (error instanceof TemplateValidationError) return false
@@ -1105,15 +1172,15 @@ function careerShape(definitionContent: unknown, value: unknown, definition: Tem
   if (blank(document)) return template
   if (!responsesEnabled(definition)) {
     const written = withoutBlankLines(document)
-    if (saving) assertCareerEdit(template, written, attribute, saving)
+    if (saving) assertCareerEdit(template, written, attribute, saving, tableNodes(template).map(listTable))
     return written
   }
   const shaped = saving ? record(withoutOwnOptions(document)) : document
   const adopted = within(attribute, () => adopt(template, shaped, saving))
   if (matches(template, adopted, "career")) return seal(template, adopted)
   if (!saving && !editedCopy(value)) return seal(template, followCurrent(template, shaped))
-  assertCareerEdit(template, shaped, attribute, saving)
-  const edited = withTemplateHeaders(template, withoutExtraTail(template, within(attribute, () => editedResponses(template, shaped, saving, true))))
+  assertCareerEdit(template, shaped, attribute, saving, tableNodes(template).map(listTable))
+  const edited = withTemplateHeaders(template, withoutExtraTail(template, within(attribute, () => editedResponses(withTableRows(template, shaped), shaped, saving, true))))
   return saving ? { ...edited, attrs: { [EDITED]: true } } : edited
 }
 
@@ -1139,11 +1206,11 @@ function carryDocument(template: PhpRecord, value: PhpRecord): PhpRecord {
   return { ...template, content: expected.map((child, index) => carryDocument(record(child), record(actual[index]))) }
 }
 
-export function fieldFits(template: unknown, value: unknown, definition: TemplateDefinition): boolean {
+export function fieldFits(template: unknown, value: unknown, definition: TemplateDefinition, definitionContent: unknown = null): boolean {
   try {
     if (teacherEdits(template)) {
       return hasOwnText(value)
-        ? ownTextStands(template, value, definition)
+        ? ownTextStands(template, value, definition, definitionContent)
         : phpEquals(normalizeFieldDocument(value, definition), normalizeFieldDocument(template, definition))
     }
     return matches(responseTemplate(normalizeFieldDocument(openShape(template), definition)), normalizeFieldDocument(writtenValue(template, value), definition), "answer")
@@ -1153,11 +1220,13 @@ export function fieldFits(template: unknown, value: unknown, definition: Templat
   }
 }
 
-export function fieldCarried(source: unknown, held: unknown, definition: TemplateDefinition): unknown {
+export function fieldCarried(source: unknown, held: unknown, definition: TemplateDefinition, definitionContent: unknown = null): unknown {
   const template = openShape(source)
-  const value = writtenValue(source, held)
+  const value = withCurrentHeaders(template, writtenValue(source, held))
   if (teacherEdits(template)) {
-    return isDocument(value) && ownTextStands(template, value, definition) ? teacherOwnText(template, value, definition) : normalizeFieldDocument(template, definition)
+    return isDocument(value) && ownTextStands(template, value, definition, definitionContent)
+      ? teacherOwnText(template, value, definition, "value", definitionContent)
+      : normalizeFieldDocument(template, definition)
   }
   if (!isDocument(value)) return template
   let current: PhpRecord
@@ -1196,7 +1265,9 @@ export function templateFor(definitionContent: unknown, stored: unknown, definit
 
 export function followTemplate(definitionContent: unknown, stored: unknown, definition: TemplateDefinition): PhpRecord | null {
   const followed = followShape(definitionContent, stored, definition)
-  return followed !== null && teacherEdits(stored) && foundResponses(followed).length === 0 ? markTeacherEdits(followed) : followed
+  if (followed === null) return null
+  if (teacherEdits(stored)) return foundResponses(followed).length === 0 ? markTeacherEdits(followed) : followed
+  return keepTeacherFills(definitionContent, followed, stored, definition)
 }
 
 function followShape(definitionContent: unknown, stored: unknown, definition: TemplateDefinition): PhpRecord | null {
@@ -1206,7 +1277,7 @@ function followShape(definitionContent: unknown, stored: unknown, definition: Te
   const template = responseTemplate(normalizeFieldDocument(definitionContent, definition))
   const adopted = adopt(template, document, false)
   if (matches(template, adopted, "career")) return adopted
-  return editedCopy(stored) ? withTemplateHeaders(template, editedResponses(template, document, false, false)) : followCurrent(template, document)
+  return editedCopy(stored) ? withTemplateHeaders(template, editedResponses(withTableRows(template, document), document, false, false)) : followCurrent(template, document)
 }
 
 export function writable(definitionContent: unknown, definition: TemplateDefinition): boolean {

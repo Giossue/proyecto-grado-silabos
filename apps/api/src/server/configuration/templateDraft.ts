@@ -19,7 +19,7 @@ import { documentFromHtml, documentLines } from "./documentHtml"
 import { defineBlock } from "./blockDefinition"
 import { canonicalJson } from "../documents/canonicalJson"
 import { defineAnyBlock, shortBlock } from "./templateShortForm"
-import { DEFINITION_KEYS, defineTemplate, listLimitsOf, withBlocks, withListLimits } from "./templateDefinition"
+import { DEFINITION_KEYS, defineTemplate, listLimitsOf, teacherFields, withBlocks, withListLimits } from "./templateDefinition"
 import { legacyUnitsDocument } from "./legacyUnits"
 import { templateFromAnyLanguage } from "./templateSpanish"
 
@@ -271,9 +271,18 @@ export class DraftRequest {
     return withDocument(definition, documentWithLayout(document, picked))
   }
 
+  private withTeacherFields(base: TemplateDefinition): TemplateDefinition {
+    const sent = given(this.input, "teacher_fields")
+    if (sent === null) return base
+    const fields = this.sectionList().flatMap((section) => list(fieldsOf(section))).filter(isPhpArray)
+    const sources = [{ key: "", fields: fields.map((field) => ({ key: given(field, "key"), quien_llena: given(field, "quien_llena"), content: null })) }]
+    const nobody = new Set(fields.filter((field) => given(field, "quien_llena") === INSTITUTIONAL).map((field) => given(field, "key")))
+    return { ...base, teacher_fields: teacherFields(sent, sources).filter((key) => !nobody.has(key)) }
+  }
+
   private draftDefinition(): TemplateDefinition {
     if (phpIntCast(this.input.version) !== FORMAT_VERSION) {
-      return definingErrors(() => withFieldLimits(withFieldConditions(this.withTitleAndLayout(this.current), this.fieldConditions()), this.fieldLimits()))
+      return definingErrors(() => withFieldLimits(withFieldConditions(this.withTitleAndLayout(this.withTeacherFields(this.current)), this.fieldConditions()), this.fieldLimits()))
     }
     const sections = this.sectionList().map((section) => ({
       key: given(section, "key"),

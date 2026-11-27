@@ -6666,8 +6666,14 @@
     }
   ],
   "teacher_fields": [
+    "asignatura",
     "nombre_campus",
     "correquisitos_asignatura",
-    "formacion_docente"
+    "formacion_docente",
+    "unidades",
+    "contribucion_perfil",
+    "conducta_etica",
+    "bibliografia",
+    "bibliografia_complementaria"
   ]
 }

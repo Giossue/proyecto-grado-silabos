@@ -465,7 +465,7 @@ describe("Coordinación edita el texto de un campo Editable en el editor", () =>
 
   it.each([
     ["quitar la tabla", () => withTable(() => null)],
-    ["agregar una fila", () => withTable((table) => ({ ...table, content: [...rowsOf(table), structuredClone(rowsOf(table)[1])] }))],
+    ["quitar la única fila", () => withTable((table) => ({ ...table, content: rowsOf(table).slice(0, 1) }))],
     ["quitar una columna", () => withTable((table) => ({ ...table, content: rowsOf(table).map((row) => ({ ...row, content: cellsOf(row).slice(0, 1) })) }))],
     ["combinar celdas", () => withTable((table) => {
       const [header, ...rest] = rowsOf(table)

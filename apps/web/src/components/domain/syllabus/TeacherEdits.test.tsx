@@ -1,11 +1,10 @@
 import { createRef } from "react"
-import { fireEvent, render, screen } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import type { SyllabusDetail, SyllabusField } from "@/api/syllabi"
 import { SyllabusTeacherForm } from "@/components/domain/syllabus/SyllabusTeacherForm"
 import { FreeTextEditor, type FreeTextEditorHandle } from "@/components/domain/syllabus/FreeTextEditor"
-import { TeacherEditsToggle } from "@/components/domain/syllabus/TeacherEditsToggle"
-import { keepTeacherEdits, withoutDocumentMarks } from "@/lib/teacherEdits"
+import { keepDocumentMarks, withoutDocumentMarks } from "@/lib/teacherEdits"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { flush } from "@/test/render"
 
@@ -34,23 +33,18 @@ describe("el docente y un texto que puede editar", () => {
   })
 })
 
-describe("la casilla de Coordinación", () => {
-  it("se activa y avisa cuando el campo tiene espacios", () => {
-    const onChange = vi.fn()
-    const { rerender } = render(<TeacherEditsToggle id="f1" document={doc("Texto")} onChange={onChange} />)
-    fireEvent.click(screen.getByRole("checkbox", { name: "El docente puede editar este texto" }))
-    expect(onChange).toHaveBeenCalledWith(true)
-    rerender(<TeacherEditsToggle id="f1" document={space} onChange={onChange} />)
-    expect(screen.getByRole("checkbox", { name: "El docente puede editar este texto" }).hasAttribute("disabled")).toBe(true)
-    expect(screen.getByText("Quite los espacios de respuesta para activarla")).toBeTruthy()
+describe("las marcas antiguas del proyecto de carrera", () => {
+  it("acompañan al texto guardado, no llegan al editor y la de editar se quita al agregar un espacio", () => {
+    const current: DocumentNode = { ...doc("Texto"), attrs: { teacherEdits: true } }
+    const next = keepDocumentMarks(doc("Nuevo"), current, doc("Plantilla"))
+    expect(next.attrs).toEqual({ teacherEdits: true })
+    expect(withoutDocumentMarks(next)).toEqual(doc("Nuevo"))
+    expect(keepDocumentMarks(space, current, doc("Plantilla")).attrs).toBeUndefined()
   })
 
-  it("la marca acompaña al texto, no llega al editor y se quita al agregar un espacio", () => {
-    const marked = keepTeacherEdits(doc("Nuevo"), true)
-    expect(marked.attrs).toEqual({ teacherEdits: true })
-    expect(withoutDocumentMarks(marked)).toEqual(doc("Nuevo"))
-    expect(keepTeacherEdits(space, true).attrs).toBeUndefined()
-    expect(keepTeacherEdits(marked, false).attrs).toBeUndefined()
+  it("la de una tabla vacía se quita al escribir en ella sin perder lo escrito", () => {
+    const current: DocumentNode = { ...doc("Plantilla"), attrs: { teacherFills: true } }
+    expect(keepDocumentMarks(doc("Escrito"), current, doc("Plantilla"))).toEqual(doc("Escrito"))
   })
 })
 
@@ -78,5 +72,21 @@ describe("los encabezados de las tablas en el editor", () => {
     expect(editor.getText()).not.toContain("XEncabezado")
     editor.commands.insertContentAt(positionOf("Celda"), "Y")
     expect(editor.getText()).toContain("YCelda")
+  })
+})
+
+describe("recargar el borrador", () => {
+  it("al volver a habilitar el editor no reenvía el texto viejo por encima del nuevo", async () => {
+    const onValueChange = vi.fn()
+    const ref = createRef<FreeTextEditorHandle>()
+    const editor = (value: DocumentNode, disabled: boolean) => <FreeTextEditor id="t" label="Texto" value={value} disabled={disabled} onValueChange={onValueChange} ref={ref} />
+    const view = render(editor(doc("Texto viejo de esta pestaña"), true))
+    await vi.waitFor(() => expect(ref.current?.editor).toBeTruthy())
+    await flush()
+    view.rerender(editor(doc("Texto nuevo guardado en el servidor"), false))
+    await flush()
+    expect(onValueChange).not.toHaveBeenCalled()
+    expect(ref.current!.editor!.getText()).toContain("Texto nuevo guardado en el servidor")
+    expect(ref.current!.editor!.isEditable).toBe(true)
   })
 })

@@ -12,6 +12,7 @@ import {
   responsesEnabled,
   responseTemplate,
   teacherOwnText,
+  withCurrentHeaders,
   TemplateValidationError,
   withoutOwnOptions,
   type TemplateDefinition,
@@ -120,9 +121,10 @@ export function draftPreview(template: SyllabusTemplate, definition: TemplateDef
   }
 }
 
-export function fieldResponseNormalize(template: unknown, value: unknown, definition: TemplateDefinition, attribute = "value"): PhpRecord {
-  if (teacherEdits(template)) return teacherOwnText(template, value, definition, attribute)
-  const document = normalizeFieldDocument(writtenValue(template, value), definition, attribute)
+export function fieldResponseNormalize(template: unknown, value: unknown, definition: TemplateDefinition, attribute = "value", definitionContent: unknown = null): PhpRecord {
+  const held = writtenValue(template, value)
+  if (teacherEdits(template)) return teacherOwnText(template, held, definition, attribute, definitionContent)
+  const document = normalizeFieldDocument(held, definition, attribute)
   if (!responsesEnabled(definition)) return document
   const shaped = withoutOwnOptions(responseTemplate(normalizeFieldDocument(openShape(template), definition))) as PhpRecord
   if (blank(document)) return shaped
@@ -145,11 +147,12 @@ export function sameStructure(template: PhpRecord, document: PhpRecord): boolean
   return phpIdentical(skeleton(template), skeleton(document))
 }
 
-function stillFits(field: TemplateField, value: unknown, template: unknown, definition: TemplateDefinition): PhpRecord | null {
+function stillFits(field: TemplateField, stored: unknown, template: unknown, definition: TemplateDefinition): PhpRecord | null {
+  const value = withCurrentHeaders(template, writtenValue(template, stored))
   if (!isPhpArray(value) || (teacherEdits(template) && !hasOwnText(value))) return null
   let document: PhpRecord
   try {
-    document = fieldResponseNormalize(template, value, definition)
+    document = fieldResponseNormalize(template, value, definition, "value", field.content)
   } catch (error) {
     if (error instanceof TemplateValidationError) return null
     throw error
@@ -184,7 +187,7 @@ async function writtenText(syllabus: RehearsedSyllabus, context: ProfileContext,
   const written = new Map<string, unknown>()
   for (const field of templateFields(context.template)) {
     if (!teacherEditable(field, templates)) continue
-    const value = values.get(field.id)
+    const value = writtenValue(templates[field.id] ?? field.content, values.get(field.id))
     if (isPhpArray(value) && !documentIsEmpty(value, context.definition) && !phpEquals(value, templates[field.id] ?? field.content)) written.set(field.key, value)
   }
   return written

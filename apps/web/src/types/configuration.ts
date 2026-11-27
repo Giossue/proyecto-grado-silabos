@@ -17,9 +17,13 @@ export type DocumentField = {
     show_if?: ResponseCondition | null;
     max_length?: number | null;
 };
-export const FIELD_EDITABILITY: Array<{ value: FieldResponsible; label: string }> = [
-    { value: 'institucional', label: 'No editable' },
-    { value: 'carrera', label: 'Editable' },
+export type FieldFiller = FieldResponsible | 'docente';
+export const FIELD_FILLERS: Array<{ value: FieldFiller; label: string }> = [
+    { value: 'institucional', label: 'Nadie (texto fijo)' },
+    { value: 'carrera', label: 'Coordinación' },
+    { value: 'docente', label: 'Solo el docente' },
 ];
-export const editabilityLabel = (value: StoredResponsible): string => value === 'institucional' ? 'No editable' : 'Editable';
+export const fieldFiller = (field: { quien_llena: StoredResponsible; teacher_only?: boolean }): FieldFiller =>
+    field.quien_llena === 'institucional' ? 'institucional' : field.teacher_only ? 'docente' : 'carrera';
+export const fillerLabel = (filler: FieldFiller): string => FIELD_FILLERS.find((item) => item.value === filler)!.label;
 export const emptyDocument = (): DocumentNode => ({ type: 'doc', content: [{ type: 'paragraph' }] });

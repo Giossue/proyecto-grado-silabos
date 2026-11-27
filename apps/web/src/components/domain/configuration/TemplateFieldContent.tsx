@@ -2,7 +2,7 @@ import type { TemplateField } from "@/api/template"
 import { FreeTextContent } from "@/components/domain/syllabus/FreeTextContent"
 import { RESPONSE_NODE, responseAnswered, responseAttrs } from "@silabos/shared/lib/responseKinds"
 import type { DocumentNode, TemplateVariable } from "@silabos/shared/lib/templateDocument"
-import { editabilityLabel } from "@/types/configuration"
+import { fieldFiller, fillerLabel } from "@/types/configuration"
 
 type TemplateFieldContentProps = { field: TemplateField; preview?: boolean; variables?: TemplateVariable[] }
 
@@ -27,7 +27,7 @@ export function TemplateFieldContent({ field, preview = false, variables }: Temp
           ) : null}
           {!preview ? (
             <span className="ml-auto max-w-full rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground" data-field-responsible>
-              {editabilityLabel(field.quien_llena)}
+              {fillerLabel(fieldFiller(field))}
             </span>
           ) : null}
         </div>

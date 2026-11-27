@@ -122,6 +122,7 @@ export function SyllabusTeacherForm({
                           <FieldResponseEditor
                             required
                             rewrite={field.teacher_edits}
+                            rowTables={(field as SyllabusField & { row_tables?: boolean[] }).row_tables}
                             template={field.template}
                             label={fieldTitle(field, section)}
                             value={field.value}

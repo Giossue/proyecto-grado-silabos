@@ -215,3 +215,45 @@ describe("Tipo de respuesta en la hoja de la plantilla", () => {
     expect(preview.container.querySelector("[data-field-body]")!.textContent).toContain("Horas:")
   })
 })
+
+describe("el engranaje de Coordinación en un campo con tabla", () => {
+  const choose = async (editor: Editor, label: string) => {
+    const tool = render(<TemplateResponseTool editor={editor} advanced={false} />)
+    await open(tool)
+    await pick(label)
+  }
+  const cellAt = (editor: Editor, type: string): number => {
+    let found = -1
+    editor.state.doc.descendants((node, position) => { if (node.type.name === type) found = position })
+    return found + 2
+  }
+  const shape = (editor: Editor) => nodesOfType(editor.getJSON() as DocumentNode, "table").length
+
+  it.each(["Texto libre", "Elegir varias"])("«%s» se coloca dentro de la celda vacía y no reemplaza la tabla", async (label) => {
+    const { editor } = await editorFor(cellDocument)
+    editor.commands.setTextSelection(cellAt(editor, "tableCell"))
+    await choose(editor, label)
+
+    expect(shape(editor)).toBe(1)
+    expect(nodesOfType(nodesOfType(editor.getJSON() as DocumentNode, "tableCell")[0]!, "response")).toHaveLength(1)
+  })
+
+  it.each(["Texto libre", "Elegir varias"])("«%s» fuera de una celda vacía no cambia nada y lo explica", async (label) => {
+    const { editor } = await editorFor(cellDocument)
+    editor.commands.setTextSelection(cellAt(editor, "tableHeader"))
+    const before = JSON.stringify(editor.getJSON())
+    await choose(editor, label)
+
+    expect(JSON.stringify(editor.getJSON())).toBe(before)
+    expect(document.querySelector("[data-response-cell-error]")!.textContent).toBe("Haga clic en una celda vacía de la tabla y vuelva a elegir el tipo de respuesta")
+    expect(document.querySelector('[role="radio"][aria-checked="true"]')).toBeNull()
+  })
+
+  it("en un campo sin tabla «Texto libre» sigue dejando todo el campo al docente", async () => {
+    const { editor } = await editorFor({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Texto anterior" }] }] })
+    await choose(editor, "Texto libre")
+
+    expect(editor.getText()).not.toContain("Texto anterior")
+    expect(nodesOfType(editor.getJSON() as DocumentNode, "response")).toHaveLength(1)
+  })
+})

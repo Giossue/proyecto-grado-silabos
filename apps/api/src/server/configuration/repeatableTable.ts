@@ -1,6 +1,5 @@
 import { defineBlock, given, isInt, pcreMatch, schemaOptionTitle } from "./blockDefinition"
 import { isList, isPhpArray, isRecord, list, phpCount, phpIdentical, phpIntCast, phpString, phpToBool, record, type PhpRecord } from "./phpValues"
-import { inheritsRows, withoutRowIds } from "./templateInheritance"
 import { schemaDigits, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import { definitionError } from "./templateStyle"
 
@@ -212,7 +211,6 @@ function unsupported(definition: PhpRecord): string | null {
   const props = given(definition, "props") ?? []
   if (!(isPhpArray(props) && phpCount(props) === 0)) return "La tabla usa propiedades que se llenan en cada aparición."
   const value = given(definition, "value") ?? []
-  if (inheritsRows(value)) return "La tabla toma sus filas de otra tabla («filas_desde») y este editor todavía no puede cambiar esa relación."
   if (isPhpArray(value) && phpCount(value) === 0) return "No tiene datos que llene el docente: es una tabla fija."
   const only = phpCount(value) === 1 ? list(value)[0] : null
   if (!isPhpArray(only) || given(only, "type") !== "array" || given(given(only, "items"), "type") !== "object") return "No es una sola lista de filas."
@@ -302,7 +300,7 @@ function comparable(definition: PhpRecord): PhpRecord {
   return {
     label: given(definition, "label"),
     props: given(definition, "props") ?? [],
-    value: withoutRowIds(given(definition, "value") ?? []),
+    value: given(definition, "value") ?? [],
     rules: given(definition, "rules") ?? [],
     layout: given(definition, "layout") ?? [],
     ...(given(definition, "catalog") !== null ? { catalog: definition.catalog } : {}),

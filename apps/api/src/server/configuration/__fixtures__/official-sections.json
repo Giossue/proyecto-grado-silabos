@@ -952,6 +952,201 @@
                       ]
                     }
                   ]
+                },
+                {
+                  "type": "tableRow",
+                  "content": [
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "tableRow",
+                  "content": [
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "tableRow",
+                  "content": [
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tableCell",
+                      "attrs": {
+                        "colspan": 1,
+                        "rowspan": 1
+                      },
+                      "content": [
+                        {
+                          "type": "paragraph"
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }
@@ -968,7 +1163,7 @@
       {
         "key": "conducta_etica",
         "label": "Conducta y comportamiento ético",
-        "responsible": "institucional",
+        "responsible": "carrera",
         "content": {
           "type": "doc",
           "content": [

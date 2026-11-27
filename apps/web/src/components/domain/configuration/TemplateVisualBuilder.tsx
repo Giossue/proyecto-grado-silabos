@@ -47,7 +47,7 @@ import { drawnInDocument } from "@silabos/shared/lib/teacherFormation"
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import { templateEditorState } from "@/state/templateEditor"
-import { emptyDocument, type FieldResponsible } from "@/types/configuration"
+import { emptyDocument, type FieldFiller } from "@/types/configuration"
 import { scrollBehavior } from "@/lib/motion"
 import { useAppearance } from "@/composables/useAppearance"
 
@@ -371,6 +371,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     layout: layoutDraft,
     ...(styleDraft ? { document: styleDraft } : {}),
     sections: draftSections(),
+    teacher_fields: draft.flatMap((section) => section.fields).filter((field) => field.teacher_only && field.quien_llena !== "institucional").map((field) => field.key),
     ...(Object.keys(tables).length ? { block_changes: Object.fromEntries(Object.entries(tables).map(([kind, table]) => [kind, table.definition])) } : {}),
   })
   const snapshot = (): TemplateAssistantDraft => ({ sections: draftSections(), version: draftVersion })
@@ -424,6 +425,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     if (proposal.block_changes) changeTables({ ...tables, ...Object.fromEntries(Object.entries(proposal.block_changes).map(([kind, definition]) => [kind, { definition, design: null }])) })
     const sectionIds = new Map(draft.map((section) => [section.key, section.id]))
     const fieldIds = new Map(draft.flatMap((section) => section.fields.map((field) => [field.key, field.id] as const)))
+    const teacherKeys = new Set(draft.flatMap((section) => section.fields).filter((field) => field.teacher_only).map((field) => field.key))
     updateDraft(() => proposal.sections.map((section) => ({
       id: sectionIds.get(section.key) ?? temporaryId(),
       key: section.key,
@@ -434,6 +436,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
         key: field.key,
         label: field.label,
         quien_llena: field.quien_llena,
+        ...(teacherKeys.has(field.key) && field.quien_llena !== "institucional" ? { teacher_only: true } : {}),
         content: field.content,
         ...(field.show_if ? { show_if: field.show_if } : {}),
         ...(field.max_length ? { max_length: field.max_length } : {}),
@@ -649,7 +652,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     }
     touched()
   }
-  const applyPreset = (preset: TemplatePreset): void => patchSelectedField({ quien_llena: preset.quien_llena, content: clone(preset.content) })
+  const applyPreset = (preset: TemplatePreset): void => patchSelectedField({ quien_llena: preset.quien_llena, teacher_only: preset.teacher_only, content: clone(preset.content) })
   const moveSelected = (direction: -1 | 1): void => {
     if (!selected) return
     if (selected.fieldIndex < 0) moveSection(selected.sectionIndex, direction)
@@ -704,8 +707,9 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     record()
     patchSelectedField({ max_length: limit })
   }
-  const setSelectedResponsible = (responsible: FieldResponsible): void => {
-    patchSelectedField(responsible === "institucional" ? { quien_llena: responsible, max_length: null } : { quien_llena: responsible })
+  const setSelectedFiller = (filler: FieldFiller): void => {
+    if (filler === "institucional") patchSelectedField({ quien_llena: filler, teacher_only: undefined, max_length: null })
+    else patchSelectedField({ quien_llena: "carrera", teacher_only: filler === "docente" ? true : undefined })
   }
   const setSelectedName = (label: string): void => patchSelectedField({ label })
   const duplicateSelected = (): void => {
@@ -1011,7 +1015,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                   targets={moveTargets}
                   onDuplicate={duplicateSelected}
                   onMoveTo={moveSelectedTo}
-                  onResponsible={setSelectedResponsible}
+                  onFiller={setSelectedFiller}
                   onName={setSelectedName}
                   onMove={moveSelected}
                   onRemove={removeSelected}

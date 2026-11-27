@@ -496,9 +496,15 @@
         "bibliografia"
     ],
     "campos_docente": [
+        "asignatura",
         "nombre_campus",
         "correquisitos_asignatura",
-        "formacion_docente"
+        "formacion_docente",
+        "unidades",
+        "contribucion_perfil",
+        "conducta_etica",
+        "bibliografia",
+        "bibliografia_complementaria"
     ],
     "contenidos_predefinidos": [
         {
@@ -746,6 +752,9 @@
                         "<tr><th rowspan=\"2\">Resultados de aprendizaje de la asignatura</th><th colspan=\"3\">Nivel de contribución (resultados de aprendizaje del perfil de egreso de la carrera)</th><th rowspan=\"2\">Resultados de aprendizaje que aportan al perfil de egreso de la carrera</th></tr>",
                         "<tr><th>ALTA (A)</th><th>MEDIA (M)</th><th>BAJA (B)</th></tr>",
                         "<tr><td></td><td></td><td></td><td></td><td></td></tr>",
+                        "<tr><td></td><td></td><td></td><td></td><td></td></tr>",
+                        "<tr><td></td><td></td><td></td><td></td><td></td></tr>",
+                        "<tr><td></td><td></td><td></td><td></td><td></td></tr>",
                         "</table>"
                     ]
                 }
@@ -759,7 +768,7 @@
                 {
                     "clave": "conducta_etica",
                     "etiqueta": "Conducta y comportamiento ético",
-                    "quien_llena": "institucional",
+                    "quien_llena": "carrera",
                     "contenido": [
                         "<p>Se aplicará el código de ética y políticas de acción afirmativa de la Universidad Estatal de Bolívar, además es importante compartir los principios de respeto mutuo dentro del ambiente virtual o salón de clase, entre los que se destacan los siguientes:</p>",
                         "<ul>",

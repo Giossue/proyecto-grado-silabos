@@ -445,3 +445,26 @@ describe("un campo que Coordinación deja editable al docente", () => {
     expect(saved).toEqual([])
   })
 })
+
+describe("un campo con una tabla que admite filas y que el docente puede editar", () => {
+  const cell = (type: string, text: string): PhpRecord => ({ type, content: [text === "" ? { type: "paragraph" } : { type: "paragraph", content: [{ type: "text", text }] }] })
+  const grid = (...rows: string[]): PhpRecord => ({ type: "doc", content: [{ type: "table", content: [{ type: "tableRow", content: [cell("tableHeader", "Actividad")] }, ...rows.map((text) => ({ type: "tableRow", content: [cell("tableCell", text)] }))] }] })
+
+  beforeEach(() => {
+    const content = grid("")
+    templates.template!.sections.flatMap((section) => section.blocks.flatMap((block) => block.fields)).find((field) => field.id === TEXT_FIELD)!.content = content
+    fields.set(TEXT_FIELD, { ...fields.get(TEXT_FIELD)!, content })
+    templates.values = [{ fieldId: TEXT_FIELD, subjectId: SUBJECT, value: { ...grid("Lectura"), attrs: { teacherEdits: true } } }]
+  })
+
+  it("guarda las filas que el docente agrega", async () => {
+    const { status } = await patch({ version_bloqueo: 3, value: grid("Lectura", "Foro", "Taller") })
+    expect(status).toBe(200)
+    expect(JSON.stringify(values.get(`${SYLLABUS}:${TEXT_FIELD}`))).toContain("Taller")
+  })
+
+  it("no guarda la tabla sin filas", async () => {
+    expect((await patch({ version_bloqueo: 3, value: grid() })).status).toBe(422)
+    expect(saved).toEqual([])
+  })
+})

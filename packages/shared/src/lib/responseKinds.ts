@@ -163,12 +163,25 @@ export const TEACHER_EDITS = 'teacherEdits';
 
 export const OWN_TEXT = 'ownText';
 
+export const TEACHER_FILLS = 'teacherFills';
+
+export const teacherFillsMarked = (document: DocumentNode | null | undefined): boolean =>
+    (document?.attrs as Record<string, unknown> | undefined)?.[TEACHER_FILLS] === true;
+
+const emptyCell = (node: DocumentNode): boolean =>
+    (node.type === 'tableCell' && (node.content ?? []).every((child) => child.type === 'paragraph' && !child.content?.length))
+    || (node.content ?? []).some(emptyCell);
+
 export const teacherEditsAllowed = (document: DocumentNode | null | undefined): boolean =>
     (document?.attrs as Record<string, unknown> | undefined)?.[TEACHER_EDITS] === true;
 
 export const templateAccepted = (document: DocumentNode | null | undefined): boolean =>
     (document?.attrs as Record<string, unknown> | undefined)?.[TEMPLATE_ACCEPTED] === true;
 
+export const teacherFillsAllowed = (template: DocumentNode, document: DocumentNode): boolean =>
+    !withinResponse(document) && emptyCell(document) && writtenIn(document) === writtenIn(template);
+
 /** A subject's Carrera field nobody has decided about: not accepted as is, no type of answer in it and no text beyond the template's. */
 export const careerFieldUndecided = (template: DocumentNode, document: DocumentNode): boolean =>
-    !templateAccepted(document) && !teacherEditsAllowed(document) && !withinResponse(document) && writtenIn(document) === writtenIn(template);
+    !templateAccepted(document) && !teacherEditsAllowed(document) && !(teacherFillsMarked(document) && teacherFillsAllowed(template, document))
+    && !withinResponse(document) && writtenIn(document) === writtenIn(template);

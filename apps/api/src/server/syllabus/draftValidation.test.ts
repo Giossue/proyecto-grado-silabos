@@ -5,6 +5,7 @@ import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW
 import { fakeTemplateStore, FORMATION_CONTENT, FORMATION_FIELD_ID, goldenTemplate, withFormation, type FakeTemplateWorld } from "../configuration/testing"
 import type { PhpRecord } from "../configuration/phpValues"
 import type { DraftSyllabus } from "./draftField"
+import { templateFields } from "../configuration/templatePresentation"
 import { validateDraft, type DraftValidationDeps, type ValidationField } from "./draftValidation"
 
 const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
@@ -176,5 +177,48 @@ describe("POST teacher/syllabi/{syllabus}/validate", () => {
     const response = await validate()
     expect(response.status).toBe(200)
     expect(JSON.stringify(response.json)).not.toContain(ETHICS.id)
+  })
+})
+
+describe("validar una tabla a la que el docente agregó filas", () => {
+  const cell = (type: string, text: string): PhpRecord => ({ type, content: [text === "" ? { type: "paragraph" } : { type: "paragraph", content: [{ type: "text", text }] }] })
+  const grid = (...rows: string[]): PhpRecord => ({ type: "doc", content: [{ type: "table", content: [{ type: "tableRow", content: [cell("tableHeader", "Actividad")] }, ...rows.map((text) => ({ type: "tableRow", content: [cell("tableCell", text)] }))] }] })
+
+  it("no la marca como estructura cambiada", async () => {
+    const content = grid("")
+    templates.template!.sections.flatMap((section) => section.blocks.flatMap((block) => block.fields)).find((field) => field.id === METHODS.id)!.content = content
+    templates.values = [{ fieldId: METHODS.id, subjectId: SUBJECT, value: { ...grid("Lectura"), attrs: { teacherEdits: true } } }]
+    fields = [{ ...METHODS, content }]
+    values = new Map([[METHODS.id, { ...grid("Lectura", "Foro"), attrs: { ownText: true } }]])
+
+    expect((await validate()).json!.validation.results).toEqual([])
+  })
+})
+
+describe("validar un campo que llena solo el docente", () => {
+  const line = (text: string): PhpRecord => (text === "" ? { type: "paragraph", attrs: { textAlign: "left" } } : { type: "paragraph", attrs: { textAlign: "left" }, content: [{ type: "text", text }] })
+  const row = (type: string, ...texts: string[]): PhpRecord => ({ type: "tableRow", content: texts.map((text) => ({ type, content: [line(text)] })) })
+  const grid = (...rows: PhpRecord[]): PhpRecord => ({ type: "doc", content: [{ type: "table", content: [row("tableHeader", "Resultado", "A"), ...rows] }] })
+  const content = grid(...Array.from({ length: 4 }, () => row("tableCell", "", "")))
+
+  function teacherOnlyTable() {
+    const target = templateFields(templates.template!).find((field) => field.id === ETHICS.id)!
+    Object.assign(target, { responsible: "carrera", content })
+    templates.template!.definition = { ...templates.template!.definition, teacher_fields: [target.key] }
+    fields = [{ ...ETHICS, responsible: "carrera", content }]
+  }
+  const codes = async () => ((await validate()).json!.validation.results as { code: string }[]).map((issue) => issue.code)
+
+  it("pide llenar la tabla que sigue vacía, tenga las filas que tenga", async () => {
+    teacherOnlyTable()
+    expect(await codes()).toEqual(["campo_obligatorio_faltante"])
+    values = new Map([[ETHICS.id, { ...grid(row("tableCell", "", "")), attrs: { ownText: true } }]])
+    expect(await codes()).toEqual(["campo_obligatorio_faltante"])
+  })
+
+  it("acepta la tabla escrita con menos filas que la plantilla", async () => {
+    teacherOnlyTable()
+    values = new Map([[ETHICS.id, { ...grid(row("tableCell", "Analiza", "X")), attrs: { ownText: true } }]])
+    expect(await codes()).toEqual([])
   })
 })

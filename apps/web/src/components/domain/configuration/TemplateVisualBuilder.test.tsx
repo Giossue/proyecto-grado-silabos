@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import * as templateApi from "@/api/template"
 import { ApiError } from "@/api/client"
 import type { TemplatePayload } from "@/api/template"
-import { body, byLabel, byText, chooseEditability, chooseMenuItem, click, menuItems, mountBuilder, press, selectField, selectSection, settle, startEditing, typeInto } from "@/components/domain/configuration/templateBuilderTesting"
+import { body, byLabel, byText, chooseFiller, chooseMenuItem, click, menuItems, mountBuilder, press, selectField, selectSection, settle, startEditing, typeInto } from "@/components/domain/configuration/templateBuilderTesting"
 import { emptyDocument, type FieldResponsible } from "@/types/configuration"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { setTemplateRuntime } from "@/lib/blocks/runtime"
@@ -37,9 +37,9 @@ const openTab = async (name: string): Promise<void> => {
   fireEvent.mouseDown(tab!)
   await settle()
 }
-const responsibleMenu = async (label: string, choice: "Editable" | "No editable"): Promise<void> => {
-  expect(body().querySelector(`[aria-label="Si se puede editar el campo ${label}"]`)).not.toBeNull()
-  await chooseEditability(choice)
+const responsibleMenu = async (label: string, choice: "Coordinación" | "Nadie (texto fijo)"): Promise<void> => {
+  expect(body().querySelector(`[aria-label="Quién llena el campo ${label}"]`)).not.toBeNull()
+  await chooseFiller(choice)
 }
 
 const keepClosingDialogs = (): void => {
@@ -178,11 +178,11 @@ describe("TemplateVisualBuilder", () => {
     await mountBuilder({ template, presets })
     expect(body().querySelector("[data-template-ribbon]")).toBeTruthy()
     expect(body().querySelector<HTMLButtonElement>('[aria-label="Negrita"]')!.disabled).toBe(true)
-    expect(body().querySelector('[aria-label="Si se puede editar el campo Primero"]')).toBeNull()
+    expect(body().querySelector('[aria-label="Quién llena el campo Primero"]')).toBeNull()
     expect(body().querySelector('[data-field="f1"] [role="toolbar"]')).toBeNull()
     await selectField("f1")
     expect(body().querySelector<HTMLButtonElement>('[aria-label="Negrita"]')!.disabled).toBe(false)
-    expect(body().querySelector('[aria-label="Si se puede editar el campo Primero"]')).toBeTruthy()
+    expect(body().querySelector('[aria-label="Quién llena el campo Primero"]')).toBeTruthy()
     expect(body().querySelector('[data-field="f1"] [role="toolbar"]')).toBeNull()
   })
 
@@ -198,8 +198,8 @@ describe("TemplateVisualBuilder", () => {
   it("cambia si el campo se puede editar desde la cinta y lo guarda con el botón", async () => {
     await mountBuilder({ template, presets })
     await selectField("f1")
-    expect(body().querySelector('[aria-label="Si se puede editar el campo Primero"]')!.textContent).toContain("Editable")
-    await responsibleMenu("Primero", "No editable")
+    expect(body().querySelector('[aria-label="Quién llena el campo Primero"]')!.textContent).toContain("Coordinación")
+    await responsibleMenu("Primero", "Nadie (texto fijo)")
     await save()
     expect(saved().sections[0]!.fields[0]!.quien_llena).toBe("institucional")
   })

@@ -9,7 +9,7 @@ import { careerProfileLockReason, profileContext } from "../configuration/subjec
 import { profileFields } from "../configuration/subjectProfileFields"
 import { fieldResponseNormalize } from "../configuration/templateRehearsal"
 import { fieldSection, type TemplateField } from "../configuration/templatePresentation"
-import { responseWithin, careerResponse, isDocument, keepOwnOptions, plainText, responseIsEmpty, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
+import { responseWithin, careerResponse, isDocument, keepOwnOptions, keepTeacherFills, plainText, responseIsEmpty, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
 import type { TemplateStore } from "../shared/templateStore"
 import { importSession, readUpload, type ImportDeps, type ImportFileRules } from "../excel/importRequest"
 import { xlsxDownload } from "../excel/workbook"
@@ -267,7 +267,7 @@ async function applyEntries(
       const stored = await tx.storedValue(entry.subject_id, field.id)
       const career = careerResponse(field.content, keepOwnOptions(field.content, document, stored, definition, "file"), definition, "value")
       const imported = freeTextNormalize(career)
-      await tx.saveValue(entry.subject_id, field.id, teacherEdits(stored) && !responseWithin(imported) ? markTeacherEdits(imported) : imported)
+      await tx.saveValue(entry.subject_id, field.id, teacherEdits(stored) && !responseWithin(imported) ? markTeacherEdits(imported) : keepTeacherFills(field.content, imported, stored, definition))
       changed = true
     }
     if (!changed) rejectWith({ subjects: ["Elija al menos un campo con contenido en cada materia seleccionada."] })

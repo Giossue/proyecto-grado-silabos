@@ -208,7 +208,7 @@ describe("template assistant", () => {
   it("sets and removes a character limit only on editable fields", async () => {
     script([
       calls(
-        ["limite_caracteres", { clave: "conducta_etica", limite: 500 }],
+        ["limite_caracteres", { clave: "firmas", limite: 500 }],
         ["limite_caracteres", { clave: "descripcion", limite: 50001 }],
         ["limite_caracteres", { clave: "descripcion", limite: 500 }],
         ["limite_caracteres", { clave: "objetivo_general", limite: 800 }],

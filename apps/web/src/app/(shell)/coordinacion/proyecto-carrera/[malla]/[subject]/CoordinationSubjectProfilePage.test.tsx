@@ -289,4 +289,16 @@ describe("Página del proyecto de carrera de una materia", () => {
     expect(document.querySelectorAll('[data-skeleton="form-editor"]')).toHaveLength(1)
     expect(document.querySelector('[data-testid="not-found"]')).toBeNull()
   })
+
+  it.each([["teacherEdits"], ["teacherFills"]])("no ofrece casillas y conserva la marca antigua «%s» al guardar, sin enviarla al editor", async (mark) => {
+    const cell: DocumentNode = { type: "doc", content: [{ type: "table", content: [{ type: "tableRow", content: [{ type: "tableCell", content: [{ type: "paragraph" }] }] }] }] }
+    const stored: DocumentNode = { ...cell, attrs: { [mark]: true } }
+    vi.mocked(getSubjectProfile).mockResolvedValue(profile({ fields: [{ id: "f1", key: "carga", label: "Carga", section: "Carga", quien_llena: "carrera", content: cell, template: cell, position: 1 }], values: { f1: stored } }))
+    vi.mocked(saveSubjectProfile).mockResolvedValue(profile({ values: {} }))
+    await mountPage()
+    expect(document.querySelector('[role="checkbox"]')).toBeNull()
+    expect(document.body.textContent).not.toContain("El docente")
+    expect(document.querySelector('[data-id="ficha-f1"]')!.getAttribute("data-document")).toBe(JSON.stringify(cell))
+    expect(document.body.textContent).not.toContain("Sin definir")
+  })
 })

@@ -88,8 +88,31 @@ const fromAttrs = (attrs: ResponseAttrs, condition: ConditionChoice): ResponseTo
 })
 
 const KINDS = responseKindOptions.map((item) => ({ value: item.kind, label: item.label }))
+const SINGLE_CHOICE = "una"
 const DISPLAYS = RESPONSE_DISPLAYS.map((item) => ({ value: item.value, label: item.label }))
 const NO_IDS: string[] = []
+const CELL_NEEDED = "Haga clic en una celda vacía de la tabla y vuelva a elegir el tipo de respuesta"
+
+const hasTable = (editor: Editor): boolean => {
+  let found = false
+  editor.state.doc.descendants((node) => {
+    if (node.type.name === "table") found = true
+    return !found
+  })
+  return found
+}
+
+const inEmptyCell = (editor: Editor): boolean => {
+  const { $from, empty } = editor.state.selection
+  if (!empty) return false
+  for (let depth = $from.depth; depth > 0; depth--) {
+    const node = $from.node(depth)
+    if (node.type.name === "tableHeader") return false
+    if (node.type.name !== "tableCell") continue
+    return Array.from({ length: node.childCount }, (_, index) => node.child(index)).every((child) => child.type.name === "paragraph" && child.content.size === 0)
+  }
+  return false
+}
 
 
 export function TemplateResponseTool({
@@ -117,7 +140,9 @@ export function TemplateResponseTool({
   const [editing, setEditing] = useState(false)
   const [logicId, setLogicId] = useState<string | undefined>(undefined)
   const [placedAt, setPlacedAt] = useState<number | null>(null)
+  const [openedKind, setOpenedKind] = useState("")
   const [openedAnswer, setOpenedAnswer] = useState<unknown>(null)
+  const [cellNeeded, setCellNeeded] = useState(false)
   const live = !advanced
   const [allSources, setAllSources] = useState<ConditionSource[]>([])
 
@@ -144,7 +169,7 @@ export function TemplateResponseTool({
   const standalone = editor === undefined
   // Live, a field closed by «Texto libre» takes no typing, but its type can still be changed here.
   const ready = !disabled && allowed && (standalone || (editor !== null && editor !== undefined && !editor.isDestroyed && (live || editor.isEditable)))
-  const tooltip = allowed ? label : `${label}: no va en campos No editables`
+  const tooltip = allowed ? label : `${label}: no va en campos de texto fijo`
   const settingNames = responseSettingNames(kind)
   const resettable = fixed && templateOptions !== null && !sameResponseOptions(options, templateOptions)
 
@@ -183,8 +208,10 @@ export function TemplateResponseTool({
     // Live: a new space starts with no type chosen, because choosing one is what places it.
     form.reset(attrs ? fromAttrs({ ...attrs, kind: attrs.kind || form.getValues("kind") }, condition) : { ...fresh(live ? "" : form.getValues("kind")), condition })
     setPlacedAt(space?.at ?? null)
+    setOpenedKind(attrs?.kind ?? "")
     setOpenedAnswer(attrs?.value ?? null)
     setLogicId(attrs?.id)
+    setCellNeeded(false)
     setAllSources(found)
     setMore(Boolean(attrs?.showIf))
   })
@@ -241,8 +268,7 @@ export function TemplateResponseTool({
       return
     }
     const target = editor!
-    // «Texto libre» leaves the whole field to the teacher: what was written goes.
-    if (responseAttrs(node).kind === FREE_TEXT_KIND) {
+    if (responseAttrs(node).kind === FREE_TEXT_KIND && !hasTable(target)) {
       target.commands.setContent({ type: "doc", content: [{ type: "paragraph", content: [node] }] })
       return
     }
@@ -255,6 +281,8 @@ export function TemplateResponseTool({
   }
 
   const placedSpace = (): number | null => (placedAt !== null && editor?.state.doc.nodeAt(placedAt)?.type.name === RESPONSE_NODE ? placedAt : null)
+
+  const misplaced = (): boolean => Boolean(live && editor && !editor.isDestroyed && placedSpace() === null && hasTable(editor) && !inEmptyCell(editor))
 
   /** Unmarking the type removes the space; the text around it stays. */
   const clear = (): void => {
@@ -307,10 +335,13 @@ export function TemplateResponseTool({
                     <ChoiceGroup
                       value={field.value}
                       label="Tipo de respuesta"
-                      options={KINDS}
+                      options={live ? KINDS.filter((item) => item.value !== SINGLE_CHOICE || openedKind === SINGLE_CHOICE) : KINDS}
                       disabled={fixed}
                       clearable={live}
                       onValueChange={(next) => {
+                        const blocked = next !== "" && misplaced()
+                        setCellNeeded(blocked)
+                        if (blocked) return
                         field.onChange(next)
                         if (!live) return
                         if (next === "") clear()
@@ -319,6 +350,7 @@ export function TemplateResponseTool({
                     />
                   )}
                 />
+                {cellNeeded ? <FieldError data-response-cell-error>{CELL_NEEDED}</FieldError> : null}
                 {fixed ? <FieldDescription data-response-fixed>{fixedReason}</FieldDescription> : hint ? <FieldDescription>{hint}</FieldDescription> : null}
               </Field>
               {responseHasOptions(kind) ? (

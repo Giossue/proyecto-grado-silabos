@@ -118,7 +118,7 @@ async function inheritPreviousPeriod(tx: DraftStartTx, template: SyllabusTemplat
     const document =
       setup === undefined && !responseWithin(value.value)
         ? fieldResponseNormalize(contents.get(value.fieldId), value.value, definition)
-        : fieldCarried(setup ?? contents.get(value.fieldId), value.value, definition)
+        : fieldCarried(setup ?? contents.get(value.fieldId), value.value, definition, contents.get(value.fieldId))
     await tx.insertValue(syllabusId, value.fieldId, document as PhpRecord, fieldFingerprint(contents.get(value.fieldId)))
   }
 }
@@ -197,7 +197,7 @@ export async function copySyllabusContentFor(request: Request, auth: DraftStartB
         const copied = await tx.values(source.id, fieldIds)
         await tx.deleteValues(locked.id, fieldIds)
         for (const value of copied) {
-          await tx.insertValue(locked.id, value.fieldId, fieldResponseNormalize(setups[value.fieldId] ?? contents.get(value.fieldId), value.value, definition), fieldFingerprint(contents.get(value.fieldId)))
+          await tx.insertValue(locked.id, value.fieldId, fieldResponseNormalize(setups[value.fieldId] ?? contents.get(value.fieldId), value.value, definition, "value", contents.get(value.fieldId)), fieldFingerprint(contents.get(value.fieldId)))
         }
         const version = locked.version + 1
         const now = deps.now()

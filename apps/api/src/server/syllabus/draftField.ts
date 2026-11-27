@@ -112,9 +112,9 @@ function conflict(request: Request, version: number): Response {
     : apiJson({ message: CONFLICT }, 409)
 }
 
-function changesStored(template: unknown, stored: unknown, document: PhpRecord, definition: TemplateDefinition): boolean {
+function changesStored(template: unknown, stored: unknown, document: PhpRecord, definition: TemplateDefinition, content: unknown): boolean {
   try {
-    return !phpEquals(fieldResponseNormalize(template, stored ?? template, definition), document)
+    return !phpEquals(fieldResponseNormalize(template, stored ?? template, definition, "value", content), document)
   } catch (error) {
     if (error instanceof TemplateValidationError) return true
     throw error
@@ -137,7 +137,7 @@ async function save(input: PhpArray, auth: DraftFieldBound, deps: DraftFieldDeps
   const profileTemplate = templates[field.id]
   const rewritable = teacherEdits(profileTemplate)
   const value = input.value === undefined || input.value === null ? EMPTY_DOCUMENT : input.value
-  const document = fieldResponseNormalize(profileTemplate ?? field.content, rewritable ? markOwnText(record(value)) : value, definition, "value")
+  const document = fieldResponseNormalize(profileTemplate ?? field.content, rewritable ? markOwnText(record(value)) : value, definition, "value", field.content)
   if (!sameStructure(normalizeFieldDocument(field.content, definition), document)) reject("value", "Los bloques de este campo los define la plantilla; el docente solo los responde.")
   const limit = limitAllowed(field.responsible) && !rewritable ? (fieldLimits(definition)[field.key] ?? null) : null
   const fieldTemplate = templates[field.id] ?? field.content
@@ -145,7 +145,7 @@ async function save(input: PhpArray, auth: DraftFieldBound, deps: DraftFieldDeps
   const notStarted = locked.state === "sin_iniciar"
   const storedValues = limit === null && !notStarted ? null : await tx.values(locked.id)
   const before = storedValues === null || limit === null ? 0 : fieldLimitCount(fieldTemplate, storedValues.get(field.id) ?? null, conditions(storedValues).answers, definition)
-  const state = notStarted && storedValues !== null && changesStored(fieldTemplate, storedValues.get(field.id), document, definition) ? "borrador" : locked.state
+  const state = notStarted && storedValues !== null && changesStored(fieldTemplate, storedValues.get(field.id), document, definition, field.content) ? "borrador" : locked.state
   await tx.saveValue(locked.id, field.id, document, deps.newId(), fieldFingerprint(field.content))
   if (limit !== null && storedValues !== null) {
     const after = conditions(new Map([...storedValues, [field.id, document]]))

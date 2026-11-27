@@ -33,6 +33,20 @@ export const responseSlot = (cell: DocumentNode): boolean => {
         && inlines.every((inline) => inline.type === RESPONSE_NODE);
 };
 
+export const documentTables = (node: DocumentNode): DocumentNode[] =>
+    node.type === 'table' ? [node] : (node.content ?? []).flatMap(documentTables);
+
+export const templateRows = (template: DocumentNode): Array<DocumentNode | null> =>
+    documentTables(template).map((table) => (responseListTable(table) ? table.content![table.content!.length - 1]! : null));
+
+const emptiedRow = (row: DocumentNode): DocumentNode => ({
+    ...row,
+    content: (row.content ?? []).map((cell) => ({ ...cell, content: [{ type: 'paragraph', ...(cell.content?.[0]?.attrs ? { attrs: cell.content[0].attrs } : {}) }] })),
+});
+
+export const emptiedRows = (document: DocumentNode, admitsRows: boolean[]): Array<DocumentNode | null> =>
+    documentTables(document).map((table, index) => (admitsRows[index] ? emptiedRow(table.content![table.content!.length - 1]!) : null));
+
 export const responseDocument = (template: DocumentNode, value?: DocumentNode | null): DocumentNode => {
     if (!value || value.type !== template.type) return cloneResponse(template);
     if (template.type === 'tableHeader') return cloneResponse(template);

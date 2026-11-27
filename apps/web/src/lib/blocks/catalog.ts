@@ -1,7 +1,7 @@
 import { ApiError } from '@/api/client';
 import type { CatalogBook } from '@/api/libraryCatalog';
 import { isText, type BlockDefinition, type ListSchema } from '@silabos/shared/lib/blocks/types';
-import { emptyRow, isBlankRow } from '@silabos/shared/lib/blocks/values';
+import { emptyValue } from '@silabos/shared/lib/blocks/values';
 
 const listOf = (definition: BlockDefinition): { name: string; schema: ListSchema } | null => {
     const name = definition.catalog?.list;
@@ -12,12 +12,14 @@ const listOf = (definition: BlockDefinition): { name: string; schema: ListSchema
 
 const MISSING = 'N/A';
 
+const blank = (row: unknown): boolean => typeof row === 'object' && row !== null && Object.values(row).every((cell) => String(cell ?? '').trim() === '');
+
 /** ¿Se puede agregar otro libro? Una fila vacía se aprovecha, así que solo cuenta la lista llena. */
 export const canAddCatalogBook = (definition: BlockDefinition, value: Record<string, unknown>): boolean => {
     const list = listOf(definition);
     const rows = list && Array.isArray(value[list.name]) ? (value[list.name] as unknown[]) : [];
 
-    return list !== null && (rows.length < list.schema.maxItems || isBlankRow(rows[rows.length - 1]));
+    return list !== null && (rows.length < list.schema.maxItems || blank(rows[rows.length - 1]));
 };
 
 /** Pone el libro en la lista del bloque, en las columnas que la plantilla indica; null si no cabe. */
@@ -25,14 +27,14 @@ export const addCatalogBook = (definition: BlockDefinition, value: Record<string
     const list = listOf(definition);
     if (!list || !canAddCatalogBook(definition, value)) return null;
     const columns = (list.schema.items.type === 'object' ? list.schema.items.properties : {});
-    const row = emptyRow(list.schema, props) as Record<string, unknown>;
+    const row = emptyValue(list.schema.items, props) as Record<string, unknown>;
     for (const [field, column] of Object.entries(definition.catalog?.map ?? {})) {
         const schema = columns[column];
         const text = ((book as Record<string, string>)[field] ?? '').trim() || MISSING;
         if (isText(schema)) row[column] = text.slice(0, schema.maxLength);
     }
     const rows = Array.isArray(value[list.name]) ? [...(value[list.name] as unknown[])] : [];
-    if (isBlankRow(rows[rows.length - 1])) rows.pop();
+    if (blank(rows[rows.length - 1])) rows.pop();
 
     return { ...value, [list.name]: [...rows, row] };
 };

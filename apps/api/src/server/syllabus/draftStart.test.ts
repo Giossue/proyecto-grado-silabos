@@ -337,6 +337,33 @@ describe("POST teacher/syllabi/{syllabus}/copy-from/{source}", () => {
     expect(log).toEqual([])
   })
 
+  it("copia y hereda las filas de un campo que llena solo el docente aunque la plantilla empiece con otras", async () => {
+    const line = (text: string) => (text === "" ? { type: "paragraph", attrs: { textAlign: "left" } } : { type: "paragraph", attrs: { textAlign: "left" }, content: [{ type: "text", text }] })
+    const grid = (...cells: string[]) => ({ type: "doc", content: [{ type: "table", content: [{ type: "tableRow", content: [{ type: "tableHeader", content: [line("Resultado")] }] }, ...cells.map((text) => ({ type: "tableRow", content: [{ type: "tableCell", content: [line(text)] }] }))] }] })
+    const target = templates.template!.sections.flatMap((section) => section.blocks.flatMap((block) => block.fields)).find((field) => field.id === fieldId(fieldIndex("tecnicas_ensenanza")))!
+    target.content = grid("", "", "", "")
+    templates.template!.definition = { ...templates.template!.definition, teacher_fields: [target.key] }
+    const own = { ...grid("Analiza", "Evalúa"), attrs: { ownText: true } }
+    const written = () => JSON.stringify(rows.get(TARGET)!.values.get(target.id))
+    const store = tx().teacherFields
+    const withTarget = async (): Promise<Awaited<ReturnType<DraftStartTx["teacherFields"]>>> => (await store("")).map((field) => (field.id === target.id ? { ...field, content: target.content } : field))
+    const previous = { ...deps(), transaction: <T,>(work: (inner: DraftStartTx) => Promise<T>) => work({ ...tx(), teacherFields: withTarget }) }
+
+    rows.set(SOURCE, row({ id: SOURCE, state: "borrador", parallel: "B", values: new Map<string, unknown>([[target.id, own]]) }))
+    const base = apiRequest(`/api/v1/teacher/syllabi/${TARGET}/copy-from/${SOURCE}`, { cookie, method: "POST", headers: { "x-csrf-token": golden.csrfToken, "content-type": "application/json" } })
+    const copied = await call(copySyllabusContent(new Request(base, { body: JSON.stringify({ version_bloqueo: 2 }) }), TARGET, SOURCE, previous))
+    expect(copied.status).toBe(200)
+    expect(written()).toContain("Evalúa")
+
+    rows.set(TARGET, row())
+    rows.set(PREVIOUS, row({ id: PREVIOUS, state: "aprobado", values: new Map<string, unknown>([[target.id, own]]) }))
+    previousSource = PREVIOUS
+    const started = await call(startDraft(apiRequest(`/api/v1/teacher/syllabi/${TARGET}/start`, { cookie, method: "POST", headers: { "x-csrf-token": golden.csrfToken } }), TARGET, previous))
+    expect(started.status).toBe(200)
+    expect(written()).toContain("Analiza")
+    expect(written()).toContain("Evalúa")
+  })
+
   it("rolls back when a copied answer no longer fits its field", async () => {
     rows.get(SOURCE)!.values.set(techniques, { type: "doc", content: [{ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Otro texto" }] }] })
     const response = await copy({ version_bloqueo: 2 })

@@ -1,7 +1,7 @@
 import { fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { TemplatePayload } from "@/api/template"
-import { body, chooseEditability, click, mountBuilder, selectField, settle } from "@/components/domain/configuration/templateBuilderTesting"
+import { body, chooseFiller, click, mountBuilder, selectField, settle } from "@/components/domain/configuration/templateBuilderTesting"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 
 vi.mock("@/api/template")
@@ -22,8 +22,8 @@ const type = async (value: string) => {
   fireEvent.change(body().querySelector<HTMLInputElement>("[data-field-limit-input]")!, { target: { value } })
   await settle()
 }
-const responsible = async (choice: "Editable" | "No editable") => {
-  await chooseEditability(choice)
+const responsible = async (choice: "Coordinación" | "Nadie (texto fijo)") => {
+  await chooseFiller(choice)
 }
 
 describe("Límite de caracteres en el editor de la plantilla", () => {
@@ -66,16 +66,16 @@ describe("Límite de caracteres en el editor de la plantilla", () => {
     expect(payload().sections[0]!.fields[1]).not.toHaveProperty("max_length")
   })
 
-  it("al volver No editable un campo con límite se le quita el límite", async () => {
+  it("al pasar a «Nadie (texto fijo)» un campo con límite se le quita el límite", async () => {
     const { payload } = await mountBuilder({ template: template(800) })
     await selectField("f1")
-    await responsible("No editable")
+    await responsible("Nadie (texto fijo)")
 
     expect(payload().sections[0]!.fields[0]!.quien_llena).toBe("institucional")
     expect(payload().sections[0]!.fields[0]).not.toHaveProperty("max_length")
     expect(body().querySelector('[data-field-limit="f1"]')).toBeNull()
 
-    await responsible("Editable")
+    await responsible("Coordinación")
     expect(payload().sections[0]!.fields[0]!.quien_llena).toBe("carrera")
   })
 })

@@ -7,9 +7,9 @@ import { defineBlock } from "./blockDefinition"
 import { defaultFacultyUrl, institutionUrl } from "./institutionalLogos"
 import { list, phpIntCast, phpShape, phpToBool, record, type PhpRecord } from "./phpValues"
 import { blockDesigns, buildTable, designWithKeys, lockedTable, readTable } from "./repeatableTable"
-import { documentAppearance, presentDefinition, presentSections, variableCatalog, type SyllabusTemplate } from "./templatePresentation"
+import { documentAppearance, isTeacherField, presentDefinition, presentSections, variableCatalog, type SyllabusTemplate } from "./templatePresentation"
 import { boundTemplate, FORBIDDEN, managesTemplates, type TemplateReadDeps } from "./templateReads"
-import { initialValue, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
+import { initialValue, INSTITUTIONAL, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import { toRuntime } from "./templateDraft"
 
 export type TemplateLock = { period: string | null; deliveryOn: string | null }
@@ -57,7 +57,8 @@ function documentLayout(document: PhpRecord): PhpRecord {
 function presets(definition: TemplateDefinition): PhpRecord[] {
   return list(definition.presets).map((raw) => {
     const preset = record(raw)
-    return { key: preset.key, field_key: preset.field, label: preset.label, quien_llena: preset.quien_llena, content: preset.content }
+    const teacher = preset.quien_llena !== INSTITUTIONAL && isTeacherField({ key: String(preset.field) }, definition)
+    return { key: preset.key, field_key: preset.field, label: preset.label, quien_llena: preset.quien_llena, ...(teacher ? { teacher_only: true } : {}), content: preset.content }
   })
 }
 

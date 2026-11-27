@@ -2,7 +2,7 @@ import { fireEvent } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import * as templateApi from "@/api/template"
 import type { TemplatePayload } from "@/api/template"
-import { body, byLabel, byText, chooseEditability, chooseMenuItem, click, menuItems, mountBuilder, press, selectField, selectSection, settle } from "@/components/domain/configuration/templateBuilderTesting"
+import { body, byLabel, byText, chooseFiller, chooseMenuItem, click, menuItems, mountBuilder, press, selectField, selectSection, settle } from "@/components/domain/configuration/templateBuilderTesting"
 import { emptyDocument, type FieldResponsible } from "@/types/configuration"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 
@@ -82,10 +82,10 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
     await selectField("f1")
     expect(tabs()).toEqual(["Inicio", "Insertar", "Diseño", "Campo"])
     expect(tab("Campo")!.getAttribute("aria-selected")).toBe("true")
-    expect(groups(activePanel())).toEqual(["Nombre", "Edición", "Reglas", "Organizar"])
+    expect(groups(activePanel())).toEqual(["Nombre", "¿Quién lo llena?", "Reglas", "Organizar"])
     expect(activePanel().querySelector<HTMLInputElement>("[data-field-name-input]")!.value).toBe("Primero")
-    expect([...activePanel().querySelectorAll("[data-field-editability] [data-editability]")].map((item) => item.textContent!.trim())).toEqual(["No editable", "Editable"])
-    expect(activePanel().querySelector('[data-editability="carrera"]')!.getAttribute("data-state")).toBe("on")
+    expect([...activePanel().querySelectorAll("[data-field-filler] [data-filler]")].map((item) => item.textContent!.trim())).toEqual(["Nadie (texto fijo)", "Coordinación", "Solo el docente"])
+    expect(activePanel().querySelector('[data-filler="carrera"]')!.getAttribute("data-state")).toBe("on")
     expect(activePanel().querySelector("[data-field-limit-tool]")!.textContent).toBe("Límite de caracteres")
     expect(activePanel().querySelector("[data-field-condition-tool]")).toBeNull()
     for (const label of ["Subir el campo Primero", "Bajar el campo Primero", "Duplicar el campo Primero", "Mover el campo Primero a otra sección", "Eliminar el campo Primero"]) {
@@ -107,8 +107,8 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
   it("un campo No editable sin respuestas antes no muestra reglas, y sin tablas repetibles no hay grupo de tablas", async () => {
     await mountBuilder({ template, presets })
     await selectField("f2")
-    expect(groups(activePanel())).toEqual(["Nombre", "Edición", "Organizar"])
-    expect(activePanel().querySelector('[data-editability="institucional"]')!.getAttribute("data-state")).toBe("on")
+    expect(groups(activePanel())).toEqual(["Nombre", "¿Quién lo llena?", "Organizar"])
+    expect(activePanel().querySelector('[data-filler="institucional"]')!.getAttribute("data-state")).toBe("on")
     expect(activePanel().querySelector("[data-field-limit-tool]")).toBeNull()
     expect(activePanel().querySelector("[data-field-condition-tool]")).toBeNull()
     expect(ribbon().textContent).not.toContain("Tablas repetibles")
@@ -141,7 +141,7 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
     await selectField("f1")
     expect(panel()).toBeNull()
     expect(body().querySelector('[aria-label="Opciones del campo"]')).toBeNull()
-    expect(body().querySelectorAll("[data-field-editability]")).toHaveLength(1)
+    expect(body().querySelectorAll("[data-field-filler]")).toHaveLength(1)
     expect(ribbon().className).toContain("sticky")
     expect(ribbon().className).toContain("top-0")
     expect(ribbon().className).not.toContain("shadow")
@@ -160,7 +160,7 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
 
     fireEvent.change(activePanel().querySelector<HTMLInputElement>("[data-field-name-input]")!, { target: { value: "Primero bis" } })
     await settle()
-    await chooseEditability("No editable")
+    await chooseFiller("Nadie (texto fijo)")
     await click(byText("button", "Guardar"))
     expect(saved().sections[0]!.fields[0]).toEqual({ key: "f1", label: "Primero bis", quien_llena: "institucional", content: emptyDocument() })
     expect(saved().sections[0]!.fields[1]).toEqual({ key: "f2", label: "Segundo", quien_llena: "institucional", content: emptyDocument() })

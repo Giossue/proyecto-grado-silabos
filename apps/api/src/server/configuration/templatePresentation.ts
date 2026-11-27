@@ -1,6 +1,7 @@
-import { hasOwnText, openShape, teacherEdits, writtenValue } from "./teacherText"
+import { hasOwnText, markTeacherDefault, openShape, teacherDefault, teacherEdits, writtenValue } from "./teacherText"
 import { isScalar, list, phpString, record, type PhpRecord } from "./phpValues"
 import {
+  blank,
   fieldConditions,
   fieldLimits,
   INSTITUTIONAL,
@@ -10,6 +11,9 @@ import {
   resolveDocument,
   responsesEnabled,
   responseTemplate,
+  responseWithin,
+  rowTables,
+  withinBlock,
   type TemplateDefinition,
 } from "./templateRuntime"
 
@@ -123,6 +127,17 @@ export function isTeacherField(field: Pick<TemplateField, "key">, definition: Ph
   return teacherFieldKeys(definition).includes(field.key)
 }
 
+export function teacherOnly(field: Pick<TemplateField, "key" | "responsible">, definition: PhpRecord): boolean {
+  return field.responsible !== INSTITUTIONAL && isTeacherField(field, definition)
+}
+
+export function teacherTemplate(field: Pick<TemplateField, "key" | "responsible" | "content">, definition: TemplateDefinition): PhpRecord | null {
+  if (!teacherOnly(field, definition)) return null
+  const document = openShape(normalizeFieldDocument(field.content, definition)) as PhpRecord
+  if (withinBlock(document) || responseWithin(document)) return null
+  return markTeacherDefault(document, !blank(document))
+}
+
 export function teacherEditable(field: TemplateField, templates: Record<string, unknown>): boolean {
   return isCareerField(field) && (!(field.id in templates) || teacherEdits(templates[field.id]) || openTemplate(templates[field.id]))
 }
@@ -149,6 +164,7 @@ export function presentSections(template: SyllabusTemplate, definition: Template
         label: field.label,
         quien_llena: field.responsible,
         content: field.content,
+        ...(teacherOnly(field, definition) ? { teacher_only: true } : {}),
         ...conditionAndLimit(definition, field),
       })),
     ),
@@ -170,13 +186,16 @@ export function syllabusSectionPayload(
     orientation: section.orientation,
     fields: section.blocks.flatMap((block) =>
       block.fields.map((field) => {
-        const rewritable = isCareerField(field) && teacherEdits(templates[field.id])
-        const editable = teacherEditable(field, templates)
-        const source = templates[field.id] ?? field.content
+        const given = templates[field.id] ?? teacherTemplate(field, definition)
+        const setups = given === null || given === undefined ? templates : { ...templates, [field.id]: given }
+        const rewritable = isCareerField(field) && teacherEdits(setups[field.id])
+        const editable = teacherEditable(field, setups)
+        const source = setups[field.id] ?? field.content
         const template = normalizeFieldDocument(isCareerField(field) ? openShape(source) : source, definition)
         const held = field.responsible === INSTITUTIONAL ? field.content : writtenValue(source, stored(field))
         const modified = rewritable && hasOwnText(held)
         const document = rewritable && !modified ? template : normalizeFieldDocument(held, definition)
+        const admitsRows = rewritable ? rowTables(field.content, definition, teacherDefault(source)) : []
         const { max_length: maxLength, ...rules } = conditionAndLimit(definition, field)
         return {
           id: field.id,
@@ -185,6 +204,7 @@ export function syllabusSectionPayload(
           quien_llena: field.responsible,
           ...(responsesEnabled(definition) && field.responsible !== INSTITUTIONAL && !rewritable ? { template: editable ? responseTemplate(template) : template } : {}),
           ...(rewritable ? { teacher_edits: true } : {}),
+          ...(admitsRows.includes(true) ? { row_tables: admitsRows } : {}),
           teacher_editable: editable,
           required: field.responsible !== INSTITUTIONAL,
           value: document,

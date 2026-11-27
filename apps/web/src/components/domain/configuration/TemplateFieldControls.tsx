@@ -5,13 +5,13 @@ import type { TemplateField } from "@/api/template"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/lib/utils"
-import { FIELD_EDITABILITY, type FieldResponsible } from "@/types/configuration"
+import { FIELD_FILLERS, fieldFiller, type FieldFiller } from "@/types/configuration"
 
-type TemplateEditabilityToggleProps = {
+type TemplateFillerToggleProps = {
   field: TemplateField
   disabled?: boolean
   className?: string
-  onResponsible: (value: FieldResponsible) => void
+  onFiller: (value: FieldFiller) => void
 }
 
 type TemplateFieldNameInputProps = {
@@ -22,18 +22,17 @@ type TemplateFieldNameInputProps = {
 }
 
 const nameOf = (field: TemplateField): string => field.label.trim() || "Campo sin nombre"
-const editabilityOf = (field: TemplateField): FieldResponsible => (field.quien_llena === "institucional" ? "institucional" : "carrera")
 
-export function TemplateEditabilityToggle({ field, disabled = false, className, onResponsible }: TemplateEditabilityToggleProps) {
-  const current = editabilityOf(field)
+export function TemplateFillerToggle({ field, disabled = false, className, onFiller }: TemplateFillerToggleProps) {
+  const current = fieldFiller(field)
   const choose = (value: string): void => {
-    if (value && value !== current) onResponsible(value as FieldResponsible)
+    if (value && value !== current) onFiller(value as FieldFiller)
   }
 
   return (
-    <ToggleGroup type="single" variant="outline" size="sm" spacing={0} value={current} disabled={disabled} aria-label={`Si se puede editar el campo ${nameOf(field)}`} className={className} data-field-editability onValueChange={choose}>
-      {FIELD_EDITABILITY.map((item) => (
-        <ToggleGroupItem key={item.value} value={item.value} className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground" data-editability={item.value}>
+    <ToggleGroup type="single" variant="outline" size="sm" spacing={0} value={current} disabled={disabled} aria-label={`Quién llena el campo ${nameOf(field)}`} className={className} data-field-filler onValueChange={choose}>
+      {FIELD_FILLERS.map((item) => (
+        <ToggleGroupItem key={item.value} value={item.value} className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground" data-filler={item.value}>
           {item.label}
         </ToggleGroupItem>
       ))}

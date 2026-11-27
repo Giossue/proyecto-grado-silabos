@@ -2,7 +2,8 @@ import { CAMPUS_FIELD, COREQUISITES_FIELD, FORMATION_FIELD } from "@silabos/shar
 import { Prisma } from "../../generated/prisma/client"
 import { definitionHash } from "../ficha/definitionHash"
 import { isPhpArray, list, phpJsonDecode, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
-import { isCareerField, isTeacherField, templateFields, type SyllabusTemplate } from "../configuration/templatePresentation"
+import { isCareerField, isTeacherField, teacherTemplate, templateFields, type SyllabusTemplate, type TemplateField } from "../configuration/templatePresentation"
+import { teacherEdits } from "../configuration/teacherText"
 import { isDocument, plainText, type TemplateDefinition } from "../configuration/templateRuntime"
 import { draftTx } from "./draftFieldStore"
 import { SYLLABUS_EXISTS, writtenBySql } from "./syllabusSql"
@@ -73,7 +74,11 @@ export async function carriedValue(executor: Executor, syllabusId: string, key: 
 }
 
 export async function carryTeacherFields(executor: Executor, syllabusId: string, template: SyllabusTemplate, newId: () => string): Promise<void> {
-  const fields = templateFields(template).filter((field) => isCareerField(field) && isTeacherField(field, template.definition) && !NOT_CARRIED.includes(field.key))
+  const startsEmpty = (field: TemplateField) => {
+    const start = teacherTemplate(field, template.definition)
+    return start !== null && !teacherEdits(start)
+  }
+  const fields = templateFields(template).filter((field) => isCareerField(field) && isTeacherField(field, template.definition) && !NOT_CARRIED.includes(field.key) && startsEmpty(field))
   for (const field of fields) {
     const [current] = await rowsOf<{ id: string; value: string | null }>(
       executor,

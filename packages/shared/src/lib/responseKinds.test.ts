@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RESPONSE_KINDS, TEMPLATE_ACCEPTED, careerFieldUndecided, emptyResponse, responseRequired, responseSetting, nextOptionKey, responseAnswered, responseAttrs, responseHasOptions, responseKindOptions, responseLabel, responseLines, responseNeedsOptions, responseSchema, keptAnswer, responseAdjustable, sameResponseOptions } from './responseKinds';
+import { RESPONSE_KINDS, TEMPLATE_ACCEPTED, careerFieldUndecided, teacherFillsAllowed, emptyResponse, responseRequired, responseSetting, nextOptionKey, responseAnswered, responseAttrs, responseHasOptions, responseKindOptions, responseLabel, responseLines, responseNeedsOptions, responseSchema, keptAnswer, responseAdjustable, sameResponseOptions } from './responseKinds';
 import type { DocumentNode } from './templateDocument';
 
 const options = [{ const: 'o1', title: 'Presencial' }, { const: 'o2', title: 'En línea' }];
@@ -108,5 +108,28 @@ describe('Campo de Carrera sin definir', () => {
         expect(careerFieldUndecided(block({}), block({ rows: [{ title: 'Unidad 1' }] }))).toBe(false);
         const placed = doc(paragraph(emptyResponse('una', options)));
         expect(careerFieldUndecided(placed, placed)).toBe(false);
+    });
+});
+
+describe('«El docente llena esta tabla»', () => {
+    const paragraph = (text: string): DocumentNode => (text ? { type: 'paragraph', content: [{ type: 'text', text }] } : { type: 'paragraph' });
+    const table = (...cells: string[]): DocumentNode => ({ type: 'doc', content: [{ type: 'table', content: [
+        { type: 'tableRow', content: [{ type: 'tableHeader', content: [paragraph('Actividad')] }] },
+        ...cells.map((text) => ({ type: 'tableRow', content: [{ type: 'tableCell', content: [paragraph(text)] }] })),
+    ] }] });
+    const marked = (document: DocumentNode): DocumentNode => ({ ...document, attrs: { teacherFills: true } });
+
+    it('se admite solo en una tabla sin escribir y con celdas vacías', () => {
+        expect(teacherFillsAllowed(table(''), table(''))).toBe(true);
+        expect(teacherFillsAllowed(table(''), table('', ''))).toBe(true);
+        expect(teacherFillsAllowed(table(''), table('Lectura', ''))).toBe(false);
+        expect(teacherFillsAllowed(table('Fijo'), table('Fijo'))).toBe(false);
+        expect(teacherFillsAllowed({ type: 'doc', content: [paragraph('')] }, { type: 'doc', content: [paragraph('')] })).toBe(false);
+    });
+
+    it('marcada deja de estar «Sin definir»; sin marcar sigue igual', () => {
+        expect(careerFieldUndecided(table(''), table(''))).toBe(true);
+        expect(careerFieldUndecided(table(''), marked(table('')))).toBe(false);
+        expect(careerFieldUndecided({ type: 'doc', content: [paragraph('Texto')] }, marked({ type: 'doc', content: [paragraph('Texto')] }))).toBe(true);
     });
 });

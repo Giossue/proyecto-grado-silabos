@@ -12,9 +12,9 @@ import {
   writable,
   type TemplateDefinition,
 } from "./templateRuntime"
-import { isCareerField, isTeacherField, templateFields, type SyllabusTemplate, type TemplateField } from "./templatePresentation"
+import { isCareerField, isTeacherField, teacherOnly, teacherTemplate, templateFields, type SyllabusTemplate, type TemplateField } from "./templatePresentation"
 import type { TemplateStore } from "../shared/templateStore"
-import { markTeacherEdits, teacherEdits } from "./teacherText"
+import { markTeacherEdits, markTeacherFills, teacherEdits, teacherFills, withoutTeacherFills } from "./teacherText"
 
 export type ProfileContext = { template: SyllabusTemplate; definition: TemplateDefinition; store: TemplateStore }
 
@@ -34,6 +34,12 @@ export function profileTemplateOf(content: unknown, stored: unknown, definition:
   return withoutOwnOptions(template) as PhpRecord
 }
 
+export function teacherTemplateOf(content: unknown, stored: unknown, definition: TemplateDefinition): PhpRecord | null {
+  const template = profileTemplateOf(content, stored, definition)
+  if (template === null || !teacherFills(template)) return template
+  return profileTemplateOf(content, withoutTeacherFills(template), definition)
+}
+
 function keyByField<T extends { fieldId: string }>(items: T[]): Map<string, T> {
   const keyed = new Map<string, T>()
   for (const item of items) keyed.set(item.fieldId, item)
@@ -41,11 +47,18 @@ function keyByField<T extends { fieldId: string }>(items: T[]): Map<string, T> {
 }
 
 export async function profileTemplates(context: ProfileContext, subjectId: string): Promise<Record<string, PhpRecord>> {
-  const stored = keyByField(await context.store.subjectValues(subjectId))
-  if (stored.size === 0) return {}
   const templates: Record<string, PhpRecord> = {}
+  const teachers = new Set<string>()
+  for (const field of templateFields(context.template)) {
+    if (!teacherOnly(field, context.definition)) continue
+    teachers.add(field.id)
+    const template = teacherTemplate(field, context.definition)
+    if (template !== null) templates[field.id] = template
+  }
+  const stored = keyByField((await context.store.subjectValues(subjectId)).filter((row) => !teachers.has(row.fieldId)))
+  if (stored.size === 0) return templates
   for (const field of await context.store.liveFields([...stored.keys()], true)) {
-    const template = profileTemplateOf(field.content, stored.get(field.id)?.value ?? null, context.definition)
+    const template = teacherTemplateOf(field.content, stored.get(field.id)?.value ?? null, context.definition)
     if (template !== null) templates[field.id] = template
   }
   return templates
@@ -61,7 +74,9 @@ export async function profileValues(context: ProfileContext, subjectId: string):
     if (!isDocument(row.value)) value = null
     else if (definition) value = followTemplate(definition.content, row.value, context.definition)
     else value = normalizeFieldDocument(row.value, context.definition)
+    const filled = teacherFills(value)
     if (value !== null && storedAccepted(row.value)) value = { ...value, attrs: { [TEMPLATE_ACCEPTED]: true } }
+    if (value !== null && filled) value = markTeacherFills(value)
     if (value !== null && teacherEdits(row.value)) value = markTeacherEdits(value)
     values.set(row.fieldId, value)
   }

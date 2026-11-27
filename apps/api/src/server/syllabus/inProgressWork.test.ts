@@ -297,3 +297,48 @@ describe("InProgressWork cuando Coordinación cambia un texto que el docente pue
     expect(JSON.stringify(await written(own, profile("Texto anterior"), { ...text("Texto fijo"), attrs: { edited: true } }))).toContain("Texto fijo")
   })
 })
+
+describe("InProgressWork reconstruye sílabos con tablas a las que el docente agregó filas", () => {
+  const cell = (type: string, text: string) => ({ type, content: [text === "" ? { type: "paragraph" } : { type: "paragraph", content: [{ type: "text", text }] }] })
+  const grid = (header: string, ...rows: string[]) => ({ type: "doc", content: [{ type: "table", content: [{ type: "tableRow", content: [cell("tableHeader", header)] }, ...rows.map((text) => ({ type: "tableRow", content: [cell("tableCell", text)] }))] }] })
+  const editing = (value: string) => ({ ...grid("Actividad", value), attrs: { teacherEdits: true } })
+  const own = { ...grid("Actividad", "Lectura", "Foro", "Taller"), attrs: { ownText: true } }
+
+  async function rebuiltWith(held: unknown, before: unknown, after: unknown, content: unknown = grid("Actividad", "")): Promise<unknown> {
+    const { db } = recordingDb((query) => (query.includes("from valores_campo") ? [{ value: JSON.stringify(held) }] : []))
+    const work = new InProgressWork(db, () => {})
+    const template = goldenTemplate()
+    const target = templateFields(template).find((item) => item.id === fieldId(8))!
+    target.content = content as never
+    const internal = work as unknown as Record<string, () => unknown>
+    const syllabus = { id: SYLLABUS, parallelId: PARALLEL, convocationId: CONVOCATION, state: "borrador", context: {}, version: 1 }
+    let documents = new Map<string, unknown>()
+    vi.spyOn(internal, "syllabi").mockResolvedValue([syllabus] as never)
+    vi.spyOn(internal, "profileContext").mockResolvedValue({ template, definition: template.definition, store: {} } as never)
+    vi.spyOn(internal, "profilesFor").mockResolvedValue(new Map([["subject", new Map([[target.id, after]])]]) as never)
+    vi.spyOn(internal, "convocationFacts").mockResolvedValue(new Map([[CONVOCATION, { careerId: CAREER, periodId: PERIOD }]]) as never)
+    vi.spyOn(internal, "contextOf").mockResolvedValue({ parallel: { id: PARALLEL, subject_id: "subject" }, context: {} } as never)
+    vi.spyOn(internal, "applyChanges").mockImplementation(((pending: { documents: Map<string, unknown> }[]) => {
+      documents = pending[0]?.documents ?? new Map()
+    }) as never)
+    await work.sync(true, CAREER, null, new Map([["subject", new Map([[target.id, before as never]])]]))
+    return documents.get(target.id)
+  }
+
+  it("no toca el texto propio con filas añadidas cuando Coordinación cambia el suyo", async () => {
+    expect(await rebuiltWith(own, editing("Antes"), editing("Después"))).toBeUndefined()
+  })
+
+  it("no toca las filas del docente cuando Coordinación marca «El docente llena esta tabla»", async () => {
+    const filled = grid("Actividad", "Lectura", "Foro")
+    expect(await rebuiltWith(filled, null, { ...grid("Actividad", ""), attrs: { teacherFills: true } })).toBeUndefined()
+  })
+
+  it("al regenerar el sílabo conserva las filas que el docente agregó", () => {
+    const template = goldenTemplate()
+    const target = { ...templateFields(template).find((item) => item.id === fieldId(8))!, content: grid("Actividad", "") as never }
+    const work = new InProgressWork(recordingDb(() => []).db, () => {}) as unknown as { stillFits(...input: unknown[]): unknown }
+
+    expect(JSON.stringify(work.stillFits(target, own, editing("Lectura"), { template, definition: template.definition }))).toContain("Taller")
+  })
+})
