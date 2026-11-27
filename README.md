@@ -1,126 +1,160 @@
 # Sílabos UEB
 
-pnpm monorepo of the syllabus system:
+Sistema web para elaborar, revisar, aprobar y firmar los sílabos de la Universidad Estatal de Bolívar. Admite varias facultades y carreras.
 
-| Package | Path | What it is |
-|---|---|---|
-| `@silabos/web` | `apps/web` | Next.js 16 interface (App Router, React 19). It has no database or Redis access: every `/api/*` request goes to the API. |
-| `@silabos/api` | `apps/api` | NestJS 12 API on port 8000 (`/api/v1`, Swagger UI at `/api/docs`) and the queue worker. PostgreSQL through Prisma, Redis for queues (BullMQ), rate limits and locks, and Gotenberg to turn Word documents into PDF. |
-| `@silabos/shared` | `packages/shared` | Zod schemas with their Spanish messages, block rules and state labels used by both sides. |
+## Qué hace cada rol
 
-The web app proxies `/api/*`, `/logos/*`, `/images/silabo/*` and `/plantilla.schema.json` to the API with Next `rewrites` (`apps/web/next.config.ts`, target `API_INTERNAL_URL`, `http://localhost:8000` by default), so the browser only talks to the web origin and the session cookie, `Origin` checks and 401/409 rules are unchanged.
-
-## Requirements
-
-- Node.js 24 and pnpm 12 (`corepack enable` installs the version pinned in `package.json`)
-- PostgreSQL 17 with the `silabos_ueb` database
-- Redis 7
-- Gotenberg 8 (optional: without it the PDF is the plain-text version)
-
-## Configuration
-
-Copy `.env.example` to `.env.local` at the repository root and fill it in. The API, the worker, Prisma and the seed read that file (`apps/api/src/config/load-env.ts`, `apps/api/prisma.config.ts`); the web app only needs `API_INTERNAL_URL` when the API is not on `http://localhost:8000`, and reads it at build time. The main variables:
-
-| Variable | Purpose |
+| Rol | Tareas principales |
 |---|---|
-| `APP_KEY` | Key (`base64:` + 32 bytes) that encrypts the stored AI API key. Keep the value the database was written with. |
-| `BETTER_AUTH_SECRET` | Secret of [Better Auth](https://better-auth.com): signs the session cookie. Required; changing it signs everyone out. |
-| `BETTER_AUTH_URL` | Public base URL of the app; `FRONTEND_URL` when unset. |
-| `APP_NAME` | Name shown in mails. |
-| `DATABASE_URL` | PostgreSQL connection string. |
-| `REDIS_URL`, `REDIS_PREFIX` | Redis connection and key prefix. |
-| `GOTENBERG_URL` | Gotenberg address for PDF conversion. |
-| `SESSION_LIFETIME` | Session lifetime in minutes (240 today); every request renews it, at most once a minute. |
-| `SESSION_COOKIE_PREFIX` | Prefix of the auth cookies (`silabos-ueb` gives `silabos-ueb.session_token`). |
-| `STATEFUL_DOMAINS` | Hosts (with port) of the web app. They are Better Auth's trusted origins: a request whose `Origin` (or `Referer`) is not one of them gets 401, and login answers 400. |
-| `STORAGE_PATH` | Root of the stored files (`private/` and `public/`). It must point at the same folder the database records refer to. |
-| `PUBLIC_ASSETS_PATH` | Folder with the default logos; `assets/` by default. |
-| `QUEUE_MAX_TIME` | Seconds before the worker exits; `0` keeps it running. |
-| `API_PORT` | Port of the API; `8000` by default (the Keycloak redirect will use it). |
-| `API_INTERNAL_URL` | Where the web app sends `/api/*`; `http://localhost:8000` by default. |
-| `SHADOW_DATABASE_URL` | Optional scratch database for `prisma migrate dev`; deploys do not need it. |
-| `MAIL_*` | Mail transport (`log` writes mails to the log). |
-| `AI_*`, `CATALOG_DRIVER`, `KOHA_BASE_URL` | Template assistant and library catalog. |
+| Administración | Facultades, carreras, cuentas, plantilla del sílabo y periodos académicos. |
+| Coordinación | Mallas, docentes, paralelos y proyecto de carrera; abre el proceso de sílabos de su carrera, revisa y aprueba. |
+| Docente | Elabora su sílabo, lo firma y lo envía. |
+| Biblioteca | Verifica la bibliografía y firma. |
 
-## Run
+Un sílabo enviado pasa primero por **Biblioteca** y después por **Coordinación**. Si alguna pide una corrección, vuelve al docente.
+
+## Tecnologías
+
+TypeScript en un monorepo de pnpm:
+
+| Paquete | Carpeta | Contenido |
+|---|---|---|
+| `@silabos/web` | `apps/web` | Interfaz con Next.js 16 y React 19, shadcn/ui, Tailwind CSS 4 y Tiptap. No accede a la base de datos. |
+| `@silabos/api` | `apps/api` | API con NestJS 12 y Prisma 7, y el proceso de tareas en segundo plano (*worker*). |
+| `@silabos/shared` | `packages/shared` | Esquemas de validación (Zod) y reglas que usan la web y la API. |
+
+| Servicio | Uso |
+|---|---|
+| PostgreSQL 18 | Base de datos. |
+| Redis 7 | Colas (BullMQ), límites y bloqueos. |
+| Gotenberg 8 | Convierte el Word del sílabo en PDF. Es opcional en desarrollo: sin él, el PDF es una versión simple. |
+| MinIO u otro almacenamiento S3 | Archivos. En desarrollo se puede usar el disco (`STORAGE_DRIVER=local`). |
+| Keycloak | Ingreso institucional, opcional. Solo autentica: la cuenta debe existir en el sistema. |
+
+También se integra con un servidor de correo (SMTP), con el catálogo Koha de Biblioteca y con un proveedor de IA (DeepSeek) para los asistentes.
+
+La web reenvía a la API las rutas `/api/*`, `/logos/*`, `/images/silabo/*` y `/plantilla.schema.json` (`apps/web/next.config.ts`). El navegador solo se comunica con la dirección de la web.
+
+## Requisitos
+
+- Node.js 24.
+- pnpm 12. Con `corepack enable` se usa la versión fijada en `package.json`.
+- PostgreSQL 18 y Redis 7.
+- Gotenberg 8 (opcional en desarrollo).
+
+## Configuración
+
+Copie `.env.example` como `.env.local` en la raíz y complete sus valores. La API, el *worker*, Prisma y el script de datos iniciales leen ese archivo. **No lo suba al repositorio.**
+
+| Variables | Para qué sirven |
+|---|---|
+| `DATABASE_URL`, `REDIS_URL`, `REDIS_PREFIX` | Base de datos y Redis. |
+| `APP_KEY` | Clave de cifrado (`base64:` y 32 bytes). Con una base que ya tiene datos, conserve la misma. |
+| `BETTER_AUTH_SECRET` | Firma la sesión. Es obligatoria; si cambia, se cierran todas las sesiones. |
+| `FRONTEND_URL`, `BETTER_AUTH_URL` | Dirección pública del sistema. |
+| `STATEFUL_DOMAINS` | Servidores y puertos de la web de los que la API acepta peticiones. |
+| `API_PORT`, `API_INTERNAL_URL` | Puerto de la API (8000) y dirección que usa la web. La web la lee al compilar. |
+| `STORAGE_DRIVER`, `STORAGE_PATH`, `S3_*` | Almacenamiento de archivos. |
+| `GOTENBERG_URL` | Conversión a PDF. |
+| `MAIL_*` | Correo. Con `MAIL_MAILER=log`, los mensajes se escriben en el registro. |
+| `AI_*` | Asistentes de IA. Con `AI_DRIVER=baseline` funcionan sin un proveedor externo. |
+| `CATALOG_DRIVER`, `KOHA_BASE_URL` | Catálogo de Biblioteca. |
+| `KEYCLOAK_*` | Ingreso con Keycloak. |
+
+La lista completa está en `.env.example` y en la sección de despliegue de [`docs/sistema.md`](docs/sistema.md).
+
+## Desarrollo
 
 ```bash
-pnpm install --frozen-lockfile   # also runs prisma generate in apps/api
-pnpm dev       # web on http://localhost:3000, API on http://localhost:8000 (nest start --watch)
-pnpm worker    # queues: critica, documentos, ia, general (runs apps/api/dist, kept fresh by pnpm dev or pnpm build)
+corepack enable
+pnpm install --frozen-lockfile   # también genera el cliente de Prisma
+pnpm db:migrate                  # crea o actualiza las tablas
+pnpm db:seed                     # solo la primera vez: ver «Base de datos»
+pnpm dev                         # web en :3000 y API en :8000
+pnpm worker                      # en otra terminal
 ```
 
-API documentation: http://localhost:8000/api/docs (OpenAPI JSON at `/api/docs-json`).
+- Sistema: <http://localhost:3000>
+- Documentación de la API: <http://localhost:8000/api/docs>
 
-Production:
+El *worker* procesa las colas `critica`, `documentos`, `ia` y `general`. Necesita la API compilada, que `pnpm dev` y `pnpm build` mantienen actualizada.
 
-```bash
-pnpm build     # apps/api (prisma generate + nest build) and apps/web (next build)
-pnpm start     # node apps/api/dist/apps/api/src/main.js and next start
-pnpm worker
-```
+## Base de datos
 
-Every root script runs in the workspaces: `pnpm test`, `pnpm typecheck`, `pnpm lint` (each package), `pnpm --filter @silabos/api <script>` for one package.
+El esquema y las migraciones están en `apps/api/prisma/`. Las funciones, restricciones, índices especiales y vistas que Prisma no expresa están en el SQL de las migraciones.
 
-## Database
+| Comando | Qué hace |
+|---|---|
+| `pnpm db:migrate` | Aplica las migraciones pendientes. |
+| `pnpm db:status` | Muestra su estado. |
+| `pnpm db:seed` | Crea el administrador inicial y la plantilla oficial. Se puede repetir sin duplicarlos. |
+| `pnpm db:generate` | Genera el cliente de Prisma. |
+| `pnpm db:baseline` | Solo una vez, en una base que ya tenía el esquema inicial. Después ejecute `pnpm db:migrate`. |
 
-Prisma owns the schema and the migrations (`apps/api/prisma/`). `schema.prisma` was introspected from the database with `prisma db pull`; `migrations/0_baseline/migration.sql` is the complete schema the three migrations of the previous ORM built, including the database functions and triggers (append-only history, single administrator, single active coordination, template change marks, export and review integrity), the checks, the partial and expression indexes and the `docentes_vigentes_silabo` view that `schema.prisma` cannot express. The services use the typed client through `PrismaService`; `$queryRaw` stays only where the old query was raw SQL. Prisma is the only database layer of the API.
+Para `pnpm db:seed` defina `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` (y, si quiere, `SEED_ADMIN_NAME`).
 
-```bash
-pnpm db:migrate    # prisma migrate deploy: apply pending migrations
-pnpm db:status     # prisma migrate status
-pnpm db:seed       # apps/api/scripts/seed.ts: administrator, its credential and the official template (idempotent; also prisma db seed)
-pnpm db:baseline   # prisma migrate resolve --applied 0_baseline, once on a database that already has the schema
-pnpm db:pull       # re-introspect into schema.prisma (then drop the Laravel-only models, see below)
-pnpm db:generate   # regenerate the client in apps/api/src/generated/prisma (git-ignored)
-```
+**Antes de migrar una base con datos, haga un respaldo.** No edite migraciones ya aplicadas: cree una nueva.
 
-**New database.** `pnpm db:migrate` creates the whole schema, including the Better Auth tables, then `pnpm db:seed` creates the administrator with its credential account from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` (optional `SEED_ADMIN_NAME`, default «Administrador») and the official template. System settings need no rows: they fall back to the environment until an administrator changes them. Running the seed again changes nothing.
-
-**Existing database.** A database built by the previous migrations (or restored from a dump) already has the schema: run `pnpm db:baseline` once, which only records `0_baseline` in `_prisma_migrations` and changes no data, then `pnpm db:migrate` for later migrations. New migrations are written with `prisma migrate dev --create-only` against a `SHADOW_DATABASE_URL`, reviewed, and applied with `pnpm db:migrate`. The old migration history (`drizzle.__drizzle_migrations`) stays in old databases and is no longer read or written.
-
-**Authentication.** Login and sessions use [Better Auth](https://better-auth.com) on the Prisma adapter (`apps/api/src/server/auth/betterAuth.ts`, bound to `PrismaService` with `bindAuthDatabase`), mounted inside the API. In Nest, `@Authenticated()` (`apps/api/src/common/decorators/`) runs the same session check through `SessionGuard` (origin, cookie, inactive account, verified email, active role → 401/403/409), `@Roles()` adds `RolesGuard`, and `@CurrentSession()` gives the controller the session and its active role. Its user model is `usuarios` itself (`PRISMA_AUTH_SCHEMA` in `apps/api/src/server/auth/prismaAuthDatabase.ts` maps `nombre_usuario`, `correo_electronico`, `usuario_activo`, and reads `correo_verificado_en` as a flag); `0_baseline` includes `sesiones_usuario` (with the session's active role), `cuentas_usuario`, `verificaciones_usuario` and `dos_factores_usuario`; the seed copies the administrator's bcrypt hash of `usuarios.contrasena` into a credential account. Passwords stay bcrypt (`$2y$`, `BCRYPT_ROUNDS`); every password write also updates `usuarios.contrasena`. The one-time move of the old system's credentials into Better Auth (`db:migrate-auth`) was already applied to `silabos_ueb` and was removed; dumps taken after that migration need nothing else. Two-factor authentication, the password change and the open sessions list in Configuración were removed: login is always one step, a forgotten password is reset with the mailed link, and resetting it closes the session on every device. The old `sesiones` table, `dos_factores_usuario` and the `usuarios` columns `dos_factores_confirmado_en`, `secreto_dos_factores` and `codigos_recuperacion_dos_factores` are no longer read or written; they stay in the database until a later migration drops them.
-
-`0_baseline` drops the `eventos_auditoria` table when it exists. The Laravel-only tables `migraciones`, `cola_trabajos`, `datos_temporales` and `bloqueos_temporales` stay in old databases but are not part of the schema and are not created in new ones; `prisma db pull` brings them back as models, which must be removed from `schema.prisma` again. The unused `btree_gist` extension of old databases is not created either.
-
-## Validation
-
-Request and form validation use [Zod](https://zod.dev). The shared schemas live in `packages/shared/src/schemas/` (imported as `@silabos/shared/schemas/...`). In the API, a Nest DTO is `createZodDto(schema)` from `nestjs-zod`, which also feeds Swagger; the global `ZodValidationPipe` (`apps/api/src/common/pipes/`) validates `@Body()` and `@QueryInput()` with `validateSchema` (`apps/api/src/server/http/schemaValidation.ts`) and answers 422 with `{ message, errors: { field: [message] } }`, the same Spanish messages and key order as before. The React forms use the same field builders through `useSchemaForm` (`apps/web/src/lib/forms.ts`, react-hook-form with `@hookform/resolvers/zod`). `applyApiErrors` puts the server's 422 errors on the matching fields, and a request without field errors shows its message above the form. Rules that need the database (unique email, active career) or the environment (production password strength) are passed to the schema factories only on the server. Every server route validates with these schemas. `packages/shared/src/schemas/fields.ts` holds the field builder (`field`, `requiredField`, `nullableField`, `sometimesField` and the `is.*` checks) that keeps the Spanish messages, the size rules (characters, numbers or list items) and the per-item checks of lists (`checkItems`); a schema can declare the order of its error keys with `.meta({ errorOrder })`.
-
-Client data goes through [TanStack Query](https://tanstack.com/query). `AppProviders` mounts one `QueryClientProvider` with the client from `getQueryClient()` (`apps/web/src/lib/queryClient.ts`): no retries for 4xx answers, no refetch on window focus. Query keys and query options live per area in `apps/web/src/queries/` (`dashboard`, `notifications`, `reviews`, `library`, `teacher`, `careerAcademics`, ...) and call the `apps/web/src/api/*` functions, which keep the 401/409 events and `ApiError`; requests carry only the session cookie, since the server checks the origin instead of an XSRF token. Lists keep the URL-synced filters in an "applied" state that is part of the query key, so the latest filter always wins, and `placeholderData: keepPreviousData` keeps the previous page on screen while the next one loads. Polling uses `refetchInterval` (the template assistant every 2.5 s, generated PDFs and support documents every 4 s while they are pending). Writes refresh with `invalidateQueries` or `setQueryData`; any successful write still fires `silabos:mutated`, which invalidates the `dashboard` queries (deadline and «Antes de empezar»). The session, the deadline, the setup checklist and the screen help stay readable outside React (`sessionState`, `deadlineState`, ...), but their data now lives in the same query cache. Editors that keep a local draft (syllabus, career project, template JSON) load through `queryClient.fetchQuery`. In Vitest, `renderWithProviders` and `createWrapper` (`apps/web/src/test/render.tsx`) give every test a fresh `QueryClient` without retries.
-
-## JSON and mail
-
-API responses are plain JSON written with `Response.json` (`apiJson` and `jsonError` in `apps/api/src/server/http/responses.ts`). Nest controllers return plain objects; `ApiResponseInterceptor` turns them into the same `apiJson` response (status from `@HttpCode`, security headers, `X-RateLimit-*` from `@Authenticated({ rateLimit })`) and `ApiExceptionFilter` writes errors in the same shapes. Paths below are relative to `apps/api/`. `phpShape` (`src/server/configuration/phpValues.ts`) still writes empty records as `[]` in template documents, because the client, the stored documents and the syllabus snapshots expect that shape. Hashes and signatures keep their own fixed encoders: `canonicalJson` (`src/server/documents/canonicalJson.ts`) for the syllabus snapshot and its SHA-256, `historicalFieldDocument.ts` for the field text of snapshot documents and the Word file, the ficha workbook fingerprint (`src/server/ficha/fichaWorkbook.ts`), `definitionHash` (`src/server/ficha/definitionHash.ts`) for the field hashes stored in exported workbooks, and `phpJson` (`src/server/ai/php.ts`) for the template assistant's draft fingerprint and tool payloads. Changing any of them breaks existing hashes or documents.
-
-Mails are [React Email](https://react.email) components in `apps/api/src/server/mail/templates/` (`MailLayout` with the header, button and subcopy, plus one component per mail). `renderMailable` (`src/server/mail/mailables.tsx`) renders the HTML and the plain-text version with `@react-email/render`.
-
-## Porting an area to Nest
-
-The reference is `apps/api/src/modules/notifications/`: a thin controller with `@Authenticated()`, DTOs from the shared Zod schemas, a service that reuses `src/server/**`, a Prisma repository, and `notifications.equivalence.test.ts`, which sends the same requests to the old route handler and to the Nest app (Supertest) and compares status, body, headers and writes. Every area is a Nest controller listed in `PORTED_CONTROLLERS` (`apps/api/src/modules/ported-routes.ts`); controllers that read a body apply `PhpInputMiddleware`, and `FallbackModule` answers unknown routes and methods (404/405) like before.
-
-## Tests
+## Pruebas
 
 ```bash
+pnpm test:cambios   # solo las pruebas relacionadas con lo modificado
+pnpm test           # todas las pruebas de Vitest
 pnpm typecheck
 pnpm lint
-pnpm test              # Vitest in packages/shared, apps/web and apps/api
-pnpm build && pnpm test:e2e   # Playwright: next start on port 3200, the built API on 8000 and the worker
+pnpm build && pnpm test:e2e   # navegador, con Playwright
 ```
 
-The E2E suite needs `E2E_PASSWORD` and `E2E_P12_PASSWORD`, and the `.p12` signatures in `apps/web/tests/e2e/.firmas` (or `E2E_SIGNATURES_DIR`). Redis-backed unit tests use database 15 of `REDIS_URL` or `REDIS_TEST_URL`.
+Las pruebas de navegador usan la API compilada, la web en el puerto 3200 y el *worker*. Necesitan `E2E_PASSWORD`, `E2E_P12_PASSWORD` y las firmas de prueba (`apps/web/tests/e2e/.firmas` o `E2E_SIGNATURES_DIR`).
 
-`apps/web/tests/e2e/template-editing.spec.ts` needs the institutional convocation open: it pauses it, edits and saves the template, restores it from the exported JSON, resumes the convocation (syllabi adapt to the template), finalizes it and opens a new period. Restore the database backup after running it. The template assistant is answered inside the browser, so no request reaches the AI provider.
+> **Cuidado:** las pruebas de navegador modifican datos; algunas pausan y finalizan el proceso de sílabos. Úselas solo con una base de pruebas, nunca en producción.
 
-## Docker
+## Producción
 
-> Not updated to the `apps/` layout yet: the Dockerfile and `compose.yaml` still build the single Next.js app. They move to separate web, API, PostgreSQL 18 and MinIO containers in the next stage.
-
-`compose.yaml` starts the web app, the worker, PostgreSQL, Redis and Gotenberg:
+Sin contenedores:
 
 ```bash
-cp .env.example .env   # set APP_KEY and POSTGRES_PASSWORD at least
-docker compose up --build
+pnpm build
+pnpm start     # API y web
+pnpm worker    # en un proceso aparte
 ```
 
-A new PostgreSQL volume starts empty: run `pnpm db:migrate` and `pnpm db:seed` against it (in the container: `docker compose run --rm api node_modules/.bin/tsx scripts/seed.ts`), or put a dump of `silabos_ueb` (`*.sql` or `*.sql.gz`) in `docker/postgres-init/` before the first start and then run `pnpm db:baseline` and `pnpm db:migrate`. Stored files live in the `storage` volume (`STORAGE_PATH=/data/storage`).
+### Docker Compose
+
+`compose.yaml` levanta la web, la API, el *worker*, PostgreSQL, Redis, MinIO y Gotenberg, y aplica las migraciones al arrancar.
+
+```bash
+cp .env.example .env      # complete los secretos
+docker compose up -d --build
+docker compose logs -f migrate api
+```
+
+Para llenar una base nueva, con las variables `SEED_ADMIN_*` definidas en su terminal:
+
+```bash
+docker compose run --rm -e SEED_ADMIN_EMAIL -e SEED_ADMIN_PASSWORD api node_modules/.bin/tsx scripts/seed.ts
+```
+
+El proxy con HTTPS no está incluido: configúrelo en el servidor.
+
+### Dokploy
+
+`compose.dokploy.yaml` despliega solo la web, la API y el *worker*. PostgreSQL, Redis, Gotenberg y MinIO deben existir ya en el servidor, y el *bucket* se crea una vez en MinIO.
+
+**Aquí las migraciones no se ejecutan solas.** Respalde la base y ejecute en la terminal del servicio `silabos-api`:
+
+```bash
+node_modules/.bin/prisma migrate deploy
+```
+
+## Pendiente
+
+- Conexión con los datos oficiales de la UEB. Ver [`docs/pendientes-conexion-ueb.md`](docs/pendientes-conexion-ueb.md).
+- Cierre automático de los procesos vencidos y su aviso previo.
+- Limpieza automática de los enlaces para restablecer la contraseña.
+
+## Documentación
+
+- [`docs/sistema.md`](docs/sistema.md): arquitectura, datos, API, seguridad, documentos, despliegue y pendientes.
+- [`AGENTS.md`](AGENTS.md): reglas para trabajar en el código.
+- [`odd/`](odd/README.md): documentos de las tareas grandes.
