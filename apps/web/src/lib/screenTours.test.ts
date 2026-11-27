@@ -1,5 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import helpCatalog from '../../../api/src/server/operations/screenHelpCatalog.json';
 import { screenTours } from '@/lib/screenTours';
 
 const sources = Object.entries(import.meta.glob<string>('../**/*.tsx', { query: '?raw', import: 'default', eager: true }))
@@ -7,11 +8,16 @@ const sources = Object.entries(import.meta.glob<string>('../**/*.tsx', { query: 
   .map(([, text]) => text)
   .join('\n');
 
+const helpScreenKeys = (): string[] => Object.keys(JSON.parse(readFileSync(join(process.cwd(), '../api/src/server/operations/screenHelpCatalog.json'), 'utf8')) as object);
+
 const stepOf = (screen: string, selector: string) => (screenTours[screen] ?? []).find((item) => item.selector === selector);
 
 describe('screenTours', () => {
   it('toda pantalla con ayuda tiene pasos que señalan dónde pulsar', () => {
-    expect(Object.keys(helpCatalog).filter((screen) => !screenTours[screen]?.length)).toEqual([]);
+    const screens = helpScreenKeys();
+
+    expect(screens.length).toBeGreaterThan(40);
+    expect(screens.filter((screen) => !screenTours[screen]?.length)).toEqual([]);
   });
 
   it('cada marca «data-tour» que busca una guía existe en alguna pantalla', () => {
