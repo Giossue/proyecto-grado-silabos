@@ -5,7 +5,7 @@ import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW
 import { fakeTemplateStore, fieldId, goldenCatalog, goldenFields, goldenPresentation, goldenTemplate, type FakeTemplateWorld } from "./testing"
 import { Prisma } from "../../generated/prisma/client"
 import type { Db } from "../../prisma/db"
-import { careerProfileEditable, showSubjectProfile, type SubjectProfileDeps } from "./subjectProfile"
+import { careerProfileBlock, showSubjectProfile, type SubjectProfileDeps } from "./subjectProfile"
 
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
@@ -24,7 +24,7 @@ const deps = (): SubjectProfileDeps => ({
   store: fakeTemplateStore(templates),
   subjectCareer: async (id) => subjects.get(id) ?? null,
   careerActive: async (id) => activeCareers.has(id),
-  careerEditable: async () => true,
+  careerBlock: async () => null,
 })
 
 const get = (subject = SUBJECT) => showSubjectProfile(apiRequest(`/api/v1/academic/asignaturas/${subject}/ficha`, { cookie }), subject, deps())
@@ -131,7 +131,7 @@ describe("GET academic/asignaturas/{asignatura}/ficha", () => {
   })
 })
 
-describe("careerProfileEditable", () => {
+describe("careerProfileBlock", () => {
   const database = (rows: { processState: string; convocationState: string | null }[]) => {
     const statements: { text: string; values: unknown[] }[] = []
     const db = {
@@ -146,22 +146,26 @@ describe("careerProfileEditable", () => {
 
   it("reads the career convocation of the most recent university process by its period", async () => {
     const { db, statements } = database([])
-    await careerProfileEditable(db, CAREER)
+    await careerProfileBlock(db, CAREER)
     expect(statements[0].text).toContain("left join convocatorias_carreras convocatoria on convocatoria.convocatoria_universidad_id = proceso.convocatoria_universidad_id and convocatoria.carrera_id = $1::uuid")
     expect(statements[0].text).toMatch(/order by periodo\.fecha_inicio_periodo desc, proceso\.convocatoria_universidad_id desc\s+limit 1$/)
     expect(statements[0].values).toEqual([CAREER])
   })
 
-  it("is editable with no process, before the career opens and while it is open, and not paused or finalized", async () => {
-    const editable = async (rows: { processState: string; convocationState: string | null }[]) => careerProfileEditable(database(rows).db, CAREER)
-    expect(await editable([])).toBe(true)
-    expect(await editable([{ processState: "abierto", convocationState: null }])).toBe(true)
-    expect(await editable([{ processState: "abierto", convocationState: "preparacion" }])).toBe(true)
-    expect(await editable([{ processState: "abierto", convocationState: "abierto" }])).toBe(true)
-    expect(await editable([{ processState: "pausado", convocationState: "abierto" }])).toBe(false)
-    expect(await editable([{ processState: "cerrado", convocationState: "cerrado" }])).toBe(false)
-    expect(await editable([{ processState: "cerrado", convocationState: null }])).toBe(false)
-    expect(await editable([{ processState: "abierto", convocationState: "pausado" }])).toBe(false)
-    expect(await editable([{ processState: "abierto", convocationState: "cerrado" }])).toBe(false)
+  it("locks while the career period is open or finalized, and not before opening or while paused", async () => {
+    const blockedBy = async (rows: { processState: string; convocationState: string | null }[]) => careerProfileBlock(database(rows).db, CAREER)
+    const open = "Pause el periodo académico de su carrera para editar el proyecto de carrera."
+    const finalized = "El proyecto de carrera no se puede editar con el periodo académico finalizado."
+    expect(await blockedBy([])).toBeNull()
+    expect(await blockedBy([{ processState: "abierto", convocationState: null }])).toBeNull()
+    expect(await blockedBy([{ processState: "abierto", convocationState: "preparacion" }])).toBeNull()
+    expect(await blockedBy([{ processState: "abierto", convocationState: "pausado" }])).toBeNull()
+    expect(await blockedBy([{ processState: "pausado", convocationState: "pausado" }])).toBeNull()
+    expect(await blockedBy([{ processState: "pausado", convocationState: null }])).toBeNull()
+    expect(await blockedBy([{ processState: "abierto", convocationState: "abierto" }])).toBe(open)
+    expect(await blockedBy([{ processState: "pausado", convocationState: "abierto" }])).toBe(open)
+    expect(await blockedBy([{ processState: "cerrado", convocationState: "cerrado" }])).toBe(finalized)
+    expect(await blockedBy([{ processState: "cerrado", convocationState: null }])).toBe(finalized)
+    expect(await blockedBy([{ processState: "abierto", convocationState: "cerrado" }])).toBe(finalized)
   })
 })

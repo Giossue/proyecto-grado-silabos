@@ -36,7 +36,7 @@ export const screenTours: Record<string, TourStep[]> = {
     ...basics,
   ],
   '/admin/estructura-academica': [
-    step(ACTIONS, 'Crear', 'Cree una carrera. Si su facultad todavía no existe, regístrela desde el mismo formulario. Las carreras también se pueden subir con un Excel', 'left'),
+    step(ACTIONS, 'Crear', 'Cree una carrera. Si su facultad todavía no existe, regístrela desde el mismo formulario. Las carreras también se pueden subir con un Excel. La malla de cada carrera se crea después, con «Nueva malla»', 'left'),
     step(FILTERS, 'Buscar', 'Busque por carrera o por facultad', 'bottom'),
     step(TABLE, 'Lista', 'Pulse una fila para editar la carrera, o el nombre de la facultad para editar la facultad. Nada se borra: lo que ya no se usa se desactiva', 'top'),
   ],
@@ -65,7 +65,7 @@ export const screenTours: Record<string, TourStep[]> = {
   ],
   '/coordinacion/revisiones': [
     step(DEADLINE, 'Plazo', 'Hasta cuándo pueden entregar los docentes', 'bottom'),
-    step(ACTIONS, 'Periodo académico de su carrera', 'Ábralo cuando termine «Antes de empezar». También puede pausarlo y reanudarlo', 'left'),
+    step(ACTIONS, 'Periodo académico de su carrera', 'Ábralo cuando termine «Antes de empezar». Páuselo para cambiar la malla o el proyecto de carrera y luego reanúdelo', 'left'),
     step(TABS, 'Por revisar y seguimiento', '«Cola de revisión» es lo que le toca revisar. «Seguimiento» muestra cómo va cada sílabo', 'bottom'),
     step(FILTERS, 'Buscar', 'Busque una materia por nombre o código', 'bottom'),
     step(TABLE, 'Sílabos', 'Llegan con la bibliografía ya verificada por Biblioteca. Pulse uno para revisarlo: puede pedir correcciones o firmarlo y aprobarlo', 'top'),
@@ -93,10 +93,11 @@ export const screenTours: Record<string, TourStep[]> = {
   ],
   '/coordinacion/proyecto-carrera': [
     step(TABS, 'Materias y documentos', 'Cambie entre el proyecto de cada materia y los documentos de apoyo', 'bottom'),
-    step(ACTIONS, 'Excel o documentos', 'En «Materias», llene varias a la vez con un Excel. Antes de aplicar, revise los cambios: lo que quitaría la respuesta del docente viene sin marcar. En «Documentos de apoyo», suba un archivo', 'left'),
     step(MALLA, 'Malla', 'En «Materias» se ve una malla a la vez. Elija aquí cuál', 'bottom'),
     step(FILTERS, 'Buscar', 'Busque una materia o filtre por ciclo o si está completa', 'bottom'),
+    step('[data-tour="career-select"]', 'Varias a la vez', 'Seleccione materias o un ciclo entero y pulse «Llenar un campo»: lo escribe una sola vez. Las que ya tienen contenido no cambian si no las marca', 'bottom'),
     step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenar su proyecto. El docente lo recibe ya escrito', 'top'),
+    step(ACTIONS, 'Subir documento', 'En «Documentos de apoyo», suba un archivo para sus docentes', 'left'),
     step(TABLE, 'Documentos de apoyo', 'Archivos para que sus docentes conozcan mejor sus materias. Pulse uno para verlo', 'top'),
   ],
   '/coordinacion/historial': [
@@ -171,9 +172,9 @@ for (const screen of ['malla', 'materias-asignaciones', 'docentes', 'proyecto-ca
   screenTours[`/admin/carreras/:career/${screen}`] = screenTours[`/coordinacion/${screen}`]!;
 }
 screenTours['/admin/carreras/:career/proyecto-carrera'] = [
-  step(ACTIONS, 'Excel', 'Llene varias materias a la vez con un Excel. Antes de aplicar, revise los cambios: lo que quitaría la respuesta del docente viene sin marcar', 'left'),
   step(MALLA, 'Malla', 'Se ve una malla a la vez. Elija aquí cuál', 'bottom'),
   step(FILTERS, 'Buscar', 'Busque una materia o filtre por ciclo o si está completa', 'bottom'),
+  step('[data-tour="career-select"]', 'Varias a la vez', 'Seleccione materias o un ciclo entero y pulse «Llenar un campo»: lo escribe una sola vez. Las que ya tienen contenido no cambian si no las marca', 'bottom'),
   step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenar su proyecto. El docente lo recibe ya escrito', 'top'),
 ];
 

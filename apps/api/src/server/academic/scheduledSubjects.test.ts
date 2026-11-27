@@ -24,7 +24,7 @@ const SHIFTS = '[{"value":"matutina","label":"Matutina"},{"value":"vespertina","
 let world: FakeWorld
 let careers: Map<string, CareerRecord>
 let lock: CareerLock | null
-let profileEditable: boolean
+let profileBlock: string | null
 let parallels: CareerParallelRecord[]
 let subjects: ScheduledSubjectRecord[]
 let marks: { syllabus: string[]; teacher: string[]; sent: string[]; started: string[] }
@@ -50,7 +50,7 @@ const deps = (): ScheduledSubjectsDeps => ({
   bridge: fakeDeps(world),
   academic: academic(),
   templates: fakeTemplateStore(templates),
-  careerProfileEditable: async () => profileEditable,
+  careerProfileBlock: async () => profileBlock,
   scheduled: {
     careerParallels: async (id) => (id === CAREER ? parallels : []),
     parallelsWithSyllabus: async (ids) => marks.syllabus.filter((id) => ids.includes(id)),
@@ -80,7 +80,7 @@ beforeEach(() => {
   asRole("coordinador")
   careers = new Map([[CAREER, { id: CAREER, name: "Software", modality: "presencial", cycleCount: 4 }]])
   lock = null
-  profileEditable = true
+  profileBlock = null
   parallels = []
   subjects = []
   marks = { syllabus: [], teacher: [], sent: [], started: [] }
@@ -125,11 +125,11 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
     )
   })
 
-  it("tells coordination why the career project is read-only when the period is paused or finalized, and tells the administrator nothing", async () => {
+  it("tells coordination why the career project is read-only when it is locked, and tells the administrator nothing", async () => {
     const reason = async () => ((await (await get()).json()) as { career: { profile_lock_reason: string | null } }).career.profile_lock_reason
     expect(await reason()).toBeNull()
-    profileEditable = false
-    expect(await reason()).toBe("El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado.")
+    profileBlock = "Pause el periodo académico de su carrera para editar el proyecto de carrera."
+    expect(await reason()).toBe("Pause el periodo académico de su carrera para editar el proyecto de carrera.")
     asRole("administrador", null)
     const admin = await scheduledSubjects(apiRequest(`/api/v1/admin/careers/${CAREER}/academic/scheduled-subjects`, { cookie }), deps(), CAREER)
     expect(((await admin.json()) as { career: { profile_lock_reason: string | null } }).career.profile_lock_reason).toBeNull()

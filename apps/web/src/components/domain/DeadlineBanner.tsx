@@ -26,7 +26,7 @@ const overdueNotice: Record<Audience, (due: string) => { headline: string; detai
 const pausedNotice = (audience: Audience, pausedBy: DashboardDeadline["paused_by"]): Notice => {
   if (audience === "docente") return { headline: "El periodo académico está en pausa", detail: "Le avisaremos cuando se reanude para que siga con sus sílabos" }
   if (audience === "administrador") return { headline: "El periodo académico está en pausa", detail: "Puede reanudarlo desde Periodos académicos" }
-  if (audience === "coordinador" && pausedBy === "coordinacion") return { headline: "El periodo académico de su carrera está en pausa", detail: "Mientras tanto no se edita ni se revisa. Puede reanudarlo desde Revisión" }
+  if (audience === "coordinador" && pausedBy === "coordinacion") return { headline: "El periodo académico de su carrera está en pausa", detail: "Los docentes no editan y no se revisa. Puede cambiar la malla y el proyecto de carrera, y luego reanudarlo desde Revisión" }
 
   return { headline: "El periodo académico está en pausa", detail: "Administración pausó el periodo académico. Las revisiones se retoman cuando lo reanude; le avisaremos" }
 }

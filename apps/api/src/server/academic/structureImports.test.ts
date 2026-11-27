@@ -16,7 +16,7 @@ const MALLA = "01a1c5bc-9000-7000-8000-000000000001"
 const OLD_MALLA = "01a1c5bc-9000-7000-8000-000000000002"
 const OTHER_MALLA = "01a1c5bc-9000-7000-8000-000000000003"
 const FACULTY_NAME = "Facultad de Ciencias Administrativas"
-const CAREERS_HEADER = ["Facultad", "Modalidad", "Código de carrera", "Nombre de la carrera", "Número de ciclos"]
+const CAREERS_HEADER = ["Facultad", "Modalidad", "Código de carrera", "Nombre de la carrera"]
 const CURRICULUM_HEADER = ["Código", "Nombre de la materia", "Ciclo", "Unidad de organización", "Modalidad", "Horas ACD", "Horas APE", "Horas AA", "Créditos", "Prerrequisitos (códigos)"]
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 
@@ -97,9 +97,9 @@ function requirementTx(): CurriculumTx {
 function governanceTx(): GovernanceWriteTx {
   return {
     replace: (_confirmed: boolean, change: () => Promise<unknown>) => change(),
-    createCareer: async (data: { code: string; name: string; cycleCount: number; facultyId: string; modality: string }) => {
+    createCareer: async (data: { code: string; name: string; facultyId: string; modality: string }) => {
       const id = nextId()
-      state.careers.push({ id, code: data.code, name: data.name, cycles: data.cycleCount, active: true, columns: { ...data } })
+      state.careers.push({ id, code: data.code, name: data.name, cycles: 0, active: true, columns: { ...data } })
       return id
     },
   } as unknown as GovernanceWriteTx
@@ -165,16 +165,16 @@ beforeEach(() => {
 
 describe("POST /api/v1/admin/academic/careers/import", () => {
   it("imports careers all or nothing", async () => {
-    const bad = await xlsx([CAREERS_HEADER, [FACULTY_NAME, "Presencial", "NC-1", "Carrera Uno", "10"], ["Inexistente", "Virtual", "NC-2", "Carrera Dos", "0"]])
+    const bad = await xlsx([CAREERS_HEADER, [FACULTY_NAME, "Presencial", "NC-1", "Carrera Uno"], ["Inexistente", "Virtual", "NC-2", "Carrera Dos"]])
     const rejected = await careers(bad, { confirm: "1" })
     expect(rejected.status).toBe(200)
     expect(await json(rejected)).toEqual({
       rows: [
-        { line: 2, values: { facultad: FACULTY_NAME, modalidad: "Presencial", codigo: "NC-1", nombre: "Carrera Uno", ciclos: "10" }, errors: [] },
+        { line: 2, values: { facultad: FACULTY_NAME, modalidad: "Presencial", codigo: "NC-1", nombre: "Carrera Uno" }, errors: [] },
         {
           line: 3,
-          values: { facultad: "Inexistente", modalidad: "Virtual", codigo: "NC-2", nombre: "Carrera Dos", ciclos: "0" },
-          errors: ["La facultad no existe o está inactiva.", "La modalidad no es válida.", "El número de ciclos debe estar entre 1 y 30."],
+          values: { facultad: "Inexistente", modalidad: "Virtual", codigo: "NC-2", nombre: "Carrera Dos" },
+          errors: ["La facultad no existe o está inactiva.", "La modalidad no es válida."],
         },
       ],
       valid: false,
@@ -182,23 +182,30 @@ describe("POST /api/v1/admin/academic/careers/import", () => {
     })
     expect(state.careers).toHaveLength(1)
 
-    const good = await xlsx([CAREERS_HEADER, [FACULTY_NAME.toUpperCase(), "en linea", "NC-1", " Carrera Uno ", 10]])
+    const good = await xlsx([CAREERS_HEADER, [FACULTY_NAME.toUpperCase(), "en linea", "NC-1", " Carrera Uno "]])
     const preview = await careers(good)
     expect((await json(preview)).created).toBe(0)
     expect(state.careers).toHaveLength(1)
     const created = await careers(good, { confirm: "1" })
     expect(await created.text()).toBe(
-      '{"rows":[{"line":2,"values":{"facultad":"FACULTAD DE CIENCIAS ADMINISTRATIVAS","modalidad":"en linea","codigo":"NC-1","nombre":"Carrera Uno","ciclos":"10"},"errors":[]}],"valid":true,"created":1}',
+      '{"rows":[{"line":2,"values":{"facultad":"FACULTAD DE CIENCIAS ADMINISTRATIVAS","modalidad":"en linea","codigo":"NC-1","nombre":"Carrera Uno"},"errors":[]}],"valid":true,"created":1}',
     )
-    expect(state.careers[1]).toMatchObject({ code: "NC-1", name: "Carrera Uno", cycles: 10, columns: { facultyId: FACULTY, modality: "en_linea" } })
+    expect(state.careers[1]).toMatchObject({ code: "NC-1", name: "Carrera Uno", columns: { facultyId: FACULTY, modality: "en_linea" } })
+    expect(state.careers[1].columns).not.toHaveProperty("cycleCount")
+  })
+
+  it("keeps working with a file made with the older template, ignoring its cycles column", async () => {
+    const older = await xlsx([[...CAREERS_HEADER, "Número de ciclos"], [FACULTY_NAME, "Presencial", "NC-9", "Carrera Antigua", "no importa"]])
+    expect((await json(await careers(older, { confirm: "1" }))).created).toBe(1)
+    expect(state.careers[1].columns).not.toHaveProperty("cycleCount")
   })
 
   it("reports taken and repeated codes with the row of the first one", async () => {
-    const file = await xlsx([CAREERS_HEADER, [FACULTY_NAME, "Híbrida", "sw-8", "Repetida", "3"], [FACULTY_NAME, "Híbrida", "NC-X", "A", "3"], [FACULTY_NAME, "Híbrida", "nc-x", "B", "3.5"]])
+    const file = await xlsx([CAREERS_HEADER, [FACULTY_NAME, "Híbrida", "sw-8", "Repetida"], [FACULTY_NAME, "Híbrida", "NC-X", "A"], [FACULTY_NAME, "Híbrida", "nc-x", "B"]])
     expect((await json(await careers(file))).rows.map((row: { errors: string[] }) => row.errors)).toEqual([
       ["Ya existe una carrera con este código."],
       [],
-      ["El código se repite en la fila 3.", "El número de ciclos debe estar entre 1 y 30."],
+      ["El código se repite en la fila 3."],
     ])
   })
 
@@ -245,7 +252,7 @@ describe("POST /api/v1/admin/academic/careers/import", () => {
   it("imports the downloaded template once filled in", async () => {
     const template = Buffer.from(await (await careerImportTemplate(get("/api/v1/admin/academic/careers/import-template"), deps())).arrayBuffer())
     const book = await readBook(template)
-    book.getWorksheet("Datos")!.getRow(2).values = [FACULTY_NAME, "Presencial", "NC-T", "Carrera Plantilla", "8"]
+    book.getWorksheet("Datos")!.getRow(2).values = [FACULTY_NAME, "Presencial", "NC-T", "Carrera Plantilla"]
     const filled = Buffer.from(await book.xlsx.writeBuffer())
     expect((await json(await careers(filled, { confirm: "1" }))).created).toBe(1)
     expect(state.careers.map((career) => career.code)).toContain("NC-T")
@@ -253,7 +260,7 @@ describe("POST /api/v1/admin/academic/careers/import", () => {
 
   it("limits imports to ten per minute", async () => {
     const limiter = createRateLimiter()
-    const file = await xlsx([CAREERS_HEADER, [FACULTY_NAME, "Presencial", "NC-1", "Uno", "1"]])
+    const file = await xlsx([CAREERS_HEADER, [FACULTY_NAME, "Presencial", "NC-1", "Uno"]])
     for (let attempt = 0; attempt < 10; attempt++) expect((await careers(file, {}, limiter)).status).toBe(200)
     const limited = await careers(file, {}, limiter)
     expect(limited.status).toBe(429)
@@ -269,6 +276,9 @@ describe("GET career and curriculum import templates", () => {
     expect(book.getWorksheet("Datos")!.getCell("A2").dataValidation).toMatchObject({ type: "list", formulae: ["Listas!$A$1:$A$1"] })
     expect(book.getWorksheet("Datos")!.getCell("B2").dataValidation).toMatchObject({ type: "list", formulae: ["Listas!$B$1:$B$3"] })
     expect(book.getWorksheet("Listas")!.getCell("A1").value).toBe(FACULTY_NAME)
+    const header = book.getWorksheet("Datos")!.getRow(1).values as unknown[]
+    expect(header.filter(Boolean).slice(0, 4)).toEqual(CAREERS_HEADER)
+    expect(JSON.stringify(book.getWorksheet("Datos")!.getSheetValues())).not.toContain("ciclos")
     signIn("coordinador", CAREER)
     expect(await (await careerImportTemplate(get("/api/v1/admin/academic/careers/import-template"), deps())).text()).toBe(
       '{"message":"No puede importar carreras con el rol activo."}',

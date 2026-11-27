@@ -1,32 +1,30 @@
 import { Controller, Get, Inject, Param, Post, Put, Req } from "@nestjs/common"
-import { ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiParam, ApiTags, ApiTooManyRequestsResponse, ApiUnprocessableEntityResponse } from "@nestjs/swagger"
-import { MessageDto, ValidationErrorDto } from "../../common/dtos/api-responses.dto"
+import { ApiBody, ApiOperation, ApiParam, ApiTags, ApiUnprocessableEntityResponse } from "@nestjs/swagger"
+import { ValidationErrorDto } from "../../common/dtos/api-responses.dto"
 import type { ApiRequest } from "../../common/http/web-request"
 import type { WebReply } from "../../common/http/web-reply"
 import { showSubjectProfile } from "../../server/configuration/subjectProfile"
+import { applySubjectProfileBulk, showSubjectProfileBulk } from "../../server/configuration/subjectProfileBulk"
 import { previewSubjectProfile } from "../../server/configuration/subjectProfilePreview"
 import { updateSubjectProfile } from "../../server/configuration/subjectProfileWrites"
-import { applyFichaImport, fichaTemplate, previewFichaImport } from "../../server/ficha/fichaImports"
 import { handled, SessionInHandler } from "../academic/academic-handler"
 import { FichaDeps } from "./ficha-deps"
 
 const VALIDATION = { description: "Errores por campo.", type: ValidationErrorDto }
-const THROTTLED = { description: "Más de 20 envíos por minuto.", type: MessageDto }
-const WORKBOOK = { schema: { type: "object", properties: { file: { type: "string", format: "binary" } } } }
 const CAREER = { name: "career", format: "uuid", description: "Carrera sobre la que trabaja el administrador." }
-const BULK = {
+const FILL = {
   schema: {
     type: "object",
-    required: ["subjects", "action"],
+    required: ["field_id", "value", "subjects"],
     properties: {
+      field_id: { type: "string", format: "uuid" },
+      value: { type: "object", description: "Documento del campo, el mismo que se guarda en la materia." },
       subjects: { type: "array", items: { type: "string", format: "uuid" } },
-      fields: { type: "array", items: { type: "string", format: "uuid" } },
-      action: { type: "string", enum: ["plantilla", "docente"] },
+      replace: { type: "array", items: { type: "string", format: "uuid" }, description: "Materias marcadas que ya tienen contenido y se reemplazan." },
       confirm_purge: { type: "boolean" },
     },
   },
 }
-const APPLY = { schema: { type: "object", properties: { file: { type: "string", format: "binary" }, confirm_purge: { type: "boolean" } } } }
 
 @ApiTags("Ficha de asignatura")
 @SessionInHandler()
@@ -34,61 +32,34 @@ const APPLY = { schema: { type: "object", properties: { file: { type: "string", 
 export class FichaController {
   constructor(@Inject(FichaDeps) private readonly deps: FichaDeps) {}
 
-  @Get("coordination/ficha-imports/template")
-  @ApiOperation({ summary: "Descarga el libro .xlsx con las fichas de las asignaturas de la carrera." })
-  @ApiOkResponse({ description: "Libro .xlsx." })
-  template(@Req() request: ApiRequest): Promise<WebReply> {
-    return handled(request, (web) => fichaTemplate(web, this.deps.imports()))
+  @Get("coordination/ficha-bulk")
+  @ApiOperation({ summary: "Campos de la carrera y las materias que ya tienen algo en cada uno." })
+  bulkFields(@Req() request: ApiRequest): Promise<WebReply> {
+    return handled(request, (web) => showSubjectProfileBulk(web, this.deps.bulk()))
   }
 
-  @Post("coordination/ficha-imports/spreadsheet")
-  @ApiOperation({ summary: "Revisa un libro de fichas y muestra los cambios sin guardarlos (20 por minuto)." })
-  @ApiConsumes("multipart/form-data")
-  @ApiBody(WORKBOOK)
+  @Post("coordination/ficha-bulk")
+  @ApiOperation({ summary: "Llena un campo en varias materias; las que ya tienen algo cambian solo si van en «replace»." })
+  @ApiBody(FILL)
   @ApiUnprocessableEntityResponse(VALIDATION)
-  @ApiTooManyRequestsResponse(THROTTLED)
-  preview(@Req() request: ApiRequest): Promise<WebReply> {
-    return handled(request, (web) => previewFichaImport(web, this.deps.imports()))
+  bulkFill(@Req() request: ApiRequest): Promise<WebReply> {
+    return handled(request, (web) => applySubjectProfileBulk(web, this.deps.bulk()))
   }
 
-  @Post("coordination/ficha-imports/apply")
-  @ApiOperation({ summary: "Guarda las fichas del libro (20 por minuto)." })
-  @ApiConsumes("multipart/form-data")
-  @ApiBody(APPLY)
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  @ApiTooManyRequestsResponse(THROTTLED)
-  apply(@Req() request: ApiRequest): Promise<WebReply> {
-    return handled(request, (web) => applyFichaImport(web, this.deps.imports()))
-  }
-
-  @Get("admin/careers/:career/ficha-imports/template")
-  @ApiOperation({ summary: "Descarga el libro .xlsx con las fichas de la carrera indicada (administración)." })
+  @Get("admin/careers/:career/ficha-bulk")
+  @ApiOperation({ summary: "Campos de la carrera indicada y las materias que ya tienen algo en cada uno (administración)." })
   @ApiParam(CAREER)
-  @ApiOkResponse({ description: "Libro .xlsx." })
-  adminTemplate(@Req() request: ApiRequest, @Param("career") career: string): Promise<WebReply> {
-    return handled(request, (web) => fichaTemplate(web, this.deps.imports(), career))
+  adminBulkFields(@Req() request: ApiRequest, @Param("career") career: string): Promise<WebReply> {
+    return handled(request, (web) => showSubjectProfileBulk(web, this.deps.bulk(), career))
   }
 
-  @Post("admin/careers/:career/ficha-imports/spreadsheet")
-  @ApiOperation({ summary: "Revisa un libro de fichas de la carrera indicada sin guardarlo (administración, 20 por minuto)." })
+  @Post("admin/careers/:career/ficha-bulk")
+  @ApiOperation({ summary: "Llena un campo en varias materias de la carrera indicada (administración)." })
   @ApiParam(CAREER)
-  @ApiConsumes("multipart/form-data")
-  @ApiBody(WORKBOOK)
+  @ApiBody(FILL)
   @ApiUnprocessableEntityResponse(VALIDATION)
-  @ApiTooManyRequestsResponse(THROTTLED)
-  adminPreview(@Req() request: ApiRequest, @Param("career") career: string): Promise<WebReply> {
-    return handled(request, (web) => previewFichaImport(web, this.deps.imports(), career))
-  }
-
-  @Post("admin/careers/:career/ficha-imports/apply")
-  @ApiOperation({ summary: "Guarda las fichas del libro en la carrera indicada (administración, 20 por minuto)." })
-  @ApiParam(CAREER)
-  @ApiConsumes("multipart/form-data")
-  @ApiBody(APPLY)
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  @ApiTooManyRequestsResponse(THROTTLED)
-  adminApply(@Req() request: ApiRequest, @Param("career") career: string): Promise<WebReply> {
-    return handled(request, (web) => applyFichaImport(web, this.deps.imports(), career))
+  adminBulkFill(@Req() request: ApiRequest, @Param("career") career: string): Promise<WebReply> {
+    return handled(request, (web) => applySubjectProfileBulk(web, this.deps.bulk(), career))
   }
 
   @Get("academic/asignaturas/:asignatura/ficha")

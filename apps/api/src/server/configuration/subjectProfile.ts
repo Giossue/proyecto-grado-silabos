@@ -7,14 +7,14 @@ import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { jsonError, apiJson, validationError } from "../http/responses"
 import { phpObject, phpShape } from "./phpValues"
-import { normalizeFieldDocument, responsesEnabled, responseTemplate, TemplateValidationError } from "./templateRuntime"
-import { fieldSection, presentDefinition, variableCatalog } from "./templatePresentation"
+import { TemplateValidationError } from "./templateRuntime"
+import { presentDefinition, variableCatalog } from "./templatePresentation"
 import { createTemplateStore, type TemplateStore } from "../shared/templateStore"
-import { profileComplete, profileFields, profilePositions, profileValues, type ProfileContext } from "./subjectProfileFields"
+import { presentedProfileFields, profileComplete, profileFields, profileValues, type ProfileContext } from "./subjectProfileFields"
 import { unmatchedRoute, modelNotFound, routeAllows } from "../http/router"
-import { CONVOCATION_PAUSED, PROCESS_PAUSED, ROLE_ADMINISTRATOR } from "../syllabus/policy"
+import { CAREER_PROFILE_FINALIZED, CAREER_PROFILE_PAUSE_TO_EDIT } from "@silabos/shared/lib/careerProfileLock"
+import { CONVOCATION_OPEN, ROLE_ADMINISTRATOR } from "../syllabus/policy"
 
-export const CAREER_PROFILE_BLOCKED = "El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado."
 const CLOSED = "cerrado"
 
 export type SubjectProfileDeps = {
@@ -22,7 +22,7 @@ export type SubjectProfileDeps = {
   store: TemplateStore
   subjectCareer: (subjectId: string) => Promise<string | null>
   careerActive: (careerId: string) => Promise<boolean>
-  careerEditable: (careerId: string) => Promise<boolean>
+  careerBlock: (careerId: string) => Promise<string | null>
 }
 
 async function subjectCareer(db: Db, subjectId: string): Promise<string | null> {
@@ -35,7 +35,7 @@ async function careerActive(db: Db, careerId: string): Promise<boolean> {
   return row !== undefined
 }
 
-export async function careerProfileEditable(db: Db, careerId: string): Promise<boolean> {
+export async function careerProfileBlock(db: Db, careerId: string): Promise<string | null> {
   const [period] = await db.$queryRaw<{ processState: string; convocationState: string | null }[]>`select proceso.estado_convocatoria_universidad as "processState",
       convocatoria.estado_convocatoria_carrera as "convocationState"
     from convocatorias_universidad proceso
@@ -43,14 +43,13 @@ export async function careerProfileEditable(db: Db, careerId: string): Promise<b
     left join convocatorias_carreras convocatoria on convocatoria.convocatoria_universidad_id = proceso.convocatoria_universidad_id and convocatoria.carrera_id = ${careerId}::uuid
     order by periodo.fecha_inicio_periodo desc, proceso.convocatoria_universidad_id desc
     limit 1`
-  if (period === undefined) return true
-  if (period.processState === PROCESS_PAUSED || period.processState === CLOSED) return false
-  return period.convocationState !== CONVOCATION_PAUSED && period.convocationState !== CLOSED
+  if (period === undefined) return null
+  if (period.processState === CLOSED || period.convocationState === CLOSED) return CAREER_PROFILE_FINALIZED
+  return period.convocationState === CONVOCATION_OPEN ? CAREER_PROFILE_PAUSE_TO_EDIT : null
 }
 
-export async function careerProfileLockReason(session: AppSession, careerId: string, careerEditable: (careerId: string) => Promise<boolean>): Promise<string | null> {
-  if (session.activeRole?.role === ROLE_ADMINISTRATOR) return null
-  return (await careerEditable(careerId)) ? null : CAREER_PROFILE_BLOCKED
+export async function careerProfileLockReason(session: AppSession, careerId: string, careerBlock: (careerId: string) => Promise<string | null>): Promise<string | null> {
+  return session.activeRole?.role === ROLE_ADMINISTRATOR ? null : careerBlock(careerId)
 }
 
 export function defaultSubjectProfileDeps(db: Db): SubjectProfileDeps {
@@ -59,7 +58,7 @@ export function defaultSubjectProfileDeps(db: Db): SubjectProfileDeps {
     store: createTemplateStore(db),
     subjectCareer: (subjectId) => subjectCareer(db, subjectId),
     careerActive: (careerId) => careerActive(db, careerId),
-    careerEditable: (careerId) => careerProfileEditable(db, careerId),
+    careerBlock: (careerId) => careerProfileBlock(db, careerId),
   }
 }
 
@@ -100,7 +99,7 @@ export async function showSubjectProfile(request: Request, subjectId: string, de
   )
   if (session instanceof Response) return session
   if (careerId === null || !(await mayManageSubjectProfile(session, careerId, deps.careerActive))) return jsonError(403, "")
-  return subjectProfileResponse(request, subjectId, deps, await careerProfileLockReason(session, careerId, deps.careerEditable))
+  return subjectProfileResponse(request, subjectId, deps, await careerProfileLockReason(session, careerId, deps.careerBlock))
 }
 
 export async function subjectProfileResponse(request: Request, subjectId: string, deps: Pick<SubjectProfileDeps, "bridge" | "store">, lockReason: string | null): Promise<Response> {
@@ -108,24 +107,14 @@ export async function subjectProfileResponse(request: Request, subjectId: string
   if (context === null) return fromController(modelNotFoundResponse(MODELS.template))
 
   try {
-    const { template, definition } = context
+    const { definition } = context
     const fields = profileFields(context)
-    const positions = profilePositions(context)
     const values = await profileValues(context, subjectId)
     const fieldIds = new Set(fields.map((field) => field.id))
     const complete = (await profileComplete(context, [subjectId])).get(subjectId) ?? false
     return apiJson(
       phpShape({
-        fields: fields.map((field) => ({
-          id: field.id,
-          key: field.key,
-          label: field.label,
-          quien_llena: field.responsible,
-          content: field.content,
-          ...(responsesEnabled(definition) ? { template: responseTemplate(normalizeFieldDocument(field.content, definition)) } : {}),
-          section: fieldSection(template, field)?.title ?? null,
-          position: positions.get(field.id) ?? 0,
-        })),
+        fields: presentedProfileFields(context, fields),
         values: phpObject(Object.fromEntries([...values].filter(([id]) => fieldIds.has(id)))),
         complete,
         definition: presentDefinition(definition),

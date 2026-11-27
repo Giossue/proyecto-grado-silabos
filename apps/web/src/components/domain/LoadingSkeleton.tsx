@@ -156,9 +156,16 @@ function LoadingBody({
             </div>
           ) : null}
         </div>
+        {selectable ? (
+          <div data-skeleton="accordion-select-all" className="flex items-center gap-3 px-4">
+            <Skeleton className="size-4" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        ) : null}
         <div className="flex flex-col gap-2">
           {range(Math.max(1, rows)).map((group) => (
             <div key={group} data-skeleton="accordion-row" className="flex items-center gap-2 rounded-md bg-card px-4 py-3 ring-1 ring-surface-ring">
+              {selectable ? <Skeleton data-skeleton="accordion-checkbox" className="mr-2 size-4" /> : null}
               <Skeleton className="h-5 w-20" />
               <span className="flex-1" />
               <Skeleton className="h-5 w-10 rounded-full" />

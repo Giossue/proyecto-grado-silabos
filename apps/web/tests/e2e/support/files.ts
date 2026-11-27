@@ -47,22 +47,6 @@ export async function writeDocx(directory: string, name: string, text: string): 
   return file
 }
 
-export async function fillWorkbookCell(source: string, target: string, sheet: RegExp, subject: string, content: string): Promise<void> {
-  const workbook = new ExcelJS.Workbook()
-  await workbook.xlsx.readFile(source)
-  const worksheet = workbook.worksheets.find((candidate) => sheet.test(candidate.name))
-  if (!worksheet) throw new Error(`No sheet matches ${sheet}`)
-  let filled = false
-  worksheet.eachRow((row) => {
-    if (row.getCell(3).value === subject) {
-      row.getCell(4).value = content
-      filled = true
-    }
-  })
-  if (!filled) throw new Error(`No row for ${subject}`)
-  await workbook.xlsx.writeFile(target)
-}
-
 export async function describeWorkbook(file: string): Promise<string> {
   const workbook = new ExcelJS.Workbook()
   await workbook.xlsx.readFile(file)

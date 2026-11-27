@@ -856,7 +856,7 @@
       "GET",
       "HEAD"
     ],
-    "uri": "api/v1/coordination/ficha-imports/template",
+    "uri": "api/v1/coordination/ficha-bulk",
     "wheres": {},
     "bindings": {}
   },
@@ -864,15 +864,7 @@
     "methods": [
       "POST"
     ],
-    "uri": "api/v1/coordination/ficha-imports/spreadsheet",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "POST"
-    ],
-    "uri": "api/v1/coordination/ficha-imports/apply",
+    "uri": "api/v1/coordination/ficha-bulk",
     "wheres": {},
     "bindings": {}
   },
@@ -1161,7 +1153,7 @@
       "GET",
       "HEAD"
     ],
-    "uri": "api/v1/admin/careers/{career}/ficha-imports/template",
+    "uri": "api/v1/admin/careers/{career}/ficha-bulk",
     "wheres": {
       "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
     },
@@ -1173,19 +1165,7 @@
     "methods": [
       "POST"
     ],
-    "uri": "api/v1/admin/careers/{career}/ficha-imports/spreadsheet",
-    "wheres": {
-      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
-    },
-    "bindings": {
-      "career": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Career"
-    }
-  },
-  {
-    "methods": [
-      "POST"
-    ],
-    "uri": "api/v1/admin/careers/{career}/ficha-imports/apply",
+    "uri": "api/v1/admin/careers/{career}/ficha-bulk",
     "wheres": {
       "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
     },

@@ -23,7 +23,7 @@ import { unmatchedRoute, modelNotFound, routeAllows } from "../http/router"
 export interface SubjectProfileTx {
   store: TemplateStore
   lockSubject(subjectId: string): Promise<{ careerId: string } | null>
-  careerEditable(careerId: string): Promise<boolean>
+  careerBlock(careerId: string): Promise<string | null>
   deleteValue(subjectId: string, fieldId: string): Promise<void>
   saveValue(subjectId: string, fieldId: string, document: PhpRecord): Promise<void>
   keepContent<T>(confirmed: boolean, careerId: string, subjectIds: string[], change: () => Promise<T>): Promise<T>
@@ -62,7 +62,7 @@ export async function lockCareerSubject(tx: SubjectProfileTx, session: AppSessio
   const locked = await tx.lockSubject(subjectId)
   if (locked === null) throw new Missing(MODELS.subject)
   if (!(await mayManageSubjectProfile(session, locked.careerId, deps.careerActive))) throw new Rejected(jsonError(403, ""))
-  const lockReason = await careerProfileLockReason(session, locked.careerId, tx.careerEditable)
+  const lockReason = await careerProfileLockReason(session, locked.careerId, tx.careerBlock)
   if (lockReason !== null) rejectWith({ process: [lockReason] })
   return locked.careerId
 }
@@ -120,6 +120,6 @@ export async function updateSubjectProfile(request: Request, subjectId: string, 
       if (error instanceof TemplateValidationError) return validationError(error.errors)
       throw error
     }
-    return subjectProfileResponse(request, subjectId, deps, await careerProfileLockReason(session, career, deps.careerEditable))
+    return subjectProfileResponse(request, subjectId, deps, await careerProfileLockReason(session, career, deps.careerBlock))
   })
 }

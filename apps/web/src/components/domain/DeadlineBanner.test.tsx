@@ -83,7 +83,7 @@ describe("DeadlineBanner", () => {
     ["docente", "administracion", "El periodo académico está en pausaLe avisaremos cuando se reanude para que siga con sus sílabos"],
     ["docente", "coordinacion", "El periodo académico está en pausaLe avisaremos cuando se reanude para que siga con sus sílabos"],
     ["coordinador", "administracion", "El periodo académico está en pausaAdministración pausó el periodo académico. Las revisiones se retoman cuando lo reanude; le avisaremos"],
-    ["coordinador", "coordinacion", "El periodo académico de su carrera está en pausaMientras tanto no se edita ni se revisa. Puede reanudarlo desde Revisión"],
+    ["coordinador", "coordinacion", "El periodo académico de su carrera está en pausaLos docentes no editan y no se revisa. Puede cambiar la malla y el proyecto de carrera, y luego reanudarlo desde Revisión"],
     ["administrador", "administracion", "El periodo académico está en pausaPuede reanudarlo desde Periodos académicos"],
     ["bibliotecario", "administracion", "El periodo académico está en pausaAdministración pausó el periodo académico. Las revisiones se retoman cuando lo reanude; le avisaremos"],
   ] as const)("en pausa, a %s (pausó %s) le dice lo que le toca", (audience, pausedBy, expected) => {

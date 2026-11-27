@@ -5,7 +5,7 @@ import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW
 import { GenerationRejected, purgeRequired } from "../syllabus/inProgressWorkHelpers"
 import type { Db } from "../../prisma/db"
 import type { PhpRecord } from "./phpValues"
-import { careerProfileEditable, showSubjectProfile } from "./subjectProfile"
+import { careerProfileBlock, showSubjectProfile } from "./subjectProfile"
 import { profileProgress, profileTemplates } from "./subjectProfileFields"
 import { normalizeFieldDocument, plainText, responseTemplate } from "./templateRuntime"
 import { updateSubjectProfile, type SubjectProfileTx, type SubjectProfileWriteDeps } from "./subjectProfileWrites"
@@ -18,7 +18,6 @@ const OTHER_CAREER = "01a1c5bc-79ca-7331-8f0f-000000000009"
 const FIRST = "01a1c5bc-7a00-7000-8000-0000000000aa"
 const SECOND = "01a1c5bc-7a00-7000-8000-0000000000bb"
 const FOREIGN = "01a1c5bc-7a00-7000-8000-0000000000cc"
-const BLOCKED = "El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado."
 
 const index = (key: string) => goldenFields.findIndex((field) => field.key === key)
 const SOLO_TEXTO = fieldId(index("sin_espacios"))
@@ -42,7 +41,7 @@ function deps(): SubjectProfileWriteDeps {
       const careerId = subjects.get(id)
       return careerId === undefined ? null : { careerId }
     },
-    careerEditable: (careerId) => careerProfileEditable(periodDb(), careerId),
+    careerBlock: (careerId) => careerProfileBlock(periodDb(), careerId),
     deleteValue: async (subjectId, field) => {
       log.push(`delete:${subjectId}:${field}`)
       templates.values = templates.values.filter((value) => !(value.subjectId === subjectId && value.fieldId === field))
@@ -63,7 +62,7 @@ function deps(): SubjectProfileWriteDeps {
     store: fakeTemplateStore(templates),
     subjectCareer: async (id) => subjects.get(id) ?? null,
     careerActive: async () => true,
-    careerEditable: (careerId) => careerProfileEditable(periodDb(), careerId),
+    careerBlock: (careerId) => careerProfileBlock(periodDb(), careerId),
     async transaction(work) {
       const values = templates.values
       log.push("begin")
@@ -116,7 +115,7 @@ beforeEach(() => {
     [SECOND, CAREER],
     [FOREIGN, OTHER_CAREER],
   ])
-  period = { processState: "abierto", convocationState: "abierto" }
+  period = { processState: "abierto", convocationState: "pausado" }
   purge = null
   log = []
   asRole("coordinador", CAREER)

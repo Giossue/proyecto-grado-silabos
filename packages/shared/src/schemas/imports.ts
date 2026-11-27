@@ -1,27 +1,22 @@
 import { z } from "zod"
-import { checkItems, field, is, itemsAt, requiredField, sizeOf, sometimesField } from "./fields"
-
-export const HASH_LENGTH = 64
-const HASH = /^[a-f0-9]{64}$/
+import { checkItems, field, is, itemsAt, nullableField, requiredField, sometimesField } from "./fields"
 
 export const spreadsheetOptionsSchema = z.object({ confirm: sometimesField("confirmación", [is.boolean()]) })
 
-const hash = (label: string) =>
-  requiredField(label, [is.string(), is.refined((value) => (sizeOf(value, "string") === HASH_LENGTH ? [] : [`El campo ${label} debe tener 64 caracteres.`])), is.matches(HASH)])
+export const BULK_UNDECIDED = "Escriba el contenido del campo o use «Configurar campo» antes de aplicar."
+export const BULK_NO_OPTIONS = "Agregue al menos una opción a la elección antes de aplicar."
 
-export const fichaApplySchema = z
+export const subjectProfileBulkSchema = z
   .object({
-    fingerprint: hash("estructura de la plantilla"),
-    file_hash: hash("archivo revisado"),
+    field_id: requiredField("campo", [is.uuid()]),
+    value: nullableField("contenido del campo", [is.array()]),
+    subjects: requiredField("materias", [is.array(), is.min(1), is.max(500)]),
+    replace: sometimesField("materias que se reemplazan", [is.array()]),
     confirm_purge: sometimesField("confirmación de borrado", [is.boolean()]),
-    subjects: requiredField("materias", [is.array(), is.min(1), is.max(100)]),
-    fields: sometimesField("campos", [is.array()]),
   })
   .superRefine(async (input, context) => {
     await checkItems(context, itemsAt(input.subjects, ["subjects"]), "materia", [is.uuid(), is.distinct()])
-    const fields = itemsAt(input.fields, ["fields"])
-    await checkItems(context, fields, "campos de la materia", [is.array()])
-    await checkItems(context, fields.flatMap(([path, value]) => itemsAt(value, path)), "campo", [is.string(), is.max(100)])
+    await checkItems(context, itemsAt(input.replace, ["replace"]), "materia que se reemplaza", [is.uuid(), is.distinct()])
   })
 
 export const subjectProfileValuesSchema = z

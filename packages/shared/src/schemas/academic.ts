@@ -57,7 +57,7 @@ export function careerSchema({ facultyExists, codeAvailable, updating }: { facul
     modality: requiredField("modalidad", [is.string(), is.oneOf(STUDY_MODALITIES)]),
     code: requiredField("código", [is.string(), is.max(CODE_MAX), codeFormat(), ...(codeAvailable ? [is.unique(codeAvailable, "Ya existe una carrera con ese código.")] : [])]),
     nombre: requiredField("nombre", [is.string(), is.max(NAME_MAX)]),
-    ...(updating ? { confirm_purge: purge() } : { cycle_count: requiredField("cantidad de ciclos", [is.integer(), is.min(1), is.max(CYCLE_LIMIT)]) }),
+    ...(updating ? { confirm_purge: purge() } : {}),
   })
 }
 

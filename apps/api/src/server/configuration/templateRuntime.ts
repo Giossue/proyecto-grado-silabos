@@ -1518,32 +1518,3 @@ export function responseIsEmpty(source: unknown, held: unknown, definition: Temp
   return !answeredAgainst(responseTemplate(record(templateContent)), value, definition)
 }
 
-function ownFrom(template: unknown, value: PhpRecord, own: unknown): PhpRecord {
-  const type = nodeType(template)
-  if (type !== nodeType(value) || type !== nodeType(own)) return value
-  if (type === RESPONSE_NODE) {
-    const attrs = given(value, "attrs") ?? []
-    const ownAttrs = at(own, "attrs")
-    if (at(ownAttrs, OWN_OPTIONS) !== true || !phpIdentical(given(attrs, "options") ?? [], given(at(template, "attrs"), "options") ?? [])) return value
-    return { ...value, attrs: responseAttrs({ ...record(attrs), options: given(ownAttrs, "options") ?? [], [OWN_OPTIONS]: true }) }
-  }
-  if (type === "tableHeader" || type === "documentBlock" || blank(template)) return value
-  const expected = [...content(template)]
-  const actual = content(value)
-  let mine = [...content(own)]
-  if (type === "table" && listTable(template) && mine.length > 0) {
-    const row = expected[expected.length - 1]
-    const last = mine[mine.length - 1]
-    while (expected.length < actual.length) expected.push(row)
-    while (mine.length < actual.length) mine.push(last)
-    mine = mine.slice(0, actual.length)
-  }
-  if (expected.length === 0 || expected.length !== actual.length || mine.length !== actual.length) return value
-  return { ...value, content: expected.map((child, index) => ownFrom(child, record(actual[index]), mine[index])) }
-}
-
-export function keepOwnOptions(definitionContent: unknown, document: PhpRecord, stored: unknown, definition: TemplateDefinition, attribute = "value"): PhpRecord {
-  if (!responsesEnabled(definition) || !isDocument(stored)) return document
-  const template = responseTemplate(normalizeFieldDocument(definitionContent, definition, "value"))
-  return within(attribute, () => ownFrom(template, document, templateFor(definitionContent, stored, definition)))
-}

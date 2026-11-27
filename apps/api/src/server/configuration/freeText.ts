@@ -1,10 +1,9 @@
-import { isPhpArray, isScalar, list, mbStrlen, phpString, phpTrim, record, type PhpRecord } from "./phpValues"
+import { isPhpArray, list, mbStrlen, record, type PhpRecord } from "./phpValues"
 import { RESPONSE_NODE, responseAttrs, TemplateValidationError } from "./templateRuntime"
 
 const MAX_NODES = 5000
 const MAX_DEPTH = 12
 const MAX_CHARACTERS = 50000
-const LINE_BREAK = /\r\n|[\n\v\f\r\u0085\u2028\u2029]/u
 
 const CHILDREN: Record<string, string[]> = {
   doc: ["paragraph", "bulletList", "orderedList", "table"],
@@ -18,7 +17,6 @@ const CHILDREN: Record<string, string[]> = {
   tableHeader: ["paragraph", "bulletList", "orderedList"],
 }
 
-export type FreeTextColumn = { key: string; label: string }
 
 function fail(attribute: string, message: string): never {
   throw new TemplateValidationError({ [attribute]: [message] })
@@ -84,64 +82,4 @@ export function freeTextNormalize(value: unknown, attribute = "value"): PhpRecor
   const document = normalizeNode(value, null, 0, counter, attribute)
   if (counter.characters > MAX_CHARACTERS) fail(attribute, "El texto libre supera los 50 000 caracteres.")
   return document
-}
-
-export function freeTextFromText(text: string): PhpRecord {
-  const paragraphs = phpTrim(text)
-    .split(LINE_BREAK)
-    .map((line) => (phpTrim(line) === "" ? { type: "paragraph" } : { type: "paragraph", content: [{ type: "text", text: line }] }))
-  return { type: "doc", content: paragraphs.length === 0 ? [{ type: "paragraph" }] : paragraphs }
-}
-
-function paragraph(text: string): PhpRecord {
-  return text === "" ? { type: "paragraph" } : { type: "paragraph", content: [{ type: "text", text }] }
-}
-
-function cellText(value: unknown): string {
-  return isScalar(value) ? phpTrim(phpString(value)) : ""
-}
-
-function cellOf(row: unknown, key: string): unknown {
-  if (Array.isArray(row)) return /^(0|[1-9]\d*)$/.test(key) ? row[Number(key)] : undefined
-  return isPhpArray(row) ? record(row)[key] : undefined
-}
-
-export function freeTextFromRows(columns: FreeTextColumn[], rows: unknown[], numbered = false): PhpRecord {
-  const kept = rows.filter((row) => columns.some((column) => cellText(cellOf(row, column.key)) !== ""))
-  if (kept.length === 0) return { type: "doc", content: [{ type: "paragraph" }] }
-  if (columns.length === 1) {
-    return {
-      type: "doc",
-      content: [
-        {
-          type: numbered ? "orderedList" : "bulletList",
-          content: kept.map((row) => ({ type: "listItem", content: [paragraph(cellText(cellOf(row, columns[0].key)))] })),
-        },
-      ],
-    }
-  }
-  const tableRow = (cells: string[], type: string): PhpRecord => ({
-    type: "tableRow",
-    content: cells.map((text) => ({ type, attrs: { colspan: 1, rowspan: 1 }, content: [paragraph(text)] })),
-  })
-  return {
-    type: "doc",
-    content: [
-      {
-        type: "table",
-        content: [
-          tableRow(
-            columns.map((column) => column.label),
-            "tableHeader",
-          ),
-          ...kept.map((row) =>
-            tableRow(
-              columns.map((column) => cellText(cellOf(row, column.key))),
-              "tableCell",
-            ),
-          ),
-        ],
-      },
-    ],
-  }
 }

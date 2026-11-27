@@ -11,6 +11,7 @@ import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { ProcessLockAlert } from "@/components/domain/ProcessLockAlert"
+import { CAREER_PROFILE_PAUSE_TO_EDIT } from "@silabos/shared/lib/careerProfileLock"
 import { StatusBadge } from "@/components/domain/StatusBadge"
 import { FieldResponseEditor } from "@/components/domain/syllabus/FieldResponseEditor"
 import { SyllabusDocumentPreview } from "@/components/domain/syllabus/SyllabusDocumentPreview"
@@ -254,7 +255,7 @@ function SubjectProfile({ subjectId, mallaCode, adminCareer }: { subjectId: stri
       loading={loading && !loadError}
       actionsSkeleton={loading ? ACTIONS_SKELETON : []}
       eyebrow={<BackToProject onClick={() => void leave(() => goBack(router, projectHref))} />}
-      banner={lockReason ? <ProcessLockAlert banner message={lockReason} hideAction /> : null}
+      banner={lockReason ? <ProcessLockAlert banner message={lockReason} hideAction={lockReason !== CAREER_PROFILE_PAUSE_TO_EDIT} /> : null}
       actions={
         !loading && !loadError && fields.length > 0 ? (
           <>

@@ -1,7 +1,6 @@
-import fs from "node:fs"
 import path from "node:path"
 import { expect, test } from "./support/fixtures"
-import { fillWorkbookCell, writeDocx, writePdf } from "./support/files"
+import { writeDocx, writePdf } from "./support/files"
 import { storageStateOf } from "./support/accounts"
 import { expireInvitation, query } from "./support/db"
 import { chooseFirstOption, chooseOption, lettersOnly, dragBetween, rowNamed, toast, uniqueSuffix } from "./support/ui"
@@ -46,7 +45,7 @@ test.describe.serial("coordination", () => {
     await page.goto("/coordinacion/revisiones")
     await page.getByRole("button", { name: "Pausar periodo académico" }).click()
     const dialog = page.getByRole("dialog", { name: "Pausar el periodo académico" })
-    await expect(dialog).toContainText("Durante la pausa puede corregir la malla y los datos curriculares")
+    await expect(dialog).toContainText("Durante la pausa puede corregir la malla, los datos curriculares y el proyecto de carrera")
     await dialog.getByRole("button", { name: "Cancelar" }).click()
     await expect(dialog).toBeHidden()
     await expect(page.getByRole("button", { name: "Pausar periodo académico" })).toBeVisible()
@@ -212,34 +211,6 @@ test.describe.serial("coordination", () => {
     await expect(toast(page)).toBeVisible()
     await page.reload()
     await expect(editor).toHaveText(original)
-    issues.expectClean()
-  })
-
-  test("coordinator downloads the career project Excel, previews it and applies it", async ({ page, issues }, testInfo) => {
-    await page.goto("/coordinacion/proyecto-carrera")
-    await page.getByRole("button", { name: /^Ciclo 1 / }).click()
-    await page.getByRole("list", { name: "Materias del ciclo 1" }).getByRole("heading", { name: "Cálculo I", exact: true }).click()
-    const description = (await page.getByRole("textbox", { name: "2. Descripción de la asignatura" }).innerText()).trim()
-    await page.goto("/coordinacion/proyecto-carrera")
-    await page.getByRole("button", { name: "Importar desde Excel" }).click()
-    const dialog = page.getByRole("dialog", { name: "Importar el proyecto de carrera" })
-    const download = page.waitForEvent("download")
-    await dialog.getByRole("button", { name: "Descargar plantilla Excel" }).click()
-    const file = path.join(testInfo.outputDir, "proyecto-carrera.xlsx")
-    await (await download).saveAs(file)
-    expect(fs.readFileSync(file).subarray(0, 2).toString()).toBe("PK")
-    const completed = path.join(testInfo.outputDir, "proyecto-carrera-completo.xlsx")
-    await fillWorkbookCell(file, completed, /^01 /, "Cálculo I", description)
-    await dialog.locator("#ficha-import-files").setInputFiles(completed)
-    await dialog.getByRole("button", { name: "Revisar Excel" }).click()
-    await expect(dialog.getByText(/^Vista previa del Excel para \d+ de \d+ materias/)).toBeVisible()
-    const subject = dialog.getByRole("checkbox", { name: "Aplicar el proyecto de carrera de Cálculo I", exact: true })
-    if (!(await subject.isChecked())) await subject.check()
-    const apply = dialog.getByRole("button", { name: /^Aplicar a \d+ materias$/ })
-    const applied = page.waitForResponse((response) => /ficha.*apply|apply/.test(response.url()) && response.request().method() !== "GET")
-    await apply.click()
-    expect((await applied).status()).toBeLessThan(400)
-    await expect(toast(page)).toBeVisible()
     issues.expectClean()
   })
 

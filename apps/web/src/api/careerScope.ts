@@ -11,5 +11,5 @@ const careerBase = (careerId: string): string => `/admin/careers/${encodeURIComp
 export const careerAcademicPath = (path: string, careerId: string | null = scopedCareerId): string =>
   careerId ? `${careerBase(careerId)}/academic${path}` : `/coordination/academic${path}`;
 
-export const fichaImportPath = (path: string, careerId: string | null = scopedCareerId): string =>
-  careerId ? `${careerBase(careerId)}/ficha-imports${path}` : `/coordination/ficha-imports${path}`;
+export const fichaBulkPath = (careerId: string | null = scopedCareerId): string =>
+  careerId ? `${careerBase(careerId)}/ficha-bulk` : "/coordination/ficha-bulk";

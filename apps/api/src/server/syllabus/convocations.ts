@@ -178,5 +178,5 @@ export async function pauseConvocationFor(session: AppSession, convocation: Conv
     if (error instanceof HttpFailure) return error.response
     throw error
   }
-  return apiJson({ message: "Periodo académico en pausa. Los docentes de la carrera no editan ni envían; la malla queda editable." })
+  return apiJson({ message: "Periodo académico en pausa. Los docentes de la carrera no editan ni envían; la malla y el proyecto de carrera quedan editables." })
 }

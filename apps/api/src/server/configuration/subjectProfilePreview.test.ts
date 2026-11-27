@@ -54,7 +54,7 @@ const deps = (): SubjectPreviewDeps => ({
   store: fakeTemplateStore(templates),
   subjectCareer: async (id) => subjects.get(id) ?? null,
   careerActive: async (id) => [CAREER, OTHER_CAREER].includes(id),
-  careerEditable: async () => true,
+  careerBlock: async () => null,
   subjectContext: async (id) => contexts.get(id) ?? null,
   logos: { faculty: async () => null },
 })

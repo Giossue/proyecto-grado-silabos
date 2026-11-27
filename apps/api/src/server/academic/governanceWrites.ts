@@ -23,8 +23,7 @@ import { unmatchedRoute } from "../http/router"
 export type FacultyRow = { id: string; name: string; libraries: string | null }
 export type CareerRow = { id: string; facultyId: string; code: string; name: string; modality: string | null }
 export type PeriodRow = { id: string; code: string; startsOn: string; endsOn: string; weeks: number | null }
-/** `cycleCount` seeds the career's first, vigente malla; afterwards cycles are edited per malla. */
-export type CareerData = { facultyId: string; modality: string; code: string; name: string; cycleCount: number }
+export type CareerData = { facultyId: string; modality: string; code: string; name: string }
 export type PeriodData = { code: string; startsOn: string; endsOn: string; weeks: number }
 export type FacultyData = { name: string; libraries: PhpValue[] }
 export type GovernanceFiles = { storage: StorageWriter; newObjectId: () => string; newLogoId: () => string }
@@ -241,7 +240,6 @@ export async function createGovernanceRecord(request: Request, entity: string, d
               modality: input.modality as string,
               code: input.code as string,
               name: input.nombre as string,
-              cycleCount: phpIntCast(input.cycle_count),
             })
           } else {
             const startsOn = input.starts_on as string

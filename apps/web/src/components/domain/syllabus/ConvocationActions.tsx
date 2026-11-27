@@ -21,12 +21,12 @@ const DIALOGS: Record<Transition, { title: string; description: string; label: s
   pausar: {
     title: "Pausar el periodo académico",
     description:
-      "Hasta que lo reanude, los docentes de su carrera no podrán editar ni enviar, y Coordinación y Biblioteca no podrán revisar sus sílabos. Los borradores se conservan. Durante la pausa puede corregir la malla y los datos curriculares",
+      "Hasta que lo reanude, los docentes de su carrera no podrán editar ni enviar, y Coordinación y Biblioteca no podrán revisar sus sílabos. Los borradores se conservan. Durante la pausa puede corregir la malla, los datos curriculares y el proyecto de carrera",
     label: "Pausar",
   },
   reanudar: {
     title: "Reanudar el periodo académico",
-    description: "Los docentes vuelven a trabajar, los paralelos creados durante la pausa reciben su sílabo y la malla y los datos curriculares de la carrera quedan protegidos de nuevo",
+    description: "Los docentes vuelven a trabajar, los paralelos creados durante la pausa reciben su sílabo y la malla, los datos curriculares y el proyecto de carrera quedan protegidos de nuevo",
     label: "Reanudar",
   },
 }

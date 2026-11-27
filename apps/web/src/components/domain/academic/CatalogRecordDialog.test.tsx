@@ -177,8 +177,7 @@ const chooseNative = (index: number, value: string): void => {
 const fillCareer = async (): Promise<void> => {
   fireEvent.change(document.body.querySelector("#catalog-career-name")!, { target: { value: "Software" } })
   fireEvent.change(document.body.querySelector("#catalog-code")!, { target: { value: "SW" } })
-  fireEvent.change(document.body.querySelector("#catalog-cycle-count")!, { target: { value: "8" } })
-  chooseNative(0, "01a1c5ba-2222-7000-8000-999999999999")
+    chooseNative(0, "01a1c5ba-2222-7000-8000-999999999999")
   chooseNative(1, "presencial")
   await flush()
 }
@@ -213,8 +212,7 @@ describe("botón de crear y errores de campo", () => {
     await flush()
     fireEvent.change(document.body.querySelector("#catalog-career-name")!, { target: { value: "Software" } })
     fireEvent.change(document.body.querySelector("#catalog-code")!, { target: { value: "SW" } })
-    fireEvent.change(document.body.querySelector("#catalog-cycle-count")!, { target: { value: "8" } })
-    await flush()
+        await flush()
     const create = (): HTMLButtonElement => buttonWithText("Crear carrera")!
 
     expect(create().disabled).toBe(true)
@@ -226,6 +224,20 @@ describe("botón de crear y errores de campo", () => {
     await actor.click(await screen.findByRole("option", { name: "Presencial" }))
     await flush()
     expect(create().disabled).toBe(false)
+  })
+
+  it("la carrera nueva no pide ciclos ni los envía: la malla se crea después", async () => {
+    vi.mocked(createAcademicRecord).mockReset().mockResolvedValue({ message: "Carrera creada." } as never)
+    renderWithProviders(<Harness entity="carrera" />)
+    await flush()
+    expect(document.body.querySelector("#catalog-cycle-count")).toBeNull()
+    expect(document.body.textContent).not.toContain("ciclos")
+    await fillCareer()
+    fireEvent.submit(document.body.querySelector("form")!)
+    await flush()
+
+    const [, payload] = vi.mocked(createAcademicRecord).mock.calls[0]!
+    expect([...(payload as FormData).keys()]).not.toContain("cycle_count")
   })
 
   it("los campos de la carrera dicen a qué se refieren", async () => {
@@ -287,8 +299,7 @@ describe("facultad nueva desde la carrera", () => {
     expect(screen.getByRole("combobox", { name: /Facultad/ }).textContent).toContain("Salud")
 
     fireEvent.change(document.body.querySelector("#catalog-code")!, { target: { value: "SW" } })
-    fireEvent.change(document.body.querySelector("#catalog-cycle-count")!, { target: { value: "8" } })
-    chooseNative(1, "presencial")
+        chooseNative(1, "presencial")
     await flush()
     fireEvent.submit(document.body.querySelector("#catalog-career-name")!.closest("form")!)
     await flush()

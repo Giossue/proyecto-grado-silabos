@@ -6,13 +6,15 @@ import {
   isDocument,
   normalizeFieldDocument,
   pendingResponses,
+  plainText,
+  responsesEnabled,
   responseTemplate,
   templateFor,
   withoutOwnOptions,
   writable,
   type TemplateDefinition,
 } from "./templateRuntime"
-import { isCareerField, isTeacherField, teacherOnly, teacherTemplate, templateFields, type SyllabusTemplate, type TemplateField } from "./templatePresentation"
+import { fieldSection, isCareerField, isTeacherField, teacherOnly, teacherTemplate, templateFields, type SyllabusTemplate, type TemplateField } from "./templatePresentation"
 import type { TemplateStore } from "../shared/templateStore"
 import { markTeacherEdits, markTeacherFills, teacherEdits, teacherFills, withoutTeacherFills } from "./teacherText"
 
@@ -20,6 +22,20 @@ export type ProfileContext = { template: SyllabusTemplate; definition: TemplateD
 
 export function profileFields(context: ProfileContext): TemplateField[] {
   return templateFields(context.template).filter((field) => isCareerField(field) && !isTeacherField(field, context.definition) && writable(field.content, context.definition))
+}
+
+export function presentedProfileFields(context: ProfileContext, fields: TemplateField[]) {
+  const positions = profilePositions(context)
+  return fields.map((field) => ({
+    id: field.id,
+    key: field.key,
+    label: field.label,
+    quien_llena: field.responsible,
+    content: field.content,
+    ...(responsesEnabled(context.definition) ? { template: responseTemplate(normalizeFieldDocument(field.content, context.definition)) } : {}),
+    section: fieldSection(context.template, field)?.title ?? null,
+    position: positions.get(field.id) ?? 0,
+  }))
 }
 
 export function profilePositions(context: ProfileContext): Map<string, number> {
@@ -93,6 +109,14 @@ export function fieldPending(content: unknown, stored: unknown, definition: Temp
   const document = profileTemplateOf(content, stored, definition) ?? blank
   if (pendingResponses(document).without_options > 0) return true
   return !storedAccepted(stored) && careerFieldUndecided(blank as unknown as DocumentNode, document as unknown as DocumentNode)
+}
+
+const writtenText = (document: PhpRecord, definition: TemplateDefinition): string => plainText(document, definition).replace(/\s+/gu, " ").trim()
+
+export function subjectKeepsWork(field: TemplateField, stored: unknown, definition: TemplateDefinition): boolean {
+  if (!fieldPending(field.content, stored, definition)) return true
+  const own = profileTemplateOf(field.content, stored, definition)
+  return own !== null && writtenText(own, definition) !== writtenText(responseTemplate(normalizeFieldDocument(field.content, definition)), definition)
 }
 
 export async function profileProgress(context: ProfileContext, subjectIds: string[]): Promise<Map<string, { filled: number; total: number }>> {

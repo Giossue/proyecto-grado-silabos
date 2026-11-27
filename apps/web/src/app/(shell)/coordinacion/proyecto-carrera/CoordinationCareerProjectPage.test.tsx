@@ -3,11 +3,13 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getMallas, getScheduledSubjects, type ScheduledSubjects } from "@/api/career-academics"
 import { getSession } from "@/api/session"
+import { toast } from "@/lib/toast"
 import { navigation } from "@/test/nextNavigation"
 import { flush, renderWithProviders } from "@/test/render"
 import CoordinationCareerProjectPage, { AdminCareerProjectPending } from "./CoordinationCareerProjectPage"
 
 const panel = vi.hoisted(() => ({ uploadOpen: undefined as boolean | undefined }))
+const bulk = vi.hoisted(() => ({ props: null as null | { open: boolean; subjects: { id: string; name: string; code: string }[]; onApplied: (message: string) => void } }))
 
 vi.mock("next/navigation", () => import("@/test/nextNavigation"))
 vi.mock("@/api/career-academics", async (importOriginal) => ({
@@ -17,12 +19,11 @@ vi.mock("@/api/career-academics", async (importOriginal) => ({
 }))
 vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }))
 vi.mock("@/api/session", () => ({ getSession: vi.fn() }))
-vi.mock("@/components/domain/academic/FichaImportDialog", () => ({
-  FichaImportDialog: ({ disabled }: { disabled?: boolean }) => (
-    <button type="button" disabled={disabled}>
-      Importar desde Excel
-    </button>
-  ),
+vi.mock("@/components/domain/academic/BulkFieldDialog", () => ({
+  BulkFieldDialog: (props: NonNullable<typeof bulk.props>) => {
+    bulk.props = props
+    return props.open ? <div data-testid="bulk-dialog" /> : null
+  },
 }))
 vi.mock("@/components/domain/academic/SupportDocumentsPanel", () => ({
   SupportDocumentsPanel: ({ uploadOpen }: { uploadOpen?: boolean }) => {
@@ -30,7 +31,7 @@ vi.mock("@/components/domain/academic/SupportDocumentsPanel", () => ({
     return <div data-testid="support-documents" />
   },
 }))
-vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: ({ message }: { message?: string }) => <div data-testid="process-lock">{message}</div> }))
+vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: ({ message, hideAction }: { message?: string; hideAction?: boolean }) => <div data-testid="process-lock" data-action={hideAction ? "no" : "yes"}>{message}</div> }))
 
 const subject = (id: string, nombre: string, ciclo: number, extra: Record<string, unknown> = {}) => ({ id, codigo_asignatura: id.toUpperCase(), malla_code: "SW-9", malla_name: "Malla SW-9", nombre, ciclo, generates_syllabus: true, profile_complete: true, ...extra })
 const SW8 = { malla_code: "SW-8", malla_name: "Malla SW-8" }
@@ -72,7 +73,18 @@ const pressTab = async (name: string): Promise<void> => {
   fireEvent.mouseDown([...document.querySelectorAll('[role="tab"]')].find((item) => item.textContent === name)!, { button: 0 })
   await flush()
 }
-const CLOSED = "El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado."
+const checkbox = (label: string): HTMLButtonElement | null => document.querySelector<HTMLButtonElement>(`[role="checkbox"][aria-label="${label}"]`)
+const checked = (label: string): string | null | undefined => checkbox(label)?.getAttribute("aria-checked")
+const pressElement = async (element: Element | null | undefined): Promise<void> => {
+  fireEvent.click(element!)
+  await flush()
+}
+const mark = (label: string): Promise<void> => pressElement(checkbox(label))
+const selectionBar = (): HTMLElement | null => document.querySelector<HTMLElement>('[role="region"][aria-label="Acciones sobre las materias seleccionadas"]')
+const barButton = (text: string) => [...(selectionBar()?.querySelectorAll("button") ?? [])].find((item) => item.textContent?.trim() === text)
+const excelButton = () => [...document.querySelectorAll("button")].find((item) => item.textContent?.includes("Excel"))
+const OPEN_REASON = "Pause el periodo académico de su carrera para editar el proyecto de carrera."
+const CLOSED = "El proyecto de carrera no se puede editar con el periodo académico finalizado."
 const scheduled = (subjects: unknown[]) => ({ career: { lock_reason: null, lock: null }, options: { activeSubjects: subjects } }) as unknown as ScheduledSubjects
 const mountPage = async () => {
   const view = renderWithProviders(<CoordinationCareerProjectPage />)
@@ -89,6 +101,7 @@ describe("Proyecto de carrera", () => {
     vi.clearAllMocks()
     navigation.reset("/coordinacion/proyecto-carrera")
     panel.uploadOpen = undefined
+    bulk.props = null
     vi.mocked(getMallas).mockResolvedValue(MALLAS)
     vi.mocked(getSession).mockResolvedValue({ active_role: { code: "coordinador", career_id: "carrera-1" } } as never)
     vi.mocked(getScheduledSubjects).mockResolvedValue(
@@ -155,24 +168,33 @@ describe("Proyecto de carrera", () => {
     expect(panel.uploadOpen).toBe(true)
   })
 
-  it("con el periodo académico en pausa o finalizado muestra el motivo y deshabilita «Importar desde Excel» con ese motivo como ayuda", async () => {
+  it("en solo lectura muestra el motivo y no deja seleccionar materias", async () => {
     vi.mocked(getScheduledSubjects).mockResolvedValue({
       ...scheduled([subject("m2", "Matemática Discreta", 1)]),
       career: { lock_reason: null, lock: null, profile_lock_reason: CLOSED },
     } as unknown as ScheduledSubjects)
     await mountPage()
+    await openCycles()
 
     expect(document.querySelector('[data-testid="process-lock"]')?.textContent).toBe(CLOSED)
-    const importButton = [...document.querySelectorAll("button")].find((item) => item.textContent?.trim() === "Importar desde Excel")!
-    expect(importButton).toBeDisabled()
-    const trigger = importButton.closest("[aria-describedby]")!
-    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)?.textContent).toBe(CLOSED)
-    fireEvent.focus(trigger)
-    await flush()
-    expect([...document.querySelectorAll('[data-slot="tooltip-content"]')].map((item) => item.textContent)).toContain("El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado")
+    expect(document.querySelector('[data-testid="process-lock"]')?.getAttribute("data-action")).toBe("no")
+    expect(cardNames()).toEqual(["Matemática Discreta"])
+    expect(document.querySelector('[role="checkbox"]')).toBeNull()
+    expect(selectionBar()).toBeNull()
   })
 
-  it("sin bloqueo del servidor deja importar aunque la malla esté bloqueada", async () => {
+  it("con el periodo académico abierto ofrece ir a pausarlo", async () => {
+    vi.mocked(getScheduledSubjects).mockResolvedValue({
+      ...scheduled([subject("m2", "Matemática Discreta", 1)]),
+      career: { lock_reason: null, lock: null, profile_lock_reason: OPEN_REASON },
+    } as unknown as ScheduledSubjects)
+    await mountPage()
+
+    expect(document.querySelector('[data-testid="process-lock"]')?.textContent).toBe(OPEN_REASON)
+    expect(document.querySelector('[data-testid="process-lock"]')?.getAttribute("data-action")).toBe("yes")
+  })
+
+  it("sin bloqueo del servidor deja seleccionar materias aunque la malla esté bloqueada", async () => {
     vi.mocked(getScheduledSubjects).mockResolvedValue({
       ...scheduled([subject("m2", "Matemática Discreta", 1)]),
       career: { lock_reason: "Periodo académico activo", lock: { scope: "convocation" }, profile_lock_reason: null },
@@ -180,16 +202,76 @@ describe("Proyecto de carrera", () => {
     await mountPage()
 
     expect(document.querySelector('[data-testid="process-lock"]')).toBeNull()
-    expect([...document.querySelectorAll("button")].find((item) => item.textContent?.trim() === "Importar desde Excel")).not.toBeDisabled()
+    expect(checkbox("Seleccionar las materias del ciclo 1")).not.toBeNull()
   })
 
-  it("las materias no se seleccionan ni tienen acciones masivas", async () => {
+  it("ya no ofrece importar el proyecto de carrera desde Excel", async () => {
+    await mountPage()
+
+    expect(excelButton()).toBeUndefined()
+  })
+
+  it("al seleccionar una materia aparece la barra y «Llenar un campo» abre la ventana con ella", async () => {
     await mountPage()
     await openCycles()
+    expect(selectionBar()).toBeNull()
+    expect(bulk.props?.open ?? false).toBe(false)
 
-    expect(document.querySelector('[role="checkbox"]')).toBeNull()
-    expect(document.body.textContent).not.toContain("Seleccionar todo")
-    expect(document.body.textContent).not.toContain("Acciones masivas")
+    await mark("Seleccionar Programación Básica")
+
+    expect(checked("Seleccionar Programación Básica")).toBe("true")
+    expect(selectionBar()!.textContent).toContain("1 materia seleccionada")
+    expect(navigation.push).not.toHaveBeenCalled()
+    await pressElement(barButton("Llenar un campo"))
+
+    expect(bulk.props!.open).toBe(true)
+    expect(bulk.props!.subjects).toEqual([{ id: "m1", name: "Programación Básica", code: "M1" }])
+  })
+
+  it("la casilla del ciclo selecciona sus materias sin abrirlo y «Quitar selección» las suelta", async () => {
+    await mountPage()
+
+    await mark("Seleccionar las materias del ciclo 1")
+
+    expect(cardNames()).toEqual([])
+    expect(selectionBar()!.textContent).toContain("2 materias seleccionadas")
+    await openCycles()
+    expect([checked("Seleccionar Programación Básica"), checked("Seleccionar Matemática Discreta"), checked("Seleccionar Estructuras de Datos")]).toEqual(["true", "true", "false"])
+    await mark("Seleccionar Matemática Discreta")
+    expect(checked("Seleccionar las materias del ciclo 1")).toBe("mixed")
+    await mark("Seleccionar las materias del ciclo 1")
+    expect(checked("Seleccionar las materias del ciclo 1")).toBe("true")
+    await pressElement(barButton("Quitar selección"))
+
+    expect(selectionBar()).toBeNull()
+    expect(checked("Seleccionar las materias del ciclo 1")).toBe("false")
+  })
+
+  it("«Seleccionar todas» toma solo las que se ven y conserva las ya seleccionadas", async () => {
+    await mountPage()
+    await mark("Seleccionar las materias del ciclo 1")
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "estructuras" } })
+    await flush()
+    expect(checked("Seleccionar todas las materias que se ven")).toBe("false")
+
+    await mark("Seleccionar todas las materias que se ven")
+
+    expect(selectionBar()!.textContent).toContain("3 materias seleccionadas")
+    await mark("Seleccionar todas las materias que se ven")
+    expect(selectionBar()!.textContent).toContain("2 materias seleccionadas")
+  })
+
+  it("después de llenar avisa, quita la selección y vuelve a leer las materias", async () => {
+    await mountPage()
+    await mark("Seleccionar las materias del ciclo 1")
+    await pressElement(barButton("Llenar un campo"))
+
+    await act(async () => bulk.props!.onApplied("Campo llenado en 2 materias"))
+    await flush()
+
+    expect(toast.success).toHaveBeenCalledWith("Campo llenado en 2 materias")
+    expect(selectionBar()).toBeNull()
+    expect(getScheduledSubjects).toHaveBeenCalledTimes(2)
   })
 
   it("abre directamente la pestaña de documentos con ?tab=documentos", async () => {
@@ -230,7 +312,17 @@ describe("Proyecto de carrera, una malla a la vez", () => {
     expect(selector()).toHaveClass("max-w-72", "max-sm:max-w-none")
   })
 
-  it("al elegir otra malla muestra solo lo suyo y la deja en la dirección, sin tocar la importación", async () => {
+  it("al cambiar de malla se quita la selección", async () => {
+    await mountPage()
+    await mark("Seleccionar las materias del ciclo 1")
+    await chooseMalla("SW-8")
+
+    expect(selectionBar()).toBeNull()
+    await chooseMalla("SW-9")
+    expect(selectionBar()).toBeNull()
+  })
+
+  it("al elegir otra malla muestra solo lo suyo y la deja en la dirección", async () => {
     await mountPage()
     await openCycles()
 
@@ -244,7 +336,6 @@ describe("Proyecto de carrera, una malla a la vez", () => {
     expect(cardLinks()).toEqual(["/coordinacion/proyecto-carrera/sw-8/v1", "/coordinacion/proyecto-carrera/sw-8/v2"])
     expect(navigation.replace).toHaveBeenLastCalledWith("/coordinacion/proyecto-carrera?malla=sw-8")
     expect(navigation.push).not.toHaveBeenCalled()
-    expect([...document.querySelectorAll("button")].find((item) => item.textContent === "Importar desde Excel")).not.toBeDisabled()
     expect(getScheduledSubjects).toHaveBeenCalledTimes(1)
   })
 
@@ -367,6 +458,14 @@ describe("Proyecto de carrera elegido por Administración", () => {
     navigation.reset("/admin/carreras/RED/proyecto-carrera")
     vi.mocked(getMallas).mockResolvedValue(MALLAS)
     vi.mocked(getScheduledSubjects).mockResolvedValue({ ...scheduled([subject("m2", "Matemática Discreta", 1), subject("v1", "Algoritmos", 3, SW8)]), career: { name: "Redes", lock_reason: null, lock: null } } as unknown as ScheduledSubjects)
+  })
+
+  it("también puede seleccionar materias para llenar un campo", async () => {
+    renderWithProviders(<CoordinationCareerProjectPage adminCareer={{ id: "carrera-9", code: "RED" }} />)
+    await flush()
+    await mark("Seleccionar las materias del ciclo 1")
+
+    expect(selectionBar()!.textContent).toContain("1 materia seleccionada")
   })
 
   it("también ve una malla a la vez, de la carrera indicada, y la deja en su dirección", async () => {

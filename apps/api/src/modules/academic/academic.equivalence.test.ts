@@ -27,7 +27,7 @@ import { destroySupportDocument, storeSupportDocument, viewSupportDocument } fro
 import { showSubjectProfile } from "../../server/configuration/subjectProfile"
 import { previewSubjectProfile } from "../../server/configuration/subjectProfilePreview"
 import { updateSubjectProfile } from "../../server/configuration/subjectProfileWrites"
-import { applyFichaImport, fichaTemplate, previewFichaImport } from "../../server/ficha/fichaImports"
+import { applySubjectProfileBulk, showSubjectProfileBulk } from "../../server/configuration/subjectProfileBulk"
 import { destroyCareerTeacher, reactivateCareerTeacher, resendCareerTeacherActivation, storeCareerTeacher } from "../../server/identity/careerTeachers"
 import { importTeachers, teacherImportTemplate } from "../../server/identity/imports"
 import { catalogLibraries } from "../../server/library/catalogHandlers"
@@ -180,7 +180,7 @@ const fakes = {
     bridge,
     academic: structureRepository,
     templates,
-    careerProfileEditable: async () => true,
+    careerProfileBlock: async () => null,
     scheduled: {
       careerParallels: async () => [{ id: PARALLEL, subjectId: SUBJECT, code: "A", shift: "matutina" }],
       parallelsWithSyllabus: async () => [],
@@ -223,10 +223,10 @@ const fakes = {
 }
 
 const fichaFakes = {
-  imports: () => ({ bridge, limiter, now: () => NOW, transaction: rejectTransaction, store: { careerActive, careerEditable: async () => true, activeCareer: async () => null, subjects: async () => [], currentValues: async () => [], store: templates } }),
-  profile: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive, careerEditable: async () => true }),
-  profileWrites: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive, careerEditable: async () => true, transaction: rejectTransaction }),
-  preview: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive, careerEditable: async () => true }),
+  bulk: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive, careerBlock: async () => null, transaction: rejectTransaction, careerSubjects: async () => [] }),
+  profile: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive, careerBlock: async () => null }),
+  profileWrites: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive, careerBlock: async () => null, transaction: rejectTransaction }),
+  preview: () => ({ bridge, store: templates, subjectCareer: async () => null, careerActive, careerBlock: async () => null }),
 }
 
 type Oracle = (web: Request, params: OracleParams) => Promise<Response>
@@ -282,9 +282,8 @@ const ORACLE: Record<string, Oracle> = {
   "api/v1/coordination/academic/teachers/[user]:DELETE": (web, params) => destroyCareerTeacher(web, p(params, "user"), academic.careerTeachers()),
   "api/v1/coordination/academic/teachers/[user]/reactivate:POST": (web, params) => reactivateCareerTeacher(web, p(params, "user"), academic.careerTeachers()),
   "api/v1/coordination/academic/teachers/[user]/resend-activation:POST": (web, params) => resendCareerTeacherActivation(web, p(params, "user"), academic.careerTeachers()),
-  "api/v1/coordination/ficha-imports/template:GET": (web) => fichaTemplate(web, ficha.imports()),
-  "api/v1/coordination/ficha-imports/spreadsheet:POST": (web) => previewFichaImport(web, ficha.imports()),
-  "api/v1/coordination/ficha-imports/apply:POST": (web) => applyFichaImport(web, ficha.imports()),
+  "api/v1/coordination/ficha-bulk:GET": (web) => showSubjectProfileBulk(web, ficha.bulk()),
+  "api/v1/coordination/ficha-bulk:POST": (web) => applySubjectProfileBulk(web, ficha.bulk()),
   "api/v1/coordination/support-documents:GET": (web) => coordinationSupportDocuments(web, academic.supportDocuments()),
   "api/v1/coordination/support-documents:POST": (web) => storeSupportDocument(web, academic.supportDocumentWrites()),
   "api/v1/coordination/support-documents/[document]:DELETE": (web, params) => destroySupportDocument(web, p(params, "document"), academic.supportDocumentWrites()),
@@ -324,9 +323,8 @@ const ORACLE: Record<string, Oracle> = {
   "api/v1/admin/careers/[career]/academic/teachers/[user]/reactivate:POST": (web, params) => reactivateCareerTeacher(web, p(params, "user"), academic.careerTeachers(), p(params, "career")),
   "api/v1/admin/careers/[career]/academic/teachers/[user]/resend-activation:POST": (web, params) =>
     resendCareerTeacherActivation(web, p(params, "user"), academic.careerTeachers(), p(params, "career")),
-  "api/v1/admin/careers/[career]/ficha-imports/template:GET": (web, params) => fichaTemplate(web, ficha.imports(), p(params, "career")),
-  "api/v1/admin/careers/[career]/ficha-imports/spreadsheet:POST": (web, params) => previewFichaImport(web, ficha.imports(), p(params, "career")),
-  "api/v1/admin/careers/[career]/ficha-imports/apply:POST": (web, params) => applyFichaImport(web, ficha.imports(), p(params, "career")),
+  "api/v1/admin/careers/[career]/ficha-bulk:GET": (web, params) => showSubjectProfileBulk(web, ficha.bulk(), p(params, "career")),
+  "api/v1/admin/careers/[career]/ficha-bulk:POST": (web, params) => applySubjectProfileBulk(web, ficha.bulk(), p(params, "career")),
   "api/v1/academic/asignaturas/[asignatura]/ficha:GET": (web, params) => showSubjectProfile(web, p(params, "asignatura"), ficha.profile()),
   "api/v1/academic/asignaturas/[asignatura]/ficha:PUT": (web, params) => updateSubjectProfile(web, p(params, "asignatura"), ficha.profileWrites()),
   "api/v1/academic/asignaturas/[asignatura]/ficha/vista-previa:GET": (web, params) => previewSubjectProfile(web, p(params, "asignatura"), ficha.preview()),
@@ -527,12 +525,11 @@ describe("academic structure served by Nest answers exactly like the route handl
     const careers = await expectSame(...Array.from({ length: 11 }, () => ({ method: "POST", path: "/api/v1/admin/academic/careers/import", body: {} })))
     expect(careers.at(-1)?.status).toBe(429)
     activeRole = COORDINATOR
-    const [curriculum, upload, preview] = await expectSame(
+    const [curriculum, upload] = await expectSame(
       { method: "POST", path: "/api/v1/coordination/academic/curriculum-import", body: {} },
       { method: "POST", path: "/api/v1/coordination/support-documents", body: {} },
-      { method: "POST", path: "/api/v1/coordination/ficha-imports/spreadsheet", body: {} },
     )
-    expect([curriculum.status, upload.status, preview.status]).toEqual([422, 422, 422])
+    expect([curriculum.status, upload.status]).toEqual([422, 422])
     expect(upload.headers["x-ratelimit-remaining"]).toBe("19")
   })
 
@@ -604,13 +601,13 @@ describe("academic structure served by Nest answers exactly like the route handl
     )
   })
 
-  it("answers the subject profile of a missing subject and the ficha template without career the same way", async () => {
+  it("answers the subject profile of a missing subject and the bulk fields without career the same way", async () => {
     activeRole = ADMIN
     await expectSame(
       { method: "GET", path: `/api/v1/academic/asignaturas/${MISSING}/ficha` },
       { method: "PUT", path: `/api/v1/academic/asignaturas/${MISSING}/ficha`, body: {} },
       { method: "GET", path: `/api/v1/academic/asignaturas/${MISSING}/ficha/vista-previa` },
-      { method: "GET", path: "/api/v1/coordination/ficha-imports/template" },
+      { method: "GET", path: "/api/v1/coordination/ficha-bulk" },
     )
   })
 

@@ -37,9 +37,10 @@ describe('screenTours', () => {
     expect(JSON.stringify(screenTours['/admin/carreras/:career/proyecto-carrera'])).not.toContain('apoyo');
   });
 
-  it('el paso del Excel avisa que lo que quitaría la respuesta del docente viene sin marcar', () => {
+  it('la guía del proyecto de carrera explica «Llenar un campo» y ya no habla de Excel', () => {
     for (const screen of ['/coordinacion/proyecto-carrera', '/admin/carreras/:career/proyecto-carrera']) {
-      expect(stepOf(screen, '[data-tour="page-actions"]')?.description, screen).toContain('Antes de aplicar, revise los cambios: lo que quitaría la respuesta del docente viene sin marcar');
+      expect(stepOf(screen, '[data-tour="career-select"]')?.description, screen).toContain('«Llenar un campo»');
+      expect(JSON.stringify(screenTours[screen]), screen).not.toContain('Excel');
     }
   });
 

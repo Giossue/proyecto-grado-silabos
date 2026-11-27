@@ -6,7 +6,7 @@ import { GenerationRejected, purgeRequired } from "../syllabus/inProgressWorkHel
 import type { PhpRecord } from "./phpValues"
 import { USED_OPTION_REMOVED, USED_RESPONSE_REMOVED } from "./responseConditions"
 import type { Db } from "../../prisma/db"
-import { careerProfileEditable, showSubjectProfile } from "./subjectProfile"
+import { careerProfileBlock, showSubjectProfile } from "./subjectProfile"
 import { profileTemplates } from "./subjectProfileFields"
 import { teacherEditable, type TemplateField } from "./templatePresentation"
 import { fieldCarried, plainText } from "./templateRuntime"
@@ -39,18 +39,22 @@ let log: string[]
 
 const periodDb = (): Db => ({ $queryRaw: async () => (period === null ? [] : [period]) }) as unknown as Db
 
+const OPEN_REASON = "Pause el periodo académico de su carrera para editar el proyecto de carrera."
+const FINALIZED_REASON = "El proyecto de carrera no se puede editar con el periodo académico finalizado."
 const allowedPeriods = [
   null,
   { processState: "abierto", convocationState: null },
   { processState: "abierto", convocationState: "preparacion" },
-  { processState: "abierto", convocationState: "abierto" },
+  { processState: "abierto", convocationState: "pausado" },
+  { processState: "pausado", convocationState: "pausado" },
+  { processState: "pausado", convocationState: null },
 ]
 const blockedPeriods = [
-  { processState: "pausado", convocationState: "abierto" },
-  { processState: "cerrado", convocationState: "cerrado" },
-  { processState: "cerrado", convocationState: null },
-  { processState: "abierto", convocationState: "pausado" },
-  { processState: "abierto", convocationState: "cerrado" },
+  { processState: "abierto", convocationState: "abierto", reason: OPEN_REASON },
+  { processState: "pausado", convocationState: "abierto", reason: OPEN_REASON },
+  { processState: "cerrado", convocationState: "cerrado", reason: FINALIZED_REASON },
+  { processState: "cerrado", convocationState: null, reason: FINALIZED_REASON },
+  { processState: "abierto", convocationState: "cerrado", reason: FINALIZED_REASON },
 ]
 
 function deps(): SubjectProfileWriteDeps {
@@ -61,7 +65,7 @@ function deps(): SubjectProfileWriteDeps {
       const careerId = subjects.get(id)
       return careerId === undefined ? null : { careerId }
     },
-    careerEditable: (careerId) => careerProfileEditable(periodDb(), careerId),
+    careerBlock: (careerId) => careerProfileBlock(periodDb(), careerId),
     deleteValue: async (subjectId, field) => {
       log.push(`delete:${field}`)
       templates.values = templates.values.filter((value) => !(value.subjectId === subjectId && value.fieldId === field))
@@ -82,7 +86,7 @@ function deps(): SubjectProfileWriteDeps {
     store: fakeTemplateStore(templates),
     subjectCareer: async (id) => subjects.get(id) ?? null,
     careerActive: async () => true,
-    careerEditable: (careerId) => careerProfileEditable(periodDb(), careerId),
+    careerBlock: (careerId) => careerProfileBlock(periodDb(), careerId),
     async transaction(work) {
       const values = templates.values
       log.push("begin")
@@ -121,7 +125,7 @@ beforeEach(() => {
   }
   templates = { template: goldenTemplate(), values: [] }
   subjects = new Map([[SUBJECT, CAREER]])
-  period = { processState: "abierto", convocationState: "abierto" }
+  period = { processState: "abierto", convocationState: "pausado" }
   purge = null
   log = []
   asRole("coordinador", CAREER)
@@ -196,10 +200,10 @@ describe("PUT academic/asignaturas/{asignatura}/ficha", () => {
     expect(log.filter((entry) => entry === "rollback")).toHaveLength(2)
   })
 
-  it("coordination saves the career project before and while the period is open, never paused or finalized", async () => {
-    const message = "El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado."
+  it("coordination saves the career project before the period opens and while it is paused, never while open or finalized", async () => {
     for (const blocked of blockedPeriods) {
       period = blocked
+      const message = blocked.reason
       const response = await put({ values: { [DESCRIPCION]: text("x") } })
       expect(response.status).toBe(422)
       expect(response.json).toEqual({ message, errors: { process: [message] } })
@@ -225,7 +229,7 @@ describe("PUT academic/asignaturas/{asignatura}/ficha", () => {
   it("the profile tells coordination why it is read-only and tells the administrator nothing", async () => {
     period = { processState: "pausado", convocationState: "abierto" }
     const show = async () => (await (await showSubjectProfile(apiRequest(`/api/v1/academic/asignaturas/${SUBJECT}/ficha`, { cookie }), SUBJECT, deps())).json()) as Record<string, unknown>
-    expect((await show()).lock_reason).toBe("El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado.")
+    expect((await show()).lock_reason).toBe(OPEN_REASON)
     asRole("administrador", null)
     expect((await show()).lock_reason).toBeNull()
   })

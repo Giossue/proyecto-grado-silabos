@@ -42,7 +42,7 @@ export interface ScheduledSubjectsRepository {
 export type ScheduledSubjectsDeps = AcademicStructureDeps & {
   scheduled: ScheduledSubjectsRepository
   templates: TemplateStore
-  careerProfileEditable: (careerId: string) => Promise<boolean>
+  careerProfileBlock: (careerId: string) => Promise<string | null>
 }
 
 type Progress = Map<string, { filled: number; total: number }>
@@ -62,7 +62,7 @@ export async function scheduledSubjects(request: Request, deps: ScheduledSubject
 export async function scheduledSubjectsResponse(request: Request, career: CareerRecord, deps: ScheduledSubjectsDeps, session: AppSession): Promise<Response> {
   try {
     const lock = await deps.academic.careerLock(career.id)
-    const profileLockReason = await careerProfileLockReason(session, career.id, deps.careerProfileEditable)
+    const profileLockReason = await careerProfileLockReason(session, career.id, deps.careerProfileBlock)
     const parallels = await deps.scheduled.careerParallels(career.id)
     const ids = parallels.map((parallel) => parallel.id)
     const withSyllabus = new Set(await deps.scheduled.parallelsWithSyllabus(ids))

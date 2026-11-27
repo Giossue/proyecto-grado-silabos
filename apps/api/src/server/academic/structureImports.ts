@@ -18,7 +18,7 @@ import { addRequirement, curriculumMutation } from "./curriculumWrites"
 import type { GovernanceWriteTx } from "./governanceWrites"
 import { CURRICULAR_UNITS, STUDY_MODALITIES, studyModalityLabel } from "./structure"
 
-export const CAREER_COLUMNS = { facultad: "Facultad", modalidad: "Modalidad", codigo: "Código de carrera", nombre: "Nombre de la carrera", ciclos: "Número de ciclos" }
+export const CAREER_COLUMNS = { facultad: "Facultad", modalidad: "Modalidad", codigo: "Código de carrera", nombre: "Nombre de la carrera" }
 
 export const CURRICULUM_COLUMNS = {
   codigo: "Código",
@@ -42,7 +42,6 @@ const CAREER_NOTES = [
   "Una fila por carrera; no deje filas vacías entre registros.",
   "Facultad y Modalidad: elija una opción de la lista.",
   "Código de carrera: único en el sistema, por ejemplo SW. Solo letras sin tilde, números y guiones simples.",
-  "Número de ciclos: un entero entre 1 y 30.",
   "Las facultades no se importan: se crean una por una.",
 ]
 
@@ -175,7 +174,7 @@ export async function curriculumImportTemplate(request: Request, deps: Structure
   )
 }
 
-type CareerPayload = { faculty_id: string | null; modality: string | null; code: string; nombre: string; cycle_count: number }
+type CareerPayload = { faculty_id: string | null; modality: string | null; code: string; nombre: string }
 
 async function checkCareers(rows: ImportRow[], deps: StructureImportDeps): Promise<{ checked: CheckedRow[]; payloads: CareerPayload[] }> {
   const faculties = new PhpMap<string>()
@@ -193,7 +192,6 @@ async function checkCareers(rows: ImportRow[], deps: StructureImportDeps): Promi
     const modality = modalities.get(importKey(values.modalidad)) ?? null
     const code = values.codigo.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, "")
     const name = values.nombre.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, "")
-    const cycles = values.ciclos
     const codeKey = importKey(code)
     if (facultyId === null) errors.push("La facultad no existe o está inactiva.")
     if (modality === null) errors.push("La modalidad no es válida.")
@@ -203,9 +201,8 @@ async function checkCareers(rows: ImportRow[], deps: StructureImportDeps): Promi
     else if (seen.has(codeKey)) errors.push(`El código se repite en la fila ${seen.get(codeKey)}.`)
     if (!seen.has(codeKey)) seen.set(codeKey, row.line)
     if (name === "" || phpLength(name) > 180) errors.push("El nombre es obligatorio y admite hasta 180 caracteres.")
-    if (!ctypeDigit(cycles) || phpIntValue(cycles) < 1 || phpIntValue(cycles) > 30) errors.push("El número de ciclos debe estar entre 1 y 30.")
     checked.push({ ...row, errors })
-    payloads.push({ faculty_id: facultyId, modality, code, nombre: name, cycle_count: phpIntValue(cycles) })
+    payloads.push({ faculty_id: facultyId, modality, code, nombre: name })
   }
   return { checked, payloads }
 }
@@ -230,7 +227,7 @@ export async function importCareers(request: Request, deps: StructureImportDeps)
           await tx.replace(
             false,
             async () => {
-              await tx.createCareer({ facultyId: payload.faculty_id as string, modality: payload.modality as string, code: payload.code, name: payload.nombre, cycleCount: payload.cycle_count })
+              await tx.createCareer({ facultyId: payload.faculty_id as string, modality: payload.modality as string, code: payload.code, name: payload.nombre })
             },
             null,
           )

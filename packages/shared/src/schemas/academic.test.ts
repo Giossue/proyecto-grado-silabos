@@ -21,15 +21,14 @@ describe("academic schemas", () => {
 
   it("validate a career with its unique code", async () => {
     const schema = careerSchema({ facultyExists: async () => true, codeAvailable: async () => false, updating: false })
-    expect(await schemaErrors(schema, { faculty_id: UUID, modality: "presencial", code: "ADM", nombre: "Administración", cycle_count: 31 })).toEqual({
+    expect(await schemaErrors(schema, { faculty_id: UUID, modality: "presencial", code: "ADM", nombre: "Administración" })).toEqual({
       code: ["Ya existe una carrera con ese código."],
-      cycle_count: ["El campo cantidad de ciclos no debe ser mayor que 30."],
     })
   })
 
   it("store study modalities as technical values and show them with their labels", async () => {
     const schema = careerSchema({ facultyExists: async () => true, codeAvailable: async () => true, updating: false })
-    const career = { faculty_id: UUID, code: "ADM", nombre: "Administración", cycle_count: 10 }
+    const career = { faculty_id: UUID, code: "ADM", nombre: "Administración" }
     expect(STUDY_MODALITIES).toEqual(["presencial", "hibrida", "en_linea"])
     expect(STUDY_MODALITIES.map(studyModalityLabel)).toEqual(["Presencial", "Híbrida", "En línea"])
     expect(studyModalityLabel(null)).toBeNull()

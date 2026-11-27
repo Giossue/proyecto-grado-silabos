@@ -169,7 +169,7 @@ describe("POST /api/v1/coordination/convocations/{convocation}/pausar", () => {
   it("pauses an open convocation under a row lock", async () => {
     const { status, text } = await pause()
     expect(status).toBe(200)
-    expect(text).toBe(JSON.stringify({ message: "Periodo académico en pausa. Los docentes de la carrera no editan ni envían; la malla queda editable." }))
+    expect(text).toBe(JSON.stringify({ message: "Periodo académico en pausa. Los docentes de la carrera no editan ni envían; la malla y el proyecto de carrera quedan editables." }))
     expect(log).toEqual(["begin", `lock:${CONVOCATION}`, `state:${CONVOCATION}:pausado`, "commit"])
   })
 

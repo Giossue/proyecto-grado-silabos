@@ -209,17 +209,16 @@ describe("faculties with their logo", () => {
 })
 
 describe("POST /api/v1/admin/academic/{entity}", () => {
-  it("the administrator creates a career with its code and cycle count", async () => {
-    const response = await create("carrera", { faculty_id: FACULTY, modality: "presencial", code: "SW-10", nombre: "Software nueva", cycle_count: "8" })
+  it("the administrator creates a career with its code and no cycle count, even if an older client sends one", async () => {
+    const response = await create("carrera", { faculty_id: FACULTY, modality: "presencial", code: "SW-10", nombre: "Software nueva", cycle_count: "no-es-un-numero" })
     expect(response.status).toBe(201)
     expect(response.text).toBe(`{"message":"Registro institucional creado.","id":"${NEW_ID}"}`)
-    expect(created).toEqual([{ facultyId: FACULTY, modality: "presencial", code: "SW-10", name: "Software nueva", cycleCount: 8 }])
+    expect(created).toEqual([{ facultyId: FACULTY, modality: "presencial", code: "SW-10", name: "Software nueva" }])
   })
 
-  it("rejects a career without code or cycle count, a taken code and an inactive faculty", async () => {
+  it("rejects a career without code, a taken code and an inactive faculty", async () => {
     expect((await create("carrera", { faculty_id: FACULTY, modality: "presencial", nombre: "X" })).json?.errors).toEqual({
       code: ["El campo código es obligatorio."],
-      cycle_count: ["El campo cantidad de ciclos es obligatorio."],
     })
     expect((await create("carrera", { ...careerBody, cycle_count: 8 })).json?.errors).toEqual({ code: ["Ya existe una carrera con ese código."] })
     faculties.set(FACULTY, { ...(faculties.get(FACULTY) as FacultyRow & { active: boolean }), active: false })
@@ -344,7 +343,7 @@ describe("career and period forms sent as multipart, as the admin screens send t
       createGovernanceRecord(request, "carrera", deps()),
     )
     expect(response).toEqual({ status: 201, text: `{"message":"Registro institucional creado.","id":"${NEW_ID}"}` })
-    expect(created).toEqual([{ facultyId: FACULTY, modality: "presencial", code: "SW-10", name: "Software nueva", cycleCount: 8 }])
+    expect(created).toEqual([{ facultyId: FACULTY, modality: "presencial", code: "SW-10", name: "Software nueva" }])
   })
 
   it("updates a career from a multipart form with the spoofed PATCH method", async () => {

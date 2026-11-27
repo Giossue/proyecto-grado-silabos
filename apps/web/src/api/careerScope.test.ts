@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api, apiBlob } from '@/api/client';
 import { createParallels, deleteParallel, getCurriculum, getScheduledSubjects, getTeacherAssignments, replaceParallelTeacher, updateCurriculumConfiguration } from '@/api/career-academics';
-import { careerAcademicPath, fichaImportPath, setAcademicCareerScope } from '@/api/careerScope';
+import { careerAcademicPath, fichaBulkPath, setAcademicCareerScope } from '@/api/careerScope';
 import { downloadImportTemplate, sendImport } from '@/api/spreadsheet-import';
 
 vi.mock('@/api/client', async (importOriginal) => ({
@@ -25,7 +25,7 @@ describe('ámbito de carrera de las llamadas académicas', () => {
     await createParallels({ subject_id: 's1', codes: ['A'], shift: 'matutina', user_id: 'u1' }, 'unconfirmed');
     await getScheduledSubjects();
     expect(calledPaths()).toEqual(['/coordination/academic/parallels', '/coordination/academic/scheduled-subjects']);
-    expect(fichaImportPath('/template')).toBe('/coordination/ficha-imports/template');
+    expect(fichaBulkPath()).toBe('/coordination/ficha-bulk');
   });
 
   it('con la carrera del administrador llama a las rutas de esa carrera', async () => {
@@ -44,7 +44,7 @@ describe('ámbito de carrera de las llamadas académicas', () => {
       '/admin/careers/carrera-9/academic/curriculum-import',
       '/admin/careers/carrera-9/academic/teachers/import-template',
     ]);
-    expect(fichaImportPath('/apply')).toBe('/admin/careers/carrera-9/ficha-imports/apply');
+    expect(fichaBulkPath()).toBe('/admin/careers/carrera-9/ficha-bulk');
   });
 
   it('las lecturas usan la carrera que reciben aunque no haya ámbito activo', async () => {

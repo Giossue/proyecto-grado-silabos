@@ -34,7 +34,7 @@ vi.mock("@/components/domain/syllabus/FreeTextEditor", () => ({
     </button>
   ),
 }))
-vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: ({ message }: { message?: string }) => <div data-testid="process-lock">{message}</div> }))
+vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: ({ message, hideAction }: { message?: string; hideAction?: boolean }) => <div data-testid="process-lock" data-action={hideAction ? "no" : "yes"}>{message}</div> }))
 vi.mock("@/components/domain/syllabus/SyllabusDocumentPreview", () => ({ SyllabusDocumentPreview: () => <div data-preview /> }))
 
 const subject = (id: string, nombre: string, ciclo: number, extra: Record<string, unknown> = {}) => ({ id, codigo_asignatura: id.replace("m", "M-"), malla_code: "SW-9", nombre, ciclo, ...extra })
@@ -181,11 +181,16 @@ describe("Página del proyecto de carrera de una materia", () => {
     expect(tabs()).toEqual(["Descripción", "Metodología"])
   })
 
-  it("con el periodo académico en pausa o finalizado queda de solo lectura con el motivo que da el servidor", async () => {
-    vi.mocked(getSubjectProfile).mockResolvedValue(profile({ lock_reason: "El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado." }))
+  it.each([
+    ["abierto", "Pause el periodo académico de su carrera para editar el proyecto de carrera.", "yes"],
+    ["finalizado", "El proyecto de carrera no se puede editar con el periodo académico finalizado.", "no"],
+  ])("con el periodo académico %s queda de solo lectura con el motivo que da el servidor", async (_state, reason, action) => {
+    vi.mocked(getSubjectProfile).mockResolvedValue(profile({ lock_reason: reason }))
     await mountPage()
 
-    expect(document.querySelector('[data-testid="process-lock"]')?.textContent).toBe("El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado.")
+    const banner = document.querySelector('[data-testid="process-lock"]')
+    expect(banner?.textContent).toBe(reason)
+    expect(banner?.getAttribute("data-action")).toBe(action)
     expect(document.querySelector("fieldset")).toBeDisabled()
     expect(button("Guardar información")).toBeDisabled()
   })

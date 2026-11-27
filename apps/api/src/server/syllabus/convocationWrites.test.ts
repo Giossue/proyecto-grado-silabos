@@ -189,7 +189,7 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
     generation = 1
     const response = await resume()
     expect(response.text).toBe(
-      JSON.stringify({ message: "Periodo académico reanudado. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla queda protegida." }),
+      JSON.stringify({ message: "Periodo académico reanudado. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla y el proyecto de carrera quedan protegidos." }),
     )
     expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierto`, "commit"])
     const at = "20270115080000123"

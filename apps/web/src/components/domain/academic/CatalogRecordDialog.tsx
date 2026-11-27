@@ -19,11 +19,10 @@ import { useInstitutionToday } from "@/composables/useInstitutionDate"
 import { useFormSteps } from "@/composables/useFormSteps"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
 import { applyApiErrors, errorMap, useSchemaForm } from "@/lib/forms"
-import { VALIDATION_LIMITS } from "@/lib/validationLimits"
 import { careerSchema, facultySchema, periodSchema } from "@silabos/shared/schemas/academic"
 import type { AcademicStructureProps, GovernanceCatalogEntity } from "@/types/academic"
 
-type RecordForm = { nombre: string; code: string; faculty_id: string; modality: string; cycle_count: string; starts_on: string; ends_on: string }
+type RecordForm = { nombre: string; code: string; faculty_id: string; modality: string; starts_on: string; ends_on: string }
 
 type CatalogRecordDialogProps = Pick<AcademicStructureProps, "options"> & {
   entity: GovernanceCatalogEntity
@@ -38,7 +37,7 @@ type CatalogRecordDialogProps = Pick<AcademicStructureProps, "options"> & {
 // Select item that opens the new faculty dialog instead of becoming the field value.
 const NEW_FACULTY = "nueva-facultad"
 
-const EMPTY_FORM: RecordForm = { nombre: "", code: "", faculty_id: "", modality: "", cycle_count: "", starts_on: "", ends_on: "" }
+const EMPTY_FORM: RecordForm = { nombre: "", code: "", faculty_id: "", modality: "", starts_on: "", ends_on: "" }
 
 const LABELS: Record<GovernanceCatalogEntity, { trigger: string; title: string; description: string; submit: string }> = {
   facultad: { trigger: "Nueva facultad", title: "Nueva facultad", description: "Complete los datos de la facultad", submit: "Crear facultad" },
@@ -90,7 +89,7 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
 
   const missingRequired = !{
     facultad: filled(form.nombre),
-    carrera: filled(form.faculty_id, form.modality, form.nombre, form.code, form.cycle_count),
+    carrera: filled(form.faculty_id, form.modality, form.nombre, form.code),
     periodo: filled(form.starts_on, form.ends_on),
   }[entity]
 
@@ -267,31 +266,13 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
                 )}
                 {selectField("modality", "catalog-modality", "Modalidad de carrera", "Seleccione la modalidad", options.modalityOptions)}
                 {nameField}
-                <div className="grid grid-cols-2 items-start gap-4">
-                  <Field data-invalid={Boolean(errors.code)}>
-                    <FieldLabel htmlFor="catalog-code" required>
-                      Código de carrera
-                    </FieldLabel>
-                    <Input id="catalog-code" value={form.code} onChange={(event) => setField("code", event.target.value)} aria-required="true" />
-                    <FieldError errors={errors.code} />
-                  </Field>
-                  <Field data-invalid={Boolean(errors.cycle_count)}>
-                    <FieldLabel htmlFor="catalog-cycle-count" required>
-                      Cantidad de ciclos
-                    </FieldLabel>
-                    <Input
-                      id="catalog-cycle-count"
-                      value={form.cycle_count}
-                      onChange={(event) => setField("cycle_count", event.target.value)}
-                      type="number"
-                      min={1}
-                      max={VALIDATION_LIMITS.cycleCount}
-                      step={1}
-                      aria-required="true"
-                    />
-                    <FieldError errors={errors.cycle_count} />
-                  </Field>
-                </div>
+                <Field data-invalid={Boolean(errors.code)}>
+                  <FieldLabel htmlFor="catalog-code" required>
+                    Código de carrera
+                  </FieldLabel>
+                  <Input id="catalog-code" value={form.code} onChange={(event) => setField("code", event.target.value)} aria-required="true" />
+                  <FieldError errors={errors.code} />
+                </Field>
               </>
             ) : null}
             {entity === "periodo" ? (

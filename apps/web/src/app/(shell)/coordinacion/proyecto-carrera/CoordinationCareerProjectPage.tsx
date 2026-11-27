@@ -8,8 +8,8 @@ import { useEffect, useMemo, useState } from "react"
 import { type ScheduledSubjects } from "@/api/career-academics"
 import { AdminCareerBackLink, AdminCareerTabs, type AdminCareer } from "@/components/domain/academic/AdminCareerNavigation"
 import { MallaToolbar, isOfMalla, openMallas, shownMalla } from "@/components/domain/academic/curriculum/MallaToolbar"
-import { FichaImportDialog } from "@/components/domain/academic/FichaImportDialog"
-import { IconTooltip } from "@/components/domain/IconTooltip"
+import { BulkFieldDialog, type BulkSubject } from "@/components/domain/academic/BulkFieldDialog"
+import { SubjectSelectionBar } from "@/components/domain/academic/SubjectSelectionBar"
 import { SupportDocumentsPanel } from "@/components/domain/academic/SupportDocumentsPanel"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { EmptyState } from "@/components/domain/EmptyState"
@@ -18,10 +18,12 @@ import { MallaSelectorSkeleton } from "@/components/domain/loading/MallaSelector
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { ProcessLockAlert } from "@/components/domain/ProcessLockAlert"
+import { CAREER_PROFILE_PAUSE_TO_EDIT } from "@silabos/shared/lib/careerProfileLock"
 import { StatusBadge } from "@/components/domain/StatusBadge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -33,7 +35,7 @@ import { sameCode } from "@/composables/useCodeLookup"
 import { paths } from "@/lib/routes"
 import { rowLinkClass } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
-import { cn, withoutFinalPeriod } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { queryErrorMessage } from "@/lib/queryClient"
 import { coordinatorCareerQuery, mallasQuery, scheduledSubjectsQuery } from "@/queries/careerAcademics"
 
@@ -50,6 +52,7 @@ const subjectFilters: Record<string, ClientFilterDefinition<Subject>> = {
 }
 const compareCycles = (left: string, right: string): number => left.localeCompare(right, "es", { numeric: true })
 const completeCount = (list: Subject[]): number => list.filter((subject) => subject.profile_complete).length
+const cycleSelectionLabel = (cycle: string): string => (cycle === "Sin ciclo" ? "Seleccionar las materias sin ciclo" : `Seleccionar las materias del ciclo ${cycle}`)
 
 const PAGE_TITLE = "Proyecto de carrera por materia"
 const SUBJECTS_DESCRIPTION = "Contenido de cada materia que se copia en sus sílabos"
@@ -71,14 +74,14 @@ function TabsSkeleton() {
 const subjectsSkeleton = (
   <div className="flex min-w-0 flex-col gap-4">
     <MallaSelectorSkeleton />
-    <LoadingSkeleton variant="accordion" rows={3} filters={2} />
+    <LoadingSkeleton variant="accordion" rows={3} filters={2} selectable />
   </div>
 )
 
 /** Administration's screen while the career of the address is being found. */
 export function AdminCareerProjectPending({ careerCode, error, onRetry }: { careerCode: string; error: string | null; onRetry: () => void }) {
   return (
-    <PageFrame title={PAGE_TITLE} description={SUBJECTS_DESCRIPTION} size="wide" loading={!error} actionsSkeleton={error ? [] : ["w-44"]} eyebrow={<AdminCareerBackLink />}>
+    <PageFrame title={PAGE_TITLE} description={SUBJECTS_DESCRIPTION} size="wide" loading={!error} actionsSkeleton={[]} eyebrow={<AdminCareerBackLink />}>
       <AdminCareerTabs careerCode={careerCode} current="project" />
       {error ? (
         <LoadErrorState message={error} onRetry={onRetry} />
@@ -99,6 +102,9 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
   useAcademicCareerScope(careerId)
   const [tab, setTab] = useState(() => (careerId === null && searchParams.get("tab") === "documentos" ? "documentos" : "materias"))
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [marked, setMarked] = useState<ReadonlySet<string>>(() => new Set())
+  const [filling, setFilling] = useState<BulkSubject[]>([])
+  const [fillOpen, setFillOpen] = useState(false)
   const scope = useQuery(coordinatorCareerQuery(careerId))
   const query = useQuery({ ...scheduledSubjectsQuery(careerId), enabled: typeof scope.data === "string" })
   const data = query.data ?? null
@@ -147,6 +153,7 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
     const next = mallas.find((item) => item.id === mallaId)
     if (!next) return
     setChosenMalla({ address: addressMalla, code: next.code })
+    setMarked(new Set())
     filter.clear()
     replaceAddress("malla", next.code.toLowerCase())
   }
@@ -158,7 +165,30 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
 
   const documents = tab === "documentos"
   const profileLock = data?.career.profile_lock_reason ?? null
-  const fichaImport = <FichaImportDialog disabled={Boolean(profileLock)} onApplied={(message) => void saved(message)} />
+  const selectable = !profileLock
+  const selected = subjects.filter((subject) => marked.has(subject.id))
+  const selectionOf = (list: Subject[]): boolean | "indeterminate" => {
+    const count = list.filter((subject) => marked.has(subject.id)).length
+    return count === 0 ? false : count === list.length ? true : "indeterminate"
+  }
+  const select = (list: Subject[], value: boolean): void => {
+    setMarked((previous) => {
+      const next = new Set(previous)
+      for (const subject of list) {
+        if (value) next.add(subject.id)
+        else next.delete(subject.id)
+      }
+      return next
+    })
+  }
+  const openFill = (): void => {
+    setFilling(selected.map((subject) => ({ id: subject.id, name: subject.nombre, code: subject.codigo_asignatura })))
+    setFillOpen(true)
+  }
+  const filled = (message: string): void => {
+    setMarked(new Set())
+    void saved(message)
+  }
   const subjectHref = ({ malla_code: malla, codigo_asignatura: code }: Subject): string =>
     adminCareer ? paths.admin.careerProjectSubject(adminCareer.code, malla, code) : paths.coordination.careerProjectSubject(malla, code)
   const title = documents ? "Documentos de apoyo" : careerId && data ? `Proyecto de ${data.career.name}` : PAGE_TITLE
@@ -170,30 +200,15 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
       description={documents ? "Material de la carrera que sus docentes pueden consultar" : SUBJECTS_DESCRIPTION}
       size="wide"
       loading={!data && !loadError}
-      actionsSkeleton={!data && !loadError ? [documents ? "w-40" : "w-44"] : []}
-      banner={profileLock && !documents ? <ProcessLockAlert banner message={profileLock} hideAction /> : null}
+      actionsSkeleton={!data && !loadError && documents ? ["w-40"] : []}
+      banner={profileLock && !documents ? <ProcessLockAlert banner message={profileLock} hideAction={profileLock !== CAREER_PROFILE_PAUSE_TO_EDIT} /> : null}
       actions={
         documents ? (
           <Button type="button" onClick={() => setUploadOpen(true)}>
             <Plus data-icon="inline-start" aria-hidden="true" />
             Subir documento
           </Button>
-        ) : (
-          profileLock ? (
-            <>
-              <IconTooltip label={withoutFinalPeriod(profileLock)}>
-                <span className="inline-flex" tabIndex={0} aria-describedby="ficha-import-lock">
-                  {fichaImport}
-                </span>
-              </IconTooltip>
-              <span id="ficha-import-lock" className="sr-only">
-                {profileLock}
-              </span>
-            </>
-          ) : (
-            fichaImport
-          )
-        )
+        ) : null
       }
     >
       {adminCareer ? <AdminCareerTabs careerCode={adminCareer.code} current="project" /> : null}
@@ -266,25 +281,40 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
                 }
               />
 
+              {selectable && filter.items.length ? (
+                <div data-tour="career-select" className="flex w-fit items-center gap-3 px-4">
+                  <Checkbox id="career-project-select-all" aria-label="Seleccionar todas las materias que se ven" checked={selectionOf(filter.items)} onCheckedChange={(value) => select(filter.items, value === true)} />
+                  <FieldLabel htmlFor="career-project-select-all" className="font-normal">
+                    {filter.active ? "Seleccionar las que se ven" : "Seleccionar todas"}
+                  </FieldLabel>
+                </div>
+              ) : null}
+
               <div data-tour="career-subjects" className="flex flex-col gap-2">
                 {!groups.length ? (
                   <EmptyState title={filter.active ? "Ninguna materia coincide con la búsqueda" : malla ? "La malla todavía no tiene materias" : "La carrera no tiene mallas vigentes"} />
                 ) : null}
                 {groups.map((group) => (
                   <Collapsible key={`${malla?.id}-${group.cycle}-${filter.active}`} defaultOpen={filter.active} className="group/cycle rounded-md bg-card ring-1 ring-surface-ring">
-                    <CollapsibleTrigger className="flex w-full items-center gap-2 px-4 py-3 text-left font-semibold">
+                    <div className="flex items-center">
+                    {selectable ? <Checkbox className="ml-4" aria-label={cycleSelectionLabel(group.cycle)} checked={selectionOf(group.list)} onCheckedChange={(value) => select(group.list, value === true)} /> : null}
+                    <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 px-4 py-3 text-left font-semibold">
                       <span className="flex-1">{group.cycle === "Sin ciclo" ? group.cycle : `Ciclo ${group.cycle}`}</span>
                       <Badge variant={completeCount(group.list) === group.list.length ? "success" : "warning"} aria-label={`${completeCount(group.list)} de ${group.list.length} asignaturas completas`}>
                         {completeCount(group.list)}/{group.list.length}
                       </Badge>
                       <ChevronDown className="size-4 transition-transform group-data-[state=open]/cycle:rotate-180" aria-hidden="true" />
                     </CollapsibleTrigger>
+                    </div>
                     <CollapsibleContent className="border-t bg-muted/60 p-3">
                       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label={group.cycle === "Sin ciclo" ? "Materias sin ciclo" : `Materias del ciclo ${group.cycle}`}>
                         {group.list.map((subject) => (
                           <li key={subject.id}>
-                            <Card className="relative h-full cursor-pointer transition-colors hover:bg-accent/40 has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50">
-                              <CardHeader>
+                            <Card className={cn("relative h-full cursor-pointer transition-colors hover:bg-accent/40 has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50", selectable && marked.has(subject.id) && "bg-accent/40 ring-2 ring-primary")}>
+                              {selectable ? (
+                                <Checkbox className="absolute top-4 right-4 z-10 bg-card" aria-label={`Seleccionar ${subject.nombre}`} checked={marked.has(subject.id)} onCheckedChange={(value) => select([subject], value === true)} />
+                              ) : null}
+                              <CardHeader className={cn(selectable && "pr-12")}>
                                 <CardTitle>
                                   <Link href={subjectHref(subject)} className={cn(rowLinkClass, "after:absolute after:inset-0 after:rounded-[inherit] focus-visible:ring-0")}>
                                     {subject.nombre}
@@ -302,6 +332,7 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
                   </Collapsible>
                 ))}
               </div>
+              {selectable && selected.length ? <SubjectSelectionBar count={selected.length} onFill={openFill} onClear={() => setMarked(new Set())} /> : null}
             </div>
           ) : loading ? (
             subjectsSkeleton
@@ -313,6 +344,7 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
           </TabsContent>
         )}
       </Tabs>
+      <BulkFieldDialog open={fillOpen} onOpenChange={setFillOpen} subjects={filling} onApplied={filled} />
     </PageFrame>
   )
 }

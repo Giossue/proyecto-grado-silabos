@@ -219,10 +219,6 @@ test.describe("administration: careers import", () => {
       Código: `IMP-${suffix}`,
       Nombre: `Carrera importada ${suffix}`,
       Modalidad: "Presencial",
-      Ciclos: "2",
-      "Cantidad de ciclos": "2",
-      Número: "2",
-      "N.º": "2",
     })
     await dialog.locator("#import-spreadsheet-file").setInputFiles(filled)
     await dialog.getByRole("button").filter({ hasText: /Revisar|Validar|Vista previa/ }).first().click()

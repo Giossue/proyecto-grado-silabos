@@ -159,6 +159,6 @@ export async function resumeConvocationFor(request: Request, session: AppSession
       await tx.updateState(locked.id, "abierto")
       await notifyConvocationResumed(tx, locked, timestampMs(deps.nowMs()))
     })
-    return apiJson({ message: "Periodo académico reanudado. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla queda protegida." })
+    return apiJson({ message: "Periodo académico reanudado. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla y el proyecto de carrera quedan protegidos." })
   })
 }
