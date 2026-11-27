@@ -528,7 +528,7 @@ export default function TeacherSyllabusDetailPage() {
         titleBadge={syllabus ? <SyllabusStateBadge state={syllabus.state} /> : undefined}
         tools={
           <>
-            {syllabus ? <SupportDocumentsButton /> : null}
+            {syllabus && syllabus.state !== "aprobado" ? <SupportDocumentsButton /> : null}
             {syllabus && showEditor ? (
               <Button
                 type="button"

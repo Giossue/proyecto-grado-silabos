@@ -33,7 +33,7 @@ export function ChoiceGroup({ value, options, label, disabled, className, cleara
 
   return (
     <RadioGroup
-      value={value}
+      value={value ?? ""}
       aria-label={label}
       disabled={disabled}
       orientation="horizontal"

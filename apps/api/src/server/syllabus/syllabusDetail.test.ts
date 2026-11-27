@@ -283,6 +283,7 @@ describe("GET teacher/syllabi/{syllabus}", () => {
       teacher_signature_required: false,
       sections: [
         {
+          id: "datos",
           key: "datos",
           title: "Datos",
           orientation: "portrait",

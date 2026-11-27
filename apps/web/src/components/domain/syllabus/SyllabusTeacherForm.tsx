@@ -74,7 +74,7 @@ export function SyllabusTeacherForm({
               {visibleSections.map((section) => (
                 <Tooltip key={section.id}>
                   <TooltipTrigger asChild>
-                    <TabsTrigger value={section.id} className="h-10 max-w-64 flex-none px-4 data-[state=active]:font-semibold">
+                    <TabsTrigger value={section.id} className="h-10 max-w-64 flex-none px-4 aria-selected:font-semibold">
                       <span className="truncate">{section.title}</span>
                     </TabsTrigger>
                   </TooltipTrigger>

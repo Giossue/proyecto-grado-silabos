@@ -57,7 +57,7 @@ export function presentSnapshot(snapshot: PhpRecord): PhpRecord {
         document: resolveDocument(document, variables, definition),
       }
     })
-    return { ...section, orientation: section.orientation ?? "portrait", fields }
+    return { ...section, id: section.id ?? section.key ?? null, orientation: section.orientation ?? "portrait", fields }
   })
   return { ...snapshot, sections }
 }

@@ -41,6 +41,10 @@ vi.mock("@/components/domain/PageFrame", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/domain/PageFrame")>()
   return { ...actual, PageFrame: vi.fn(actual.PageFrame) }
 })
+vi.mock("@/api/support-documents", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getTeacherSupportDocuments: vi.fn(async () => ({ data: [{ id: "doc-1", title: "Guía", size: 10, view: "lista", uploaded_at: "2026-09-10T00:00:00Z" }] })),
+}))
 vi.mock("@/api/syllabi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/api/syllabi")>()),
   copyTeacherSyllabus: vi.fn(),
@@ -79,7 +83,7 @@ const field = (id: string, quien_llena: StoredResponsible = "docente", overrides
   required: true, teacher_editable: quien_llena === "docente" || quien_llena === "carrera", value: doc("Texto enviado"), ...overrides,
 })
 
-const syllabus = (state: "borrador" | "en_revision" | "correccion_solicitada", quien_llena: StoredResponsible = "docente"): SyllabusDetail => ({
+const syllabus = (state: "borrador" | "en_revision" | "correccion_solicitada" | "aprobado", quien_llena: StoredResponsible = "docente"): SyllabusDetail => ({
   id: "syllabus-1",
   subject: "Inteligencia Artificial",
   code: "SW-01",
@@ -676,6 +680,33 @@ describe("TeacherSyllabusDetailPage", () => {
     expect(saveTeacherField).toHaveBeenCalledWith("syllabus-1", "field-1", 2, doc("Texto nuevo"))
     expect(header()).toContain("Borrador")
     expect(header()).not.toContain("Sin iniciar")
+    page.unmount()
+  })
+
+  it("ofrece «Documentos de apoyo» mientras el sílabo no está aprobado y lo quita al aprobarse", async () => {
+    for (const [state, offered] of [["borrador", true], ["en_revision", true], ["correccion_solicitada", true], ["aprobado", false]] as const) {
+      vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: syllabus(state) })
+      const page = mountPage()
+      await flush()
+
+      expect(Boolean(buttonNamed(page, "Documentos de apoyo")), state).toBe(offered)
+      page.unmount()
+    }
+  })
+
+  it("marca con aria-selected la pestaña de la sección abierta aunque el mensaje emergente cambie data-state", async () => {
+    const detail = syllabus("borrador")
+    detail.sections.push({ ...detail.sections[0]!, id: "section-2", key: "otra", title: "Otra", fields: [field("field-2")] })
+    vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: detail })
+    const page = mountPage()
+    await flush()
+
+    const [first, second] = [...page.container.querySelectorAll('[role="tab"]')]
+    for (const className of ["aria-selected:border-foreground", "aria-selected:text-foreground", "aria-selected:font-semibold"]) {
+      expect(first!.className.split(" ")).toContain(className)
+    }
+    expect(first!.getAttribute("aria-selected")).toBe("true")
+    expect(second!.getAttribute("aria-selected")).toBe("false")
     page.unmount()
   })
 

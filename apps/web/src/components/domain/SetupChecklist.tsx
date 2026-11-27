@@ -91,6 +91,8 @@ export function SetupChecklist() {
       })),
     })
     panel.current.show()
+    // The library names its close button in English and has no option to change it.
+    document.querySelector(".setup-checklist .driver-checklist-close-btn")?.setAttribute("aria-label", "Cerrar la lista")
     guardTooltip()
     const firstTime = doneCount < steps.length && !localStorage.getItem(seenKey())
     if (firstTime) localStorage.setItem(seenKey(), "1")
