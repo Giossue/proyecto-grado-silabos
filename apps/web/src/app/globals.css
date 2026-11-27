@@ -551,6 +551,20 @@
     }
 }
 
+@layer utilities {
+    @media (width >= 40rem) {
+        table[data-slot='table'][data-cards='true'] > tbody > tr > td[data-card-role]:not([data-card-role='title']) {
+            width: 1%;
+            white-space: nowrap;
+        }
+
+        table[data-slot='table'][data-cards='true'] > tbody > tr > td[data-card-role='data'][data-card-wide='true'] {
+            min-width: 16rem;
+            white-space: normal;
+        }
+    }
+}
+
 @layer components {
     :is([data-slot='dialog-content'], [data-slot='sheet-content']) .grid:not([class*='grid-cols']) {
         grid-template-columns: minmax(0, 1fr);
