@@ -1,5 +1,6 @@
 "use client"
 
+import { navigateTo } from "@/lib/pageReload"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ApiError } from "@/api/client"
@@ -35,7 +36,7 @@ export default function VerifyEmailPage() {
     const result = await logout()
     sessionState.clear()
     clearIntendedRoute()
-    if (result?.logout_url) window.location.assign(result.logout_url)
+    if (result?.logout_url) navigateTo(result.logout_url)
     else router.replace(paths.login)
   }
 

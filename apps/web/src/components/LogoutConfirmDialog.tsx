@@ -1,5 +1,6 @@
 "use client"
 
+import { navigateTo } from "@/lib/pageReload"
 import { LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -25,7 +26,7 @@ export function LogoutConfirmDialog() {
       sessionState.clear()
       clearIntendedRoute()
       logoutConfirmOpen.value = false
-      if (result?.logout_url) window.location.assign(result.logout_url)
+      if (result?.logout_url) navigateTo(result.logout_url)
       else router.replace(paths.login)
     } finally {
       setLeaving(false)

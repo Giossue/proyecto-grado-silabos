@@ -8,6 +8,7 @@ import { curriculumEditorState } from "@/state/curriculumEditor"
 import { screenHelpState } from "@/state/screenHelp"
 import { sessionState } from "@/state/session"
 import { logoutConfirmOpen } from "@/state/shellDialogs"
+import { navigateTo } from "@/lib/pageReload"
 import { navigation } from "@/test/nextNavigation"
 import { flush, renderWithProviders } from "@/test/render"
 
@@ -22,6 +23,7 @@ const { getDeadline, getDashboard, getNotifications, leaveActiveRole, logout, se
 }))
 
 vi.mock("next/navigation", () => import("@/test/nextNavigation"))
+vi.mock("@/lib/pageReload", () => ({ reloadPage: vi.fn(), navigateTo: vi.fn() }))
 vi.mock("@/api/notifications", () => ({ getNotifications, markAllNotificationsRead: vi.fn(), markNotificationRead: vi.fn(), openNotification: vi.fn() }))
 vi.mock("@/api/dashboard", () => ({ getDeadline, getDashboard }))
 vi.mock("@/api/screen-help", () => ({ listAvailableScreenHelp: vi.fn().mockResolvedValue({ help: [] }) }))
@@ -286,8 +288,6 @@ describe("AppSidebarLayout", () => {
 
   it("al cerrar una sesión de Keycloak lleva al cierre de la cuenta institucional", async () => {
     logout.mockResolvedValue({ logout_url: "https://auth.ueb.edu.ec/auth/realms/SAC/protocol/openid-connect/logout?id_token_hint=t" })
-    const assign = vi.fn()
-    vi.stubGlobal("location", { ...window.location, assign })
     try {
       const user = userEvent.setup()
       await mountShell()
@@ -298,7 +298,7 @@ describe("AppSidebarLayout", () => {
       await user.click(confirm!)
       await flush()
 
-      expect(assign).toHaveBeenCalledWith("https://auth.ueb.edu.ec/auth/realms/SAC/protocol/openid-connect/logout?id_token_hint=t")
+      expect(navigateTo).toHaveBeenCalledWith("https://auth.ueb.edu.ec/auth/realms/SAC/protocol/openid-connect/logout?id_token_hint=t")
       expect(sessionState.current.value).toBeNull()
       expect(navigation.pathname).toBe("/admin/periodos")
     } finally {
