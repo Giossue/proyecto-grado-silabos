@@ -2,6 +2,18 @@ import { countOf, parseNumber, Scope } from './scope';
 import type { BlockRule } from './types';
 
 export type CheckResult = { label: string | null; actual: string; expected: string; ok: boolean };
+export type SumBudget = { path: string; label: string; used: number; limit: number | null };
+
+export const sumOf = (values: unknown[]): number => values.reduce<number>((sum, item) => sum + parseNumber(item), 0);
+
+export const sumBudgets = (rules: BlockRule[], value: Record<string, unknown>, variables: Record<string, string>): SumBudget[] => {
+    const scope = new Scope(value, {}, variables);
+    return rules.filter((rule) => rule.on === 'submit').flatMap((rule) => rule.checks.flatMap((check) => {
+        if (check.sum === undefined || typeof check.equals !== 'object' || !('variable' in check.equals)) return [];
+        const limit = (variables[check.equals.variable] ?? '').trim();
+        return [{ path: check.sum, label: check.label ?? '', used: sumOf(scope.collect(check.sum)), limit: limit === '' ? null : parseNumber(limit) }];
+    }));
+};
 
 export const ruleResults = (rule: BlockRule, value: Record<string, unknown>, variables: Record<string, string>): CheckResult[] => {
     const scope = new Scope(value, {}, variables);
@@ -11,7 +23,7 @@ export const ruleResults = (rule: BlockRule, value: Record<string, unknown>, var
             : check.filled !== undefined
                 // «filled» cuenta textos o números escritos y listas con algo (una unidad con semanas), como el backend.
                 ? scope.collect(check.filled).filter((item) => Array.isArray(item) ? item.length > 0 : (typeof item === 'string' || typeof item === 'number') && String(item).trim() !== '').length
-                : scope.collect(check.sum ?? '').reduce<number>((sum, item) => sum + parseNumber(item), 0);
+                : sumOf(scope.collect(check.sum ?? ''));
         const comparison = check.equals !== undefined ? 'equals' : check.max !== undefined ? 'max' : 'min';
         const target = check[comparison];
         const expected = typeof target !== 'object' || target === null

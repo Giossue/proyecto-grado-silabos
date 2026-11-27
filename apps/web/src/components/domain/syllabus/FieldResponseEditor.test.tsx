@@ -51,6 +51,14 @@ const scrambledDefinition = (): TemplateDefinitionPayload => {
 }
 const heads = (container: Element) => [...container.querySelectorAll('[data-slot="table-head"]')].map((head) => head.textContent).filter((text) => text !== "Acciones")
 const precedes = (first: Element, second: Element) => Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
+const withHours = (hours: Array<[number, number, "acd_h" | "ape_h" | "aa_h", string]>) => {
+  const list = units() as Array<{ nombre: string; resultado: string; semanas: Array<Record<string, string>> }>
+  for (const [unit, row, key, text] of hours) list[unit]!.semanas[row]![key] = text
+  return list
+}
+const subjectHours = (docencia: string, practicas: string, autonomas: string) =>
+  setTemplateRuntime(definition as unknown as TemplateDefinitionPayload, { horas_docencia: docencia, horas_practicas: practicas, horas_autonomas: autonomas })
+const hourLines = (container: HTMLElement) => [...container.querySelectorAll("[data-hours-budget] li")].map((line) => line.textContent)
 
 describe("FieldResponseEditor", () => {
   beforeEach(() => setTemplateRuntime(definition as unknown as TemplateDefinitionPayload, { horas_docencia: "64", horas_practicas: "0", horas_autonomas: "0" }))
@@ -110,6 +118,45 @@ describe("FieldResponseEditor", () => {
     expect(heads(container)).toEqual(["Autor", "Título", "Año", "Ciudad", "Editorial", "ISBN", "Código"])
     expect(container.querySelector("[data-hours-budget]")).toBeNull()
     expect(container.querySelector('[data-slot="table-footer"]')).toBeNull()
+  })
+
+  it("muestra cuántas horas de la asignatura lleva y cuántas faltan o sobran entre todas las unidades", () => {
+    subjectHours("32", "16", "48")
+    const { container, update } = mountEditor(block("unidades"), block("unidades", { units: withHours([[0, 0, "acd_h", "10"], [1, 0, "acd_h", "2,5"], [0, 1, "ape_h", "16"], [2, 0, "aa_h", "52"]]) }))
+
+    expect(container.querySelector("[data-hours-budget]")!.textContent).toContain("Horas de la asignatura")
+    expect(hourLines(container)).toEqual(["ACD 12.5 de 32 · faltan 19.5", "APE 16 de 16 · completo", "AA 52 de 48 · sobran 4"])
+    expect(container.querySelector("[data-hours-budget]")!.textContent).not.toMatch(/Nombres|Resultados|Semanas/)
+
+    update({ value: block("unidades", { units: withHours([[0, 0, "acd_h", "31"], [0, 1, "ape_h", "17"], [2, 0, "aa_h", "0.1"], [2, 1, "aa_h", "0.2"]]) }) })
+    expect(hourLines(container)).toEqual(["ACD 31 de 32 · falta 1", "APE 17 de 16 · sobra 1", "AA 0.3 de 48 · faltan 47.7"])
+  })
+
+  it("pasarse de las horas solo avisa: se sigue pudiendo escribir y agregar semanas", () => {
+    subjectHours("1", "0", "0")
+    const short = withHours([[0, 0, "acd_h", "9"]]).map((unit, index) => (index === 3 ? { ...unit, semanas: unit.semanas.slice(0, 3) } : unit))
+    const { container, emitted } = mountEditor(block("unidades"), block("unidades", { units: short }))
+
+    expect(hourLines(container)).toEqual(["ACD 9 de 1 · sobran 8"])
+    fireEvent.change(get(container, "#campo-0-units-0-semanas-1-acd_h"), { target: { value: "99" } })
+    expect((emitted().content![0]!.attrs!.value as { units: Array<{ semanas: Array<{ acd_h: string }> }> }).units[0]!.semanas[1]!.acd_h).toBe("99")
+    expect(buttonText(container, "Agregar semana").disabled).toBe(false)
+  })
+
+  it("no muestra una hora que la asignatura no tiene y, sin el dato, muestra solo lo usado", () => {
+    subjectHours("32", "0", "")
+    const { container } = mountEditor(block("unidades"), block("unidades", { units: withHours([[0, 0, "aa_h", "5"]]) }))
+
+    expect(hourLines(container)).toEqual(["ACD 0 de 32 · faltan 32", "AA 5 usadas"])
+  })
+
+  it("cada unidad suma sus horas al pie de su tabla", () => {
+    subjectHours("32", "16", "48")
+    const { container } = mountEditor(block("unidades"), block("unidades", { units: withHours([[0, 0, "acd_h", "2"], [0, 1, "acd_h", "1,5"], [0, 0, "aa_h", "3"], [1, 0, "acd_h", "7"]]) }))
+
+    const cells = [...get(container, '[aria-label="Unidad 1"]').querySelectorAll('[data-slot="table-footer"] [data-slot="table-cell"]')].map((entry) => entry.textContent)
+    expect(cells.slice(0, 4)).toEqual(["Total de horas", "3.5", "0", "3"])
+    expect(cells.slice(4).every((text) => text === "")).toBe(true)
   })
 
   it("el docente agrega unidades hasta las que permite la plantilla", () => {

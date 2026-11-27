@@ -835,6 +835,10 @@
 
     .teacher-form tr > :last-child { border-right: 0 !important; }
     .teacher-form tr:last-child > * { border-bottom: 0 !important; }
+    .teacher-form thead th[data-sticky-end] { background-color: color-mix(in oklab, var(--muted) 60%, var(--card)) !important; }
+    .teacher-form tbody tr:nth-child(odd) > td[data-sticky-end] { background-color: var(--card) !important; }
+    .teacher-form tbody tr:nth-child(even) > td[data-sticky-end],
+    .teacher-form tfoot td[data-sticky-end] { background-color: color-mix(in oklab, var(--muted) 50%, var(--card)) !important; }
 }
 
 .teacher-form [data-slot='table-container'] {

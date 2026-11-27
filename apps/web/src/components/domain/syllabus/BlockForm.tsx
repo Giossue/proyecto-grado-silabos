@@ -1,6 +1,6 @@
 "use client"
 
-import { Eraser, Plus, Trash2 } from "lucide-react"
+import { CircleCheck, Eraser, Plus, Trash2, TriangleAlert } from "lucide-react"
 import { Fragment, useEffect, useRef, type ComponentProps, type ReactNode } from "react"
 import type { CatalogBook } from "@/api/libraryCatalog"
 import { ChoiceGroup } from "@/components/domain/ChoiceGroup"
@@ -10,14 +10,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { addCatalogBook, canAddCatalogBook } from "@/lib/blocks/catalog"
 import { holds } from "@silabos/shared/lib/blocks/condition"
 import { valueInLayoutOrder } from "@silabos/shared/lib/blocks/order"
-import { ruleFailures } from "@silabos/shared/lib/blocks/rules"
+import { ruleFailures, sumBudgets, sumOf, type SumBudget } from "@silabos/shared/lib/blocks/rules"
 import { blockDefinition, templateRuntime } from "@/lib/blocks/runtime"
-import { Scope, type Path } from "@silabos/shared/lib/blocks/scope"
+import { formatTotal, Scope, type Path } from "@silabos/shared/lib/blocks/scope"
 import {
   guardNumber,
   isChoice,
@@ -51,6 +51,23 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 
 const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1)
 
+function BudgetLine({ budget: { label, used, limit } }: { budget: SumBudget }) {
+  if (limit === null) return <li>{`${label} ${formatTotal(used)} usadas`}</li>
+  const left = limit - used
+  const done = Math.abs(left) <= 0.001
+  const over = !done && left < 0
+  const amount = formatTotal(Math.abs(left))
+  const verb = over ? "sobra" : "falta"
+  const state = done ? "completo" : `${amount === "1" ? verb : `${verb}n`} ${amount}`
+  return (
+    <li className={cn("flex items-center gap-1.5", over && "font-medium text-destructive")}>
+      {done ? <CircleCheck className="size-4" aria-hidden="true" /> : null}
+      {over ? <TriangleAlert className="size-4" aria-hidden="true" /> : null}
+      {`${label} ${formatTotal(used)} de ${formatTotal(limit)} · ${state}`}
+    </li>
+  )
+}
+
 export function GuardedNumberInput({ schema, ...props }: Omit<ComponentProps<typeof Input>, "ref"> & { schema: NumberSchema }) {
   const ref = useRef<HTMLInputElement | null>(null)
 
@@ -68,6 +85,8 @@ export function GuardedNumberInput({ schema, ...props }: Omit<ComponentProps<typ
 export function BlockForm({ id, kind, blockProps, value, disabled = false, required = false, onValueChange }: BlockFormProps) {
   const definition = blockDefinition(kind)
   const variables = templateRuntime().variables
+  const budgets = definition ? sumBudgets(definition.rules, value, variables) : []
+  const summedPaths = new Set(budgets.map((budget) => budget.path))
 
   const change = (next: Record<string, unknown>): void => {
     if (definition) onValueChange?.(settle(definition.value, next, blockProps))
@@ -248,6 +267,8 @@ export function BlockForm({ id, kind, blockProps, value, disabled = false, requi
     const resizable = schema.minItems < schema.maxItems
     const clearable = path.length === 1 && definition?.catalog?.list === path[0]
     const columns = Object.entries(rows.properties) as Array<[string, Scalar]>
+    const rowPath = [...path.map((segment) => (typeof segment === "number" ? "*" : segment)), "*"].join(".")
+    const totalled = columns.map(([key]) => summedPaths.has(`${rowPath}.${key}`))
 
     return (
       <div className="flex min-w-0 flex-col gap-3">
@@ -293,6 +314,22 @@ export function BlockForm({ id, kind, blockProps, value, disabled = false, requi
               )
             })}
           </TableBody>
+          {totalled.includes(true) ? (
+            <TableFooter>
+              <TableRow>
+                {columns.map(([key], position) => (
+                  <TableCell key={key}>
+                    {totalled[position] ? (
+                      <span className="block w-20 text-center tabular-nums">{formatTotal(sumOf(items.map((item) => (isRecord(item) ? item[key] : undefined))))}</span>
+                    ) : position === 0 ? (
+                      "Total de horas"
+                    ) : null}
+                  </TableCell>
+                ))}
+                {resizable ? <TableCell data-sticky-end="" /> : null}
+              </TableRow>
+            </TableFooter>
+          ) : null}
         </Table>
         {resizable ? addButton(schema, path, name) : null}
       </div>
@@ -373,8 +410,20 @@ export function BlockForm({ id, kind, blockProps, value, disabled = false, requi
     />
   ) : null
 
+  const shownBudgets = budgets.filter((budget) => budget.limit !== 0 || budget.used !== 0)
+
   return (
-    <div id={id} className="flex flex-col gap-4">
+    <div id={id} className={cn("flex flex-col gap-4", shownBudgets.length > 0 && "[&_:is(input,textarea,button)]:scroll-mt-24 max-sm:[&_:is(input,textarea,button)]:scroll-mt-48")}>
+      {shownBudgets.length > 0 ? (
+        <div data-hours-budget="" className="sticky top-0 z-10 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-md bg-card px-4 py-3 text-sm shadow-surface ring-1 ring-surface-ring max-sm:top-(--app-header-height)">
+          <span className="font-semibold">Horas de la asignatura</span>
+          <ul className="flex flex-wrap gap-x-6 gap-y-1 tabular-nums" aria-live="polite">
+            {shownBudgets.map((budget) => (
+              <BudgetLine key={budget.path} budget={budget} />
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {search}
       {fields(Object.entries(valueInLayoutOrder(definition)), [], 0)}
     </div>
