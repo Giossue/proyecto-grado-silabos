@@ -53,7 +53,7 @@ export const screenTours: Record<string, TourStep[]> = {
     step('[data-tour="template-selection"]', 'Campo elegido', 'Pulse un campo de la hoja. Aquí elige quién lo llena y si la IA puede leerlo; también lo mueve o lo borra', 'bottom'),
     step('[data-tour="template-more"]', 'Más', 'Editar JSON: descargue la plantilla o reemplácela con un archivo', 'bottom'),
     step('[data-tour="template-preview"]', 'Vista previa', 'Muestra el sílabo con los cambios que todavía no ha guardado', 'bottom'),
-    step('[data-tour="template-teacher-view"]', 'Ver como docente', 'Muestra cómo recibirá el sílabo el docente', 'bottom'),
+    step('[data-tour="template-teacher-view"]', 'Ver como docente', 'Así lo verá el docente', 'bottom'),
     step('[data-tour="template-save"]', 'Guardar', 'Guarda sus cambios. Un punto en el botón le avisa que falta guardar', 'bottom'),
     step('[data-sheet]', 'La hoja', 'Así se verá el sílabo. Escriba directo sobre ella. Pase el ratón entre dos campos para agregar uno nuevo', 'left'),
     step('[data-tour="template-assistant"]', 'Asistente', 'Pídale cambios con sus palabras. Si le gusta la propuesta, aplíquela y luego guarde', 'left'),
@@ -92,13 +92,13 @@ export const screenTours: Record<string, TourStep[]> = {
     step(TABLE, 'Docentes', 'Pulse uno para ver sus datos, reenviarle la invitación, desactivarlo o reactivarlo', 'top'),
   ],
   '/coordinacion/proyecto-carrera': [
-    step(TABS, 'Materias y documentos', 'Cambie entre el proyecto de cada materia y los documentos de apoyo', 'bottom'),
-    step(MALLA, 'Malla', 'En «Materias» se ve una malla a la vez. Elija aquí cuál', 'bottom'),
-    step(FILTERS, 'Buscar', 'Busque una materia o filtre por ciclo o si está completa', 'bottom'),
-    step('[data-tour="career-select"]', 'Varias a la vez', 'Seleccione materias o un ciclo entero y pulse «Llenar un campo»: lo escribe una sola vez y reemplaza lo que esas materias tengan en el campo', 'bottom'),
-    step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenar su proyecto. El docente lo recibe ya escrito', 'top'),
-    step(ACTIONS, 'Subir documento', 'En «Documentos de apoyo», suba un archivo para sus docentes', 'left'),
-    step(TABLE, 'Documentos de apoyo', 'Archivos para que sus docentes conozcan mejor sus materias. Pulse uno para verlo', 'top'),
+    step(TABS, 'Materias y documentos', 'Materias y archivos para sus docentes', 'bottom'),
+    step(MALLA, 'Malla', 'Elija qué malla ver', 'bottom'),
+    step(FILTERS, 'Buscar', 'Encuentre una materia por nombre, ciclo o estado', 'bottom'),
+    step('[data-tour="career-select"]', 'Varias a la vez', 'Seleccione materias y pulse «Llenar un campo». Reemplaza lo que tengan', 'bottom'),
+    step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenarla', 'top'),
+    step(ACTIONS, 'Subir documento', 'Suba un archivo para sus docentes', 'left'),
+    step(TABLE, 'Documentos de apoyo', 'Pulse un archivo para verlo', 'top'),
   ],
   '/coordinacion/historial': [
     step(FILTERS, 'Buscar', 'Busque por materia o código, o elija un período', 'bottom'),
@@ -160,10 +160,10 @@ export const screenTours: Record<string, TourStep[]> = {
 };
 
 screenTours['/coordinacion/proyecto-carrera/:malla/:subject'] = [
-  step('[aria-label="Cambiar de materia"]', 'Materia', 'Pase a otra materia de la misma malla sin volver atrás', 'bottom'),
-  step('[aria-label="Secciones del proyecto de carrera"]', 'Secciones', 'Elija qué parte del sílabo va a escribir. Se le marca la que tiene campos pendientes', 'right'),
-  step('[aria-label="Configurar campo"]', 'Qué responde el docente', 'Escriba el texto y use la tuerca. «Texto libre»: lo escribe el docente y se borra su texto. «Elegir varias»: el docente marca de su lista', 'bottom'),
-  step('[data-tour="career-preview"]', 'Vista previa', 'Muestra cómo recibirá el sílabo el docente', 'bottom'),
+  step('[aria-label="Cambiar de materia"]', 'Materia', 'Cambie de materia sin volver atrás', 'bottom'),
+  step('[aria-label="Secciones del proyecto de carrera"]', 'Secciones', 'Elija qué escribir. Las pendientes salen marcadas', 'right'),
+  step('[aria-label="Configurar campo"]', 'Qué responde el docente', 'Use la tuerca. «Texto libre»: escribe el docente y se borra su texto. «Elegir varias»: marca de su lista', 'bottom'),
+  step('[data-tour="career-preview"]', 'Vista previa', 'Así lo verá el docente', 'bottom'),
   step('[data-tour="career-save"]', 'Guardar información', 'Guarde antes de salir', 'bottom'),
 ];
 
@@ -172,10 +172,10 @@ for (const screen of ['malla', 'materias-asignaciones', 'docentes', 'proyecto-ca
   screenTours[`/admin/carreras/:career/${screen}`] = screenTours[`/coordinacion/${screen}`]!;
 }
 screenTours['/admin/carreras/:career/proyecto-carrera'] = [
-  step(MALLA, 'Malla', 'Se ve una malla a la vez. Elija aquí cuál', 'bottom'),
-  step(FILTERS, 'Buscar', 'Busque una materia o filtre por ciclo o si está completa', 'bottom'),
-  step('[data-tour="career-select"]', 'Varias a la vez', 'Seleccione materias o un ciclo entero y pulse «Llenar un campo»: lo escribe una sola vez y reemplaza lo que esas materias tengan en el campo', 'bottom'),
-  step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenar su proyecto. El docente lo recibe ya escrito', 'top'),
+  step(MALLA, 'Malla', 'Elija qué malla ver', 'bottom'),
+  step(FILTERS, 'Buscar', 'Encuentre una materia por nombre, ciclo o estado', 'bottom'),
+  step('[data-tour="career-select"]', 'Varias a la vez', 'Seleccione materias y pulse «Llenar un campo». Reemplaza lo que tengan', 'bottom'),
+  step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenarla', 'top'),
 ];
 
 /** Pantallas que tienen todos los roles. */

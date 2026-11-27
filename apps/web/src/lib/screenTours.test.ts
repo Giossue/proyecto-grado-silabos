@@ -103,7 +103,7 @@ describe('screenTours', () => {
   it.each([
     ['/coordinacion/malla', 'Elija qué malla ver o cambiar. Al final de la lista puede crear otra'],
     ['/coordinacion/materias-asignaciones', 'Se ve una malla a la vez. Elija aquí cuál'],
-    ['/coordinacion/proyecto-carrera', 'En «Materias» se ve una malla a la vez. Elija aquí cuál'],
+    ['/coordinacion/proyecto-carrera', 'Elija qué malla ver'],
   ])('la guía de %s señala el desplegable de malla', (screen, description) => {
     const found = (screenTours[screen] ?? []).filter((item) => item.selector === '[data-tour="malla-selector"]');
     expect(found).toEqual([expect.objectContaining({ title: 'Malla', description })]);

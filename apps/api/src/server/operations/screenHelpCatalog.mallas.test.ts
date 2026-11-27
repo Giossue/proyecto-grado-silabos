@@ -14,13 +14,11 @@ describe("screen help about seeing one malla at a time", () => {
     expect(catalog[path].content).not.toContain("Todas las mallas")
   })
 
-  it.each(["/coordinacion/proyecto-carrera", "/admin/carreras/:career/proyecto-carrera"] as const)("%s says its subjects and counters are those of the chosen malla", (path) => {
-    for (const part of ["Se ve una malla a la vez", "los ciclos, las materias y los contadores son de esa malla", "Al volver de una materia sigue en la misma"]) {
-      expect(catalog[path].content, part).toContain(part)
-    }
+  it.each(["/coordinacion/proyecto-carrera", "/admin/carreras/:career/proyecto-carrera"] as const)("%s says to choose the malla and that filling several replaces their content", (path) => {
+    for (const part of ["Elija la malla", "«Llenar un campo». Reemplaza lo que tengan"]) expect(catalog[path].content, part).toContain(part)
   })
 
-  it.each(["/coordinacion/proyecto-carrera/:malla/:subject", "/admin/carreras/:career/proyecto-carrera/:malla/:subject"] as const)("%s says the subject list stays in the malla", (path) => {
-    expect(catalog[path].content).toContain("«Cambiar de materia» ofrece las materias de la misma malla")
+  it.each(["/coordinacion/proyecto-carrera", "/admin/carreras/:career/proyecto-carrera", "/coordinacion/proyecto-carrera/:malla/:subject", "/admin/carreras/:career/proyecto-carrera/:malla/:subject"] as const)("%s keeps its help short", (path) => {
+    expect(catalog[path].content.length).toBeLessThan(400)
   })
 })
