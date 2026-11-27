@@ -322,36 +322,19 @@ describe("«Asistente IA» disponible: lo que la pantalla ya hacía sigue igual"
 })
 
 describe("«Asistente IA»: el panel, el aviso y los pedidos", () => {
-  it("avisa que usa IA, qué se envía y qué no, y pide no escribir datos personales", async () => {
+  it.each([
+    ["sin conversación", false],
+    ["con conversación", true],
+  ])("el panel queda limpio %s: un solo aviso corto de IA, sin listas ni explicaciones", async (_case, talking) => {
+    if (talking) vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal()))
     const page = await open()
     await openPanel(page)
 
-    const text = panel()!.textContent
-    for (const part of [
-      "inteligencia artificial (DeepSeek)", "revíselas antes de usarlas", "No escriba datos personales",
-      "Lo que usted escribe aquí", "El nombre de la asignatura, sus horas, créditos y semanas",
-      "campos que usted puede editar y que Administración permite leer",
-      "estudiantes con discapacidad", "Los nombres y correos de la identificación",
-      "no reconoce los nombres escritos dentro de un texto",
-    ]) expect(text, part).toContain(part)
+    const text = panel()!.textContent!
+    expect(text).toContain("La IA (DeepSeek) puede equivocarse: revise antes de usar y no escriba datos personales")
+    for (const extra of ["Qué se envía", "Se envía a DeepSeek", "No se envía", "Le propone textos", "discapacidad"]) expect(text, extra).not.toContain(extra)
+    expect(panelButton("Qué se envía")).toBeUndefined()
     expect(panelButton("Cerrar")!.querySelector("svg")).not.toBeNull()
-    page.unmount()
-  })
-
-  it("con conversación el detalle del aviso queda recogido y siempre se puede volver a abrir", async () => {
-    vi.mocked(getTeacherAssistant).mockResolvedValue(withProposals(proposal()))
-    const page = await open()
-    await openPanel(page)
-
-    expect(panel()!.textContent).toContain("inteligencia artificial (DeepSeek)")
-    expect(panel()!.textContent).toContain("No escriba datos personales")
-    expect(panel()!.textContent).not.toContain("estudiantes con discapacidad")
-    const toggle = panelButton("Qué se envía")!
-    expect(toggle.getAttribute("aria-expanded")).toBe("false")
-    await click(toggle)
-
-    expect(toggle.getAttribute("aria-expanded")).toBe("true")
-    expect(panel()!.textContent).toContain("estudiantes con discapacidad")
     page.unmount()
   })
 

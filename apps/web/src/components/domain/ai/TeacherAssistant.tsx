@@ -10,11 +10,10 @@ import { Message, MessageContent } from "@/components/ai-elements/message"
 import { RobotAvatar } from "@/components/domain/ai/avatar/RobotAvatar"
 import { useAvatarController } from "@/components/domain/ai/avatar/useAvatarController"
 import { renderChatMarkdown } from "@/components/domain/ai/chatMarkdown"
-import { TeacherAssistantNotice } from "@/components/domain/ai/TeacherAssistantNotice"
 import { TeacherProposalCard, type ProposalAction, type ProposalOutcome } from "@/components/domain/ai/TeacherProposalCard"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyContent, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Spinner } from "@/components/ui/spinner"
@@ -75,7 +74,6 @@ export function TeacherAssistant({ syllabusId, chat, open, waitingElsewhere, onO
   const [sendProblem, setSendProblem] = useState<string | null>(null)
   const [working, setWorking] = useState<{ id: string; action: ProposalAction } | null>(null)
   const [outcomes, setOutcomes] = useState<Record<string, ProposalOutcome | null>>({})
-  const [noticeChoice, setNoticeChoice] = useState<boolean | null>(null)
   const [engaged, setEngaged] = useState(false)
   const [wasOpen, setWasOpen] = useState(open)
   const openNow = useRef(open)
@@ -194,16 +192,12 @@ export function TeacherAssistant({ syllabusId, chat, open, waitingElsewhere, onO
             </Button>
           </SheetClose>
         </SheetHeader>
-        <TeacherAssistantNotice open={noticeChoice ?? messages.length === 0} onOpenChange={setNoticeChoice}>
-          <SheetDescription>Usa inteligencia artificial (DeepSeek). La IA genera las respuestas: revíselas antes de usarlas. No escriba datos personales.</SheetDescription>
-        </TeacherAssistantNotice>
         <Conversation aria-label="Conversación con el asistente" className="min-h-24 flex-1">
           <ConversationContent scrollClassName="[scrollbar-gutter:auto]!" className="gap-5 px-4 py-4">
             {available && !messages.length ? (
               <Empty className="justify-start gap-3 p-0 md:p-0">
                 <EmptyHeader className="max-w-full">
                   <EmptyTitle>¿Con qué le ayudo?</EmptyTitle>
-                  <EmptyDescription>Le propone textos para su sílabo y usted decide cuáles usar</EmptyDescription>
                 </EmptyHeader>
                 {exhausted ? null : (
                   <EmptyContent className="max-w-full gap-2" data-suggestions>
@@ -308,6 +302,7 @@ export function TeacherAssistant({ syllabusId, chat, open, waitingElsewhere, onO
               </div>
             </form>
           )}
+  <SheetDescription className="text-center text-xs leading-snug">La IA (DeepSeek) puede equivocarse: revise antes de usar y no escriba datos personales.</SheetDescription>
         </div>
       </SheetContent>
     </Sheet>
