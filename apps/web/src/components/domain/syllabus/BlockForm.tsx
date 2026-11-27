@@ -410,7 +410,7 @@ export function BlockForm({ id, kind, blockProps, value, disabled = false, requi
     />
   ) : null
 
-  const shownBudgets = budgets.filter((budget) => budget.limit !== 0 || budget.used !== 0)
+  const shownBudgets = budgets.filter((budget) => budget.used !== 0 || (budget.limit !== null && budget.limit !== 0))
 
   return (
     <div id={id} className={cn("flex flex-col gap-4", shownBudgets.length > 0 && "[&_:is(input,textarea,button)]:scroll-mt-24 max-sm:[&_:is(input,textarea,button)]:scroll-mt-48")}>

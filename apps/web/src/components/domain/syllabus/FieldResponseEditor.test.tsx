@@ -150,6 +150,13 @@ describe("FieldResponseEditor", () => {
     expect(hourLines(container)).toEqual(["ACD 0 de 32 · faltan 32", "AA 5 usadas"])
   })
 
+  it("sin ningún dato de horas y sin nada escrito no muestra el contador", () => {
+    subjectHours("", "", "")
+    const { container } = mountEditor(block("unidades"), block("unidades", { units: units() }))
+
+    expect(container.querySelector("[data-hours-budget]")).toBeNull()
+  })
+
   it("cada unidad suma sus horas al pie de su tabla", () => {
     subjectHours("32", "16", "48")
     const { container } = mountEditor(block("unidades"), block("unidades", { units: withHours([[0, 0, "acd_h", "2"], [0, 1, "acd_h", "1,5"], [0, 0, "aa_h", "3"], [1, 0, "acd_h", "7"]]) }))
