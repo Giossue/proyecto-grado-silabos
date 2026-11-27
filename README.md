@@ -1,39 +1,115 @@
 # Sílabos UEB
 
-Sistema web para elaborar, revisar, aprobar y firmar los sílabos de la Universidad Estatal de Bolívar. Admite varias facultades y carreras.
+Sistema web para **elaborar, revisar, aprobar y firmar** los sílabos de la Universidad Estatal de Bolívar. Admite varias facultades y carreras.
 
-## Qué hace cada rol
+Reúne en un solo lugar la malla curricular, los docentes, el contenido que define cada carrera y el trabajo de cada docente. Cada sílabo se genera con los datos académicos ya cargados, pasa por revisión con firma digital y termina en un documento Word y PDF.
 
-| Rol | Tareas principales |
+## Roles
+
+| Rol | Qué hace |
 |---|---|
-| Administración | Facultades, carreras, cuentas, plantilla del sílabo y periodos académicos. |
-| Coordinación | Mallas, docentes, paralelos y proyecto de carrera; abre el proceso de sílabos de su carrera, revisa y aprueba. |
-| Docente | Elabora su sílabo, lo firma y lo envía. |
+| Administración | Gestiona facultades, carreras y cuentas, diseña la plantilla del sílabo y abre el proceso de sílabos de cada periodo académico. |
+| Coordinación | Arma las mallas, registra docentes, crea paralelos y completa el proyecto de carrera. Abre el proceso de su carrera y aprueba los sílabos. |
+| Docente | Elabora, firma y envía sus sílabos. |
 | Biblioteca | Verifica la bibliografía y firma. |
 
-Un sílabo enviado pasa primero por **Biblioteca** y después por **Coordinación**. Si alguna pide una corrección, vuelve al docente.
+Una persona puede tener varios roles y carreras, y elige con cuál trabaja.
 
-## Tecnologías
+## Cómo funciona
 
-TypeScript en un monorepo de pnpm:
+1. **Plantilla.** Administración define la plantilla institucional, única para toda la universidad. Cada campo indica quién lo llena: nadie (texto fijo), Coordinación o solo el docente.
+2. **Proceso.** Administración abre el proceso de sílabos de un periodo académico con sus fechas. Necesita una plantilla utilizable.
+3. **Preparación de la carrera.** Coordinación prepara la malla, los docentes, los paralelos y el **proyecto de carrera**: el contenido de cada materia que le corresponde. Puede llenar una materia o escribir un mismo campo en varias a la vez. Varios datos se pueden importar desde Excel.
+4. **Apertura.** Para abrir el proceso de la carrera se requiere la plantilla, el logo de la facultad, la malla con materias, el proyecto de carrera completo y al menos un paralelo con docente. El sistema crea **un sílabo por paralelo con docente**; los demás se crean al asignarlo.
+5. **Elaboración.** El docente completa su sílabo en línea, con guardado automático.
+6. **Revisión.** El docente firma y envía. **Biblioteca** verifica la bibliografía, con apoyo del catálogo Koha, y **Coordinación** aprueba. Si alguna pide una corrección, el sílabo vuelve al docente.
+7. **Documento final.** El sílabo aprobado queda en Word y PDF.
 
-| Paquete | Carpeta | Contenido |
-|---|---|---|
-| `@silabos/web` | `apps/web` | Interfaz con Next.js 16 y React 19, shadcn/ui, Tailwind CSS 4 y Tiptap. No accede a la base de datos. |
-| `@silabos/api` | `apps/api` | API con NestJS 12 y Prisma 7, y el proceso de tareas en segundo plano (*worker*). |
-| `@silabos/shared` | `packages/shared` | Esquemas de validación (Zod) y reglas que usan la web y la API. |
+```
+Docente  ──firma y envía──▶  Biblioteca  ──firma──▶  Coordinación  ──aprueba──▶  Word y PDF
+   ▲                              │                        │
+   └──────────── corrección ──────┴────────────────────────┘
+```
 
-| Servicio | Uso |
+**Estados de un sílabo:** Sin iniciar, Borrador, En revisión, Corrección solicitada y Aprobado.
+
+Coordinación puede **pausar** el proceso de su carrera para cambiar la malla o el proyecto de carrera, y reanudarlo después.
+
+### Otras funciones
+
+- **Asistentes de IA:** uno ayuda a Administración a diseñar la plantilla. El del docente lee solo lo que tiene permitido y propone textos; el docente decide si los usa. Se puede desactivar.
+- **Documentos de apoyo:** archivos que Coordinación comparte con los docentes de su carrera.
+- **Avisos y correo:** avisos dentro del sistema y un resumen diario de pendientes.
+- **Ayuda y accesibilidad:** guías en cada pantalla, tamaño del texto, alto contraste, modo sin animaciones y modo para dislexia.
+
+## Arquitectura
+
+```
+                 Navegador
+                     │  HTTPS
+                     ▼
+        apps/web · Next.js (:3000)
+                     │  reenvía /api/*
+                     ▼
+        apps/api · NestJS (:8000) ───── Keycloak (opcional) · Koha
+          │          │        │
+          ▼          ▼        ▼
+     PostgreSQL    Redis    Archivos (MinIO o disco)
+                     │  colas
+                     ▼
+                  Worker ───── Gotenberg · Correo · Proveedor de IA
+
+        packages/shared: validaciones y reglas comunes a la web y la API
+```
+
+- **Web:** muestra la interfaz y reenvía a la API las rutas `/api/*`, `/logos/*`, `/images/silabo/*` y `/plantilla.schema.json`. No accede a la base de datos. El navegador solo se comunica con la dirección de la web.
+- **API:** concentra las reglas, los permisos y el acceso a los datos. La lógica de negocio está en `apps/api/src/server/` y los módulos de NestJS, en `apps/api/src/modules/`, la exponen bajo `/api/v1`.
+- **Worker:** hace en segundo plano las tareas lentas: documentos, correos y asistentes de IA. Usa las colas `critica`, `documentos`, `ia` y `general`.
+- **PostgreSQL:** es la fuente de verdad. Además de las tablas, usa restricciones, funciones y *triggers* para proteger la integridad.
+
+### Documentos
+
+Al enviar un sílabo, su contenido se congela con una huella **SHA-256**. Con esa versión, un generador propio arma el Word y Gotenberg lo convierte en PDF.
+
+### Seguridad
+
+- Sesiones guardadas en la base de datos, con cookie `HttpOnly`; contraseñas con bcrypt.
+- La API solo acepta peticiones de las direcciones configuradas y limita los intentos de ingreso.
+- Los permisos se comprueban en el servidor, por rol y por carrera.
+- Todas las entradas se validan con Zod.
+- Las aprobaciones se firman con el certificado digital `.p12` de cada persona. El servidor verifica la firma, la vigencia y el titular.
+
+## Stack
+
+| Área | Tecnologías |
 |---|---|
-| PostgreSQL 18 | Base de datos. |
-| Redis 7 | Colas (BullMQ), límites y bloqueos. |
-| Gotenberg 8 | Convierte el Word del sílabo en PDF. Es opcional en desarrollo: sin él, el PDF es una versión simple. |
-| MinIO u otro almacenamiento S3 | Archivos. En desarrollo se puede usar el disco (`STORAGE_DRIVER=local`). |
-| Keycloak | Ingreso institucional, opcional. Solo autentica: la cuenta debe existir en el sistema. |
+| Lenguaje y entorno | TypeScript, Node.js 24, monorepo con pnpm |
+| Interfaz | Next.js 16 (App Router), React 19, shadcn/ui sobre Radix UI, Tailwind CSS 4, Lucide |
+| Formularios y datos | React Hook Form, Zod, TanStack Query |
+| Editores | Tiptap para la plantilla y los sílabos; React Flow para la malla |
+| API | NestJS 12 sobre Express, con Swagger (OpenAPI) |
+| Datos | PostgreSQL 18 y Prisma 7 |
+| Colas y límites | Redis 7 y BullMQ |
+| Autenticación | Better Auth y, de forma opcional, Keycloak |
+| Archivos | MinIO u otro almacenamiento S3, o disco local |
+| Documentos | Generador de Word propio con JSZip, Gotenberg 8 para PDF y ExcelJS para Excel |
+| Correo | Nodemailer y React Email |
+| IA | Vercel AI SDK con DeepSeek |
+| Pruebas | Vitest, Testing Library, Supertest y Playwright |
+| Despliegue | Docker, Docker Compose y Dokploy |
 
-También se integra con un servidor de correo (SMTP), con el catálogo Koha de Biblioteca y con un proveedor de IA (DeepSeek) para los asistentes.
+## Estructura del repositorio
 
-La web reenvía a la API las rutas `/api/*`, `/logos/*`, `/images/silabo/*` y `/plantilla.schema.json` (`apps/web/next.config.ts`). El navegador solo se comunica con la dirección de la web.
+```
+apps/web/          Interfaz (Next.js)
+apps/api/          API, worker y base de datos (prisma/)
+packages/shared/   Esquemas y reglas compartidas
+assets/            Imágenes de los documentos
+docs/              Documentación técnica
+odd/               Documentos de las tareas grandes
+compose.yaml           Despliegue completo con Docker Compose
+compose.dokploy.yaml   Despliegue en Dokploy
+```
 
 ## Requisitos
 
@@ -57,7 +133,7 @@ Copie `.env.example` como `.env.local` en la raíz y complete sus valores. La AP
 | `STORAGE_DRIVER`, `STORAGE_PATH`, `S3_*` | Almacenamiento de archivos. |
 | `GOTENBERG_URL` | Conversión a PDF. |
 | `MAIL_*` | Correo. Con `MAIL_MAILER=log`, los mensajes se escriben en el registro. |
-| `AI_*` | Asistentes de IA. Con `AI_DRIVER=baseline` funcionan sin un proveedor externo. |
+| `AI_*` | Asistentes de IA. |
 | `CATALOG_DRIVER`, `KOHA_BASE_URL` | Catálogo de Biblioteca. |
 | `KEYCLOAK_*` | Ingreso con Keycloak. |
 
@@ -81,7 +157,7 @@ El *worker* procesa las colas `critica`, `documentos`, `ia` y `general`. Necesit
 
 ## Base de datos
 
-El esquema y las migraciones están en `apps/api/prisma/`. Las funciones, restricciones, índices especiales y vistas que Prisma no expresa están en el SQL de las migraciones.
+El modelo de datos y las migraciones están en `apps/api/prisma/`. Las funciones, restricciones, índices especiales y vistas que Prisma no expresa están en el SQL de las migraciones.
 
 | Comando | Qué hace |
 |---|---|
@@ -89,7 +165,6 @@ El esquema y las migraciones están en `apps/api/prisma/`. Las funciones, restri
 | `pnpm db:status` | Muestra su estado. |
 | `pnpm db:seed` | Crea el administrador inicial y la plantilla oficial. Se puede repetir sin duplicarlos. |
 | `pnpm db:generate` | Genera el cliente de Prisma. |
-| `pnpm db:baseline` | Solo una vez, en una base que ya tenía el esquema inicial. Después ejecute `pnpm db:migrate`. |
 
 Para `pnpm db:seed` defina `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` (y, si quiere, `SEED_ADMIN_NAME`).
 
@@ -147,14 +222,8 @@ El proxy con HTTPS no está incluido: configúrelo en el servidor.
 node_modules/.bin/prisma migrate deploy
 ```
 
-## Pendiente
-
-- Conexión con los datos oficiales de la UEB. Ver [`docs/pendientes-conexion-ueb.md`](docs/pendientes-conexion-ueb.md).
-- Cierre automático de los procesos vencidos y su aviso previo.
-- Limpieza automática de los enlaces para restablecer la contraseña.
-
 ## Documentación
 
-- [`docs/sistema.md`](docs/sistema.md): arquitectura, datos, API, seguridad, documentos, despliegue y pendientes.
+- [`docs/sistema.md`](docs/sistema.md): detalle técnico del sistema.
 - [`AGENTS.md`](AGENTS.md): reglas para trabajar en el código.
 - [`odd/`](odd/README.md): documentos de las tareas grandes.
