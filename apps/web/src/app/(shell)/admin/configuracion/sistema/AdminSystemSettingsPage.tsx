@@ -347,6 +347,7 @@ export default function AdminSystemSettingsPage() {
 
             <SettingsAccordionSection
               value="asistente-docente"
+              data-tour="settings-teacher-ai"
               title="Asistente del docente"
               description="Ayuda con IA dentro del sílabo del docente"
               icon={GraduationCap}

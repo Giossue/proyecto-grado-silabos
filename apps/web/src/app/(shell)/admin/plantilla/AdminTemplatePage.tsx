@@ -161,6 +161,7 @@ export default function AdminTemplatePage() {
       type="button"
       variant="outline"
       size={editing ? "sm" : "default"}
+      data-tour="template-teacher-view"
       data-draft-teacher-view={editing || undefined}
       onClick={() => void toggleTeacherView()}
     >

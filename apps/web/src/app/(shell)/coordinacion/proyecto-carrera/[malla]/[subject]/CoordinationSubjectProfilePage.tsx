@@ -258,11 +258,11 @@ function SubjectProfile({ subjectId, mallaCode, adminCareer }: { subjectId: stri
       actions={
         !loading && !loadError && fields.length > 0 ? (
           <>
-            <Button type="button" variant={view === "vista-previa" ? "secondary" : "outline"} onClick={toggleView}>
+            <Button type="button" data-tour="career-preview" variant={view === "vista-previa" ? "secondary" : "outline"} onClick={toggleView}>
               {view === "vista-previa" ? <PencilLine data-icon="inline-start" aria-hidden="true" /> : <Eye data-icon="inline-start" aria-hidden="true" />}
               {view === "vista-previa" ? "Volver a editar" : "Vista previa"}
             </Button>
-            <Button type="button" disabled={!canSave} onClick={() => void save()}>
+            <Button type="button" data-tour="career-save" disabled={!canSave} onClick={() => void save()}>
               {saving ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" aria-hidden="true" />}
               Guardar información
             </Button>

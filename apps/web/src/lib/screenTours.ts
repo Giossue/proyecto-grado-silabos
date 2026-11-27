@@ -19,7 +19,7 @@ const shell = {
   menu: step('[data-sidebar="sidebar"]', 'Menú', 'Aquí están todas sus pantallas. El botón de arriba a la izquierda lo esconde o lo muestra', 'right'),
   notifications: step('[aria-label^="Notificaciones"]', 'Avisos', 'Aquí le llegan los avisos. Pulse uno para ir a donde corresponde', 'bottom'),
   user: step('[data-user-menu]', 'Su cuenta', 'Cambie de carrera o de rol, vea su perfil, use el tema claro u oscuro o cierre la sesión', 'bottom'),
-  accessibility: step('[aria-label="Accesibilidad"]', 'Accesibilidad', 'Agrande el texto, suba el contraste o quite las animaciones', 'bottom'),
+  accessibility: step('[aria-label="Accesibilidad"]', 'Accesibilidad', 'Agrande el texto, suba el contraste o quite las animaciones', 'right'),
 };
 const basics = [shell.menu, shell.notifications, shell.accessibility, shell.user];
 
@@ -50,8 +50,10 @@ export const screenTours: Record<string, TourStep[]> = {
     // Pasos del editor: solo aparecen mientras se edita.
     step('[data-tour="template-back"]', 'Volver', 'Sale del editor. Si no guardó, le avisa antes', 'bottom'),
     step('[aria-label="Formato del texto"]', 'Formato', 'Negrita, colores, listas y tablas. Escriba dentro de un campo para usarlo', 'bottom'),
-    step('[data-tour="template-selection"]', 'Campo elegido', 'Pulse un campo de la hoja y aquí elige quién lo llena, lo mueve o lo borra', 'bottom'),
+    step('[data-tour="template-selection"]', 'Campo elegido', 'Pulse un campo de la hoja. Aquí elige quién lo llena y si la IA puede leerlo; también lo mueve o lo borra', 'bottom'),
     step('[data-tour="template-more"]', 'Más', 'Editar JSON: descargue la plantilla o reemplácela con un archivo', 'bottom'),
+    step('[data-tour="template-preview"]', 'Vista previa', 'Muestra el sílabo con los cambios que todavía no ha guardado', 'bottom'),
+    step('[data-tour="template-teacher-view"]', 'Ver como docente', 'Muestra cómo recibirá el sílabo el docente', 'bottom'),
     step('[data-tour="template-save"]', 'Guardar', 'Guarda sus cambios. Un punto en el botón le avisa que falta guardar', 'bottom'),
     step('[data-sheet]', 'La hoja', 'Así se verá el sílabo. Escriba directo sobre ella. Pase el ratón entre dos campos para agregar uno nuevo', 'left'),
     step('[data-tour="template-assistant"]', 'Asistente', 'Pídale cambios con sus palabras. Si le gusta la propuesta, aplíquela y luego guarde', 'left'),
@@ -59,6 +61,7 @@ export const screenTours: Record<string, TourStep[]> = {
   '/admin/configuracion/sistema': [
     step('[data-tour="settings-notices"]', 'Correos', 'Active o apague el resumen de pendientes y elija a qué hora llega', 'bottom'),
     step('[data-tour="settings-ai"]', 'Asistente', 'Conecte el asistente con un servicio de inteligencia artificial y pruebe que funcione', 'bottom'),
+    step('[data-tour="settings-teacher-ai"]', 'Asistente del docente', 'Enciéndalo para que los docentes pidan ideas a la IA desde su sílabo. Empieza apagado', 'bottom'),
     step('[data-tour="settings-library"]', 'Biblioteca', 'Conecte el catálogo de la biblioteca para que los docentes busquen libros', 'top'),
   ],
   '/coordinacion/revisiones': [
@@ -138,9 +141,10 @@ export const screenTours: Record<string, TourStep[]> = {
     step(DEADLINE, 'Plazo', 'Hasta cuándo puede entregar este sílabo', 'bottom'),
     step('.review-comment', 'Correcciones', 'Lo que le pidieron cambiar. Corríjalo y vuelva a enviar', 'bottom'),
     step('[aria-label="Secciones del sílabo"]', 'Secciones', 'Pase de una parte del sílabo a otra', 'bottom'),
-    step('.teacher-form', 'Su parte', 'Llene los campos con asterisco. Lo demás ya viene escrito. Todo se guarda solo mientras escribe', 'top'),
+    step('.teacher-form', 'Su parte', 'Llene los campos con asterisco; lo demás ya viene escrito. Donde vea «Elegir varias», marque las que correspondan. Todo se guarda solo', 'top'),
+    step('[aria-label="Documentos de apoyo"]', 'Documentos de apoyo', 'Material que su coordinación dejó para sus materias', 'bottom'),
     step('[aria-label="Vista previa"]', 'Vista previa', 'Vea cómo queda el sílabo terminado', 'bottom'),
-    step('[data-tour="teacher-assistant"]', 'Asistente', 'Pida ideas para sus textos. Copie la que le sirva y péguela en su campo', 'left'),
+    step('[data-tour="teacher-assistant"]', 'Asistente', 'Pida ideas, copie la que le sirva y péguela en su campo. Responde una IA externa (DeepSeek): revise lo que dice y no escriba datos personales', 'left'),
     step('[data-tour="syllabus-submit"]', 'Enviar', 'Cuando termine, envíelo a revisión. La primera vez lo firma con su archivo de firma electrónica', 'bottom'),
   ],
   '/docente/historial': [
@@ -155,7 +159,24 @@ export const screenTours: Record<string, TourStep[]> = {
   ],
 };
 
+screenTours['/coordinacion/proyecto-carrera/:malla/:subject'] = [
+  step('[aria-label="Cambiar de materia"]', 'Materia', 'Pase a otra materia de la misma malla sin volver atrás', 'bottom'),
+  step('[aria-label="Secciones del proyecto de carrera"]', 'Secciones', 'Elija qué parte del sílabo va a escribir. Se le marca la que tiene campos pendientes', 'right'),
+  step('[aria-label="Configurar campo"]', 'Qué responde el docente', 'Escriba el texto y use la tuerca. «Texto libre»: lo escribe el docente y se borra su texto. «Elegir varias»: el docente marca de su lista', 'bottom'),
+  step('[data-tour="career-preview"]', 'Vista previa', 'Muestra cómo recibirá el sílabo el docente', 'bottom'),
+  step('[data-tour="career-save"]', 'Guardar información', 'Guarde antes de salir', 'bottom'),
+];
+
 screenTours['/admin/estructura-academica/:section'] = screenTours['/admin/estructura-academica']!;
+for (const screen of ['malla', 'materias-asignaciones', 'docentes', 'proyecto-carrera/:malla/:subject']) {
+  screenTours[`/admin/carreras/:career/${screen}`] = screenTours[`/coordinacion/${screen}`]!;
+}
+screenTours['/admin/carreras/:career/proyecto-carrera'] = [
+  step(ACTIONS, 'Excel', 'Llene varias materias a la vez con un Excel', 'left'),
+  step(MALLA, 'Malla', 'Se ve una malla a la vez. Elija aquí cuál', 'bottom'),
+  step(FILTERS, 'Buscar', 'Busque una materia o filtre por ciclo o si está completa', 'bottom'),
+  step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenar su proyecto. El docente lo recibe ya escrito', 'top'),
+];
 
 /** Pantallas que tienen todos los roles. */
 const sharedScreens: Record<string, TourStep[]> = {

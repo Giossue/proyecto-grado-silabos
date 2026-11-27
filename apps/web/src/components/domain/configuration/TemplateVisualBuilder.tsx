@@ -975,7 +975,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                     </DropdownMenuGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button type="button" variant={previewing ? "secondary" : "outline"} size="sm" aria-label={previewing ? "Volver a editar" : "Vista previa"} aria-pressed={previewing} disabled={busy || previewLoading} data-draft-preview onClick={() => void togglePreview()}>
+                <Button type="button" variant={previewing ? "secondary" : "outline"} size="sm" aria-label={previewing ? "Volver a editar" : "Vista previa"} aria-pressed={previewing} disabled={busy || previewLoading} data-tour="template-preview" data-draft-preview onClick={() => void togglePreview()}>
                   {previewLoading ? <Spinner data-icon="inline-start" /> : previewing ? <EyeOff data-icon="inline-start" aria-hidden="true" /> : <Eye data-icon="inline-start" aria-hidden="true" />}
                   {previewing ? "Volver a editar" : "Vista previa"}
                 </Button>

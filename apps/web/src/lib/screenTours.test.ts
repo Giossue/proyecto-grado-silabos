@@ -1,7 +1,55 @@
 import { describe, expect, it } from 'vitest';
+import helpCatalog from '../../../api/src/server/operations/screenHelpCatalog.json';
 import { screenTours } from '@/lib/screenTours';
 
+const sources = Object.entries(import.meta.glob<string>('../**/*.tsx', { query: '?raw', import: 'default', eager: true }))
+  .filter(([path]) => !path.includes('.test.'))
+  .map(([, text]) => text)
+  .join('\n');
+
+const stepOf = (screen: string, selector: string) => (screenTours[screen] ?? []).find((item) => item.selector === selector);
+
 describe('screenTours', () => {
+  it('toda pantalla con ayuda tiene pasos que señalan dónde pulsar', () => {
+    expect(Object.keys(helpCatalog).filter((screen) => !screenTours[screen]?.length)).toEqual([]);
+  });
+
+  it('cada marca «data-tour» que busca una guía existe en alguna pantalla', () => {
+    const wanted = Object.values(screenTours).flatMap((steps) => steps.flatMap((item) => [...item.selector.matchAll(/data-tour="([a-z-]+)"/g)].map((match) => match[1]!)));
+
+    expect([...new Set(wanted)].filter((name) => !new RegExp(`(data-tour|tour)["']?[=:] ?["'{]*["']?${name}["']`).test(sources))).toEqual([]);
+  });
+
+  it('en el proyecto de una materia se explica cómo decidir qué responde el docente', () => {
+    for (const screen of ['/coordinacion/proyecto-carrera/:malla/:subject', '/admin/carreras/:career/proyecto-carrera/:malla/:subject']) {
+      expect(stepOf(screen, '[aria-label="Configurar campo"]')?.description, screen).toContain('«Elegir varias»');
+      expect(screenTours[screen]?.at(-1)?.title, screen).toBe('Guardar información');
+    }
+  });
+
+  it('en el proyecto de una carrera visto por Administración no se habla de documentos de apoyo', () => {
+    expect(JSON.stringify(screenTours['/admin/carreras/:career/proyecto-carrera'])).not.toContain('apoyo');
+  });
+
+  it('en «Sistema» se señala el interruptor del asistente del docente', () => {
+    expect(stepOf('/admin/configuracion/sistema', '[data-tour="settings-teacher-ai"]')?.description).toContain('Empieza apagado');
+  });
+
+  it('en la plantilla se explican «Vista previa», «Ver como docente» y lo que lee la IA', () => {
+    expect(stepOf('/admin/plantilla', '[data-tour="template-preview"]')?.title).toBe('Vista previa');
+    expect(stepOf('/admin/plantilla', '[data-tour="template-teacher-view"]')?.title).toBe('Ver como docente');
+    expect(stepOf('/admin/plantilla', '[data-tour="template-selection"]')?.description).toContain('si la IA puede leerlo');
+  });
+
+  it('el docente ve en la guía cómo elegir opciones y el aviso sobre la IA externa', () => {
+    expect(stepOf('/docente/mis-silabos/:syllabus', '.teacher-form')?.description).toContain('«Elegir varias»');
+    expect(stepOf('/docente/mis-silabos/:syllabus', '[data-tour="teacher-assistant"]')?.description).toMatch(/DeepSeek.*no escriba datos personales/);
+  });
+
+  it('el paso de accesibilidad abre hacia la derecha, porque su botón está abajo a la izquierda', () => {
+    expect(stepOf('/docente/mis-silabos', '[aria-label="Accesibilidad"]')?.side).toBe('right');
+  });
+
   it('perfil, seguridad y avisos tienen guía en todos los roles', () => {
     for (const role of ['admin', 'coordinacion', 'docente', 'biblioteca']) {
       for (const screen of ['configuracion/perfil', 'configuracion/seguridad', 'notificaciones']) {
@@ -19,8 +67,8 @@ describe('screenTours', () => {
 
   it('la guía del sílabo del docente señala el botón flotante «Asistente» después de «Vista previa»', () => {
     const steps = screenTours['/docente/mis-silabos/:syllabus'] ?? [];
-    expect(steps.map((item) => item.title)).toEqual(['Plazo', 'Correcciones', 'Secciones', 'Su parte', 'Vista previa', 'Asistente', 'Enviar']);
-    expect(steps.find((item) => item.title === 'Asistente')).toMatchObject({ selector: '[data-tour="teacher-assistant"]', description: 'Pida ideas para sus textos. Copie la que le sirva y péguela en su campo', side: 'left' });
+    expect(steps.map((item) => item.title)).toEqual(['Plazo', 'Correcciones', 'Secciones', 'Su parte', 'Documentos de apoyo', 'Vista previa', 'Asistente', 'Enviar']);
+    expect(steps.find((item) => item.title === 'Asistente')).toMatchObject({ selector: '[data-tour="teacher-assistant"]', side: 'left' });
   });
 
   it('la guía de la plantilla señala el menú «Más» del editor, no «Opciones avanzadas»', () => {
@@ -50,6 +98,7 @@ describe('screenTours', () => {
 
   it('la guía de la plantilla habla de quién llena el campo, no de si se puede editar', () => {
     const selection = (screenTours['/admin/plantilla'] ?? []).find((item) => item.selector === '[data-tour="template-selection"]');
-    expect(selection?.description).toBe('Pulse un campo de la hoja y aquí elige quién lo llena, lo mueve o lo borra');
+    expect(selection?.description).toContain('quién lo llena');
+    expect(selection?.description).not.toMatch(/puede editar/);
   });
 });
