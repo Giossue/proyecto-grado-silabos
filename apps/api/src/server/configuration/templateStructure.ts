@@ -26,7 +26,6 @@ export interface StructureTx {
   syncDocument(templateId: string, sections: DocumentSection[]): Promise<void>
   insertField(field: StoredField): Promise<void>
   updateField(id: string, changes: FieldChanges): Promise<void>
-  retainAiPermissions(templateId: string, keys: string[]): Promise<void>
   reload?(templateId: string): Promise<SyllabusTemplate | null>
 }
 
@@ -92,10 +91,6 @@ export function documentOf(template: SyllabusTemplate): DocumentSection[] {
     position: section.position,
     blocks: section.blocks.map((block) => ({ id: block.id, key: block.key, title: block.title, position: block.position })),
   }))
-}
-
-function fieldKeys(document: DocumentSection[]): string[] {
-  return document.flatMap((section) => section.blocks.map((block) => block.key))
 }
 
 function sortedByPosition<T extends { position: number }>(items: T[]): T[] {
@@ -241,7 +236,6 @@ export async function destroySectionOf(auth: StructureTarget, deps: StructureWri
     if (!document.some((entry) => entry.id === section.id)) throw new Missing(MODELS.template, section.id)
     const remaining = document.filter((entry) => entry.id !== section.id)
     await tx.syncDocument(template.id, remaining)
-    await tx.retainAiPermissions(template.id, fieldKeys(remaining))
     return apiJson({ message: "Sección eliminada." })
   })
 }
@@ -303,7 +297,6 @@ export async function storeFieldOf(raw: PhpArray, auth: StructureTarget, deps: S
     }
     const fieldId = deps.newFieldId()
     await tx.insertField({ id: fieldId, templateId: template.id, blockId, responsible, content })
-    await tx.retainAiPermissions(template.id, fieldKeys(document))
     return apiJson({ message: "Campo agregado a la sección.", field: fieldPayload(fieldId, block.key, label, responsible, content) }, 201)
   })
 }
@@ -388,7 +381,6 @@ export async function destroyFieldOf(auth: StructureTarget, deps: StructureWrite
     if (!document.some((section) => section.blocks.some((block) => block.id === field.blockId))) throw new Missing(MODELS.template, field.blockId)
     const remaining = document.map((section) => ({ ...section, blocks: section.blocks.filter((block) => block.id !== field.blockId) }))
     await tx.syncDocument(template.id, remaining)
-    await tx.retainAiPermissions(template.id, fieldKeys(remaining))
     return apiJson({ message: "Campo eliminado." })
   })
 }

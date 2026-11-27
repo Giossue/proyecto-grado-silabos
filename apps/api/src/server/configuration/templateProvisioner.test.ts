@@ -40,10 +40,17 @@ const tx = (): ProvisionTx => ({
   lockTemplate: async (id) => (log.push(`lock ${id}`), templates.template?.id === id ? templates.template : null),
   insertTemplate: async (id, definition) => void (log.push(`insert ${id}`), definitions.push(definition), created.add(id)),
   createdHere: (id) => created.has(id),
-  allowAiReading: async (_id, keys) => void keys.forEach((key) => permissions.add(key)),
-  retainAiPermissions: async (_id, keys) => void (permissions = new Set([...permissions].filter((key) => keys.includes(key)))),
+  aiReadableKeys: async () => new Set(permissions),
+  allowAiReading: async (_id, keys) => {
+    const live = new Set(documents.at(-1)?.flatMap((section) => section.blocks.map((block) => block.key)))
+    keys.filter((key) => live.has(key)).forEach((key) => permissions.add(key))
+  },
   hasStructure: async () => structure,
-  syncDocument: async (id, sections) => void (log.push(`sync ${id} ${sections.length}`), documents.push(sections)),
+  syncDocument: async (id, sections) => {
+    log.push(`sync ${id} ${sections.length}`)
+    documents.push(sections)
+    if (sections.length === 0) permissions = new Set()
+  },
   suffixRetiredSections: async (id) => void log.push(`suffix ${id}`),
   insertField: async (field) => void fields.push({ templateId: field.templateId, blockId: field.blockId, responsible: field.responsible }),
   saveDefinition: async (id, definition) => void (log.push(`definition ${id}`), definitions.push(definition)),

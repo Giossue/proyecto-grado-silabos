@@ -6,7 +6,7 @@ import { loadTemplate } from "../shared/templateStore"
 export interface AiReadPermissionTx {
   lockTemplate(templateId: string): Promise<SyllabusTemplate | null>
   allowedKeys(templateId: string): Promise<Set<string>>
-  save(templateId: string, key: string, allowed: boolean, actorId: string): Promise<void>
+  save(templateId: string, key: string, allowed: boolean): Promise<void>
 }
 
 export interface AiReadPermissionStore {
@@ -16,28 +16,21 @@ export interface AiReadPermissionStore {
 
 export async function allowedAiKeysOn(db: Db, templateId: string): Promise<Set<string>> {
   const rows = await db.$queryRaw<{ key: string }[]>`
-    select clave_campo_plantilla as key from permisos_lectura_ia
-    where plantilla_id = ${templateId}::uuid and lectura_permitida`
+    select clave_campo_plantilla as key from campos_plantilla
+    where plantilla_id = ${templateId}::uuid and vigente_en_plantilla and lectura_ia_permitida`
   return new Set(rows.map((row) => row.key))
 }
 
 export async function allowAiReadingOn(db: Db, templateId: string, keys: string[]): Promise<void> {
   await db.$executeRaw`
-    insert into permisos_lectura_ia (plantilla_id, clave_campo_plantilla, lectura_permitida)
-    select ${templateId}::uuid, clave, true from unnest(${keys}::text[]) as clave
-    on conflict (plantilla_id, clave_campo_plantilla) do nothing`
+    update campos_plantilla set lectura_ia_permitida = true
+    where plantilla_id = ${templateId}::uuid and vigente_en_plantilla and clave_campo_plantilla = any(${keys}::text[])`
 }
 
-export async function retainAiPermissionsOn(db: Db, templateId: string, keys: string[]): Promise<void> {
-  await db.$executeRaw`delete from permisos_lectura_ia where plantilla_id = ${templateId}::uuid and not (clave_campo_plantilla = any(${keys}::text[]))`
-}
-
-export async function saveAiPermissionOn(db: Db, templateId: string, key: string, allowed: boolean, actorId: string): Promise<void> {
+export async function saveAiPermissionOn(db: Db, templateId: string, key: string, allowed: boolean): Promise<void> {
   await db.$executeRaw`
-    insert into permisos_lectura_ia (plantilla_id, clave_campo_plantilla, lectura_permitida, modificado_por)
-    values (${templateId}::uuid, ${key}, ${allowed}, ${actorId}::uuid)
-    on conflict (plantilla_id, clave_campo_plantilla)
-    do update set lectura_permitida = excluded.lectura_permitida, modificado_por = excluded.modificado_por`
+    update campos_plantilla set lectura_ia_permitida = ${allowed}
+    where plantilla_id = ${templateId}::uuid and vigente_en_plantilla and clave_campo_plantilla = ${key}`
 }
 
 function permissionTxOn(db: Db): AiReadPermissionTx {
@@ -47,7 +40,7 @@ function permissionTxOn(db: Db): AiReadPermissionTx {
       return template?.id === templateId ? template : null
     },
     allowedKeys: (templateId) => allowedAiKeysOn(db, templateId),
-    save: (templateId, key, allowed, actorId) => saveAiPermissionOn(db, templateId, key, allowed, actorId),
+    save: (templateId, key, allowed) => saveAiPermissionOn(db, templateId, key, allowed),
   }
 }
 

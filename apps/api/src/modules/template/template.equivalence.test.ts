@@ -197,7 +197,12 @@ const structureTx = {
   syncDocument: async (id: string, sections: DocumentSection[]) => {
     state.writes.push(`sync:${id}:${JSON.stringify(sections)}`)
     const template = current()
-    if (template) state.templates.template = applySync(template, sections)
+    if (template) {
+      const kept = new Set(sections.flatMap((section) => section.blocks.map((block) => block.id)))
+      const gone = template.sections.flatMap((section) => section.blocks).filter((block) => !kept.has(block.id))
+      for (const block of gone) state.permissions.delete(block.key)
+      state.templates.template = applySync(template, sections)
+    }
   },
   insertField: async (field: { id: string; templateId: string; blockId: string; responsible: string; content: unknown }) => {
     state.writes.push(`insert-field:${JSON.stringify(field)}`)
@@ -205,7 +210,6 @@ const structureTx = {
     if (template) state.templates.template = addField(template, field)
   },
   updateField: async (id: string, changes: unknown) => void state.writes.push(`update-field:${id}:${JSON.stringify(changes)}`),
-  retainAiPermissions: async (_id: string, keys: string[]) => void (state.permissions = new Set([...state.permissions].filter((key) => keys.includes(key)))),
 }
 
 const structure: StructureStore = {
@@ -232,8 +236,11 @@ const provisionTx: ProvisionTx = {
   syncDocument: (id, sections) => structureTx.syncDocument(id, sections),
   suffixRetiredSections: async (id) => void state.writes.push(`suffix:${id}`),
   insertField: (field) => structureTx.insertField(field),
-  allowAiReading: async (_id, keys) => void keys.forEach((key) => state.permissions.add(key)),
-  retainAiPermissions: (id, keys) => structureTx.retainAiPermissions(id, keys),
+  aiReadableKeys: async () => new Set(state.permissions),
+  allowAiReading: async (_id, keys) => {
+    const live = current()?.sections.flatMap((section) => section.blocks.map((block) => block.key))
+    keys.filter((key) => live?.includes(key) ?? true).forEach((key) => state.permissions.add(key))
+  },
   saveDefinition: async (id, definition) => void state.writes.push(`definition:${id}:${createHash("sha256").update(JSON.stringify(definition)).digest("hex")}`),
   coordinationFields: async () =>
     new Map((current()?.sections ?? []).flatMap((section) => section.blocks.flatMap((block) => block.fields.filter((field) => field.responsible !== "institucional").map((field) => [block.key, field.id] as [string, string])))),
@@ -251,8 +258,8 @@ const permissionStore: AiReadPermissionStore = {
     work({
       lockTemplate: (id) => structureTx.lockTemplate(id),
       allowedKeys: async () => new Set(state.permissions),
-      save: async (templateId, key, allowed, actorId) => {
-        state.writes.push(`ai-permission:${templateId}:${key}:${allowed}:${actorId}`)
+      save: async (templateId, key, allowed) => {
+        state.writes.push(`ai-permission:${templateId}:${key}:${allowed}`)
         if (allowed) state.permissions.add(key)
         else state.permissions.delete(key)
       },
@@ -740,8 +747,8 @@ describe("AI read permission routes", () => {
     expect((await entry("descripcion"))?.readable).toBe(false)
 
     expect(state.writes.filter((write) => !write.startsWith("lock:"))).toEqual([
-      `ai-permission:${TEMPLATE_ID}:descripcion:true:${golden.userId}`,
-      `ai-permission:${TEMPLATE_ID}:descripcion:false:${golden.userId}`,
+      `ai-permission:${TEMPLATE_ID}:descripcion:true`,
+      `ai-permission:${TEMPLATE_ID}:descripcion:false`,
     ])
   })
 

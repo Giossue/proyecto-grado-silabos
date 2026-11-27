@@ -41,7 +41,7 @@ export async function saveAiReadPermissionOf(session: AppSession, input: PhpArra
     if (current === null || field === undefined) return modelNotFound(MODELS.field, fieldId)
     const reason = aiBlockReason(field, current.definition)
     if (readable && reason !== null) return validationError({ readable: [reason] })
-    await tx.save(current.id, field.key, readable, session.user.id)
+    await tx.save(current.id, field.key, readable)
     return apiJson({ message: readable ? AI_READ_ALLOWED : AI_READ_DENIED, field: entryOf(current, field, new Set(readable ? [field.key] : [])) })
   })
 }

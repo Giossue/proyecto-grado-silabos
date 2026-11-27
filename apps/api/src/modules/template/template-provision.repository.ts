@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common"
 import { PrismaService } from "../../prisma/prisma.service"
-import { allowAiReadingOn, retainAiPermissionsOn } from "../../server/ai/readPermissionStore"
+import { allowAiReadingOn, allowedAiKeysOn } from "../../server/ai/readPermissionStore"
 import { phpShape, type PhpRecord } from "../../server/configuration/phpValues"
 import type { ProvisionStore, ProvisionTx } from "../../server/configuration/templateProvisioner"
 import { type Db, TRANSACTION_OPTIONS } from "../../prisma/db"
@@ -18,8 +18,8 @@ export function provisionTxOn(db: Db): ProvisionTx {
       created.add(templateId)
     },
     createdHere: (templateId) => created.has(templateId),
+    aiReadableKeys: (templateId) => allowedAiKeysOn(db, templateId),
     allowAiReading: (templateId, keys) => allowAiReadingOn(db, templateId, keys),
-    retainAiPermissions: (templateId, keys) => retainAiPermissionsOn(db, templateId, keys),
     async hasStructure(templateId) {
       return (
         (await hasRows(db.secciones_plantilla.findMany({ where: { plantilla_id: templateId, vigente_en_plantilla: true }, select: { seccion_plantilla_id: true }, take: 1 }))) &&
