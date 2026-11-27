@@ -290,7 +290,7 @@ describe("FichaImportTest", () => {
     const entry = entryOf(detail, SUBJECTS[0].id)
     expect(entry.replaces).toBe(true)
     expect((entry.current as PhpRecord).descripcion).toBe("Descripción que ya estaba")
-    expect(entry.removed_options).toEqual({})
+    expect(entry.removed_answers).toEqual({})
     expect(entryOf(detail, SUBJECTS[1].id).current).toEqual({})
 
     expect((await apply(file, detail, [[`fields[${SUBJECTS[0].id}][]`, "objetivos_especificos"]])).status).toBe(200)
@@ -458,7 +458,7 @@ describe("FichaImportOwnOptionsTest", () => {
   })
 })
 
-describe("FichaImportRemovedOptionsTest", () => {
+describe("FichaImportRemovedAnswersTest", () => {
   const METHODS = ["Aprendizaje basado en problemas", "Aula invertida"]
 
   function question(kind: "una" | "varias", options: string[]): PhpRecord {
@@ -466,6 +466,7 @@ describe("FichaImportRemovedOptionsTest", () => {
   }
 
   const line = (node: PhpRecord): PhpRecord => ({ type: "paragraph", content: [node] })
+  const freeText: PhpRecord = { type: "response", attrs: { kind: "texto", options: [], value: "" } }
 
   function savedByCoordination(key: string, content: PhpRecord[]): void {
     const value = careerResponse(field(key).content, { type: "doc", content }, templates.template!.definition!, "value")
@@ -479,10 +480,10 @@ describe("FichaImportRemovedOptionsTest", () => {
     const file = await workbook({ descripcion: { D4: "Texto del Excel", D5: "Texto de la otra materia" }, objetivo_general: { D4: "Objetivo del Excel" } })
     const detail = await preview(file)
     const entry = entryOf(detail, SUBJECTS[0].id)
-    expect(entry.removed_options).toEqual({ descripcion: METHODS, objetivo_general: ["Teórico"] })
+    expect(entry.removed_answers).toEqual({ descripcion: [{ kind: "varias", options: METHODS }], objetivo_general: [{ kind: "una", options: ["Teórico"] }] })
     expect(entry.replaces).toBe(true)
     expect(entry.current).toEqual({ objetivo_general: "Elija el enfoque" })
-    expect(entryOf(detail, SUBJECTS[1].id).removed_options).toEqual({})
+    expect(entryOf(detail, SUBJECTS[1].id).removed_answers).toEqual({})
     expect(entryOf(detail, SUBJECTS[1].id).replaces).toBe(false)
     expect(templates.values).toEqual(before)
 
@@ -494,14 +495,27 @@ describe("FichaImportRemovedOptionsTest", () => {
   it("warns about a choice that has no options yet", async () => {
     savedByCoordination("descripcion", [line(question("varias", []))])
     const entry = entryOf(await preview(await workbook({ descripcion: { D4: "Texto del Excel" } })), SUBJECTS[0].id)
-    expect(entry.removed_options).toEqual({ descripcion: [] })
+    expect(entry.removed_answers).toEqual({ descripcion: [{ kind: "varias", options: [] }] })
     expect(entry.replaces).toBe(true)
+  })
+
+  it("warns about a «Texto libre» space the workbook would remove", async () => {
+    savedByCoordination("descripcion", [line(freeText)])
+    const file = await workbook({ descripcion: { D4: "Texto del Excel" } })
+    const detail = await preview(file)
+    const entry = entryOf(detail, SUBJECTS[0].id)
+    expect(entry.removed_answers).toEqual({ descripcion: [{ kind: "texto", options: [] }] })
+    expect(entry.replaces).toBe(true)
+    expect(entry.current).toEqual({})
+
+    expect((await apply(file, detail)).status).toBe(200)
+    expect(foundResponses(stored(SUBJECTS[0].id, "descripcion"))).toEqual([])
   })
 
   it("does not warn for a field the workbook leaves empty", async () => {
     savedByCoordination("descripcion", [line(question("varias", METHODS))])
     const entry = entryOf(await preview(await workbook({ objetivo_general: { D4: "Objetivo del Excel" } })), SUBJECTS[0].id)
-    expect(entry.removed_options).toEqual({})
+    expect(entry.removed_answers).toEqual({})
     expect(entry.replaces).toBe(false)
   })
 
@@ -509,8 +523,8 @@ describe("FichaImportRemovedOptionsTest", () => {
     withResponseField()
     templates.values.push({ fieldId: field("metodologia").id, subjectId: SUBJECTS[0].id, value: ownSetup(OWN) })
     const detail = await preview(await workbook({ metodologia: { D4: "Exposición", E4: "4", D44: "Debate", E44: "2" } }))
-    expect(entryOf(detail, SUBJECTS[0].id).removed_options).toEqual({})
-    expect(entryOf(detail, SUBJECTS[1].id).removed_options).toEqual({})
+    expect(entryOf(detail, SUBJECTS[0].id).removed_answers).toEqual({})
+    expect(entryOf(detail, SUBJECTS[1].id).removed_answers).toEqual({})
   })
 })
 

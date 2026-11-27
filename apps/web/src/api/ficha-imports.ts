@@ -6,6 +6,8 @@ export type FichaTableValue = { columns: string[]; rows: string[][] };
 export type FichaProposalValue = string | string[] | FichaTableValue;
 export type FichaMissingField = { key: string; label: string; reason: 'no_encontrado' };
 
+export type FichaRemovedAnswer = { kind: 'texto' | 'una' | 'varias'; options: string[] };
+
 export type FichaWorkbookSubject = {
   subject_id: string;
   code: string;
@@ -17,7 +19,7 @@ export type FichaWorkbookSubject = {
   missing?: FichaMissingField[];
   replaces: boolean;
   current: Record<string, string>;
-  removed_options?: Record<string, string[]>;
+  removed_answers?: Record<string, FichaRemovedAnswer[]>;
 };
 
 export type FichaWorkbookPreview = {

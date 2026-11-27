@@ -142,7 +142,7 @@ export function expandBlock(node: unknown, variables: Record<string, string>, de
   return toDocument(resolveBlock(libDefinition(block), record(at(attrs, "props")), record(at(attrs, "value")), variables)) as unknown[]
 }
 
-export function hasOptions(kind: string): boolean {
+function hasOptions(kind: string): boolean {
   return KINDS[kind]?.options ?? false
 }
 

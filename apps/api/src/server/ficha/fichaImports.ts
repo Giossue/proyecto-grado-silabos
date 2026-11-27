@@ -9,7 +9,7 @@ import { careerProfileLockReason, profileContext } from "../configuration/subjec
 import { profileFields } from "../configuration/subjectProfileFields"
 import { fieldResponseNormalize } from "../configuration/templateRehearsal"
 import { fieldSection, type TemplateField } from "../configuration/templatePresentation"
-import { responseWithin, careerResponse, foundResponses, hasOptions, isDocument, keepOwnOptions, keepTeacherFills, plainText, responseIsEmpty, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
+import { responseWithin, careerResponse, foundResponses, isDocument, keepOwnOptions, keepTeacherFills, plainText, responseIsEmpty, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
 import type { TemplateStore } from "../shared/templateStore"
 import { importSession, readUpload, type ImportDeps, type ImportFileRules } from "../excel/importRequest"
 import { xlsxDownload } from "../excel/workbook"
@@ -162,38 +162,39 @@ function importedDocument(field: TemplateField, document: PhpRecord, stored: unk
   return freeTextNormalize(careerResponse(field.content, kept, definition, "value"))
 }
 
-function choiceQuestions(document: unknown): { kind: string; titles: string[] }[] {
+type AnswerSpace = { kind: string; options: string[] }
+
+function answerSpaces(document: unknown): AnswerSpace[] {
   return foundResponses(document)
     .map((attrs) => record(attrs))
-    .filter((attrs) => hasOptions(String(attrs.kind)))
-    .map((attrs) => ({ kind: String(attrs.kind), titles: list(attrs.options ?? []).map((option) => String(record(option).title)) }))
+    .map((attrs) => ({ kind: String(attrs.kind), options: list(attrs.options ?? []).map((option) => String(record(option).title)) }))
 }
 
-function removedOptions(field: TemplateField, value: unknown, stored: unknown, definition: TemplateDefinition): string[] | null {
-  const before = choiceQuestions(stored)
+function removedAnswers(field: TemplateField, value: unknown, stored: unknown, definition: TemplateDefinition): AnswerSpace[] | null {
+  const before = answerSpaces(stored)
   if (before.length === 0) return null
   try {
     const document = excelDocument(field, value, definition)
     if (document === null) return null
-    const after = choiceQuestions(importedDocument(field, document, stored, definition)).map((question) => JSON.stringify(question))
-    const lost = before.filter((question) => {
-      const kept = after.indexOf(JSON.stringify(question))
+    const after = answerSpaces(importedDocument(field, document, stored, definition)).map((space) => JSON.stringify(space))
+    const lost = before.filter((space) => {
+      const kept = after.indexOf(JSON.stringify(space))
       if (kept >= 0) after.splice(kept, 1)
       return kept < 0
     })
-    return lost.length === 0 ? null : lost.flatMap((question) => question.titles)
+    return lost.length === 0 ? null : lost
   } catch (error) {
     if (error instanceof TemplateValidationError) return null
     throw error
   }
 }
 
-function removedBySubject(preview: Preview, entry: FichaEntry, stored: Map<string, unknown>): Record<string, string[]> {
-  const removed: Record<string, string[]> = {}
+function removedBySubject(preview: Preview, entry: FichaEntry, stored: Map<string, unknown>): Record<string, AnswerSpace[]> {
+  const removed: Record<string, AnswerSpace[]> = {}
   for (const field of preview.fields) {
     if (!Object.prototype.hasOwnProperty.call(entry.values, field.key)) continue
-    const options = removedOptions(field, entry.values[field.key], stored.get(`${entry.subject_id}:${field.id}`), preview.template as TemplateDefinition)
-    if (options !== null) removed[field.key] = options
+    const lost = removedAnswers(field, entry.values[field.key], stored.get(`${entry.subject_id}:${field.id}`), preview.template as TemplateDefinition)
+    if (lost !== null) removed[field.key] = lost
   }
   return removed
 }
@@ -230,7 +231,7 @@ async function previewDetail(preview: Preview, deps: FichaImportDeps): Promise<P
         values: entry.values,
         replaces: current.has(entry.subject_id) || Object.keys(removed).length > 0,
         current: current.get(entry.subject_id) ?? {},
-        removed_options: removed,
+        removed_answers: removed,
         ...fichaCoverage(entry, fields),
       }
     }),

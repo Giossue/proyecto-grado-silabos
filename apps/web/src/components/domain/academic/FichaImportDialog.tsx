@@ -3,7 +3,7 @@
 import { Check, Download, FileSpreadsheet, FileUp, TriangleAlert } from "lucide-react"
 import { useState } from "react"
 import { ApiError } from "@/api/client"
-import { applyFichaWorkbook, downloadFichaWorkbook, previewFichaWorkbook, type FichaWorkbookPreview, type FichaWorkbookSubject } from "@/api/ficha-imports"
+import { applyFichaWorkbook, downloadFichaWorkbook, previewFichaWorkbook, type FichaRemovedAnswer, type FichaWorkbookPreview, type FichaWorkbookSubject } from "@/api/ficha-imports"
 import { FichaProposalValue } from "@/components/domain/academic/FichaProposalValue"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { FileDropzone } from "@/components/domain/FileDropzone"
@@ -19,9 +19,9 @@ import { cn } from "@/lib/utils"
 
 type FichaImportDialogProps = { disabled?: boolean; onApplied?: (message: string) => void }
 
-const removingKeys = (subject: FichaWorkbookSubject): string[] => Object.keys(subject.removed_options ?? {}).filter((key) => key in subject.values)
+const removingKeys = (subject: FichaWorkbookSubject): string[] => Object.keys(subject.removed_answers ?? {}).filter((key) => key in subject.values)
 
-function OptionsWarning({ children }: { children: string }) {
+function AnswerWarning({ children }: { children: string }) {
   return (
     <p className="flex items-start gap-1.5 text-sm text-warning">
       <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -30,23 +30,29 @@ function OptionsWarning({ children }: { children: string }) {
   )
 }
 
-function CurrentContent({ text, options }: { text?: string; options?: string[] }) {
+function Choices({ options }: { options: string[] }) {
+  if (options.length === 0) return <p className="text-muted-foreground">El docente elige, pero todavía no hay opciones</p>
+
+  return (
+    <>
+      <p className="text-muted-foreground">El docente elige entre:</p>
+      <ul className="list-disc pl-5">
+        {options.map((option, index) => (
+          <li key={index}>{option}</li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+function CurrentContent({ text, removed }: { text?: string; removed?: FichaRemovedAnswer[] }) {
   return (
     <div>
       <p className="text-xs font-medium text-muted-foreground">Actual</p>
       {text ? <p className="whitespace-pre-wrap">{text}</p> : null}
-      {!text && !options ? <p className="text-muted-foreground">Vacío</p> : null}
-      {options && options.length === 0 ? <p className="text-muted-foreground">Elección sin opciones todavía</p> : null}
-      {options && options.length > 0 ? (
-        <>
-          <p className="text-muted-foreground">Opciones para elegir:</p>
-          <ul className="list-disc pl-5">
-            {options.map((option, index) => (
-              <li key={index}>{option}</li>
-            ))}
-          </ul>
-        </>
-      ) : null}
+      {!text && !removed ? <p className="text-muted-foreground">Vacío</p> : null}
+      {removed?.some((answer) => answer.kind === "texto") ? <p className="text-muted-foreground">El docente escribe aquí («Texto libre»)</p> : null}
+      {removed?.filter((answer) => answer.kind !== "texto").map((answer, index) => <Choices key={index} options={answer.options} />)}
     </div>
   )
 }
@@ -84,7 +90,7 @@ export function FichaImportDialog({ disabled, onApplied }: FichaImportDialogProp
   const hasChosenField = (subject: FichaWorkbookSubject): boolean => Object.keys(subject.values).some((key) => fieldChosen(subject.subject_id, key))
   const applies = (subject: FichaWorkbookSubject): boolean => chosen.has(subject.subject_id) && hasChosenField(subject)
   const selectedSubjects = proposed.filter(applies).map((subject) => subject.subject_id)
-  const removesOptions = proposed.some((subject) => removingKeys(subject).length > 0)
+  const removesAnswers = proposed.some((subject) => removingKeys(subject).length > 0)
 
   const run = async (action: () => Promise<unknown>, fallback: string): Promise<boolean> => {
     setBusy(true)
@@ -189,10 +195,10 @@ export function FichaImportDialog({ disabled, onApplied }: FichaImportDialogProp
                   <p className="text-sm">
                     Vista previa del Excel para {proposed.length} de {current.subjects.length} materias. Revise el contenido antes de aplicar. Los campos vacíos conservan sus valores actuales
                   </p>
-                  {removesOptions ? (
+                  {removesAnswers ? (
                     <Alert className="[&>svg]:text-warning">
                       <TriangleAlert aria-hidden="true" />
-                      <AlertDescription>Algunos campos tienen opciones para elegir y el Excel las quitaría. Por eso vienen sin marcar: márquelos solo si quiere reemplazarlas</AlertDescription>
+                      <AlertDescription>En algunos campos responde el docente y el Excel quitaría ese espacio. Por eso vienen sin marcar: márquelos solo si quiere reemplazarlos</AlertDescription>
                     </Alert>
                   ) : null}
                   <ScrollArea className="[&>[data-slot=scroll-area-viewport]]:max-h-96">
@@ -222,8 +228,8 @@ export function FichaImportDialog({ disabled, onApplied }: FichaImportDialogProp
                                   {found(subject)} de {total(subject)} campos con contenido
                                   {subject.state === "lista" && subject.replaces ? " · actualiza solo los campos que aplique" : null}
                                 </p>
-                                {replaced.length ? <OptionsWarning>{`Se quitarán las opciones de: ${replaced.map(fieldLabel).join(", ")}`}</OptionsWarning> : null}
-                                {kept.length ? <OptionsWarning>{`Sin marcar para no quitar opciones: ${kept.map(fieldLabel).join(", ")}`}</OptionsWarning> : null}
+                                {replaced.length ? <AnswerWarning>{`El docente ya no responderá en: ${replaced.map(fieldLabel).join(", ")}`}</AnswerWarning> : null}
+                                {kept.length ? <AnswerWarning>{`Sin marcar para no quitar lo que responde el docente: ${kept.map(fieldLabel).join(", ")}`}</AnswerWarning> : null}
                                 <div className="text-sm">
                                   <Button type="button" variant="link" size="sm" className="h-auto px-0" aria-expanded={isExpanded} onClick={() => toggleExpanded(subject.subject_id)}>
                                     {isExpanded ? "Ocultar la comparación" : subject.replaces ? "Comparar con el proyecto de carrera actual" : "Revisar campos"}
@@ -242,9 +248,9 @@ export function FichaImportDialog({ disabled, onApplied }: FichaImportDialogProp
                                               {fieldLabel(key)}
                                             </FieldLabel>
                                           </div>
-                                          {subject.removed_options?.[key] ? <p className="mt-2 text-warning">Si marca este campo, se quitan sus opciones y queda el texto del Excel</p> : null}
+                                          {subject.removed_answers?.[key] ? <p className="mt-2 text-warning">Si marca este campo, el docente ya no responde aquí y queda el texto del Excel</p> : null}
                                           <div className={cn("mt-2 grid gap-3", subject.replaces && "sm:grid-cols-2")}>
-                                            {subject.replaces ? <CurrentContent text={subject.current[key]} options={subject.removed_options?.[key]} /> : null}
+                                            {subject.replaces ? <CurrentContent text={subject.current[key]} removed={subject.removed_answers?.[key]} /> : null}
                                             <div>
                                               <p className="text-xs font-medium text-muted-foreground">Contenido del Excel</p>
                                               <FichaProposalValue value={value} label={fieldLabel(key)} />
