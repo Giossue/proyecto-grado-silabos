@@ -105,6 +105,7 @@ export const screenTours: Record<string, TourStep[]> = {
     step('[data-tour="curriculum-back"]', 'Volver', 'Sale del editor', 'bottom'),
     step('[data-tour="curriculum-data"]', 'Editar malla', 'Cambie el código, los ciclos o el estado', 'bottom'),
     step('[data-tour="curriculum-add"]', 'Agregar materia', 'Agrega una materia en ese ciclo. Arrastre de una materia a otra para unirlas como requisito', 'top'),
+    step('[data-tour="curriculum-save"]', 'Guardar cambios', 'Las materias que mueva y los requisitos que una se guardan solo al pulsar este botón', 'bottom'),
   ],
   '/biblioteca/revisiones': [
     step(ACTIONS, 'Historial', 'Los sílabos de períodos que ya terminaron', 'left'),

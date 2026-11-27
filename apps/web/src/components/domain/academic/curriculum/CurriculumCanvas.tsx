@@ -5,8 +5,6 @@ import { ConnectionMode, NodeChangeset, ReactFlow, type Connection, type Edge, t
 import { Info } from "lucide-react"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useFillHeight } from "@/composables/useFillHeight"
-import { ApiError } from "@/api/client"
-import { updateSubjectLayout } from "@/api/career-academics"
 import {
   buildCurriculumNodes,
   buildRequirementEdges,
@@ -27,8 +25,9 @@ import { CurriculumLegend } from "@/components/domain/academic/curriculum/Curric
 import { CONTROL_CLASS, CurriculumNavigationControls } from "@/components/domain/academic/curriculum/CurriculumNavigationControls"
 import { CurriculumAddContext, curriculumEdgeTypes, curriculumNodeTypes } from "@/components/domain/academic/curriculum/curriculumNodeTypes"
 import { CurriculumRelationPicker, type RelationPickerState } from "@/components/domain/academic/curriculum/CurriculumRelationPicker"
-import { CurriculumRequirementDialogs, useRequirementConnection } from "@/components/domain/academic/curriculum/CurriculumRequirementDialogs"
+import { CurriculumRequirementDialogs } from "@/components/domain/academic/curriculum/CurriculumRequirementDialogs"
 import { CurriculumVisualSubjectForm } from "@/components/domain/academic/curriculum/CurriculumVisualSubjectForm"
+import { isPendingRequirement, type CurriculumDraft } from "@/components/domain/academic/curriculum/useCurriculumDraft"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -37,7 +36,6 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useShownWhileClosing } from "@/lib/dialogExit"
 import { useFocusReturn } from "@/lib/focusReturn"
 import { formatNumericDisplay } from "@/lib/numberDisplay"
-import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import type { CurriculumBuilderProps, CurriculumBuilderSubject } from "@/types/academic"
 
@@ -46,6 +44,8 @@ type CurriculumCanvasProps = Pick<CurriculumBuilderProps, "curriculum" | "fixedF
   fullScreen?: boolean
   organizationUnits: CurriculumBuilderProps["organizationUnitOptions"]
   modalityOptions: CurriculumBuilderProps["modalityOptions"]
+  /** What is moved and connected stays here until the page saves it. */
+  draft: CurriculumDraft
   onChanged: (message: string) => void
   /** Shown above the board, aligned with its first column (the malla selector in the view). */
   header?: ReactNode
@@ -80,7 +80,7 @@ const withMeasures = (next: Node[], previous: Node[]): Node[] => {
 
 const sameList = (left: unknown[], right: unknown[]): boolean => left.length === right.length && left.every((value, index) => Object.is(value, right[index]))
 
-export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, subjects, requirements, career, editing, fullScreen = false, organizationUnits, modalityOptions, onChanged, header, onBoardInset }: CurriculumCanvasProps) {
+export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, subjects, requirements, career, editing, fullScreen = false, organizationUnits, modalityOptions, draft, onChanged, header, onBoardInset }: CurriculumCanvasProps) {
   const scrollElement = useRef<HTMLDivElement>(null)
   const canvasElement = useRef<HTMLDivElement>(null)
   const fillHeight = useFillHeight(canvasElement, !fullScreen)
@@ -91,12 +91,12 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null)
   const [draftCycle, setDraftCycle] = useState<number | null>(null)
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null)
-  const [savingLayout, setSavingLayout] = useState(false)
   const [editorOpenings, setEditorOpenings] = useState(0)
   const [relationPicker, setRelationPicker] = useState<RelationPickerState>(null)
   const [selectedRequirement, setSelectedRequirement] = useState<CurriculumRequirement | null>(null)
   const [zoomChoice, setZoomChoice] = useState<ZoomChoice>(storedZoom)
   const editable = editing && curriculum.editable && !curriculum.lock_reason
+  const savingLayout = draft.saving
   const hasOpenEditor = editingSubjectId !== null || draftCycle !== null
   useFocusReturn(hasOpenEditor)
 
@@ -146,7 +146,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
   ]
 
   const subjectsForCycle = (cycle: number): CurriculumBuilderSubject[] =>
-    subjects
+    draft.subjects
       .filter((subject) => subject.cycle === cycle)
       .sort((left, right) => (left.position === right.position ? left.name.localeCompare(right.name) : left.position - right.position))
 
@@ -186,13 +186,21 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
   }
 
   const subjectById = useMemo(() => new Map(subjects.map((subject) => [subject.id, subject])), [subjects])
-  const edges: Edge[] = useMemo(() => buildRequirementEdges(requirements, subjectById), [requirements, subjectById])
+  const shownById = useMemo(() => new Map(draft.subjects.map((subject) => [subject.id, subject])), [draft.subjects])
+  // A dashed line is a prerequisite that has not been saved yet.
+  const edges: Edge[] = useMemo(
+    () =>
+      buildRequirementEdges(draft.requirements, shownById).map((edge) =>
+        isPendingRequirement(edge.id) ? { ...edge, ariaLabel: `${edge.ariaLabel} (sin guardar)`, style: { ...edge.style, strokeDasharray: "6 4" } } : edge,
+      ),
+    [draft.requirements, shownById],
+  )
 
   const editorTarget = useMemo(() => (hasOpenEditor ? { subjectId: editingSubjectId, cycle: draftCycle } : null), [hasOpenEditor, editingSubjectId, draftCycle])
   const shownEditor = useShownWhileClosing(editorTarget)
   const editorSubject = shownEditor?.subjectId ? (subjectById.get(shownEditor.subjectId) ?? null) : null
   const editorCycle = editorSubject?.cycle ?? shownEditor?.cycle ?? 1
-  const editorPosition = editorSubject?.position ?? Math.max(-1, ...subjectsForCycle(editorCycle).map((subject) => subject.position)) + 1
+  const editorPosition = editorSubject?.position ?? Math.max(-1, ...subjects.filter((subject) => subject.cycle === editorCycle).map((subject) => subject.position)) + 1
 
   const beginSubjectEdit = (subjectId: string): void => {
     if (!editable) return
@@ -213,21 +221,10 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
     setDraftCycle(null)
   }
 
-  const moveSubject = async (subjectId: string, delta: -1 | 1): Promise<void> => {
-    const subject = subjectById.get(subjectId)
+  const moveSubject = (subjectId: string, delta: -1 | 1): void => {
+    const subject = shownById.get(subjectId)
     if (!editable || savingLayout || !subject || typeof subject.cycle !== "number") return
-    const cycleSubjects = subjectsForCycle(subject.cycle)
-    const index = cycleSubjects.findIndex((item) => item.id === subjectId) + delta
-    if (index < 0 || index >= cycleSubjects.length) return
-    setSavingLayout(true)
-    try {
-      const result = await updateSubjectLayout(curriculum.id, { subject_id: subjectId, cycle: subject.cycle, position: index })
-      onChanged(result.message)
-    } catch (reason) {
-      toast.error(reason instanceof ApiError ? reason.message : "No se pudo mover la materia")
-    } finally {
-      setSavingLayout(false)
-    }
+    draft.move(subjectId, subjectsForCycle(subject.cycle).findIndex((item) => item.id === subjectId) + delta)
   }
 
   const buildNodes = (preview: DragPreview | null, saving = savingLayout): Node[] =>
@@ -243,7 +240,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
       savingLayout: saving,
       draggingSubjectId: preview?.subjectId,
       onEdit: (subjectId) => beginSubjectEdit(subjectId),
-      onMove: (subjectId, delta) => void moveSubject(subjectId, delta),
+      onMove: (subjectId, delta) => moveSubject(subjectId, delta),
       onRelate: (subjectId, mode) => setRelationPicker({ subjectId, mode }),
       onSaved: (message) => {
         if (message) onChanged(message)
@@ -251,7 +248,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
     })
 
   const [nodes, setNodes] = useState<Node[]>(() => buildNodes(null))
-  const nodeInputs = [subjects, requirements, organizationUnits, curriculum.cycle_count, editable, editingSubjectId, draftCycle, savingLayout]
+  const nodeInputs = [draft.subjects, requirements, organizationUnits, curriculum.cycle_count, editable, editingSubjectId, draftCycle, savingLayout]
   const [seenInputs, setSeenInputs] = useState(nodeInputs)
   if (!sameList(seenInputs, nodeInputs)) {
     setSeenInputs(nodeInputs)
@@ -261,12 +258,10 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
   const synchronizeNodePositions = (preview: DragPreview | null, saving: boolean): void => setNodes((current) => withMeasures(buildNodes(preview, saving), current))
 
   const subjectName = (id: string | null | undefined): string => (id && subjectById.get(id)?.name) || "materia"
-  const subjectCycle = (id: string | null | undefined): number | null => (id && subjectById.get(id)?.cycle) || null
-  const { connect } = useRequirementConnection({ curriculumId: curriculum.id, editable, subjectCycle, onChanged })
 
   const onConnect = (connection: Connection): void => {
-    if (!editable || hasOpenEditor || !connection.source || !connection.target) return
-    void connect({ sourceId: connection.source, targetId: connection.target })
+    if (!editable || savingLayout || hasOpenEditor || !connection.source || !connection.target) return
+    draft.connect({ sourceId: connection.source, targetId: connection.target })
   }
 
   const onNodeClick = (_event: unknown, node: Node): void => {
@@ -275,8 +270,8 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
   }
 
   const onEdgeClick = (_event: unknown, edge: Edge): void => {
-    if (!editable || hasOpenEditor) return
-    setSelectedRequirement(requirements.find((requirement) => requirement.id === edge.id) ?? null)
+    if (!editable || savingLayout || hasOpenEditor) return
+    setSelectedRequirement(draft.requirements.find((requirement) => requirement.id === edge.id) ?? null)
   }
 
   const onNodeDrag = (_event: unknown, node: Node): void => {
@@ -300,28 +295,15 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
     )
   }
 
-  const onNodeDragStop = async (_event: unknown, node: Node): Promise<void> => {
+  const onNodeDragStop = (_event: unknown, node: Node): void => {
     const subject = subjectById.get(node.id)
-    if (!editable || node.type !== "subject" || !subject || typeof subject.cycle !== "number") return
+    if (!editable || savingLayout || node.type !== "subject" || !subject || typeof subject.cycle !== "number") return
     const originalIndex = subjectsForCycle(subject.cycle).findIndex((item) => item.id === node.id)
     const index = dragPreview?.subjectId === node.id ? dragPreview.index : originalIndex
-    if (index === originalIndex) {
-      setDragPreview(null)
-      synchronizeNodePositions(null, savingLayout)
-      return
-    }
-    setSavingLayout(true)
-    synchronizeNodePositions(dragPreview, true)
-    try {
-      const result = await updateSubjectLayout(curriculum.id, { subject_id: node.id, cycle: subject.cycle, position: index })
-      onChanged(result.message)
-    } catch (reason) {
-      setDragPreview(null)
-      synchronizeNodePositions(null, true)
-      toast.error(reason instanceof ApiError ? reason.message : "No se pudo mover la materia")
-    } finally {
-      setSavingLayout(false)
-    }
+    setDragPreview(null)
+    // Dropped where it was: only snap it back into its slot. Otherwise the new order rebuilds the board.
+    if (index === originalIndex) synchronizeNodePositions(null, savingLayout)
+    else draft.move(node.id, index)
   }
 
   const onNodesChange = (changes: NodeChangeset<Node>): void => {
@@ -336,7 +318,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
       style={fillHeight !== null ? { height: `${fillHeight}px` } : undefined}
       aria-label={editing ? "Editor interactivo de la malla" : "Vista de la malla"}
     >
-      <CurriculumRelationPicker subjects={subjects} picker={relationPicker} onPickerChange={setRelationPicker} onPick={(pending) => void connect(pending)} />
+      <CurriculumRelationPicker subjects={draft.subjects} picker={relationPicker} onPickerChange={setRelationPicker} onPick={draft.connect} />
       <CurriculumNavigationControls choice={zoomChoice} zoom={zoom} onChoiceChange={chooseZoom}>
         <Popover open={legendOpen} onOpenChange={setLegendOpen}>
           <PopoverAnchor asChild>
@@ -396,7 +378,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
               preventScrolling={false}
               connectionMode={ConnectionMode.Strict}
               nodesDraggable={editable && !hasOpenEditor}
-              nodesConnectable={editable && !hasOpenEditor}
+              nodesConnectable={editable && !hasOpenEditor && !savingLayout}
               elementsSelectable
               disableKeyboardA11y
               proOptions={{ hideAttribution: true }}
@@ -404,7 +386,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
               onEdgeClick={onEdgeClick}
               onNodeClick={onNodeClick}
               onNodeDrag={onNodeDrag}
-              onNodeDragStop={(event, node) => void onNodeDragStop(event, node)}
+              onNodeDragStop={onNodeDragStop}
             />
           </CurriculumAddContext.Provider>
         </div>
@@ -413,9 +395,9 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
         curriculumId={curriculum.id}
         editable={editable}
         subjectName={subjectName}
-        subjectCycle={subjectCycle}
         selectedRequirement={selectedRequirement}
         onSelectedRequirementChange={setSelectedRequirement}
+        removePending={draft.removePending}
         onChanged={onChanged}
       />
       <Dialog

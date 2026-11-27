@@ -4,6 +4,7 @@ import golden from "../http/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeTemplateStore, fieldId, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "../configuration/testing"
 import type { PhpRecord } from "../configuration/phpValues"
+import { syllabusSectionPayload } from "../configuration/templatePresentation"
 import { definitionHash } from "../ficha/definitionHash"
 import { updateDraftField, type DraftFieldDeps, type DraftFieldRecord, type DraftSyllabus } from "./draftField"
 import type { IdentificationSource } from "./identificationCard"
@@ -391,5 +392,56 @@ describe("PATCH a field with a character limit", () => {
     limitTo(1000)
     const result = await patch({ version_bloqueo: 3, value: doc("x".repeat(1001)) })
     expect(result.json).toMatchObject({ errors: { value: ["Este campo admite hasta 1 000 caracteres."] } })
+  })
+})
+
+describe("un campo que Coordinación deja editable al docente", () => {
+  const profile = (text: string): PhpRecord => ({ ...doc(text), attrs: { edited: true, teacherEdits: true } })
+  const coordinatorWrites = (text: string) => {
+    templates.values = [{ fieldId: TEXT_FIELD, subjectId: SUBJECT, value: profile(text) }]
+  }
+  const stored = () => values.get(`${SYLLABUS}:${TEXT_FIELD}`) as PhpRecord
+  const ownMark = () => (stored().attrs as PhpRecord | undefined)?.ownText
+
+  beforeEach(() => coordinatorWrites("Texto de Coordinación"))
+
+  it("guarda el texto del docente marcado por el servidor y lo conserva al cambiar el original", async () => {
+    const { status } = await patch({ version_bloqueo: 3, value: doc("Mi texto") })
+    expect(status).toBe(200)
+    expect(JSON.stringify(stored().content)).toContain("Mi texto")
+    expect(ownMark()).toBe(true)
+    coordinatorWrites("Texto nuevo de Coordinación")
+    await patch({ version_bloqueo: 3, value: doc("Mi texto ampliado") })
+    expect(JSON.stringify(stored().content)).toContain("Mi texto ampliado")
+    expect(ownMark()).toBe(true)
+  })
+
+  it("no confía en la marca del cliente: el texto original sigue siendo el de Coordinación", async () => {
+    await patch({ version_bloqueo: 3, value: { ...doc("Texto de Coordinación"), attrs: { ownText: true } } })
+    expect(ownMark()).toBeUndefined()
+  })
+
+  it("al abrir el sílabo recibe el texto de Coordinación o el suyo, sin límite de caracteres ni plantilla de espacios", () => {
+    const template = goldenTemplate()
+    const section = template.sections.find((item) => item.blocks.some((block) => block.fields.some((field) => field.id === TEXT_FIELD)))!
+    const original = { ...doc("Texto de Coordinación"), attrs: { edited: true, teacherEdits: true } }
+    const read = (held: unknown) =>
+      (syllabusSectionPayload(section, () => held, {}, template.definition!, { [TEXT_FIELD]: original }).fields as PhpRecord[]).find((field) => field.id === TEXT_FIELD)!
+
+    const untouched = read(doc("Una versión anterior sin tocar"))
+    expect(untouched).toMatchObject({ teacher_editable: true, teacher_edits: true })
+    expect(untouched).not.toHaveProperty("template")
+    expect(untouched).not.toHaveProperty("max_length")
+    expect(JSON.stringify(untouched.value)).toContain("Texto de Coordinación")
+
+    const own = read({ ...doc("Mi texto"), attrs: { ownText: true } })
+    expect(JSON.stringify(own.value)).toContain("Mi texto")
+  })
+
+  it("sin la marca, el docente no puede cambiarlo", async () => {
+    templates.values = [{ fieldId: TEXT_FIELD, subjectId: SUBJECT, value: { ...doc("Texto fijo"), attrs: { edited: true } } }]
+    const { status } = await patch({ version_bloqueo: 3, value: doc("Mi texto") })
+    expect(status).toBe(422)
+    expect(saved).toEqual([])
   })
 })

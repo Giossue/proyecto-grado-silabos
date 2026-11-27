@@ -190,6 +190,11 @@ export const SUPPORT_DOCUMENT_TITLE_MAX = 180
 
 const isFile = (value: unknown): value is File => typeof File !== "undefined" && value instanceof File
 
+export const supportDocumentEditSchema = z.object({
+  file: z.custom<File | null>((value) => value === null || isFile(value), "Elija el archivo."),
+  title: z.string().trim().min(1, "Escriba el nombre del documento.").max(SUPPORT_DOCUMENT_TITLE_MAX, "El nombre no puede pasar de 180 caracteres."),
+})
+
 export const supportDocumentFormSchema = z.object({
   file: z.custom<File | null>(isFile, "Elija el archivo."),
   title: z.string().trim().min(1, "Escriba el nombre del documento.").max(SUPPORT_DOCUMENT_TITLE_MAX, "El nombre no puede pasar de 180 caracteres."),

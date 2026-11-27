@@ -1,15 +1,16 @@
 "use client"
 
-import { ArrowLeft, Pencil, PencilLine, UserPlus } from "lucide-react"
+import { ArrowLeft, Pencil, PencilLine, Save, Undo2, UserPlus } from "lucide-react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useState, type CSSProperties } from "react"
+import { useEffect, useEffectEvent, useState, type CSSProperties } from "react"
 import { type Curriculum } from "@/api/career-academics"
 import type { BoardInset } from "@/components/domain/academic/curriculum/CurriculumCanvas"
 import { AdminCareerBackLink, AdminCareerTabs, type AdminCareer } from "@/components/domain/academic/AdminCareerNavigation"
 import { MallaDialog } from "@/components/domain/academic/curriculum/MallaDialog"
 import { MallaToolbar, mallaLabel } from "@/components/domain/academic/curriculum/MallaToolbar"
+import { useCurriculumDraft } from "@/components/domain/academic/curriculum/useCurriculumDraft"
 import { ScheduledSubjectsTab } from "@/components/domain/academic/ScheduledSubjectsTab"
 import { TeacherAssignmentsPanel } from "@/components/domain/academic/TeacherAssignmentsPanel"
 import { ManagedUserDialog } from "@/components/domain/identity/ManagedUserDialog"
@@ -18,6 +19,8 @@ import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { ProcessLockAlert } from "@/components/domain/ProcessLockAlert"
+import { useLeaveGuard } from "@/components/domain/syllabus/useLeaveGuard"
+import { UnsavedChangesDialog } from "@/components/domain/UnsavedChangesDialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
@@ -26,6 +29,7 @@ import { paths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import { useAcademicCareerScope } from "@/composables/useAcademicCareerScope"
+import { useDiscardConfirmation } from "@/composables/useDiscardConfirmation"
 import { curriculumEditorState } from "@/state/curriculumEditor"
 import { errorMessage, failedQuery } from "@/lib/queryClient"
 
@@ -59,6 +63,9 @@ const curriculumColumns = [
   { key: "unidad", label: "Unidad" },
   { key: "genera_silabo", label: "Genera sílabo" },
 ]
+
+const NO_SUBJECTS: Curriculum["subjects"] = []
+const NO_REQUIREMENTS: Curriculum["requirements"] = []
 
 const locked = (current: Curriculum | null): boolean => Boolean(current && (!current.curriculum.editable || current.curriculum.lock_reason))
 
@@ -179,6 +186,36 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
     if (mallaId === curriculum?.curriculum.id) await reloadCurriculum()
   }
 
+  const draft = useCurriculumDraft({
+    curriculumId: curriculum?.curriculum.id ?? "",
+    subjects: curriculum?.subjects ?? NO_SUBJECTS,
+    requirements: curriculum?.requirements ?? NO_REQUIREMENTS,
+    onSaved: handleCurriculumChanged,
+    onFailed: reloadCurriculum,
+  })
+  // Whatever closes the editor, a lock included, drops what was not saved.
+  if (!editingCurriculum && draft.dirty) draft.discard()
+  const { open: discardOpen, ask: askToDiscard, decide: decideDiscard } = useDiscardConfirmation()
+  useLeaveGuard({ needed: () => draft.dirty, confirm: askToDiscard, navigate: (href) => router.push(href) })
+
+  const warnBeforeUnload = useEffectEvent((event: BeforeUnloadEvent): void => {
+    if (!draft.dirty) return
+    event.preventDefault()
+    event.returnValue = ""
+  })
+
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent): void => warnBeforeUnload(event)
+    window.addEventListener("beforeunload", onBeforeUnload)
+
+    return () => window.removeEventListener("beforeunload", onBeforeUnload)
+  }, [])
+
+  const leaveEditor = async (): Promise<void> => {
+    if (draft.dirty && !(await askToDiscard())) return
+    setEditingCurriculum(false)
+  }
+
   const openCurriculumEditor = async (): Promise<void> => {
     const careerId = curriculum?.career.id
     if (!careerId || openingEditor) return
@@ -216,7 +253,7 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
       banner={mode === "curriculum" && curriculum?.curriculum.lock_reason ? <ProcessLockAlert banner lock={curriculum.curriculum.lock} /> : null}
       eyebrow={
         mode === "curriculum" && editingCurriculum ? (
-          <Button variant="link" size="sm" className="h-auto px-0" data-tour="curriculum-back" onClick={() => setEditingCurriculum(false)}>
+          <Button variant="link" size="sm" className="h-auto px-0" data-tour="curriculum-back" disabled={draft.saving} onClick={() => void leaveEditor()}>
             <ArrowLeft aria-hidden="true" />
             Volver a la vista
           </Button>
@@ -230,6 +267,18 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
             <Button variant="outline" data-tour="curriculum-data" onClick={() => setEditMallaOpen(true)}>
               <PencilLine data-icon="inline-start" aria-hidden="true" />
               Editar malla
+            </Button>
+          ) : null}
+          {mode === "curriculum" && editingCurriculum && draft.dirty ? (
+            <Button variant="outline" disabled={draft.saving} onClick={draft.discard}>
+              <Undo2 data-icon="inline-start" aria-hidden="true" />
+              Descartar
+            </Button>
+          ) : null}
+          {mode === "curriculum" && editingCurriculum ? (
+            <Button data-tour="curriculum-save" disabled={!draft.dirty || draft.saving} onClick={() => void draft.save()}>
+              {draft.saving ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" aria-hidden="true" />}
+              {draft.saving ? "Guardando…" : "Guardar cambios"}
             </Button>
           ) : null}
           {mode === "teachers" && assignments?.canCreateTeacher ? (
@@ -299,6 +348,7 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
               requirements={curriculum.requirements}
               organizationUnits={curriculum.organizationUnitOptions}
               editing={editingCurriculum}
+              draft={draft}
               onChanged={(message) => void handleCurriculumChanged(message)}
               onBoardInset={setBoardInset}
             />
@@ -326,6 +376,19 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
             <MallaDialog open={editMallaOpen} onOpenChange={setEditMallaOpen} malla={selectedMalla} onSaved={(message, mallaId) => void handleMallaSaved(message, mallaId)} />
           ) : null}
         </>
+      ) : null}
+      {mode === "curriculum" ? (
+        <UnsavedChangesDialog
+          open={discardOpen}
+          title="Hay cambios sin guardar"
+          description="Los cambios de la malla no se guardaron. Si sale, los perderá"
+          discardLabel="Salir y descartar cambios"
+          onContinue={() => decideDiscard(false)}
+          onDiscard={() => decideDiscard(true)}
+          onOpenChange={(open) => {
+            if (!open) decideDiscard(false)
+          }}
+        />
       ) : null}
       {mode === "teachers" ? (
         <ManagedUserDialog open={teacherOpen} onOpenChange={setTeacherOpen} teacherCareer={assignments?.career ?? null} showTrigger={false} onSaved={(message) => void handleAssignmentChanged(message)} />

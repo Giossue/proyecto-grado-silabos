@@ -3,12 +3,13 @@ import { requireSession } from "../auth/requireSession"
 import { activeCareerId, resolveCareerScope } from "../academic/careerScope"
 import type { AppSession } from "../auth/types"
 import { freeTextNormalize } from "../configuration/freeText"
+import { markTeacherEdits, teacherEdits } from "../configuration/teacherText"
 import { phpTrim, type PhpRecord } from "../configuration/phpValues"
 import { careerProfileLockReason, profileContext } from "../configuration/subjectProfile"
 import { profileFields } from "../configuration/subjectProfileFields"
 import { fieldResponseNormalize } from "../configuration/templateRehearsal"
 import { fieldSection, type TemplateField } from "../configuration/templatePresentation"
-import { careerResponse, isDocument, keepOwnOptions, plainText, responseIsEmpty, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
+import { responseWithin, careerResponse, isDocument, keepOwnOptions, plainText, responseIsEmpty, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
 import type { TemplateStore } from "../shared/templateStore"
 import { importSession, readUpload, type ImportDeps, type ImportFileRules } from "../excel/importRequest"
 import { xlsxDownload } from "../excel/workbook"
@@ -265,7 +266,8 @@ async function applyEntries(
       if (responseIsEmpty(field.content, fieldResponseNormalize(field.content, document, definition, "value"), definition)) continue
       const stored = await tx.storedValue(entry.subject_id, field.id)
       const career = careerResponse(field.content, keepOwnOptions(field.content, document, stored, definition, "file"), definition, "value")
-      await tx.saveValue(entry.subject_id, field.id, freeTextNormalize(career))
+      const imported = freeTextNormalize(career)
+      await tx.saveValue(entry.subject_id, field.id, teacherEdits(stored) && !responseWithin(imported) ? markTeacherEdits(imported) : imported)
       changed = true
     }
     if (!changed) rejectWith({ subjects: ["Elija al menos un campo con contenido en cada materia seleccionada."] })

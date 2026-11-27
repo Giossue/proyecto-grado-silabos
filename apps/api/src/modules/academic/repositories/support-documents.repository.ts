@@ -40,6 +40,17 @@ function writeTx(runner: Runner): SupportDocumentTx {
       const rows = await runner.archivos.findMany({ where: { archivo_id: { in: ids } }, select: { disco: true, ruta_archivo: true } })
       return rows.map((row) => ({ disk: row.disco, path: row.ruta_archivo }))
     },
+    async updateDocument(id, changes) {
+      await runner.documentos_apoyo.update({
+        where: { documento_apoyo_id: id },
+        data: {
+          titulo_documento: changes.title,
+          subido_por: changes.uploadedBy,
+          subido_en: epochDate(changes.uploadedAt),
+          ...(changes.file === undefined ? {} : { archivo_id: changes.file.objectId, archivo_vista_id: changes.file.previewId, estado_vista: changes.file.view }),
+        },
+      })
+    },
     async deleteDocument(id) {
       await runner.documentos_apoyo.deleteMany({ where: { documento_apoyo_id: id } })
     },

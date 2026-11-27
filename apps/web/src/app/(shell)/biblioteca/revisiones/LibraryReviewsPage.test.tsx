@@ -91,7 +91,7 @@ describe("LibraryReviewsPage", () => {
     const row = container.querySelectorAll("tbody tr")[0]!
     const headers = [...container.querySelectorAll("thead th")].map((header) => header.textContent)
     expect(container.querySelector("#library-search")!.getAttribute("placeholder")).toBe("Buscar por asignatura, código, carrera o docente")
-    expect(headers).toEqual(["Facultad", "Carrera", "Asignatura", "Responsable", "Estado"])
+    expect(headers).toEqual(["Carrera", "Facultad", "Asignatura", "Responsable", "Estado"])
     expect(row.textContent).not.toContain("SW-601")
     expect(row.textContent).toContain("Arquitectura de Software")
     expect(row.textContent).toContain("Sin asignar")

@@ -6,10 +6,10 @@ import { useEffect, useRef } from "react"
 import { useCurrentFullPath } from "@/composables/useCurrentUrl"
 import { useScrollDirection } from "@/composables/useScrollDirection"
 import { setupRoutes } from "@/lib/setupRoutes"
+import { toast } from "@/lib/toast"
 import { deadlineState } from "@/state/deadline"
 import { sessionState, useSession } from "@/state/session"
 import { setupChecklistState, useSetupChecklist } from "@/state/setupChecklist"
-import { useSignal } from "@/lib/signal"
 import "driver.js/dist/checklist.css"
 
 const plain = (text: string): string => text.replace(/\.$/, "")
@@ -26,24 +26,13 @@ export function SetupChecklist() {
   const { session } = useSession()
   const role = session?.active_role?.code ?? ""
   const { setup, steps, start, openRequests } = useSetupChecklist()
-  const deadlineValue = useSignal(deadlineState.deadline)
   const { hidden } = useScrollDirection()
   const panel = useRef<Checklist | null>(null)
   const titleGuard = useRef<MutationObserver | null>(null)
+  const handledRequests = useRef(openRequests)
 
-  const deadlineStatus = deadlineValue?.state
-  const openedDescription = deadlineStatus === "paused"
-    ? "El periodo académico está en pausa"
-    : deadlineStatus === "closed"
-      ? "El periodo académico finalizó"
-      : "El periodo académico ya está abierto"
-  const complete = start?.done
-    ? { title: "Todo listo", description: openedDescription }
-    : !start || start.action
-      ? { title: "Todo listo", description: "Ya puede abrir el periodo académico" }
-      : { title: "Pasos completos", description: plain(start.hint) }
-  const doneCount = steps.filter((step) => step.done).length
-  const signature = JSON.stringify({ setup, role, complete })
+  const pending = steps.some((step) => !step.done)
+  const signature = JSON.stringify({ setup, role })
 
   const syncScrollHidden = (value: boolean): void => {
     document.querySelector(".driver-checklist.setup-checklist")?.toggleAttribute("data-scroll-hidden", value)
@@ -69,7 +58,7 @@ export function SetupChecklist() {
     const wasOpen = panel.current?.isOpen() ?? false
     panel.current?.hide()
     panel.current = null
-    if (steps.length === 0) return
+    if (!pending) return
     panel.current = checklist({
       id: `setup-${role}`,
       title: setup?.title,
@@ -77,10 +66,7 @@ export function SetupChecklist() {
       launcherText: "Antes de empezar",
       progressText: "{{done}} de {{total}}",
       launcherProgressText: "{{done}}/{{total}}",
-      completeTitle: complete.title,
-      completeDescription: complete.description,
-      completeLauncherText: complete.title,
-      className: doneCount < steps.length ? "setup-checklist setup-pending" : "setup-checklist setup-done",
+      className: "setup-checklist setup-pending",
       completed: steps.filter((step) => step.done).map((step) => step.key),
       items: steps.map((step) => ({
         id: step.key,
@@ -94,7 +80,7 @@ export function SetupChecklist() {
     // The library names its close button in English and has no option to change it.
     document.querySelector(".setup-checklist .driver-checklist-close-btn")?.setAttribute("aria-label", "Cerrar la lista")
     guardTooltip()
-    const firstTime = doneCount < steps.length && !localStorage.getItem(seenKey())
+    const firstTime = !localStorage.getItem(seenKey())
     if (firstTime) localStorage.setItem(seenKey(), "1")
     if (firstTime || wasOpen) panel.current.open()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,7 +91,11 @@ export function SetupChecklist() {
   }, [hidden, signature])
 
   useEffect(() => {
-    if (openRequests > 0) panel.current?.open()
+    if (openRequests === handledRequests.current) return
+    handledRequests.current = openRequests
+    if (panel.current) panel.current.open()
+    else if (start && !start.done) toast.info(start.hint)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRequests])
 
   useEffect(() => {

@@ -12,6 +12,7 @@ export type DocumentField = {
     document?: DocumentNode | null;
     template?: DocumentNode;
     teacher_editable?: boolean;
+    teacher_edits?: boolean;
     required?: boolean;
     show_if?: ResponseCondition | null;
     max_length?: number | null;

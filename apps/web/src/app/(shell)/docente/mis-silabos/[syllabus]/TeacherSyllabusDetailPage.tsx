@@ -27,6 +27,7 @@ import { ReviewCommentNotice } from "@/components/domain/syllabus/ReviewCommentN
 import { SignatureDialog, type StatementSigner } from "@/components/domain/syllabus/SignatureDialog"
 import { SyllabusDocumentPreview } from "@/components/domain/syllabus/SyllabusDocumentPreview"
 import { isSyllabusPreview } from "@/components/domain/syllabus/syllabusPreview"
+import { IconTooltip } from "@/components/domain/IconTooltip"
 import { SyllabusTeacherForm } from "@/components/domain/syllabus/SyllabusTeacherForm"
 import { useLeaveGuard } from "@/components/domain/syllabus/useLeaveGuard"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -49,7 +50,6 @@ import { drawnInDocument, shownInCard } from "@silabos/shared/lib/teacherFormati
 import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { toast } from "@/lib/toast"
 import { handleUnauthorized } from "@/lib/unauthorized"
-import { withoutFinalPeriod } from "@/lib/utils"
 import { teacherSyllabusQuery } from "@/queries/teacher"
 import { scrollBehavior } from "@/lib/motion"
 
@@ -174,14 +174,7 @@ export default function TeacherSyllabusDetailPage() {
   const submitLabel = mustSign ? "Firmar y enviar" : "Enviar"
   const emptyParts = allFields.filter((field) => field.required && isTeacherField(field)).filter(isFieldEmpty).length
   const blockIssue = blockIssueOf(allFields)
-  const submitHint =
-    emptyParts === 0 && blockIssue !== ""
-      ? blockIssue
-      : emptyParts === 1
-        ? "Falta 1 campo por completar"
-        : emptyParts > 1
-          ? `Faltan ${emptyParts} campos por completar`
-          : ""
+  const submitHint = emptyParts === 0 ? "" : emptyParts === 1 ? "Falta 1 campo por completar" : `Faltan ${emptyParts} campos por completar`
   const copySources = canEdit && (syllabus?.state === "borrador" || syllabus?.state === "sin_iniciar") ? (syllabus.copy_sources ?? []) : []
   const visibleSections = (syllabus?.sections ?? []).filter((section) => teacherFormFields(section.fields).length > 0)
   const activeSectionId = visibleSections.find((section) => section.id === chosenSectionId)?.id ?? visibleSections[0]?.id ?? ""
@@ -451,7 +444,19 @@ export default function TeacherSyllabusDetailPage() {
     }
   }
 
+  const showFailingBlock = async (): Promise<void> => {
+    try {
+      if (await flushAutosave()) await showValidation()
+    } catch (reason) {
+      setError(reason instanceof ApiError ? reason.message : "No se pudo revisar el sílabo")
+    }
+  }
+
   const askSubmit = (): void => {
+    if (blockIssue !== "") {
+      void showFailingBlock()
+      return
+    }
     if (mustSign) setSignOpen(true)
     else setConfirmSubmitOpen(true)
   }
@@ -576,16 +581,27 @@ export default function TeacherSyllabusDetailPage() {
               </Button>
             ))}
             {syllabus && canEdit ? (
-              <span data-tour="syllabus-submit" className="flex min-w-0 items-center gap-2">
+              <span data-tour="syllabus-submit" className="flex min-w-0 items-center">
                 {submitHint ? (
-                  <span id="submit-hint" className="min-w-0 max-w-64 text-right text-sm text-muted-foreground break-words">
-                    {withoutFinalPeriod(submitHint)}
-                  </span>
-                ) : null}
-                <Button disabled={processingAction || conflict || emptyParts > 0 || blockIssue !== ""} aria-describedby={submitHint ? "submit-hint" : undefined} onClick={askSubmit}>
-                  {processingAction ? <Spinner /> : mustSign ? <FileSignature aria-hidden="true" /> : <Send aria-hidden="true" />}
-                  {submitLabel}
-                </Button>
+                  <>
+                    <IconTooltip label={submitHint}>
+                      <span className="inline-flex" tabIndex={0} aria-describedby="submit-hint">
+                        <Button disabled={processingAction || conflict || emptyParts > 0} onClick={askSubmit}>
+                            {processingAction ? <Spinner /> : mustSign ? <FileSignature aria-hidden="true" /> : <Send aria-hidden="true" />}
+                            {submitLabel}
+                  </Button>
+                      </span>
+                    </IconTooltip>
+                    <span id="submit-hint" className="sr-only">
+                      {submitHint}
+                    </span>
+                  </>
+                ) : (
+                  <Button disabled={processingAction || conflict || emptyParts > 0} onClick={askSubmit}>
+                    {processingAction ? <Spinner /> : mustSign ? <FileSignature aria-hidden="true" /> : <Send aria-hidden="true" />}
+                    {submitLabel}
+                  </Button>
+                )}
               </span>
             ) : null}
           </>

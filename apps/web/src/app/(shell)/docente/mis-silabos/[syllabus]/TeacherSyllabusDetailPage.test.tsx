@@ -397,7 +397,7 @@ describe("TeacherSyllabusDetailPage", () => {
     edited.unmount()
   })
 
-  it("el motivo por el que no se puede enviar se ve junto al botón, sin pasar el mouse", async () => {
+  it("cuántos campos faltan se dice en un tooltip del botón, sin texto a la vista", async () => {
     const detail = syllabus("borrador")
     detail.sections[0]!.fields[0]!.value = null
     vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: detail })
@@ -406,8 +406,15 @@ describe("TeacherSyllabusDetailPage", () => {
 
     const submit = buttonNamed(page, "Enviar")!
     expect(submit.disabled).toBe(true)
-    expect(page.container.querySelector("#submit-hint")!.textContent).toBe("Falta 1 campo por completar")
-    expect(submit.getAttribute("aria-describedby")).toBe("submit-hint")
+    const hint = page.container.querySelector("#submit-hint")!
+    expect(hint.textContent).toBe("Falta 1 campo por completar")
+    expect(hint.classList.contains("sr-only")).toBe(true)
+    const trigger = submit.parentElement!
+    expect(trigger.tabIndex).toBe(0)
+    expect(trigger.getAttribute("aria-describedby")).toBe("submit-hint")
+    fireEvent.focus(trigger)
+    await flush()
+    expect(document.querySelector('[role="tooltip"]')!.textContent).toBe("Falta 1 campo por completar")
     page.unmount()
   })
 
@@ -441,7 +448,7 @@ describe("TeacherSyllabusDetailPage", () => {
     page.unmount()
   })
 
-  it("no deja enviar mientras las horas de las unidades no sumen las de la asignatura", async () => {
+  it("si las horas de las unidades no suman, no lo dice junto al botón: al pulsarlo lleva al error sin enviar", async () => {
     const week = (acd: string) => ({ contenidos: "", acd_h: acd, ape_h: "", aa_h: "", acd: "", ape: "", aa: "", evaluacion: "" })
     const units = (acd: string) => Array.from({ length: 4 }, (_, index) => ({ nombre: "U", resultado: "R", semanas: Array.from({ length: 4 }, (__, number) => week(index === 0 && number === 0 ? acd : "")) }))
     const planning = (acd: string): DocumentNode => ({ type: "doc", content: [{ type: "documentBlock", attrs: { kind: "unidades", props: {}, value: { units: units(acd) } } }] })
@@ -452,7 +459,15 @@ describe("TeacherSyllabusDetailPage", () => {
     vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: wrong })
     const first = mountPage()
     await flush()
-    expect(buttonNamed(first, "Enviar")!.disabled).toBe(true)
+    expect(buttonNamed(first, "Enviar")!.disabled).toBe(false)
+    expect(first.container.querySelector("#submit-hint")).toBeNull()
+    vi.mocked(validateTeacherSyllabus).mockClear()
+    vi.mocked(validateTeacherSyllabus).mockResolvedValue({ validation: { results: [] } } as never)
+    fireEvent.click(buttonNamed(first, "Enviar")!)
+    await flush()
+    expect(validateTeacherSyllabus).toHaveBeenCalledOnce()
+    expect(document.body.textContent).not.toContain("¿Enviar a revisión?")
+    expect(submitTeacherSyllabus).not.toHaveBeenCalled()
     first.unmount()
 
     const right = syllabus("borrador")

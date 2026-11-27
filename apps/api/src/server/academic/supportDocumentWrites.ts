@@ -47,6 +47,13 @@ export type SupportDocumentInput = {
 
 export type StoredFile = { disk: string; path: string }
 
+export type SupportDocumentChanges = {
+  title: string
+  uploadedBy: string
+  uploadedAt: number
+  file?: { objectId: string; previewId: string | null; view: string }
+}
+
 export type ReadableDocument = { id: string; careerId: string; title: string; view: string; preview: StoredFile | null }
 
 export interface SupportDocumentTx {
@@ -54,6 +61,7 @@ export interface SupportDocumentTx {
   insertDocument(row: SupportDocumentInput): Promise<void>
   lockDocument(id: string): Promise<{ id: string; careerId: string; objectId: string; previewId: string | null } | null>
   objects(ids: string[]): Promise<StoredFile[]>
+  updateDocument(id: string, changes: SupportDocumentChanges): Promise<void>
   deleteDocument(id: string): Promise<void>
   deleteObjects(ids: string[]): Promise<void>
 }
@@ -73,11 +81,11 @@ export type SupportDocumentWriteDeps = {
   now: () => number
   newDocumentId: () => string
   newObjectId: () => string
-  dispatchView: (documentId: string) => Promise<unknown>
+  dispatchView: (documentId: string, originalId: string) => Promise<unknown>
   maxPostSize: number
 }
 
-export function defaultSupportDocumentWriteDeps(store: SupportDocumentWriteStore, dispatchView: (documentId: string) => Promise<unknown>): SupportDocumentWriteDeps {
+export function defaultSupportDocumentWriteDeps(store: SupportDocumentWriteStore, dispatchView: SupportDocumentWriteDeps["dispatchView"]): SupportDocumentWriteDeps {
   return {
     bridge: defaultBridgeDeps(),
     store,
@@ -229,6 +237,23 @@ function throttled(deps: SupportDocumentWriteDeps, limit: number | null): { gate
   }
 }
 
+function storedOriginal(upload: UploadedFile, objectId: string, path: string, ownerId: string, now: number): StoredObjectInput {
+  return {
+    id: objectId,
+    disk: SUPPORT_DISK,
+    path,
+    name: strLimit(upload.originalName, 250),
+    mime: detectMimeType(upload.bytes),
+    size: upload.bytes.length,
+    sha256: createHash("sha256").update(upload.bytes).digest("hex"),
+    classification: "documento_apoyo",
+    ownerId,
+    storedAt: now,
+  }
+}
+
+const documentDirectory = (careerId: string, id: string): string => `documentos-apoyo/${careerId}/${id}`
+
 export async function storeSupportDocument(request: Request, deps: SupportDocumentWriteDeps): Promise<Response> {
   const tooLarge = postTooLarge(request, deps.maxPostSize)
   if (tooLarge !== null) return tooLarge
@@ -255,37 +280,94 @@ export async function storeSupportDocument(request: Request, deps: SupportDocume
   const content = upload.bytes
   const extension = clientExtension(upload.originalName).toLowerCase()
   const id = deps.newDocumentId()
-  const path = `documentos-apoyo/${careerId}/${id}/original.${extension}`
+  const path = `${documentDirectory(careerId, id)}/original.${extension}`
   const isPdf = extension === "pdf"
   await deps.storage.put(SUPPORT_DISK, path, content)
   const now = deps.now()
   const objectId = deps.newObjectId()
   try {
     await deps.store.transaction(async (tx) => {
-      await tx.insertObject({
-        id: objectId,
-        disk: SUPPORT_DISK,
-        path,
-        name: strLimit(upload.originalName, 250),
-        mime: detectMimeType(content),
-        size: content.length,
-        sha256: createHash("sha256").update(content).digest("hex"),
-        classification: "documento_apoyo",
-        ownerId: session.user.id,
-        storedAt: now,
-      })
+      await tx.insertObject(storedOriginal(upload, objectId, path, session.user.id, now))
       await tx.insertDocument({ id, careerId, title: title as string, objectId, previewId: isPdf ? objectId : null, view: isPdf ? VIEW_READY : VIEW_PENDING, uploadedBy: session.user.id, uploadedAt: now })
     })
   } catch (error) {
     await deps.storage.deleteDirectory(SUPPORT_DISK, phpDirname(path))
     throw error
   }
-  if (!isPdf) await deps.dispatchView(id)
+  if (!isPdf) await deps.dispatchView(id, objectId)
   return finish(
     apiJson(
       { message: "Documento subido.", document: { id, title, size: content.length, view: isPdf ? VIEW_READY : VIEW_PENDING, uploaded_at: iso8601(now) } },
       201,
     ),
+  )
+}
+
+export async function updateSupportDocument(request: Request, documentId: string, deps: SupportDocumentWriteDeps): Promise<Response> {
+  const tooLarge = postTooLarge(request, deps.maxPostSize)
+  if (tooLarge !== null) return tooLarge
+  if (!routeAllows(request)) return unmatchedRoute(request)
+  const body = await readBody(request.clone())
+  const original = request.clone()
+  const { gate, requirements } = throttled(deps, 20)
+  const finish = (response: Response) => gate()?.decorate(response) ?? response
+  const session = await requireSession(request, requirements, deps.bridge)
+  if (session instanceof Response) return finish(session)
+  const documentCareer = await deps.store.documentCareer(documentId)
+  if (documentCareer === null) return finish(modelNotFound(MODELS.supportDocument, documentId))
+  const careerId = await coordinationCareer(session, deps)
+  if (careerId === null) return finish(jsonError(403, ""))
+  if (careerId !== documentCareer) return finish(jsonError(404, ""))
+
+  const title = normalizedTitle(body.input.title)
+  const errors: Record<string, string[]> = {}
+  validateTitle(title, errors)
+  const sent = body.files.file !== undefined ? body.files.file : body.input.file
+  const upload = phpFilled(sent) ? validateFile(sent, errors) : null
+  if (errors.file === undefined && upload !== null) {
+    const problem = spreadsheetProblem(upload.bytes, clientExtension(upload.originalName))
+    if (problem !== null) add(errors, "file", problem)
+  }
+  if (Object.keys(errors).length > 0) return finish(validationError(errors))
+
+  const now = deps.now()
+  const extension = upload === null ? "" : clientExtension(upload.originalName).toLowerCase()
+  const isPdf = extension === "pdf"
+  const objectId = upload === null ? null : deps.newObjectId()
+  const directory = documentDirectory(careerId, documentId)
+  const path = upload === null ? null : `${directory}/${objectId}/original.${extension}`
+  if (upload !== null) await deps.storage.put(SUPPORT_DISK, path as string, upload.bytes)
+  const discard = async () => {
+    if (path !== null) await deps.storage.deleteDirectory(SUPPORT_DISK, phpDirname(path))
+  }
+
+  return finish(
+    await settle(original, deps, async () => {
+      try {
+        await deps.store.transaction(async (tx, afterCommit) => {
+          const locked = await tx.lockDocument(documentId)
+          if (locked === null) throw new Missing(MODELS.supportDocument, documentId)
+          const changes: SupportDocumentChanges = { title: title as string, uploadedBy: session.user.id, uploadedAt: now }
+          if (upload === null || objectId === null) return tx.updateDocument(locked.id, changes)
+          const replaced = [...new Set([locked.objectId, locked.previewId].filter((value): value is string => value !== null && value !== ""))]
+          const objects = await tx.objects(replaced)
+          await tx.insertObject(storedOriginal(upload, objectId, path as string, session.user.id, now))
+          await tx.updateDocument(locked.id, { ...changes, file: { objectId, previewId: isPdf ? objectId : null, view: isPdf ? VIEW_READY : VIEW_PENDING } })
+          await tx.deleteObjects(replaced)
+          afterCommit(async () => {
+            for (const object of objects) {
+              await deps.storage.delete(object.disk, object.path)
+              if (phpDirname(object.path) !== directory) await deps.storage.deleteDirectory(object.disk, phpDirname(object.path))
+            }
+            if (!isPdf) await deps.dispatchView(locked.id, objectId)
+          })
+        })
+      } catch (error) {
+        await discard()
+        throw error
+      }
+      return apiJson({ message: "Documento actualizado." })
+    }),
   )
 }
 
@@ -312,6 +394,7 @@ export async function destroySupportDocument(request: Request, documentId: strin
           await deps.storage.delete(object.disk, object.path)
           await deps.storage.deleteDirectory(object.disk, phpDirname(object.path))
         }
+        await deps.storage.deleteDirectory(SUPPORT_DISK, documentDirectory(locked.careerId, locked.id))
       })
     })
     return apiJson({ message: "Documento eliminado." })

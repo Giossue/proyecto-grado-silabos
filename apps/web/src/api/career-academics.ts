@@ -5,10 +5,9 @@ import type { DocumentPresentation } from '@/api/syllabi';
 import type { PreviewSection } from '@/components/domain/syllabus/previewSection';
 import type { DocumentNode } from '@silabos/shared/lib/templateDocument';
 import { api, ApiError } from "@/api/client";
-import { careerAcademicPath, subjectProfileBulkPath } from "@/api/careerScope";
+import { careerAcademicPath } from "@/api/careerScope";
 import { announcePurge, purgeMessageOf } from "@/lib/purgeNotice";
 import type { Malla, MallaState } from "@/types/academic";
-import type { SubjectProfileBulkAction } from "@silabos/shared/schemas/imports";
 
 export function withPurgeConfirmation<T>(
   send: (confirmPurge: boolean) => Promise<T>,
@@ -145,12 +144,6 @@ export const saveSubjectProfile = (subjectId: string, values: Record<string, Doc
     method: "PUT",
     body: jsonBody({ values }, confirmPurge),
   }));
-
-export type SubjectProfileBulkPayload = { subjects: string[]; fields: string[]; action: SubjectProfileBulkAction };
-export type SubjectProfileBulkSummary = { message: string; applied: number; skipped: number; not_applicable: number };
-
-export const applySubjectProfileBulk = (payload: SubjectProfileBulkPayload) =>
-  withPurgeConfirmation((confirmPurge) => api<SubjectProfileBulkSummary>(subjectProfileBulkPath(), { method: "POST", body: jsonBody(payload, confirmPurge) }));
 
 export type TeacherAssignments = {
   canCreateTeacher: boolean;

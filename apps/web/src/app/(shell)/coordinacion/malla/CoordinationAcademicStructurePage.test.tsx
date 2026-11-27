@@ -1,7 +1,7 @@
 import { fireEvent } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { getCurriculum, getMallas, getScheduledSubjects, getTeacherAssignments, type Curriculum } from "@/api/career-academics"
+import { getCurriculum, getMallas, getScheduledSubjects, getTeacherAssignments, updateSubjectLayout, type Curriculum } from "@/api/career-academics"
 import { getSession } from "@/api/session"
 import { academicCareerScope } from "@/api/careerScope"
 import { navigation } from "@/test/nextNavigation"
@@ -19,11 +19,15 @@ vi.mock("@/api/career-academics", async (importOriginal) => ({
   getMallas: vi.fn(),
   getScheduledSubjects: vi.fn(),
   getTeacherAssignments: vi.fn(),
+  updateSubjectLayout: vi.fn(),
 }))
 vi.mock("@/components/domain/academic/curriculum/CurriculumCanvas", () => ({
-  CurriculumCanvas: ({ editing, onChanged, header, onBoardInset }: { editing: boolean; onChanged: (message: string) => void; header?: ReactNode; onBoardInset?: (inset: { left: number; right: number }) => void }) => (
+  CurriculumCanvas: ({ editing, onChanged, header, onBoardInset, draft }: { editing: boolean; onChanged: (message: string) => void; header?: ReactNode; onBoardInset?: (inset: { left: number; right: number }) => void; draft: { move: (subjectId: string, index: number) => void } }) => (
     <div data-testid="canvas" data-editing={String(editing)}>
       {header}
+      <button type="button" onClick={() => draft.move("a", 1)}>
+        mover materia
+      </button>
       <button type="button" data-measure onClick={() => onBoardInset?.({ left: 230, right: 180 })} />
       <button type="button" onClick={() => onChanged("Malla actualizada.")}>
         cambiar malla
@@ -145,6 +149,93 @@ describe("CoordinationAcademicStructurePage, edición de malla", () => {
     await flush()
     expect(canvasEditing()).toBe("false")
     expect(editButton()).toBeDisabled()
+  })
+})
+
+describe("CoordinationAcademicStructurePage, guardar la malla", () => {
+  const withSubjects = (editable = true): Curriculum => ({
+    ...curriculum(editable),
+    subjects: [
+      { id: "a", name: "Cálculo", cycle: 1, position: 0 },
+      { id: "b", name: "Física", cycle: 1, position: 1 },
+    ] as Curriculum["subjects"],
+  })
+  const button = (text: string): HTMLButtonElement | undefined => [...document.querySelectorAll("button")].find((item) => item.textContent === text)
+  const press = async (text: string): Promise<void> => {
+    fireEvent.click(button(text)!)
+    await flush()
+  }
+  const startEditing = async (): Promise<void> => {
+    await mountPage()
+    fireEvent.click(editButton())
+    await flush()
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getSession).mockResolvedValue({ active_role: { code: "coordinador", career_id: "career-1" } } as never)
+    vi.mocked(getMallas).mockResolvedValue(MALLAS)
+    vi.mocked(getCurriculum).mockResolvedValue(withSubjects())
+    vi.mocked(getScheduledSubjects).mockResolvedValue({} as never)
+    vi.mocked(getTeacherAssignments).mockResolvedValue({} as never)
+    vi.mocked(updateSubjectLayout).mockResolvedValue({ message: "Posición actualizada." })
+  })
+
+  it("muestra «Guardar cambios» solo al editar y lo activa cuando hay algo por guardar", async () => {
+    await mountPage()
+    expect(button("Guardar cambios")).toBeUndefined()
+
+    fireEvent.click(editButton())
+    await flush()
+    expect(button("Guardar cambios")).toBeDisabled()
+    expect(button("Descartar")).toBeUndefined()
+
+    await press("mover materia")
+    expect(updateSubjectLayout).not.toHaveBeenCalled()
+    expect(button("Guardar cambios")).toBeEnabled()
+
+    await press("Guardar cambios")
+    // Swapping two subjects takes one move of either of them: «b» to the first place leaves «a» second.
+    expect(vi.mocked(updateSubjectLayout).mock.calls).toEqual([["malla-9", { subject_id: "b", cycle: 1, position: 0 }]])
+    expect(button("Guardar cambios")).toBeDisabled()
+    expect(canvasEditing()).toBe("true")
+  })
+
+  it("«Descartar» quita lo pendiente sin guardar", async () => {
+    await startEditing()
+    await press("mover materia")
+
+    await press("Descartar")
+    expect(button("Guardar cambios")).toBeDisabled()
+    expect(updateSubjectLayout).not.toHaveBeenCalled()
+  })
+
+  it("antes de salir del editor con cambios pendientes pregunta, y permite seguir o descartar", async () => {
+    await startEditing()
+    await press("mover materia")
+
+    await press("Volver a la vista")
+    expect(document.querySelector('[role="dialog"]')!.textContent).toContain("Hay cambios sin guardar")
+    await press("Seguir editando")
+    expect(canvasEditing()).toBe("true")
+    expect(button("Guardar cambios")).toBeEnabled()
+
+    await press("Volver a la vista")
+    await press("Salir y descartar cambios")
+    expect(canvasEditing()).toBe("false")
+    fireEvent.click(editButton())
+    await flush()
+    expect(button("Guardar cambios")).toBeDisabled()
+    expect(updateSubjectLayout).not.toHaveBeenCalled()
+  })
+
+  it("avisa antes de cerrar o recargar la página solo si hay cambios pendientes", async () => {
+    await startEditing()
+    const unload = (): boolean => !window.dispatchEvent(new Event("beforeunload", { cancelable: true }))
+    expect(unload()).toBe(false)
+
+    await press("mover materia")
+    expect(unload()).toBe(true)
   })
 })
 

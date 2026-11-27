@@ -4,7 +4,7 @@ import { FileText, FolderOpen } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { type SupportDocument } from "@/api/support-documents"
-import { openSupportDocument, supportDocumentSize } from "@/components/domain/academic/supportDocumentViewer"
+import { openSupportDocument } from "@/components/domain/academic/supportDocumentViewer"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
@@ -25,8 +25,10 @@ export function SupportDocumentsButton() {
   const view = async (document: SupportDocument): Promise<void> => {
     if (document.view !== "lista" || busyId) return
     setBusyId(document.id)
+    const opening = openSupportDocument(document)
+    setOpen(false)
     try {
-      await openSupportDocument(document)
+      await opening
     } finally {
       setBusyId(null)
     }
@@ -44,7 +46,7 @@ export function SupportDocumentsButton() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Documentos de apoyo</DialogTitle>
-            <DialogDescription>Material que Coordinación comparte con los docentes de la carrera</DialogDescription>
+            <DialogDescription>Documentación de apoyo para la elaboración del sílabo</DialogDescription>
           </DialogHeader>
           {documents.length === 0 ? (
             <p className="text-sm text-muted-foreground">Coordinación ya no tiene documentos compartidos</p>
@@ -68,9 +70,7 @@ export function SupportDocumentsButton() {
                       ) : document.view === "sin_vista" ? (
                         <span className="text-xs text-muted-foreground">No se pudo preparar la vista</span>
                       ) : (
-                        <span className="text-xs text-muted-foreground">
-                          {supportDocumentSize(document.size)} · {formatDateDisplay(document.uploaded_at)}
-                        </span>
+                        <span className="text-xs text-muted-foreground">Actualizado el {formatDateDisplay(document.uploaded_at)}</span>
                       )}
                     </span>
                   </Button>

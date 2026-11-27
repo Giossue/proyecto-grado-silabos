@@ -11,6 +11,7 @@ import {
   plainText,
   responsesEnabled,
   responseTemplate,
+  teacherOwnText,
   TemplateValidationError,
   withoutOwnOptions,
   type TemplateDefinition,
@@ -26,6 +27,7 @@ import {
   type TemplateSection,
 } from "./templatePresentation"
 import { profileTemplates, type ProfileContext } from "./subjectProfileFields"
+import { hasOwnText, openShape, teacherEdits, writtenValue } from "./teacherText"
 import { contentForField, type DraftSection } from "./templateDraft"
 import type { LiveField, StoredValue, TemplateStore } from "../shared/templateStore"
 
@@ -119,9 +121,10 @@ export function draftPreview(template: SyllabusTemplate, definition: TemplateDef
 }
 
 export function fieldResponseNormalize(template: unknown, value: unknown, definition: TemplateDefinition, attribute = "value"): PhpRecord {
-  const document = normalizeFieldDocument(value, definition, attribute)
+  if (teacherEdits(template)) return teacherOwnText(template, value, definition, attribute)
+  const document = normalizeFieldDocument(writtenValue(template, value), definition, attribute)
   if (!responsesEnabled(definition)) return document
-  const shaped = withoutOwnOptions(responseTemplate(normalizeFieldDocument(template, definition))) as PhpRecord
+  const shaped = withoutOwnOptions(responseTemplate(normalizeFieldDocument(openShape(template), definition))) as PhpRecord
   if (blank(document)) return shaped
   if (!matches(shaped, document, "answer")) {
     throw new TemplateValidationError({ [attribute]: ["Complete solo los espacios de respuesta. El texto, los encabezados y la estructura los define Administración."] })
@@ -143,7 +146,7 @@ export function sameStructure(template: PhpRecord, document: PhpRecord): boolean
 }
 
 function stillFits(field: TemplateField, value: unknown, template: unknown, definition: TemplateDefinition): PhpRecord | null {
-  if (!isPhpArray(value)) return null
+  if (!isPhpArray(value) || (teacherEdits(template) && !hasOwnText(value))) return null
   let document: PhpRecord
   try {
     document = fieldResponseNormalize(template, value, definition)

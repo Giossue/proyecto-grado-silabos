@@ -17,6 +17,7 @@ import { toRuntime } from "./templateDraft"
 import { templateFields, type TemplateField } from "./templatePresentation"
 import { careerResponse, fieldConditions, normalizeFieldDocument, responseTemplate, TemplateValidationError } from "./templateRuntime"
 import type { TemplateStore } from "../shared/templateStore"
+import { teacherEdits } from "./teacherText"
 import { unmatchedRoute, modelNotFound, routeAllows } from "../http/router"
 
 export interface SubjectProfileTx {
@@ -71,7 +72,7 @@ async function saveValues(tx: SubjectProfileTx, session: AppSession, subjectId: 
   const context = await writableProfileContext(tx.store)
   const allowed = new Map(profileFields(context).map((field) => [field.id, field]))
   const used = usedProfileOptions(context)
-  const accepted = new Set((await tx.store.subjectValues(subjectId)).filter((row) => storedAccepted(row.value)).map((row) => row.fieldId))
+  const accepted = new Set((await tx.store.subjectValues(subjectId)).filter((row) => storedAccepted(row.value) && !teacherEdits(row.value)).map((row) => row.fieldId))
   const fieldIds = Object.keys(values)
   for (const fieldId of fieldIds) {
     const field = allowed.get(fieldId)

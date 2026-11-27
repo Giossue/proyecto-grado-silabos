@@ -1,3 +1,4 @@
+import { hasOwnText, openShape, teacherEdits, writtenValue } from "./teacherText"
 import { isScalar, list, phpString, record, type PhpRecord } from "./phpValues"
 import {
   fieldConditions,
@@ -123,7 +124,7 @@ export function isTeacherField(field: Pick<TemplateField, "key">, definition: Ph
 }
 
 export function teacherEditable(field: TemplateField, templates: Record<string, unknown>): boolean {
-  return isCareerField(field) && (!(field.id in templates) || openTemplate(templates[field.id]))
+  return isCareerField(field) && (!(field.id in templates) || teacherEdits(templates[field.id]) || openTemplate(templates[field.id]))
 }
 
 function conditionAndLimit(definition: TemplateDefinition, field: TemplateField): PhpRecord {
@@ -169,20 +170,27 @@ export function syllabusSectionPayload(
     orientation: section.orientation,
     fields: section.blocks.flatMap((block) =>
       block.fields.map((field) => {
-        const document = normalizeFieldDocument(field.responsible === INSTITUTIONAL ? field.content : stored(field), definition)
+        const rewritable = isCareerField(field) && teacherEdits(templates[field.id])
         const editable = teacherEditable(field, templates)
-        const template = normalizeFieldDocument(templates[field.id] ?? field.content, definition)
+        const source = templates[field.id] ?? field.content
+        const template = normalizeFieldDocument(isCareerField(field) ? openShape(source) : source, definition)
+        const held = field.responsible === INSTITUTIONAL ? field.content : writtenValue(source, stored(field))
+        const modified = rewritable && hasOwnText(held)
+        const document = rewritable && !modified ? template : normalizeFieldDocument(held, definition)
+        const { max_length: maxLength, ...rules } = conditionAndLimit(definition, field)
         return {
           id: field.id,
           key: field.key,
           label: field.label,
           quien_llena: field.responsible,
-          ...(responsesEnabled(definition) && field.responsible !== INSTITUTIONAL ? { template: editable ? responseTemplate(template) : template } : {}),
+          ...(responsesEnabled(definition) && field.responsible !== INSTITUTIONAL && !rewritable ? { template: editable ? responseTemplate(template) : template } : {}),
+          ...(rewritable ? { teacher_edits: true } : {}),
           teacher_editable: editable,
           required: field.responsible !== INSTITUTIONAL,
           value: document,
           document: resolveDocument(document, variables, definition),
-          ...conditionAndLimit(definition, field),
+          ...rules,
+          ...(maxLength === undefined || rewritable ? {} : { max_length: maxLength }),
         }
       }),
     ),

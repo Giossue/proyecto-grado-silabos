@@ -1,3 +1,4 @@
+import { openShape, writtenValue } from "./teacherText"
 import { isPhpArray, list, mbStrlen, record, type PhpRecord } from "./phpValues"
 import { responseVisible, type Answers } from "./responseConditions"
 import { blank, isDocument, listTable, RESPONSE_NODE, responseAnswered, responsesEnabled, responseTemplate, type TemplateDefinition } from "./templateRuntime"
@@ -40,7 +41,9 @@ function written(template: PhpRecord, value: PhpRecord, answers: Answers): numbe
   }, 0)
 }
 
-export function fieldLimitCount(template: unknown, value: unknown, answers: Answers, definition: TemplateDefinition): number {
+export function fieldLimitCount(source: unknown, held: unknown, answers: Answers, definition: TemplateDefinition): number {
+  const template = openShape(source)
+  const value = writtenValue(source, held)
   if (!isDocument(value)) return 0
   if (!responsesEnabled(definition)) return written(EMPTY_DOCUMENT, record(value), answers)
   return written(responseTemplate(record(template)), record(value), answers)

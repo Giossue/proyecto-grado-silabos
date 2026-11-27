@@ -29,19 +29,3 @@ export const subjectProfileValuesSchema = z
   .superRefine(async (input, context) => {
     await checkItems(context, itemsAt(input.values, ["values"]), "dato del proyecto de carrera", [is.array()], { nullable: true })
   })
-
-
-export const SUBJECT_PROFILE_BULK_ACTIONS = ["plantilla", "docente"] as const
-export type SubjectProfileBulkAction = (typeof SUBJECT_PROFILE_BULK_ACTIONS)[number]
-
-export const subjectProfileBulkSchema = z
-  .object({
-    subjects: requiredField("materias", [is.array(), is.min(1), is.max(200)]),
-    fields: sometimesField("campos", [is.array(), is.max(100)]),
-    action: requiredField("acción", [is.string(), is.oneOf(SUBJECT_PROFILE_BULK_ACTIONS)]),
-    confirm_purge: sometimesField("confirmación de borrado", [is.boolean()]),
-  })
-  .superRefine(async (input, context) => {
-    await checkItems(context, itemsAt(input.subjects, ["subjects"]), "materia", [is.uuid(), is.distinct()])
-    await checkItems(context, itemsAt(input.fields, ["fields"]), "campo", [is.uuid(), is.distinct()])
-  })

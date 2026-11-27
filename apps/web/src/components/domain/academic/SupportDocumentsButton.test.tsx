@@ -62,6 +62,8 @@ describe("Botón «Documentos de apoyo» del docente", () => {
     expect(dialog()?.textContent).toContain("Documentos de apoyo")
     expect(dialog()?.textContent).toContain("Proyecto de carrera")
     expect(dialog()?.textContent).toContain("Guía TIC y TAC")
+    expect(dialog()?.textContent).not.toContain("KB")
+    expect(dialog()?.textContent).toMatch(/Actualizado el .*2026/)
     expect(getTeacherSupportDocuments).toHaveBeenCalledTimes(2)
 
     fireEvent.click(dialog()!.querySelector<HTMLButtonElement>('[aria-label="Abrir Guía TIC y TAC"]')!)
@@ -69,6 +71,7 @@ describe("Botón «Documentos de apoyo» del docente", () => {
     expect(viewSupportDocument).toHaveBeenCalledWith("d2")
     expect(window.open).toHaveBeenCalledWith("", "silabos-pdf", expect.stringContaining("popup=yes"))
     expect(tab.location.href).toBe("blob:vista")
+    expect(dialog()).toBeNull()
   })
 
   it("un documento sin vista lista no se puede abrir y dice por qué", async () => {

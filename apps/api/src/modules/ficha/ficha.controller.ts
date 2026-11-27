@@ -4,7 +4,6 @@ import { MessageDto, ValidationErrorDto } from "../../common/dtos/api-responses.
 import type { ApiRequest } from "../../common/http/web-request"
 import type { WebReply } from "../../common/http/web-reply"
 import { showSubjectProfile } from "../../server/configuration/subjectProfile"
-import { bulkSubjectProfiles } from "../../server/configuration/subjectProfileBulk"
 import { previewSubjectProfile } from "../../server/configuration/subjectProfilePreview"
 import { updateSubjectProfile } from "../../server/configuration/subjectProfileWrites"
 import { applyFichaImport, fichaTemplate, previewFichaImport } from "../../server/ficha/fichaImports"
@@ -62,14 +61,6 @@ export class FichaController {
     return handled(request, (web) => applyFichaImport(web, this.deps.imports()))
   }
 
-  @Post("coordination/subject-profiles/bulk")
-  @ApiOperation({ summary: "Define a la vez los campos sin definir del proyecto de carrera de varias materias, con el texto de la plantilla o con «Texto libre» para el docente." })
-  @ApiBody(BULK)
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  bulk(@Req() request: ApiRequest): Promise<WebReply> {
-    return handled(request, (web) => bulkSubjectProfiles(web, this.deps.profileWrites()))
-  }
-
   @Get("admin/careers/:career/ficha-imports/template")
   @ApiOperation({ summary: "Descarga el libro .xlsx con las fichas de la carrera indicada (administración)." })
   @ApiParam(CAREER)
@@ -98,15 +89,6 @@ export class FichaController {
   @ApiTooManyRequestsResponse(THROTTLED)
   adminApply(@Req() request: ApiRequest, @Param("career") career: string): Promise<WebReply> {
     return handled(request, (web) => applyFichaImport(web, this.deps.imports(), career))
-  }
-
-  @Post("admin/careers/:career/subject-profiles/bulk")
-  @ApiOperation({ summary: "Define a la vez los campos sin definir del proyecto de carrera en materias de la carrera indicada (administración)." })
-  @ApiParam(CAREER)
-  @ApiBody(BULK)
-  @ApiUnprocessableEntityResponse(VALIDATION)
-  adminBulk(@Req() request: ApiRequest, @Param("career") career: string): Promise<WebReply> {
-    return handled(request, (web) => bulkSubjectProfiles(web, this.deps.profileWrites(), career))
   }
 
   @Get("academic/asignaturas/:asignatura/ficha")

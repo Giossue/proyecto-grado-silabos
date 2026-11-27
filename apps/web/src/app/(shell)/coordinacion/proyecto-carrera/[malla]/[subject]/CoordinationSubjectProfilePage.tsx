@@ -14,6 +14,7 @@ import { ProcessLockAlert } from "@/components/domain/ProcessLockAlert"
 import { StatusBadge } from "@/components/domain/StatusBadge"
 import { FieldResponseEditor } from "@/components/domain/syllabus/FieldResponseEditor"
 import { SyllabusDocumentPreview } from "@/components/domain/syllabus/SyllabusDocumentPreview"
+import { TeacherEditsToggle } from "@/components/domain/syllabus/TeacherEditsToggle"
 import { useLeaveGuard } from "@/components/domain/syllabus/useLeaveGuard"
 import { UnsavedChangesDialog } from "@/components/domain/UnsavedChangesDialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -26,7 +27,8 @@ import { useAcademicCareerScope } from "@/composables/useAcademicCareerScope"
 import { sameCode, useCodeLookup } from "@/composables/useCodeLookup"
 import { useDiscardConfirmation } from "@/composables/useDiscardConfirmation"
 import { goBack } from "@/lib/goBack"
-import { RESPONSE_NODE, careerFieldUndecided, responseAttrs, responseNeedsOptions } from "@silabos/shared/lib/responseKinds"
+import { RESPONSE_NODE, careerFieldUndecided, responseAttrs, responseNeedsOptions, teacherEditsAllowed } from "@silabos/shared/lib/responseKinds"
+import { keepTeacherEdits, withoutDocumentMarks } from "@/lib/teacherEdits"
 import { paths } from "@/lib/routes"
 import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { toast } from "@/lib/toast"
@@ -352,8 +354,19 @@ function SubjectProfile({ subjectId, adminCareer }: { subjectId: string; adminCa
                     disabled={locked}
                     career
                     askFor="a Administración"
-                    value={values[field.id]}
-                    onValueChange={(next) => setValues((current) => ({ ...current, [field.id]: next }))}
+                    value={values[field.id] ? withoutDocumentMarks(values[field.id]!) : values[field.id]}
+                    onValueChange={(next) => setValues((current) => ({ ...current, [field.id]: keepTeacherEdits(next, teacherEditsAllowed(current[field.id])) }))}
+                  />
+                  <TeacherEditsToggle
+                    id={field.id}
+                    document={values[field.id] ?? field.template}
+                    disabled={locked}
+                    onChange={(allowed) =>
+                      setValues((current) => {
+                        const document = current[field.id] ?? field.template
+                        return document ? { ...current, [field.id]: keepTeacherEdits(document, allowed) } : current
+                      })
+                    }
                   />
                 </Field>
               ))}

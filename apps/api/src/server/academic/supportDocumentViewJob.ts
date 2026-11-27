@@ -7,7 +7,7 @@ import { defineJob } from "../queue/job"
 import { failSupportDocumentView, prepareSupportDocumentView, type SupportDocumentViewDeps } from "./supportDocumentView"
 import { createSupportDocumentViewStore } from "./supportDocumentWriteStore"
 
-export type SupportDocumentViewData = { documentId: string }
+export type SupportDocumentViewData = { documentId: string; originalId?: string }
 
 export function defaultSupportDocumentViewDeps(prisma: PrismaService): SupportDocumentViewDeps {
   return {
@@ -28,10 +28,10 @@ export function createSupportDocumentViewJob(deps: () => SupportDocumentViewDeps
     tries: 3,
     timeout: 150,
     backoff: [5, 30, 120],
-    uniqueId: (data) => data.documentId,
+    uniqueId: (data) => (data.originalId === undefined ? data.documentId : `${data.documentId}:${data.originalId}`),
     runsOnce: true,
-    handle: (data) => prepareSupportDocumentView(data.documentId, deps()),
-    failed: (data, error) => failSupportDocumentView(data.documentId, error, deps()),
+    handle: (data) => prepareSupportDocumentView(data.documentId, deps(), data.originalId),
+    failed: (data, error) => failSupportDocumentView(data.documentId, error, deps(), data.originalId),
   })
 }
 
@@ -43,6 +43,6 @@ const dispatchedViewJob = createSupportDocumentViewJob(() => {
   throw new Error("PrepareSupportDocumentViewJob runs only in the worker, built with supportDocumentViewJobOn.")
 })
 
-export function dispatchSupportDocumentView(documentId: string): Promise<string> {
-  return dispatch(dispatchedViewJob, { documentId })
+export function dispatchSupportDocumentView(documentId: string, originalId: string): Promise<string> {
+  return dispatch(dispatchedViewJob, { documentId, originalId })
 }

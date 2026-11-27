@@ -4,7 +4,7 @@ import { MessageDto, ValidationErrorDto } from "../../common/dtos/api-responses.
 import type { ApiRequest } from "../../common/http/web-request"
 import type { WebReply } from "../../common/http/web-reply"
 import { coordinationSupportDocuments } from "../../server/academic/supportDocuments"
-import { destroySupportDocument, storeSupportDocument, viewSupportDocument } from "../../server/academic/supportDocumentWrites"
+import { destroySupportDocument, storeSupportDocument, updateSupportDocument, viewSupportDocument } from "../../server/academic/supportDocumentWrites"
 import { handled, SessionInHandler } from "./academic-handler"
 import { AcademicDeps } from "./academic-deps"
 
@@ -30,6 +30,17 @@ export class SupportDocumentsController {
   @ApiTooManyRequestsResponse({ description: "Más de 20 subidas por minuto.", type: MessageDto })
   upload(@Req() request: ApiRequest): Promise<WebReply> {
     return handled(request, (web) => storeSupportDocument(web, this.deps.supportDocumentWrites()))
+  }
+
+  @Post("coordination/support-documents/:document")
+  @ApiOperation({ summary: "Cambia el nombre del documento y, si se envía, reemplaza su archivo (20 por minuto)." })
+  @ApiParam({ name: "document", format: "uuid" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody(UPLOAD)
+  @ApiUnprocessableEntityResponse({ description: "Errores por campo.", type: ValidationErrorDto })
+  @ApiTooManyRequestsResponse({ description: "Más de 20 subidas por minuto.", type: MessageDto })
+  update(@Req() request: ApiRequest, @Param("document") document: string): Promise<WebReply> {
+    return handled(request, (web) => updateSupportDocument(web, document, this.deps.supportDocumentWrites()))
   }
 
   @Delete("coordination/support-documents/:document")

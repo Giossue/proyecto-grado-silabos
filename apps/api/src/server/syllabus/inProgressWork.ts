@@ -1,3 +1,4 @@
+import { hasOwnText, teacherEdits } from "../configuration/teacherText"
 import { MODELS } from "../http/models"
 import { studyModalityLabel } from "@silabos/shared/schemas/academic"
 import { failServerError, Missing } from "../http/failures"
@@ -420,7 +421,7 @@ export class InProgressWork {
   }
 
   private stillFits(field: TemplateField, value: unknown, template: unknown, context: ProfileContext): unknown {
-    if (!isPhpArray(value)) return null
+    if (!isPhpArray(value) || (teacherEdits(template) && !hasOwnText(value))) return null
     let document: PhpRecord
     try {
       document = fieldResponseNormalize(template, value, context.definition)
@@ -461,7 +462,7 @@ export class InProgressWork {
         const after = profilesAfter.get(parallel.subject_id)?.get(field.id) ?? null
         if (phpEquals(before, after)) continue
         const template = profileTemplateOf(field.content, after, context.definition)
-        if (template === null || openTemplate(template)) {
+        if (template === null || teacherEdits(template) || openTemplate(template)) {
           for (const [id, document] of await this.rebuilt(syllabus, field, template ?? field.content, context)) if (!documents.has(id)) documents.set(id, document)
         } else if (!documents.has(field.id)) documents.set(field.id, template)
       }
@@ -555,7 +556,7 @@ export class InProgressWork {
           }
           continue
         }
-        if (field.id in templates || responseWithin(value)) {
+        if (field.id in templates || responseWithin(value) || hasOwnText(value)) {
           for (const [id, document] of await this.rebuilt(syllabus, field, template, context, { value })) if (!documents.has(id)) documents.set(id, document)
         }
       }

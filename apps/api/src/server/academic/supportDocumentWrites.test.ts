@@ -13,6 +13,7 @@ import { failSupportDocumentView, prepareSupportDocumentView, type SupportDocume
 import {
   destroySupportDocument,
   storeSupportDocument,
+  updateSupportDocument,
   viewSupportDocument,
   type StoredObjectInput,
   type SupportDocumentInput,
@@ -56,6 +57,10 @@ const store = (): SupportDocumentWriteStore => ({
           const document = staged.documents.get(id)
           return document ? { id, careerId: document.careerId, objectId: document.objectId, previewId: document.previewId } : null
         },
+        updateDocument: async (id, changes) => {
+          const { file, ...rest } = changes
+          staged.documents.set(id, { ...(staged.documents.get(id) as SupportDocumentInput), ...rest, ...(file ?? {}) })
+        },
         objects: async (list) => list.flatMap((id) => (staged.objects.has(id) ? [{ disk: staged.objects.get(id)!.disk, path: staged.objects.get(id)!.path }] : [])),
         deleteDocument: async (id) => void staged.documents.delete(id),
         deleteObjects: async (list) => list.forEach((id) => staged.objects.delete(id)),
@@ -86,15 +91,16 @@ const viewStore = (): SupportDocumentViewStore => ({
     const document = documents.get(id)
     if (!document || document.view !== "pendiente") return null
     const original = objects.get(document.objectId) as StoredObjectInput
-    return { disk: original.disk, path: original.path, name: original.name, ownerId: original.ownerId }
+    return { objectId: original.id, disk: original.disk, path: original.path, name: original.name, ownerId: original.ownerId }
   },
-  async markWithoutView(id) {
+  async markWithoutView(id, originalId) {
     const document = documents.get(id)
+    if (originalId !== undefined && document?.objectId !== originalId) return
     if (document?.view === "pendiente") documents.set(id, { ...document, view: "sin_vista" })
   },
   async transaction(work) {
     return work({
-      lockPending: async (id) => documents.get(id)?.view === "pendiente",
+      lockPending: async (id, originalId) => documents.get(id)?.view === "pendiente" && documents.get(id)?.objectId === originalId,
       insertObject: async (row) => void objects.set(row.id, row),
       markReady: async (id, previewId) => void documents.set(id, { ...(documents.get(id) as SupportDocumentInput), previewId, view: "lista" }),
     })
@@ -335,5 +341,90 @@ describe("DELETE /api/v1/coordination/support-documents/{document}", () => {
       status: 404,
       text: '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\SupportDocument] 01a1c5bc-79ca-7331-8f0f-000000000000"}',
     })
+  })
+})
+
+describe("POST /api/v1/coordination/support-documents/{document}", () => {
+  const ID = "00000001-81b0-45fa-b5a4-70f744af0244"
+  const URL = `/api/v1/coordination/support-documents/${ID}`
+  const base = `documentos-apoyo/${CAREER}/${ID}`
+
+  function change(title: string, file: { name: string; content: Buffer | string } | null = null): Request {
+    const form = new FormData()
+    form.append("title", title)
+    if (file !== null) form.append("file", new File([typeof file.content === "string" ? file.content : new Uint8Array(file.content)], file.name))
+    return request("POST", URL, form)
+  }
+  const update = async (body: Request) => {
+    ids++
+    return read(await updateSupportDocument(body, ID, deps()))
+  }
+  const exists = (stored: string) => {
+    try {
+      statSync(storage.path("private", stored))
+      return true
+    } catch {
+      return false
+    }
+  }
+  const current = () => documents.get(ID) as SupportDocumentInput
+  const currentPath = () => objects.get(current().objectId)!.path
+
+  beforeEach(async () => {
+    asRole("coordinador")
+    await storeSupportDocument(upload("Guía", { name: "guia.pdf", content: PDF }), deps())
+  })
+
+  it("cambia solo el nombre y conserva el archivo", async () => {
+    const before = current().objectId
+    expect(await update(change("  Guía   nueva "))).toEqual({ status: 200, text: '{"message":"Documento actualizado."}' })
+    expect(current()).toMatchObject({ title: "Guía nueva", objectId: before, view: "lista", uploadedAt: NOW })
+    expect(exists(`${base}/original.pdf`)).toBe(true)
+  })
+
+  it("reemplaza el archivo, borra el anterior y no repite el documento", async () => {
+    const before = current().objectId
+    const replaced = `${PDF}\n%nuevo`
+    expect((await update(change("Guía", { name: "nuevo.pdf", content: replaced }))).status).toBe(200)
+    expect(documents.size).toBe(1)
+    expect(current().objectId).not.toBe(before)
+    expect(objects.has(before)).toBe(false)
+    expect(objects.size).toBe(1)
+    expect(readFileSync(storage.path("private", currentPath()), "latin1")).toBe(replaced)
+    expect(exists(`${base}/original.pdf`)).toBe(false)
+    expect((await read(await destroySupportDocument(request("DELETE", URL), ID, deps()))).status).toBe(200)
+    expect(objects.size).toBe(0)
+    expect(exists(base)).toBe(false)
+  })
+
+  it("al subir un Word vuelve a preparar la vista, y la tarea del archivo anterior no la pisa", async () => {
+    await update(change("Guía", { name: "primero.docx", content: fixture("habilidades.docx") }))
+    const first = current().objectId
+    const stale = dispatched.length
+    await update(change("Guía", { name: "segundo.docx", content: fixture("habilidades.docx") }))
+    expect(dispatched.length).toBe(stale + 1)
+    expect(current()).toMatchObject({ view: "pendiente", previewId: null })
+    await prepareSupportDocumentView(ID, viewDeps(), first)
+    await failSupportDocumentView(ID, new Error("archivo borrado"), viewDeps(), first)
+    expect(current().view).toBe("pendiente")
+    expect(converted).toEqual([])
+    await prepareSupportDocumentView(ID, viewDeps(), current().objectId)
+    expect(current().view).toBe("lista")
+  })
+
+  it("rechaza un nombre vacío o un archivo no permitido sin cambiar nada", async () => {
+    const before = { ...current() }
+    expect((await update(change("   "))).status).toBe(422)
+    expect((await update(change("Guía", { name: "malo.txt", content: "hola" }))).status).toBe(422)
+    expect(current()).toEqual(before)
+  })
+
+  it("solo la coordinación de esa carrera puede actualizarlo", async () => {
+    const before = { ...current() }
+    asRole("docente")
+    expect((await update(change("Otro"))).status).toBe(403)
+    asRole("coordinador", OTHER_CAREER)
+    expect((await update(change("Otro"))).status).toBe(404)
+    expect(current()).toEqual(before)
   })
 })

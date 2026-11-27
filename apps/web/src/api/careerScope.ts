@@ -13,6 +13,3 @@ export const careerAcademicPath = (path: string, careerId: string | null = scope
 
 export const fichaImportPath = (path: string, careerId: string | null = scopedCareerId): string =>
   careerId ? `${careerBase(careerId)}/ficha-imports${path}` : `/coordination/ficha-imports${path}`;
-
-export const subjectProfileBulkPath = (careerId: string | null = scopedCareerId): string =>
-  careerId ? `${careerBase(careerId)}/subject-profiles/bulk` : '/coordination/subject-profiles/bulk';

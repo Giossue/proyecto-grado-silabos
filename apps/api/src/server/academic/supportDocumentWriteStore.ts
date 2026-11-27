@@ -22,10 +22,10 @@ export async function insertStoredObject(db: Db, row: StoredObjectInput): Promis
 
 function viewTx(db: Db): SupportDocumentViewTx {
   return {
-    async lockPending(id) {
-      const [row] = await db.$queryRaw<{ view: string }[]>`select documentos_apoyo.estado_vista as view from documentos_apoyo
+    async lockPending(id, originalId) {
+      const [row] = await db.$queryRaw<{ view: string; original: string }[]>`select documentos_apoyo.estado_vista as view, documentos_apoyo.archivo_id::text as original from documentos_apoyo
         where documentos_apoyo.documento_apoyo_id = ${id}::uuid limit 1 for update`
-      return row?.view === VIEW_PENDING
+      return row?.view === VIEW_PENDING && row.original === originalId
     },
     insertObject: (row) => insertStoredObject(db, row),
     async markReady(id, previewId) {
@@ -41,15 +41,16 @@ export function createSupportDocumentViewStore(prisma: PrismaService): SupportDo
         where: { documento_apoyo_id: id },
         select: {
           estado_vista: true,
+          archivo_id: true,
           archivos_documentos_apoyo_archivo_idToarchivos: { select: { disco: true, ruta_archivo: true, nombre_archivo: true, subido_por: true } },
         },
       })
       if (!row || row.estado_vista !== VIEW_PENDING) return null
       const original = row.archivos_documentos_apoyo_archivo_idToarchivos
-      return { disk: original.disco, path: original.ruta_archivo, name: original.nombre_archivo, ownerId: original.subido_por }
+      return { objectId: row.archivo_id, disk: original.disco, path: original.ruta_archivo, name: original.nombre_archivo, ownerId: original.subido_por }
     },
-    async markWithoutView(id) {
-      await prisma.documentos_apoyo.updateMany({ where: { documento_apoyo_id: id, estado_vista: VIEW_PENDING }, data: { estado_vista: VIEW_NONE } })
+    async markWithoutView(id, originalId) {
+      await prisma.documentos_apoyo.updateMany({ where: { documento_apoyo_id: id, estado_vista: VIEW_PENDING, ...(originalId === undefined ? {} : { archivo_id: originalId }) }, data: { estado_vista: VIEW_NONE } })
     },
     transaction: (work) => inTransaction(prisma, (tx) => work(viewTx(tx))),
   }

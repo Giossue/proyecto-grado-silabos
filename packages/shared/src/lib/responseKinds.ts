@@ -159,9 +159,16 @@ const writtenIn = (node: DocumentNode): string => {
 
 export const TEMPLATE_ACCEPTED = 'accepted';
 
+export const TEACHER_EDITS = 'teacherEdits';
+
+export const OWN_TEXT = 'ownText';
+
+export const teacherEditsAllowed = (document: DocumentNode | null | undefined): boolean =>
+    (document?.attrs as Record<string, unknown> | undefined)?.[TEACHER_EDITS] === true;
+
 export const templateAccepted = (document: DocumentNode | null | undefined): boolean =>
     (document?.attrs as Record<string, unknown> | undefined)?.[TEMPLATE_ACCEPTED] === true;
 
 /** A subject's Carrera field nobody has decided about: not accepted as is, no type of answer in it and no text beyond the template's. */
 export const careerFieldUndecided = (template: DocumentNode, document: DocumentNode): boolean =>
-    !templateAccepted(document) && !withinResponse(document) && writtenIn(document) === writtenIn(template);
+    !templateAccepted(document) && !teacherEditsAllowed(document) && !withinResponse(document) && writtenIn(document) === writtenIn(template);

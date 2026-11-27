@@ -36,8 +36,8 @@ type Filters = { q: string; state: string; faculty: string; sort: string; dir: s
 const NO_FILTERS: Filters = { q: "", state: "all", faculty: "all", sort: "", dir: "" }
 
 const SORT_COLUMNS = {
-  faculty: { label: "Facultad" },
   career: { label: "Carrera" },
+  faculty: { label: "Facultad" },
   subject: { label: "Asignatura" },
   responsible: { label: "Responsable" },
   state: { label: "Estado" },
@@ -215,11 +215,11 @@ export default function LibraryReviewsPage() {
           <Table label="Revisiones de biblioteca">
             <TableHeader>
               <TableRow>
-                <SortableHead sort={sort} column="faculty">
-                  Facultad
-                </SortableHead>
                 <SortableHead sort={sort} column="career">
                   Carrera
+                </SortableHead>
+                <SortableHead sort={sort} column="faculty">
+                  Facultad
                 </SortableHead>
                 <SortableHead sort={sort} column="subject">
                   Asignatura
@@ -242,13 +242,13 @@ export default function LibraryReviewsPage() {
                     className="cursor-pointer"
                     onClick={(event) => activateRow(event.nativeEvent, () => open(item.revision_id))}
                   >
-                    <TableCell data-card-hide="true">{item.faculty ?? "—"}</TableCell>
                     <TableCell data-card-hide="true">{item.career}</TableCell>
+                    <TableCell data-card-hide="true">{item.faculty ?? "—"}</TableCell>
                     <TableCell>
                       <Link href={paths.library.review(item.revision_id)} className={rowLinkClass}>{item.subject}</Link>
                       <TableCardLine>
-                        {item.faculty ? `${item.faculty} · ` : ""}
                         {item.career}
+                        {item.faculty ? ` · ${item.faculty}` : ""}
                       </TableCardLine>
                       <TableCardLine>
                         <StatusBadge label={libraryStatusLabel(status)} tone={libraryStatusTone(status)} />

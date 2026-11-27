@@ -14,6 +14,7 @@ import {
 } from "./templateRuntime"
 import { isCareerField, isTeacherField, templateFields, type SyllabusTemplate, type TemplateField } from "./templatePresentation"
 import type { TemplateStore } from "../shared/templateStore"
+import { markTeacherEdits, teacherEdits } from "./teacherText"
 
 export type ProfileContext = { template: SyllabusTemplate; definition: TemplateDefinition; store: TemplateStore }
 
@@ -60,7 +61,9 @@ export async function profileValues(context: ProfileContext, subjectId: string):
     if (!isDocument(row.value)) value = null
     else if (definition) value = followTemplate(definition.content, row.value, context.definition)
     else value = normalizeFieldDocument(row.value, context.definition)
-    values.set(row.fieldId, value !== null && storedAccepted(row.value) ? { ...value, attrs: { [TEMPLATE_ACCEPTED]: true } } : value)
+    if (value !== null && storedAccepted(row.value)) value = { ...value, attrs: { [TEMPLATE_ACCEPTED]: true } }
+    if (value !== null && teacherEdits(row.value)) value = markTeacherEdits(value)
+    values.set(row.fieldId, value)
   }
   return values
 }

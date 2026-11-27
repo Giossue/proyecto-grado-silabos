@@ -1,3 +1,4 @@
+import { hasOwnText, markOwnText, markTeacherEdits, openShape, teacherEdits, writtenValue } from "./teacherText"
 import { ruleFailures } from "@silabos/shared/lib/blocks/rules"
 import { holds } from "@silabos/shared/lib/blocks/condition"
 import { Scope } from "@silabos/shared/lib/blocks/scope"
@@ -1023,7 +1024,38 @@ function followCurrent(template: PhpRecord, stored: PhpRecord): PhpRecord {
   return matches(template, followed, "career") ? followed : template
 }
 
+const SPACES_WITH_TEACHER_EDITS = "Quite los espacios de respuesta para que el docente pueda editar todo el texto."
+const NO_NEW_SPACES = "No agregue espacios de respuesta: escriba directamente en el texto."
+
 export function careerResponse(definitionContent: unknown, value: unknown, definition: TemplateDefinition, attribute = "value", saving = true): PhpRecord {
+  const shaped = careerShape(definitionContent, value, definition, attribute, saving)
+  if (!teacherEdits(value)) return shaped
+  if (foundResponses(shaped).length === 0) return markTeacherEdits(shaped)
+  if (saving) fail(SPACES_WITH_TEACHER_EDITS, attribute)
+  return shaped
+}
+
+export function teacherOwnText(template: unknown, value: unknown, definition: TemplateDefinition, attribute = "value"): PhpRecord {
+  const base = normalizeFieldDocument(template, definition, attribute)
+  const document = normalizeFieldDocument(value, definition, attribute)
+  if (phpEquals(withoutExtraTail(base, document), base)) return base
+  if (foundResponses(document).length > 0) fail(NO_NEW_SPACES, attribute)
+  assertCareerEdit(base, document, attribute, true)
+  return markOwnText(document)
+}
+
+function ownTextStands(template: unknown, value: unknown, definition: TemplateDefinition): boolean {
+  if (!hasOwnText(value)) return false
+  try {
+    teacherOwnText(template, value, definition)
+    return true
+  } catch (error) {
+    if (error instanceof TemplateValidationError) return false
+    throw error
+  }
+}
+
+function careerShape(definitionContent: unknown, value: unknown, definition: TemplateDefinition, attribute: string, saving: boolean): PhpRecord {
   if (saving) within(attribute, () => assertEnoughOptions(value))
   const document = normalizeFieldDocument(value, definition, attribute)
   const template = responseTemplate(normalizeFieldDocument(definitionContent, definition))
@@ -1066,14 +1098,24 @@ function carryDocument(template: PhpRecord, value: PhpRecord): PhpRecord {
 
 export function fieldFits(template: unknown, value: unknown, definition: TemplateDefinition): boolean {
   try {
-    return matches(responseTemplate(normalizeFieldDocument(template, definition)), normalizeFieldDocument(value, definition), "answer")
+    if (teacherEdits(template)) {
+      return hasOwnText(value)
+        ? ownTextStands(template, value, definition)
+        : phpEquals(normalizeFieldDocument(value, definition), normalizeFieldDocument(template, definition))
+    }
+    return matches(responseTemplate(normalizeFieldDocument(openShape(template), definition)), normalizeFieldDocument(writtenValue(template, value), definition), "answer")
   } catch (error) {
     if (error instanceof TemplateValidationError) return false
     throw error
   }
 }
 
-export function fieldCarried(template: unknown, value: unknown, definition: TemplateDefinition): unknown {
+export function fieldCarried(source: unknown, held: unknown, definition: TemplateDefinition): unknown {
+  const template = openShape(source)
+  const value = writtenValue(source, held)
+  if (teacherEdits(template)) {
+    return isDocument(value) && ownTextStands(template, value, definition) ? teacherOwnText(template, value, definition) : normalizeFieldDocument(template, definition)
+  }
   if (!isDocument(value)) return template
   let current: PhpRecord
   let document: PhpRecord
@@ -1110,6 +1152,11 @@ export function templateFor(definitionContent: unknown, stored: unknown, definit
 }
 
 export function followTemplate(definitionContent: unknown, stored: unknown, definition: TemplateDefinition): PhpRecord | null {
+  const followed = followShape(definitionContent, stored, definition)
+  return followed !== null && teacherEdits(stored) && foundResponses(followed).length === 0 ? markTeacherEdits(followed) : followed
+}
+
+function followShape(definitionContent: unknown, stored: unknown, definition: TemplateDefinition): PhpRecord | null {
   if (!isDocument(stored)) return null
   const document = normalizeFieldDocument(stored, definition)
   if (!responsesEnabled(definition)) return document
@@ -1342,7 +1389,9 @@ function answeredAgainst(template: unknown, value: unknown, definition: Template
   })
 }
 
-export function responseIsEmpty(templateContent: unknown, value: unknown, definition: TemplateDefinition): boolean {
+export function responseIsEmpty(source: unknown, held: unknown, definition: TemplateDefinition): boolean {
+  const templateContent = openShape(source)
+  const value = writtenValue(source, held)
   if (!responsesEnabled(definition)) return !isDocument(value) || phpTrim(plainText(value, definition)) === ""
   if (!isDocument(value)) return true
   return !answeredAgainst(responseTemplate(record(templateContent)), value, definition)

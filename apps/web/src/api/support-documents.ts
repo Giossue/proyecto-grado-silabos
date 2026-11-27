@@ -22,6 +22,14 @@ export const uploadSupportDocument = (title: string, file: File) => {
   return api<{ message: string; document: SupportDocument }>('/coordination/support-documents', { method: 'POST', body });
 };
 
+export const updateSupportDocument = (id: string, title: string, file: File | null) => {
+  const body = new FormData();
+  body.append('title', title);
+  if (file !== null) body.append('file', file);
+
+  return api<{ message: string }>(`/coordination/support-documents/${id}`, { method: 'POST', body });
+};
+
 export const deleteSupportDocument = (id: string) =>
   api<{ message: string }>(`/coordination/support-documents/${id}`, { method: 'DELETE' });
 

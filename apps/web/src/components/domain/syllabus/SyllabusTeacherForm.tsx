@@ -121,6 +121,7 @@ export function SyllabusTeacherForm({
                           </FieldLabel>
                           <FieldResponseEditor
                             required
+                            rewrite={field.teacher_edits}
                             template={field.template}
                             label={fieldTitle(field, section)}
                             value={field.value}

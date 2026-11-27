@@ -1,3 +1,4 @@
+import { markOwnText, teacherEdits } from "../configuration/teacherText"
 import { fromController } from "../auth/controllerResponse"
 import type { PrismaService } from "../../prisma/prisma.service"
 import { HttpFailure, Missing, modelNotFoundResponse } from "../http/failures"
@@ -26,7 +27,7 @@ import {
   type TemplateDefinition,
 } from "../configuration/templateRuntime"
 import { createTemplateStore, type TemplateStore } from "../shared/templateStore"
-import { phpEquals, type PhpRecord } from "../configuration/phpValues"
+import { record, phpEquals, type PhpRecord } from "../configuration/phpValues"
 import { institutionToday } from "../shared/clock"
 import { identificationOf, type IdentificationSource } from "./identificationCard"
 import { editableState, mayEdit, type SyllabusFacts } from "./policy"
@@ -133,10 +134,12 @@ async function save(input: PhpArray, auth: DraftFieldBound, deps: DraftFieldDeps
   const templates = await profileTemplates({ template, definition, store: tx.templateStore }, locked.subjectId)
   const asTemplateField = { id: field.id, responsible: field.responsible } as TemplateField
   if (!teacherEditable(asTemplateField, templates)) reject("field", "Este campo pertenece a Coordinación o a la institución y el docente no puede cambiarlo.")
+  const profileTemplate = templates[field.id]
+  const rewritable = teacherEdits(profileTemplate)
   const value = input.value === undefined || input.value === null ? EMPTY_DOCUMENT : input.value
-  const document = fieldResponseNormalize(templates[field.id] ?? field.content, value, definition, "value")
+  const document = fieldResponseNormalize(profileTemplate ?? field.content, rewritable ? markOwnText(record(value)) : value, definition, "value")
   if (!sameStructure(normalizeFieldDocument(field.content, definition), document)) reject("value", "Los bloques de este campo los define la plantilla; el docente solo los responde.")
-  const limit = limitAllowed(field.responsible) ? (fieldLimits(definition)[field.key] ?? null) : null
+  const limit = limitAllowed(field.responsible) && !rewritable ? (fieldLimits(definition)[field.key] ?? null) : null
   const fieldTemplate = templates[field.id] ?? field.content
   const conditions = (values: Map<string, unknown>) => syllabusConditions(template, fieldConditions(definition), values, templates)
   const notStarted = locked.state === "sin_iniciar"

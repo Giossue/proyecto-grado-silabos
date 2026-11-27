@@ -1,10 +1,11 @@
 "use client"
 
-import { Trash2, Upload } from "lucide-react"
+import { Pencil, Trash2, Upload } from "lucide-react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useEffectEvent, useState } from "react"
 import { ApiError } from "@/api/client"
 import { deleteSupportDocument, uploadSupportDocument, type SupportDocument } from "@/api/support-documents"
+import { SupportDocumentEditDialog } from "@/components/domain/academic/SupportDocumentEditDialog"
 import { openSupportDocument, supportDocumentSize } from "@/components/domain/academic/supportDocumentViewer"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
@@ -49,7 +50,7 @@ const searchable = (document: SupportDocument) => [document.title]
 const sortColumns = {
   title: { label: "Documento", value: (document: SupportDocument) => document.title },
   size: { label: "Tamaño", type: "number", value: (document: SupportDocument) => document.size },
-  uploaded: { label: "Subido", type: "date", value: (document: SupportDocument) => document.uploaded_at },
+  uploaded: { label: "Actualizado", type: "date", value: (document: SupportDocument) => document.uploaded_at },
 } satisfies SortColumns<SupportDocument>
 
 export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange, onLoadingChange }: SupportDocumentsPanelProps) {
@@ -71,6 +72,7 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
   const fileError = fieldMessage(uploadForm.formState.errors, "file") ?? null
   const uploadError = serverMessage(uploadForm.formState.errors) ?? fieldMessage(uploadForm.formState.errors, "title") ?? null
   const uploading = uploadForm.formState.isSubmitting
+  const [editing, setEditing] = useState<SupportDocument | null>(null)
   const [removing, setRemoving] = useState<SupportDocument | null>(null)
   const [removeError, setRemoveError] = useState<string | null>(null)
   const [removeProcessing, setRemoveProcessing] = useState(false)
@@ -165,7 +167,7 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
               <TableRow>
                 <SortableHead sort={sort} column="title">Documento</SortableHead>
                 <SortableHead sort={sort} column="size" className="text-center">Tamaño</SortableHead>
-                <SortableHead sort={sort} column="uploaded">Subido</SortableHead>
+                <SortableHead sort={sort} column="uploaded">Actualizado</SortableHead>
                 {manages ? <TableHead className="text-center">Acciones</TableHead> : null}
               </TableRow>
             </TableHeader>
@@ -205,6 +207,10 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
                     <TableCell data-card-hide="true">{uploadedOn(document)}</TableCell>
                     {manages ? (
                       <TableCell className="text-center" data-card-no-label="true">
+                        <Button type="button" variant="ghost" size="sm" aria-label={`Actualizar ${document.title}`} onClick={() => setEditing(document)}>
+                          <Pencil data-icon="inline-start" aria-hidden="true" />
+                          Actualizar
+                        </Button>
                         <IconTooltip label="Eliminar">
                           <Button
                             type="button"
@@ -228,6 +234,8 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
           <TablePagination meta={pagination.meta} label="Paginación de documentos de apoyo" onPageChange={pagination.setPage} />
         </div>
       )}
+
+      {manages ? <SupportDocumentEditDialog document={editing} maxBytes={MAX_BYTES} onClose={() => setEditing(null)} onUpdated={reload} /> : null}
 
       {manages ? (
         <Dialog open={isUploadOpen} onOpenChange={setUploadOpen}>

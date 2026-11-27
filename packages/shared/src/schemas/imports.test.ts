@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import { schemaErrors } from "./issues"
-import { fichaApplySchema, subjectProfileBulkSchema, subjectProfileValuesSchema } from "./imports"
+import { fichaApplySchema, subjectProfileValuesSchema } from "./imports"
 
 describe("import schemas", () => {
   it("validate the confirmed ficha selection", async () => {
@@ -18,20 +18,4 @@ describe("import schemas", () => {
     expect(await schemaErrors(subjectProfileValuesSchema, { values: { a: null, b: "x" } })).toEqual({ "values.b": ["El campo dato del proyecto de carrera debe ser una lista."] })
   })
 
-  it("validate a bulk action of the career project", async () => {
-    const subject = "01a1c5bc-7a00-7000-8000-0000000000aa"
-    expect(await schemaErrors(subjectProfileBulkSchema, { subjects: [subject], action: "plantilla" })).toEqual({})
-    expect(await schemaErrors(subjectProfileBulkSchema, { subjects: [subject], fields: [subject], action: "docente", confirm_purge: true })).toEqual({})
-    expect(await schemaErrors(subjectProfileBulkSchema, {})).toEqual({
-      subjects: ["El campo materias es obligatorio."],
-      action: ["El campo acción es obligatorio."],
-    })
-    expect(await schemaErrors(subjectProfileBulkSchema, { subjects: ["x", subject, subject], fields: ["y"], action: "borrar" })).toEqual({
-      "subjects.0": ["El campo materia debe ser un UUID válido."],
-      "subjects.1": ["El campo materia tiene un valor duplicado."],
-      "subjects.2": ["El campo materia tiene un valor duplicado."],
-      "fields.0": ["El campo campo debe ser un UUID válido."],
-      action: ["El valor seleccionado en acción no es válido."],
-    })
-  })
 })

@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { Prisma } from "../../generated/prisma/client"
 import type { Db } from "../../prisma/db"
 import { returnApprovals } from "./coordinationHandover"
 import { anotherProcessInProgress } from "./finalizedChangeNotice"
-import { FORMATION_CONTENT, FORMATION_FIELD_ID, withFormation } from "../configuration/testing"
+import { fieldId, FORMATION_CONTENT, FORMATION_FIELD_ID, goldenTemplate, withFormation } from "../configuration/testing"
 import { templateFields } from "../configuration/templatePresentation"
 import { definitionHash } from "../ficha/definitionHash"
 import { InProgressWork } from "./inProgressWork"
@@ -256,5 +256,44 @@ describe("InProgressWork adapting to a new template", () => {
     await work.adaptToTemplate(workSyllabus(true)).catch(() => undefined)
     expect(restarted).toEqual([])
     expect(statements[0]?.text).toContain("from valores_campo where silabo_id")
+  })
+})
+
+describe("InProgressWork cuando Coordinación cambia un texto que el docente puede editar", () => {
+  const FIELD = fieldId(8)
+  const text = (value: string) => ({ type: "doc", content: [{ type: "paragraph", attrs: { textAlign: "left" }, content: [{ type: "text", text: value }] }] })
+  const profile = (value: string) => ({ ...text(value), attrs: { edited: true, teacherEdits: true } })
+
+  async function written(held: unknown, before: unknown, after: unknown): Promise<unknown> {
+    const { db } = recordingDb((query) => (query.includes("from valores_campo") ? [{ value: JSON.stringify(held) }] : []))
+    const work = new InProgressWork(db, () => {})
+    const template = goldenTemplate()
+    const internal = work as unknown as Record<string, () => unknown>
+    const syllabus = { id: SYLLABUS, parallelId: PARALLEL, convocationId: CONVOCATION, state: "borrador", context: {}, version: 1 }
+    let documents = new Map<string, unknown>()
+    vi.spyOn(internal, "syllabi").mockResolvedValue([syllabus] as never)
+    vi.spyOn(internal, "profileContext").mockResolvedValue({ template, definition: template.definition, store: {} } as never)
+    vi.spyOn(internal, "profilesFor").mockResolvedValue(new Map([["subject", new Map([[FIELD, after]])]]) as never)
+    vi.spyOn(internal, "convocationFacts").mockResolvedValue(new Map([[CONVOCATION, { careerId: CAREER, periodId: PERIOD }]]) as never)
+    vi.spyOn(internal, "contextOf").mockResolvedValue({ parallel: { id: PARALLEL, subject_id: "subject" }, context: {} } as never)
+    vi.spyOn(internal, "applyChanges").mockImplementation(((pending: { documents: Map<string, unknown> }[]) => {
+      documents = pending[0]?.documents ?? new Map()
+    }) as never)
+    await work.sync(true, CAREER, null, new Map([["subject", new Map([[FIELD, before as never]])]]))
+    return documents.get(FIELD)
+  }
+
+  it("conserva el texto que el docente ya cambió", async () => {
+    const own = { ...text("Cambio del docente"), attrs: { ownText: true } }
+    expect(await written(own, profile("Texto anterior"), profile("Texto nuevo"))).toBeUndefined()
+  })
+
+  it("entrega el texto nuevo si el docente no lo tocó", async () => {
+    expect(JSON.stringify(await written(profile("Texto anterior"), profile("Texto anterior"), profile("Texto nuevo")))).toContain("Texto nuevo")
+  })
+
+  it("vuelve al texto de Coordinación si se quita la casilla", async () => {
+    const own = { ...text("Cambio del docente"), attrs: { ownText: true } }
+    expect(JSON.stringify(await written(own, profile("Texto anterior"), { ...text("Texto fijo"), attrs: { edited: true } }))).toContain("Texto fijo")
   })
 })

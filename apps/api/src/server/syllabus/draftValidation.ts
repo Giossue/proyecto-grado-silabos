@@ -1,3 +1,4 @@
+import { openShape, teacherEdits, writtenValue } from "../configuration/teacherText"
 import { HttpFailure, Missing } from "../http/failures"
 import type { PrismaService } from "../../prisma/prisma.service"
 import { ruleFailures } from "@silabos/shared/lib/blocks/rules"
@@ -13,6 +14,7 @@ import { profileTemplates } from "../configuration/subjectProfileFields"
 import { documentIsEmpty, fieldResponseNormalize } from "../configuration/templateRehearsal"
 import { resolveVariables, teacherEditable, type TemplateField } from "../configuration/templatePresentation"
 import {
+  fieldDocumentIsEmpty,
   blank,
   fieldConditions,
   fieldLimits,
@@ -129,9 +131,12 @@ function fieldIssues(
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   const issue = (code: string, message: string) => issues.push({ field_id: field.id, code, severity: "error", message })
+  const rewritable = teacherEdits(original)
   const template = clearHidden(original, answers, true)
   const shown = clearHidden(stored, answers, true)
-  const empty = responseIsEmpty(template, shown, definition) && (!responsesEnabled(definition) || asksForAnswer(responseTemplate(record(template))))
+  const empty = rewritable
+    ? fieldDocumentIsEmpty(isDocument(stored) ? stored : original, definition)
+    : responseIsEmpty(template, shown, definition) && (!responsesEnabled(definition) || asksForAnswer(responseTemplate(record(template))))
   const shownAnswers = shownResponses(isDocument(stored) ? stored : original, answers)
   const pending = pendingResponses(shownAnswers)
   const name = field.displayName
@@ -166,8 +171,10 @@ async function runValidation(tx: DraftValidationTx, syllabusId: string) {
   const issues: ValidationIssue[] = []
   for (const field of await tx.documentFields(locked.id)) {
     if (!teacherEditable({ id: field.id, responsible: field.responsible } as TemplateField, templates) || conditions.hidden.has(field.id)) continue
-    const limit = limitAllowed(field.responsible) ? (limits[field.key] ?? null) : null
-    issues.push(...fieldIssues(field, templates[field.id] ?? field.content, values.get(field.id) ?? null, conditions.answers, limit, variables, definition))
+    const limit = limitAllowed(field.responsible) && !teacherEdits(templates[field.id]) ? (limits[field.key] ?? null) : null
+    const source = templates[field.id] ?? field.content
+    const held = writtenValue(source, values.get(field.id) ?? null)
+    issues.push(...fieldIssues(field, openShape(source), held, conditions.answers, limit, variables, definition))
   }
   return { version: locked.version, issues }
 }

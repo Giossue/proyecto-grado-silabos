@@ -5,6 +5,7 @@ import {
   deleteSupportDocument,
   getCoordinationSupportDocuments,
   getTeacherSupportDocuments,
+  updateSupportDocument,
   uploadSupportDocument,
   viewSupportDocument,
   type SupportDocument,
@@ -17,6 +18,7 @@ vi.mock("@/api/support-documents", () => ({
   getCoordinationSupportDocuments: vi.fn(),
   getTeacherSupportDocuments: vi.fn(),
   uploadSupportDocument: vi.fn(),
+  updateSupportDocument: vi.fn(),
   deleteSupportDocument: vi.fn(),
   viewSupportDocument: vi.fn(),
 }))
@@ -85,7 +87,7 @@ describe("Documentos de apoyo", () => {
     expect(tab.focus).toHaveBeenCalled()
   })
 
-  it("ordena por tamaño y por fecha de subida al pulsar los encabezados y marca aria-sort en esa columna", async () => {
+  it("ordena por tamaño y por fecha de actualización al pulsar los encabezados y marca aria-sort en esa columna", async () => {
     vi.mocked(getTeacherSupportDocuments).mockResolvedValue({
       data: [
         { ...doc("d1", "Proyecto de carrera"), size: 4096, uploaded_at: "2026-11-02T15:00:00Z" },
@@ -100,10 +102,10 @@ describe("Documentos de apoyo", () => {
     fireEvent.click(screen.getByRole("button", { name: "Tamaño" }))
     expect(titles()).toEqual(["Reglamento", "Proyecto de carrera", "Guía"])
     expect(screen.getByRole("columnheader", { name: "Tamaño" }).getAttribute("aria-sort")).toBe("ascending")
-    fireEvent.click(screen.getByRole("button", { name: "Subido" }))
-    fireEvent.click(screen.getByRole("button", { name: "Subido" }))
+    fireEvent.click(screen.getByRole("button", { name: "Actualizado" }))
+    fireEvent.click(screen.getByRole("button", { name: "Actualizado" }))
     expect(titles()).toEqual(["Guía", "Proyecto de carrera", "Reglamento"])
-    expect(screen.getByRole("columnheader", { name: "Subido" }).getAttribute("aria-sort")).toBe("descending")
+    expect(screen.getByRole("columnheader", { name: "Actualizado" }).getAttribute("aria-sort")).toBe("descending")
     expect(screen.getByRole("columnheader", { name: "Tamaño" }).hasAttribute("aria-sort")).toBe(false)
   })
 
@@ -150,6 +152,54 @@ describe("Documentos de apoyo", () => {
 
     expect(viewSupportDocument).toHaveBeenCalledWith("d1")
     expect(document.body.querySelector('[aria-label="Abriendo"]')).toBeNull()
+  })
+
+  it("Coordinación actualiza un documento: cambia el nombre y conserva el archivo", async () => {
+    vi.mocked(updateSupportDocument).mockResolvedValue({ message: "Documento actualizado." })
+    await mountPanel("coordination")
+
+    fireEvent.click(screen.getByRole("button", { name: "Actualizar Proyecto de carrera" }))
+    await flush()
+    const form = document.body.querySelector<HTMLFormElement>('[data-testid="support-document-edit-form"]')!
+    const title = form.querySelector<HTMLInputElement>("#support-document-edit-title")!
+    expect(title.value).toBe("Proyecto de carrera")
+    fireEvent.change(title, { target: { value: "Proyecto actualizado" } })
+    await flush()
+    vi.mocked(getCoordinationSupportDocuments).mockResolvedValue({ data: [doc("d1", "Proyecto actualizado")] })
+    fireEvent.submit(form)
+    await flush()
+
+    expect(updateSupportDocument).toHaveBeenCalledWith("d1", "Proyecto actualizado", null)
+    expect(viewSupportDocument).not.toHaveBeenCalled()
+    expect(document.body.querySelector("tbody")?.textContent).toContain("Proyecto actualizado")
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull()
+  })
+
+  it("al actualizar puede subir otro archivo, y sin nombre no guarda y lo explica", async () => {
+    vi.mocked(updateSupportDocument).mockReset().mockResolvedValue({ message: "Documento actualizado." })
+    await mountPanel("coordination")
+    fireEvent.click(screen.getByRole("button", { name: "Actualizar Proyecto de carrera" }))
+    await flush()
+    const form = document.body.querySelector<HTMLFormElement>('[data-testid="support-document-edit-form"]')!
+    const title = form.querySelector<HTMLInputElement>("#support-document-edit-title")!
+    fireEvent.change(title, { target: { value: "  " } })
+    fireEvent.submit(form)
+    await flush()
+    expect(updateSupportDocument).not.toHaveBeenCalled()
+    expect(form.textContent).toContain("Escriba el nombre del documento")
+
+    const file = new File(["contenido"], "nuevo.docx", { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" })
+    fireEvent.change(form.querySelector<HTMLInputElement>("#support-document-edit-file")!, { target: { files: [file] } })
+    fireEvent.change(title, { target: { value: "Proyecto de carrera" } })
+    await flush()
+    fireEvent.submit(form)
+    await flush()
+    expect(updateSupportDocument).toHaveBeenCalledWith("d1", "Proyecto de carrera", file)
+  })
+
+  it("el docente no puede actualizar documentos", async () => {
+    await mountPanel("teacher")
+    expect(document.body.querySelector('[aria-label^="Actualizar "]')).toBeNull()
   })
 
   it("Coordinación elimina un documento tras confirmar", async () => {

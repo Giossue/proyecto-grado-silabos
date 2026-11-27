@@ -37,6 +37,7 @@ type FieldResponseEditorProps = {
   disabled?: boolean
   required?: boolean
   career?: boolean
+  rewrite?: boolean
   askFor?: string
   answers?: Record<string, unknown> | null
   limit?: number | null
@@ -81,6 +82,7 @@ export function FieldResponseEditor({
   disabled = false,
   required = false,
   career = false,
+  rewrite = false,
   askFor = "al coordinador",
   answers = null,
   limit = null,
@@ -90,6 +92,9 @@ export function FieldResponseEditor({
     return (
       <FreeTextEditor id={id} label={label} value={value ?? template} disabled={disabled} allowTables={false} spaces onValueChange={(next) => onValueChange?.(next)} />
     )
+  }
+  if (rewrite) {
+    return <FreeTextEditor id={id} label={label} value={value} disabled={disabled} allowTables={false} lockTables onValueChange={(next) => onValueChange?.(next)} />
   }
   const document = template ? responseDocument(template, value) : value
   const used = limit === null ? 0 : fieldCharacters(template, document, answers ?? {})

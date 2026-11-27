@@ -40,6 +40,7 @@ type FreeTextEditorProps = {
   allowTables?: boolean
   align?: boolean
   spaces?: boolean
+  lockTables?: boolean
   limit?: number | null
   ref?: Ref<FreeTextEditorHandle>
 }
@@ -121,10 +122,11 @@ const SlashKeys = Extension.create<unknown, SlashStorage>({
 const storageOf = (editor: Editor): { characterLimit: LimitStorage; slashKeys: SlashStorage } =>
   editor.storage as unknown as { characterLimit: LimitStorage; slashKeys: SlashStorage }
 
-type ExtensionOptions = { bare: boolean; align: boolean; spaces: boolean; blocks: "configure" | "fill"; labels: Record<string, string> }
+type ExtensionOptions = { bare: boolean; align: boolean; spaces: boolean; lockTables: boolean; blocks: "configure" | "fill"; labels: Record<string, string> }
 
-const editorExtensions = ({ bare, align, spaces, blocks, labels }: ExtensionOptions) => [
-  ...(spaces ? [OneSpace, ProtectedTables] : []),
+const editorExtensions = ({ bare, align, spaces, lockTables, blocks, labels }: ExtensionOptions) => [
+  ...(spaces ? [OneSpace] : []),
+  ...(spaces || lockTables ? [ProtectedTables] : []),
   StarterKit.configure({ document: false, heading: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false, link: false, strike: false, ...(bare ? { trailingNode: false } : {}) }),
   ...(align ? [TextAlign.configure({ types: ["paragraph"], alignments: ["left", "center", "right", "justify"] })] : []),
   TextStyle,
@@ -172,6 +174,7 @@ export function FreeTextEditor({
   allowTables = true,
   align = false,
   spaces = false,
+  lockTables = false,
   limit = null,
   ref,
 }: FreeTextEditorProps) {
@@ -204,7 +207,7 @@ export function FreeTextEditor({
       },
       attributes: { id, "aria-label": label, role: "textbox", "aria-multiline": "true", class: "free-text-editor__content" },
     },
-    extensions: editorExtensions({ bare, align, spaces, blocks, labels: Object.fromEntries(variables.map((item) => [item.key, item.label])) }),
+    extensions: editorExtensions({ bare, align, spaces, lockTables, blocks, labels: Object.fromEntries(variables.map((item) => [item.key, item.label])) }),
   }))
 
   const editorProps = useMemo(() => ({ ...setup.editorProps, attributes: { ...setup.editorProps.attributes, "aria-label": label } }), [setup, label])
@@ -332,7 +335,7 @@ export function FreeTextEditor({
               <Table2 aria-hidden="true" />
             </ToolButton>
           ) : null}
-          {editor.isActive("table") && !spaces ? (
+          {editor.isActive("table") && !spaces && !lockTables ? (
             <>
               <Separator />
               <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => editor.chain().focus().addRowAfter().run()}>
