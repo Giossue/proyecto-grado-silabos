@@ -192,6 +192,28 @@ describe("proposals", () => {
   })
 
   it.each([
+    ["Se aplicará lo que indique [dato del sistema]."],
+    ["Se aplicará lo que indique [ Datos del Sistema ]."],
+    ["Incluye [contenido omitido]."],
+  ])("refuses a proposal that would write a hidden-data marker into the syllabus and lets the model rewrite it: %s", async (texto) => {
+    script([read("descripcion"), answer("Propuesta.", [proposal("descripcion", texto)]), answer("Corregida.", [proposal("descripcion", "Estudia las redes.")])])
+
+    const outcome = await run()
+
+    expect(JSON.stringify(resultOf(2))).toContain("no puede incluir")
+    expect(outcome).toMatchObject({ status: "completado", message: "Corregida." })
+    expect(outcome.proposals.map((item) => item.text)).toEqual(["Estudia las redes."])
+  })
+
+  it("tells the model never to write the hidden-data markers in a proposal", async () => {
+    script([answer("Hola.")])
+
+    await run()
+
+    expect(gateway.requests[0]!.system).toContain("nunca los escribas en una propuesta")
+  })
+
+  it.each([
     ["two proposals for one target", [proposal("descripcion"), proposal("descripcion")], "Propuesta 2: ese destino ya tiene otra propuesta."],
     ["a proposal without its basis", [{ destino: "descripcion", texto: "Redes", fundamento: " " }], "Propuesta 1: escriba el texto y en qué se basa."],
     ["more than six proposals", Array.from({ length: 7 }, () => proposal("descripcion")), "«propuestas» debe ser una lista de hasta 6 propuestas."],

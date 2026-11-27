@@ -30,6 +30,8 @@ export const SYSTEM_DATA = "[dato del sistema]"
 export const OMITTED = "[contenido omitido]"
 export const EMPTY_PROPOSAL = "Escriba el texto de la propuesta."
 export const INVALID_PROPOSAL = "El texto de la propuesta no es válido."
+export const MARKER_PROPOSAL = "La propuesta no puede incluir «[dato del sistema]» ni «[contenido omitido]». Escriba el texto sin esas marcas."
+const HIDDEN_DATA_MARKER = /\[\s*(datos?\s+del\s+sistema|contenido\s+omitido)\s*\]/i
 
 const UNFILLED = "[espacio sin llenar]"
 const PLAIN_TEXT_NODES = ["doc", "paragraph", "bulletList", "orderedList", "listItem", "text", "hardBreak"]
@@ -299,6 +301,7 @@ export function applyToTarget(snapshot: AssistantSnapshot, readable: ReadableFie
   const definition = snapshot.template.definition
   const written = proposalText(text)
   if (written === "") return { problem: EMPTY_PROPOSAL }
+  if (HIDDEN_DATA_MARKER.test(written)) return { problem: MARKER_PROPOSAL }
   if ([...written].length > PROPOSAL_CHARACTERS || holdsDisabilityData(written, definition)) return { problem: INVALID_PROPOSAL }
   const value =
     target.kind === "campo"
