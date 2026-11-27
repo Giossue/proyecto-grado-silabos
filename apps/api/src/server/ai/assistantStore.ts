@@ -43,6 +43,7 @@ export interface AssistantTx {
   questionByKey(templateId: string, userId: string, key: string): Promise<string | null>
   answerTo(questionId: string): Promise<string | null>
   conversationBusy(templateId: string, userId: string): Promise<boolean>
+  hideConversation(templateId: string, userId: string, at: number): Promise<void>
   insertMessage(message: NewMessage): Promise<void>
   lockProposal(id: string): Promise<StoredProposal | null>
   decideProposal(id: string, state: string, actorId: string, at: number): Promise<void>
@@ -55,8 +56,6 @@ export interface AssistantTx {
 export interface AssistantStore {
   template(): Promise<SyllabusTemplate | null>
   conversation(templateId: string, userId: string): Promise<ConversationEntry[]>
-  conversationBusy(templateId: string, userId: string): Promise<boolean>
-  hideConversation(templateId: string, userId: string, at: number): Promise<void>
   openProcess(): Promise<boolean>
   processState(): Promise<string>
   proposal(id: string): Promise<StoredProposal | null>
@@ -182,6 +181,9 @@ export function assistantTx(db: Db): AssistantTx {
     questionByKey: (templateId, userId, key) => firstId(db, Prisma.sql`${ownedBy(templateId, userId)} and m.rol = 'usuario' and m.clave_idempotencia = ${key}`),
     answerTo: (questionId) => firstId(db, Prisma.sql`m.respuesta_a_id = ${questionId}::uuid`),
     conversationBusy: (templateId, userId) => busy(db, templateId, userId),
+    async hideConversation(templateId, userId, at) {
+      await db.$executeRaw`update sesiones_ia set cerrada_en = ${fromEpoch(at)} where plantilla_id = ${templateId}::uuid and usuario_id = ${userId}::uuid and cerrada_en is null`
+    },
     async insertMessage(message) {
       const { columns, content: rest } = splitMessageContent(message.content)
       await db.$executeRaw`${openSessionSql(message.userId, { templateId: message.templateId })}
@@ -235,10 +237,6 @@ export function assistantStoreOn(db: Db, transaction: <T>(work: (tx: AssistantTx
       const ids = found.map((message) => message.id)
       const offers = (await db.$queryRaw<ProposalRow[]>`${PROPOSAL} where m.mensaje_ia_id = any(${ids}::uuid[]) and ${offerText("id")} is not null`).map(proposalOf)
       return found.map((message) => ({ ...message, proposal: offers.find((proposal) => proposal.messageId === message.id) ?? null }))
-    },
-    conversationBusy: (templateId, userId) => busy(db, templateId, userId),
-    async hideConversation(templateId, userId, at) {
-      await db.$executeRaw`update sesiones_ia set cerrada_en = ${fromEpoch(at)} where plantilla_id = ${templateId}::uuid and usuario_id = ${userId}::uuid and cerrada_en is null`
     },
     openProcess: () => processExists(db, "abierto"),
     async processState() {

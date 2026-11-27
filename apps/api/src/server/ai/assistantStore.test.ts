@@ -179,7 +179,7 @@ describe("assistant proposals live inside their answer", () => {
 
   it("starts a new chat by closing the open session, and shows only the open one", async () => {
     const { db, statements } = recordingDatabase()
-    await store(db).hideConversation(TEMPLATE, USER, 1_800_000_000)
+    await assistantTx(db).hideConversation(TEMPLATE, USER, 1_800_000_000)
     await store(db).conversation(TEMPLATE, USER)
     expect(flat(statements[0])).toBe("update sesiones_ia set cerrada_en = to_timestamp($1) where plantilla_id = $2::uuid and usuario_id = $3::uuid and cerrada_en is null")
     expect(flat(statements[1])).toContain("s.plantilla_id = $1::uuid and s.usuario_id = $2::uuid and s.cerrada_en is null order by m.creado_en asc")

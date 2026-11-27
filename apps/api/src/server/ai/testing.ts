@@ -88,6 +88,12 @@ export function fakeAssistantStore(world: AssistantWorld): AssistantStore {
       )?.id ?? null,
     answerTo: async (questionId) => world.messages.find((message) => (message.content.entrada as PhpRecord | undefined)?.respuesta_a_id === questionId)?.id ?? null,
     conversationBusy: async (templateId, userId) => visible(world, templateId, userId).some(open),
+    hideConversation: async (templateId, userId) => {
+      const hidden = stamp(world)
+      world.messages = world.messages.map((message) =>
+        message.templateId === templateId && message.userId === userId && message.hiddenAt === null ? { ...message, hiddenAt: hidden } : message,
+      )
+    },
     insertMessage: async (message) => {
       world.messages.push({ ...message, content: stored(message.content), sentAt: stamp(world), hiddenAt: null })
     },
@@ -119,13 +125,6 @@ export function fakeAssistantStore(world: AssistantWorld): AssistantStore {
     template: async () => (world.template === null ? null : copy(world.template)),
     conversation: async (templateId, userId) =>
       visible(world, templateId, userId).map((message) => ({ ...copy(message), proposal: copy(world.proposals.find((proposal) => proposal.messageId === message.id) ?? null) })),
-    conversationBusy: async (templateId, userId) => visible(world, templateId, userId).some(open),
-    hideConversation: async (templateId, userId) => {
-      const hidden = stamp(world)
-      world.messages = world.messages.map((message) =>
-        message.templateId === templateId && message.userId === userId && message.hiddenAt === null ? { ...message, hiddenAt: hidden } : message,
-      )
-    },
     openProcess: async () => world.processes.includes("abierto"),
     processState: async () => (world.processes.includes("abierto") ? "abierta" : world.processes.includes("pausado") ? "pausada" : "ninguna"),
     proposal: async (id) => copy(world.proposals.find((proposal) => proposal.id === id) ?? null),

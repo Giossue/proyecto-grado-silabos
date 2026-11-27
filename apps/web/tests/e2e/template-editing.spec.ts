@@ -137,7 +137,7 @@ test.describe.serial("template editing during a paused convocation", () => {
 
   test.beforeAll(async () => {
     before = await templateState()
-    const [count] = await query<{ total: string }>("select count(*) as total from mensajes_ia_plantilla")
+    const [count] = await query<{ total: string }>("select count(*) as total from mensajes_ia m join sesiones_ia s on s.sesion_ia_id = m.sesion_ia_id where s.plantilla_id is not null")
     aiMessagesBefore = Number(count!.total)
   })
 
@@ -391,7 +391,7 @@ test.describe.serial("template editing during a paused convocation", () => {
   })
 
   test("the template assistant never reached the server", async () => {
-    const [count] = await query<{ total: string }>("select count(*) as total from mensajes_ia_plantilla")
+    const [count] = await query<{ total: string }>("select count(*) as total from mensajes_ia m join sesiones_ia s on s.sesion_ia_id = m.sesion_ia_id where s.plantilla_id is not null")
     expect(Number(count!.total)).toBe(aiMessagesBefore)
   })
 })

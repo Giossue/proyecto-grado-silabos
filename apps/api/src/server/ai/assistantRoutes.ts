@@ -191,9 +191,14 @@ export async function clearAssistant(request: Request, deps: AssistantRouteDeps)
 export async function clearAssistantOf(session: AppSession, deps: AssistantRouteDeps): Promise<Response> {
   const template = await deps.store.template()
   if (template === null) return fromController(modelNotFoundResponse(MODELS.template))
-  if (await deps.store.conversationBusy(template.id, session.user.id)) return validationError({ chat: [BUSY] })
-  await deps.store.hideConversation(template.id, session.user.id, deps.bridge.now())
-  return apiJson({ message: "Nuevo chat iniciado." })
+  return settled(async () => {
+    await deps.store.transaction(async (tx) => {
+      await tx.lockTemplateId()
+      if (await tx.conversationBusy(template.id, session.user.id)) reject(validationError({ chat: [BUSY] }))
+      await tx.hideConversation(template.id, session.user.id, deps.bridge.now())
+    })
+    return apiJson({ message: "Nuevo chat iniciado." })
+  })
 }
 
 export function findProposal(id: string, store: AssistantStore): Promise<StoredProposal | null> {

@@ -103,6 +103,30 @@ const apply = (id: string) => applyProposal(assistantRequest("POST", `/proposals
 const discard = (id: string) => discardProposal(assistantRequest("POST", `/proposals/${id}/discard`), id, deps())
 
 describe("template assistant API", () => {
+  it("starts a new chat holding the same lock as a request, so one being sent is never hidden", async () => {
+    const steps: string[] = []
+    const real = fakeAssistantStore(world)
+    const watched: AssistantRouteDeps["store"] = {
+      ...real,
+      transaction: (work) =>
+        real.transaction(async (tx) => {
+          steps.push("begin")
+          const result = await work({
+            ...tx,
+            lockTemplateId: () => (steps.push("lock"), tx.lockTemplateId()),
+            conversationBusy: (...args) => (steps.push("busy"), tx.conversationBusy(...args)),
+            hideConversation: (...args) => (steps.push("hide"), tx.hideConversation(...args)),
+          })
+          steps.push("commit")
+          return result
+        }),
+    }
+
+    expect((await clearAssistant(assistantRequest("DELETE", ""), { ...deps(), store: watched })).status).toBe(200)
+
+    expect(steps).toEqual(["begin", "lock", "busy", "hide", "commit"])
+  })
+
   it("marks only the assistant changes over the editor draft and sends them to the editor", async () => {
     script([addField("Competencias"), call("responder", { mensaje: "Propongo **Competencias**." })])
     const sections = draft()
