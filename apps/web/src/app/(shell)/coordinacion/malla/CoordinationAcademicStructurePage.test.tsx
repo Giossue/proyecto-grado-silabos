@@ -41,10 +41,18 @@ vi.mock("@/components/domain/ImportSpreadsheetDialog", () => ({
   ImportSpreadsheetDialog: ({ extra, title }: { extra?: Record<string, string>; title: string }) => <div data-testid="import" data-malla={extra?.malla_id ?? ""} data-title={title} />,
 }))
 vi.mock("@/components/domain/academic/curriculum/MallaDialog", () => ({
-  MallaDialog: ({ open, onOpenChange, malla }: { open: boolean; onOpenChange: (open: boolean) => void; malla: { code: string } | null }) => (
+  MallaDialog: ({ open, onOpenChange, malla, onSaved }: { open: boolean; onOpenChange: (open: boolean) => void; malla: { id: string; code: string } | null; onSaved: (message: string, mallaId: string) => void }) => (
     <div data-testid="malla-dialog" data-open={String(open)}>
       <span data-label>{malla === null ? "nueva" : malla.code}</span>
       <button type="button" data-close onClick={() => onOpenChange(false)} />
+      <button
+        type="button"
+        data-save
+        onClick={() => {
+          onSaved("Malla guardada.", malla === null ? "malla-10" : malla.id)
+          onOpenChange(false)
+        }}
+      />
     </div>
   ),
 }))
@@ -288,7 +296,6 @@ describe("CoordinationAcademicStructurePage, varias mallas", () => {
     await flush()
     fireEvent.click(editButton())
     await flush()
-    expect(document.querySelector('[data-tour="malla-selector"]')).toBeNull()
     expect([...document.querySelectorAll("button")].some((button) => button.textContent?.includes("Nueva malla"))).toBe(false)
     const pageHeader = document.querySelector('[data-tour="page-header"]')!
     fireEvent.click([...pageHeader.querySelectorAll("button")].find((button) => button.textContent === "Editar malla")!)
@@ -393,8 +400,321 @@ describe("CoordinationAcademicStructurePage, varias mallas", () => {
   it("el selector de malla no lleva etiqueta visible y conserva su nombre accesible", async () => {
     await mountPage()
     const selector = document.querySelector('[data-tour="malla-selector"]')!
+    expect(selector).toHaveClass("max-w-72")
+    expect(selector).not.toHaveClass("max-sm:max-w-none")
     expect(selector.querySelector("label")).toBeNull()
     expect(selector.querySelector('[aria-label="Malla"]')).not.toBeNull()
+  })
+})
+
+describe("CoordinationAcademicStructurePage, cambiar de malla dentro del editor", () => {
+  const editorMallas = [
+    { id: "malla-9", code: "SW-9", cycle_count: 3, state: "vigente" as const, subject_count: 2 },
+    { id: "malla-8", code: "SW-8", cycle_count: 4, state: "vigente" as const, subject_count: 2 },
+  ]
+  const draftable = (id: string): Curriculum => ({
+    ...curriculum(true, [...editorMallas, { id: "malla-10", code: "SW-10", cycle_count: 2, state: "vigente" as const, subject_count: 0 }].find((malla) => malla.id === id)!),
+    subjects: [
+      { id: "a", name: "Cálculo", cycle: 1, position: 0 },
+      { id: "b", name: "Física", cycle: 1, position: 1 },
+    ] as Curriculum["subjects"],
+  })
+  const button = (text: string): HTMLButtonElement | undefined => [...document.querySelectorAll("button")].find((item) => item.textContent === text)
+  const press = async (text: string): Promise<void> => {
+    fireEvent.click(button(text)!)
+    await flush()
+  }
+  const selector = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-tour="malla-selector"]')
+  const shownMallaId = (): string | null => selector()!.querySelector("[data-select]")!.getAttribute("data-selected")
+  const pick = async (value: string): Promise<void> => {
+    fireEvent.click(selector()!.querySelector(`[data-value="${value}"]`)!)
+    await flush()
+  }
+  const pageTitle = (): string => document.querySelector('[data-tour="page-header"] h1')!.textContent!
+  const requestedMallas = (): string[] => vi.mocked(getCurriculum).mock.calls.map(([id]) => id)
+  const asking = (): boolean => [...document.querySelectorAll('[role="dialog"]')].some((dialog) => dialog.textContent?.includes("Hay cambios sin guardar"))
+  const unloadBlocked = (): boolean => !window.dispatchEvent(new Event("beforeunload", { cancelable: true }))
+  const startEditing = async () => {
+    const view = await mountPage()
+    fireEvent.click(editButton())
+    await flush()
+    return view
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getSession).mockResolvedValue({ active_role: { code: "coordinador", career_id: "career-1" } } as never)
+    vi.mocked(getMallas).mockResolvedValue(editorMallas)
+    vi.mocked(getCurriculum).mockImplementation(async (id) => draftable(id))
+    vi.mocked(getScheduledSubjects).mockResolvedValue({} as never)
+    vi.mocked(getTeacherAssignments).mockResolvedValue({} as never)
+    vi.mocked(updateSubjectLayout).mockResolvedValue({ message: "Posición actualizada." })
+  })
+
+  it("el editor muestra sobre la malla el mismo desplegable que la vista, con las mismas opciones", async () => {
+    await mountPage()
+    const inView = [...selector()!.querySelectorAll("[data-value]")].map((option) => option.textContent)
+
+    fireEvent.click(editButton())
+    await flush()
+    expect(canvasEditing()).toBe("true")
+    expect(document.querySelector('[data-testid="canvas"] [data-tour="malla-selector"]')).not.toBeNull()
+    expect([...selector()!.querySelectorAll("[data-value]")].map((option) => option.textContent)).toEqual(inView)
+    expect(inView).toEqual(["Malla SW-9 · Vigente · 3 ciclos", "Malla SW-8 · Vigente · 4 ciclos", "Nueva malla"])
+  })
+
+  it("sin cambios pendientes cambia de malla sin preguntar y sigue en el editor", async () => {
+    await startEditing()
+
+    await pick("malla-8")
+    expect(asking()).toBe(false)
+    expect(shownMallaId()).toBe("malla-8")
+    expect(canvasEditing()).toBe("true")
+    expect(pageTitle()).toBe("Malla SW-8 de Software")
+    expect(requestedMallas().at(-1)).toBe("malla-8")
+    expect(updateSubjectLayout).not.toHaveBeenCalled()
+  })
+
+  it("con cambios pendientes pregunta antes de cambiar; «Seguir editando» conserva la malla y lo pendiente", async () => {
+    await startEditing()
+    await press("mover materia")
+
+    await pick("malla-8")
+    expect(asking()).toBe(true)
+    expect(shownMallaId()).toBe("malla-9")
+    await press("Seguir editando")
+
+    expect(asking()).toBe(false)
+    expect(shownMallaId()).toBe("malla-9")
+    expect(pageTitle()).toBe("Malla SW-9 de Software")
+    expect(canvasEditing()).toBe("true")
+    expect(button("Guardar cambios")).toBeEnabled()
+    expect(unloadBlocked()).toBe(true)
+    expect(requestedMallas()).not.toContain("malla-8")
+    expect(updateSubjectLayout).not.toHaveBeenCalled()
+
+    await press("Guardar cambios")
+    expect(vi.mocked(updateSubjectLayout).mock.calls).toEqual([["malla-9", { subject_id: "b", cycle: 1, position: 0 }]])
+  })
+
+  it("al descartar pasa a la otra malla sin guardar, mover ni copiar nada entre ellas", async () => {
+    await startEditing()
+    await press("mover materia")
+
+    await pick("malla-8")
+    await press("Salir y descartar cambios")
+
+    expect(shownMallaId()).toBe("malla-8")
+    expect(canvasEditing()).toBe("true")
+    expect(button("Guardar cambios")).toBeDisabled()
+    expect(button("Descartar")).toBeUndefined()
+    expect(unloadBlocked()).toBe(false)
+    expect(updateSubjectLayout).not.toHaveBeenCalled()
+
+    await pick("malla-9")
+    expect(asking()).toBe(false)
+    expect(shownMallaId()).toBe("malla-9")
+    expect(button("Guardar cambios")).toBeDisabled()
+    expect(updateSubjectLayout).not.toHaveBeenCalled()
+  })
+
+  it("después de cambiar de malla, guardar envía solo lo de la malla que se ve", async () => {
+    await startEditing()
+    await press("mover materia")
+    await pick("malla-8")
+    await press("Salir y descartar cambios")
+
+    await press("mover materia")
+    await press("Guardar cambios")
+    expect(vi.mocked(updateSubjectLayout).mock.calls).toEqual([["malla-8", { subject_id: "b", cycle: 1, position: 0 }]])
+  })
+
+  it("elegir la misma malla no pregunta ni pierde lo pendiente", async () => {
+    await startEditing()
+    await press("mover materia")
+
+    await pick("malla-9")
+    expect(asking()).toBe(false)
+    expect(button("Guardar cambios")).toBeEnabled()
+  })
+
+  it("mientras se guarda no se puede cambiar de malla", async () => {
+    vi.mocked(updateSubjectLayout).mockImplementation(() => new Promise(() => undefined))
+    await startEditing()
+    expect(selector()!.querySelector("[data-select]")!.getAttribute("data-disabled")).toBeNull()
+    await press("mover materia")
+    await press("Guardar cambios")
+
+    expect(selector()!.querySelector("[data-select]")!.getAttribute("data-disabled")).toBe("true")
+    await pick("malla-8")
+    expect(shownMallaId()).toBe("malla-9")
+    expect(requestedMallas()).not.toContain("malla-8")
+  })
+
+  it("mientras carga la otra malla muestra el esqueleto con el hueco del desplegable y mantiene «Volver a la vista»", async () => {
+    vi.mocked(getCurriculum).mockImplementation((id) => (id === "malla-8" ? new Promise(() => undefined) : Promise.resolve(draftable(id))))
+    await startEditing()
+
+    await pick("malla-8")
+    expect(document.querySelector('[data-testid="canvas"]')).toBeNull()
+    expect(document.querySelector('[data-skeleton="curriculum-selector"]')).not.toBeNull()
+    expect(document.querySelector('[data-skeleton="page-actions"]')!.children).toHaveLength(2)
+    expect(document.querySelector('[data-tour="page-header"]')!.textContent).toContain("Volver a la vista")
+    expect(unloadBlocked()).toBe(false)
+  })
+
+  it("si la malla elegida está bloqueada vuelve a la vista", async () => {
+    vi.mocked(getCurriculum).mockImplementation(async (id) => (id === "malla-8" ? curriculum(false, editorMallas[1]) : draftable(id)))
+    await startEditing()
+
+    await pick("malla-8")
+    expect(canvasEditing()).toBe("false")
+    expect(shownMallaId()).toBe("malla-8")
+  })
+
+  it("el editor se queda en su malla aunque una recarga ponga otra de primera", async () => {
+    await startEditing()
+    await press("mover materia")
+    vi.mocked(getMallas).mockResolvedValue([editorMallas[1], editorMallas[0]])
+
+    await press("cambiar malla")
+    expect(shownMallaId()).toBe("malla-9")
+    expect(pageTitle()).toBe("Malla SW-9 de Software")
+  })
+
+  it("«Nueva malla» desde el editor abre el diálogo sin tocar lo pendiente", async () => {
+    await startEditing()
+    await press("mover materia")
+
+    await pick("nueva-malla")
+    expect(openMallaDialog()!.querySelector("[data-label]")!.textContent).toBe("nueva")
+    expect(asking()).toBe(false)
+    fireEvent.click(openMallaDialog()!.querySelector("[data-close]")!)
+    await flush()
+
+    expect(shownMallaId()).toBe("malla-9")
+    expect(button("Guardar cambios")).toBeEnabled()
+    expect(updateSubjectLayout).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["Seguir editando", "malla-9", true],
+    ["Salir y descartar cambios", "malla-10", false],
+  ])("al crear una malla desde el editor con cambios pendientes pregunta antes de pasar a ella: «%s»", async (answer, expected, keeps) => {
+    await startEditing()
+    await press("mover materia")
+    await pick("nueva-malla")
+    vi.mocked(getMallas).mockResolvedValue([{ id: "malla-10", code: "SW-10", cycle_count: 2, state: "vigente" as const, subject_count: 0 }, ...editorMallas])
+
+    fireEvent.click(openMallaDialog()!.querySelector("[data-save]")!)
+    await flush()
+    expect(asking()).toBe(true)
+    expect(shownMallaId()).toBe("malla-9")
+    await press(answer)
+
+    expect(shownMallaId()).toBe(expected)
+    expect(selector()!.textContent).toContain("Malla SW-10")
+    expect(button("Guardar cambios")!.disabled).toBe(!keeps)
+    expect(updateSubjectLayout).not.toHaveBeenCalled()
+  })
+
+  it("al crear una malla desde la vista pasa a ella sin preguntar", async () => {
+    await mountPage()
+    await pick("nueva-malla")
+    vi.mocked(getMallas).mockResolvedValue([...editorMallas, { id: "malla-10", code: "SW-10", cycle_count: 2, state: "vigente" as const, subject_count: 0 }])
+
+    fireEvent.click(openMallaDialog()!.querySelector("[data-save]")!)
+    await flush()
+    expect(asking()).toBe(false)
+    expect(shownMallaId()).toBe("malla-10")
+    expect(canvasEditing()).toBe("false")
+  })
+
+  it("al guardar los datos de la malla que se edita sigue en ella con lo pendiente", async () => {
+    await startEditing()
+    await press("mover materia")
+    fireEvent.click(document.querySelector('[data-tour="curriculum-data"]')!)
+    await flush()
+
+    fireEvent.click(openMallaDialog()!.querySelector("[data-save]")!)
+    await flush()
+    expect(asking()).toBe(false)
+    expect(shownMallaId()).toBe("malla-9")
+    expect(button("Guardar cambios")).toBeEnabled()
+    expect(requestedMallas().filter((id) => id === "malla-9")).toHaveLength(3)
+  })
+
+  it("con una sola malla el editor muestra el desplegable con esa malla", async () => {
+    vi.mocked(getMallas).mockResolvedValue([editorMallas[0]])
+    await startEditing()
+
+    expect([...selector()!.querySelectorAll("[data-value]")].map((option) => option.textContent)).toEqual(["Malla SW-9 · Vigente · 3 ciclos", "Nueva malla"])
+  })
+
+  it("en Administración el editor también deja cambiar de malla y pregunta antes de descartar", async () => {
+    renderWithProviders(<CoordinationAcademicStructurePage mode="curriculum" adminCareer={{ id: "career-9", code: "RED" }} />)
+    await flush()
+    fireEvent.click(editButton())
+    await flush()
+    await press("mover materia")
+
+    await pick("malla-8")
+    expect(asking()).toBe(true)
+    await press("Salir y descartar cambios")
+    expect(shownMallaId()).toBe("malla-8")
+    expect(requestedMallas().at(-1)).toBe("malla-8")
+    expect(vi.mocked(getCurriculum).mock.calls.at(-1)).toEqual(["malla-8", "career-9"])
+    expect(updateSubjectLayout).not.toHaveBeenCalled()
+  })
+})
+
+describe("CoordinationAcademicStructurePage, materias y asignaciones por malla", () => {
+  const openMallasList = [MALLAS[0]!, { ...MALLAS[1]!, state: "vigente" as const }]
+  const scheduledRow = (id: string, name: string, mallaCode: string) => ({
+    subject_id: id,
+    label: name,
+    subject_code: id,
+    subject_name: name,
+    subject_cycle: 1,
+    malla_name: `Malla ${mallaCode}`,
+    generates_syllabus: true,
+    modality_name: null,
+    parallels: [],
+    editable: true,
+  })
+  const rows = (): string[] => [...document.querySelectorAll('[data-slot="table-body"] tr')].map((item) => item.querySelectorAll("td")[1]!.textContent!)
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getSession).mockResolvedValue({ active_role: { code: "coordinador", career_id: "career-1" } } as never)
+    vi.mocked(getMallas).mockResolvedValue(openMallasList)
+    vi.mocked(getCurriculum).mockResolvedValue(curriculum())
+    vi.mocked(getScheduledSubjects).mockResolvedValue({
+      career: { id: "career-1", name: "Software", lock_reason: null },
+      scheduledSubjects: [scheduledRow("s-1", "Redes", "SW-9"), scheduledRow("s-2", "Compiladores", "SW-8")],
+      options: { shiftOptions: [], activeSubjects: [] },
+    } as never)
+    vi.mocked(getTeacherAssignments).mockResolvedValue({ teacherAssignments: [], options: { teacherUsers: [] } } as never)
+  })
+
+  it.each([
+    ["Coordinación", null],
+    ["Administración", { id: "career-9", code: "RED" }],
+  ])("en %s cambia de malla en la misma pantalla, sin volver a pedir datos ni ofrecer «Nueva malla»", async (_role, adminCareer) => {
+    renderWithProviders(<CoordinationAcademicStructurePage mode="schedule" adminCareer={adminCareer} />)
+    await flush()
+    const selector = (): HTMLElement => document.querySelector<HTMLElement>('[data-tour="malla-selector"]')!
+    expect(rows()).toEqual(["Redes"])
+    expect([...selector().querySelectorAll("[data-value]")].map((option) => option.getAttribute("data-value"))).toEqual(["malla-9", "malla-8"])
+    const requests = [getCurriculum, getScheduledSubjects, getMallas, getTeacherAssignments].map((request) => vi.mocked(request).mock.calls.length)
+
+    fireEvent.click(selector().querySelector('[data-value="malla-8"]')!)
+    await flush()
+
+    expect(rows()).toEqual(["Compiladores"])
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull()
+    expect([getCurriculum, getScheduledSubjects, getMallas, getTeacherAssignments].map((request) => vi.mocked(request).mock.calls.length)).toEqual(requests)
+    expect(updateSubjectLayout).not.toHaveBeenCalled()
   })
 })
 

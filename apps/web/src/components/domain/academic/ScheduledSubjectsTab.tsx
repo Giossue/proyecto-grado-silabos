@@ -1,14 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import type { ScheduledSubjects, TeacherAssignments } from "@/api/career-academics"
+import { MallaToolbar, isOfMalla, openMallas, shownMalla } from "@/components/domain/academic/curriculum/MallaToolbar"
 import { ParallelBulkActions } from "@/components/domain/academic/ParallelBulkActions"
 import { ParallelCreationDialog } from "@/components/domain/academic/ParallelCreationDialog"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { StatusBadge } from "@/components/domain/StatusBadge"
 import { TablePagination } from "@/components/domain/TablePagination"
 import { SortableHead, SortStatus } from "@/components/domain/TableSort"
-import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -19,6 +19,7 @@ import { useTableSort, type SortColumns } from "@/composables/useTableSort"
 import { shiftLabel } from "@/lib/parallelShifts"
 import { activateRow, rowButtonClass } from "@/lib/rowActivation"
 import { cn } from "@/lib/utils"
+import type { Malla } from "@/types/academic"
 
 // `malla_name` comes with each subject since careers can have several mallas (S8).
 type ScheduledRow = ScheduledSubjects["scheduledSubjects"][number] & { malla_name?: string | null }
@@ -26,6 +27,7 @@ type CheckState = boolean | "indeterminate"
 
 type ScheduledSubjectsTabProps = {
   data: ScheduledSubjects
+  mallas: Malla[]
   assignments: TeacherAssignments["teacherAssignments"]
   teacherUsers: TeacherAssignments["options"]["teacherUsers"]
   onChanged: (message: string) => void
@@ -35,9 +37,7 @@ type ScheduledSubjectsTabProps = {
 const cycleKey = (item: ScheduledRow): string => (item.subject_cycle === null ? "none" : String(item.subject_cycle))
 const shiftKey = (shift: string | null | undefined): string => shift ?? "none"
 const searchable = (item: ScheduledRow) => [item.subject_name]
-const mallaOf = (item: ScheduledRow): string => item.malla_name ?? ""
 const filters: Record<string, ClientFilterDefinition<ScheduledRow>> = {
-  malla: { matches: (item, value) => mallaOf(item) === value },
   ciclo: { matches: (item, value) => cycleKey(item) === value },
   paralelo: { matches: (item, value) => item.parallels.some((parallel) => parallel.code === value) },
   jornada: { matches: (item, value) => item.parallels.some((parallel) => shiftKey(parallel.shift) === value) },
@@ -49,12 +49,17 @@ const sortColumns = {
 const canPlan = (item: ScheduledRow): boolean => item.editable
 const selectableParallels = (item: ScheduledRow) => item.parallels.filter((parallel) => parallel.editable !== false)
 
-export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChanged, onFailed }: ScheduledSubjectsTabProps) {
-  const rows: ScheduledRow[] = data.scheduledSubjects
+export function ScheduledSubjectsTab({ data, mallas, assignments, teacherUsers, onChanged, onFailed }: ScheduledSubjectsTabProps) {
+  const [chosenMallaId, setChosenMallaId] = useState<string | null>(null)
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const offeredMallas = openMallas(mallas)
+  const malla = shownMalla(offeredMallas, chosenMallaId)
+  const mallaCode = malla?.code ?? null
+  const rows = useMemo((): ScheduledRow[] => data.scheduledSubjects.filter((item) => mallaCode !== null && isOfMalla(item, { code: mallaCode })), [data.scheduledSubjects, mallaCode])
   const shiftOptions = data.options.shiftOptions
   const filter = useClientFilter(rows, searchable, filters)
   const sort = useTableSort(filter.items, sortColumns)
-  const pagination = useClientPagination(sort.items, 20, `${filter.criteria}|${sort.criteria}`)
+  const pagination = useClientPagination(sort.items, 20, `${mallaCode}|${filter.criteria}|${sort.criteria}`)
   const [planningId, setPlanningId] = useState<string | null>(null)
   const [planningOpen, setPlanningOpen] = useState(false)
   const [selectedParallels, setSelectedParallels] = useState<string[]>([])
@@ -75,8 +80,6 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
       ]),
     ).values(),
   ].sort((a, b) => a.order - b.order)
-  const mallas = [...new Set(rows.map(mallaOf).filter((name) => name !== ""))].sort((a, b) => a.localeCompare(b, "es", { numeric: true }))
-  const severalMallas = mallas.length > 1
   const parallelOptions = [...new Set(rows.flatMap((item) => item.parallels.map((parallel) => parallel.code)))].sort((a, b) => a.localeCompare(b, "es", { numeric: true }))
   const shiftChoices = [
     ...new Map(rows.flatMap((item) => item.parallels).map((parallel) => [shiftKey(parallel.shift), { value: shiftKey(parallel.shift), label: shiftLabel(parallel.shift, shiftOptions) }])).values(),
@@ -112,6 +115,11 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
     setSelectedBare([])
   }
 
+  const switchMalla = (mallaId: string): void => {
+    setChosenMallaId(mallaId)
+    filter.clear()
+  }
+
   const openPlanning = (item: ScheduledRow): void => {
     setPlanningId(item.subject_id)
     setPlanningOpen(true)
@@ -144,6 +152,7 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
 
   return (
     <div className="flex flex-col gap-4">
+      {malla ? <MallaToolbar className="max-sm:max-w-none" mallas={offeredMallas} selected={malla} disabled={bulkBusy} onSelect={switchMalla} /> : null}
       <ClientFilterBar
         filter={filter}
         inputId="scheduled-subjects-search"
@@ -152,16 +161,6 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
         sort={sort}
         filters={
           <>
-            {severalMallas
-              ? filterSelect(
-                  "malla",
-                  "scheduled-subject-malla",
-                  "Malla",
-                  "Todas las mallas",
-                  "Todas las mallas",
-                  mallas.map((name) => ({ value: name, label: name })),
-                )
-              : null}
             {filterSelect("ciclo", "scheduled-subject-cycle", "Ciclo", "Todos los ciclos", "Todos los ciclos", cycleOptions)}
             {filterSelect(
               "paralelo",
@@ -185,6 +184,7 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
           onChanged={onChanged}
           onFailed={onFailed}
           onClear={clearSelection}
+          onBusyChange={setBulkBusy}
         />
       ) : null}
       <Table label="Materias programadas">
@@ -202,7 +202,7 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
         </TableHeader>
         <TableBody>
           {!pagination.items.length ? (
-            <TableEmpty colSpan={6}>{filter.active ? "No hay materias que coincidan con los filtros" : "No hay materias en la malla"}</TableEmpty>
+            <TableEmpty colSpan={6}>{filter.active ? "No hay materias que coincidan con los filtros" : malla ? "No hay materias en la malla" : "La carrera no tiene mallas vigentes"}</TableEmpty>
           ) : (
             pagination.items.map((item) => (
               <TableRow
@@ -224,7 +224,6 @@ export function ScheduledSubjectsTab({ data, assignments, teacherUsers, onChange
                     ) : (
                       item.subject_name
                     )}
-                    {severalMallas && mallaOf(item) !== "" ? <Badge variant="outline">{mallaOf(item)}</Badge> : null}
                     {item.generates_syllabus === false ? <StatusBadge label="Sin sílabo" tone="info" /> : null}
                   </span>
                 </TableCell>

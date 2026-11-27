@@ -4,7 +4,7 @@ import { expect, test } from "./support/fixtures"
 import { fillWorkbookCell, writeDocx, writePdf } from "./support/files"
 import { storageStateOf } from "./support/accounts"
 import { expireInvitation, query } from "./support/db"
-import { chooseOption, lettersOnly, dragBetween, rowNamed, toast, uniqueSuffix } from "./support/ui"
+import { chooseFirstOption, chooseOption, lettersOnly, dragBetween, rowNamed, toast, uniqueSuffix } from "./support/ui"
 
 test.use({ storageState: storageStateOf("coordinator") })
 
@@ -253,12 +253,11 @@ test.describe.serial("coordination", () => {
   })
 
   test("coordinator creates, edits and reassigns a parallel", async ({ page, issues }) => {
-    const code = `E${suffix}`
     await page.goto("/coordinacion/materias-asignaciones")
     await page.getByRole("cell", { name: "Cálculo III", exact: true }).click()
     const dialog = page.getByRole("dialog", { name: "Paralelos y docentes de la materia" })
     await dialog.getByRole("button", { name: "Agregar paralelo" }).click()
-    await dialog.getByRole("textbox", { name: "Código del nuevo paralelo" }).fill(code)
+    const code = await chooseFirstOption(page, dialog.getByRole("combobox", { name: "Código del nuevo paralelo" }))
     await chooseOption(page, dialog.getByRole("combobox", { name: "Jornada del nuevo paralelo" }), "Vespertina")
     await chooseOption(page, dialog.getByRole("combobox", { name: "Docente del nuevo paralelo" }), "JUAN CARLOS GAIBOR NARANJO")
     await dialog.getByRole("button", { name: "Guardar nuevo paralelo" }).click()

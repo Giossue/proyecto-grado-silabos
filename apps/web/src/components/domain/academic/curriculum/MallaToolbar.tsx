@@ -2,6 +2,7 @@
 
 import { BookPlus } from "lucide-react"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 import type { Malla } from "@/types/academic"
 import { MALLA_STATE_LABELS } from "@silabos/shared/schemas/academic"
 
@@ -10,21 +11,28 @@ export function mallaLabel(malla: Pick<Malla, "code">): string {
   return `Malla ${malla.code}`
 }
 
+export const openMallas = (mallas: Malla[]): Malla[] => mallas.filter((malla) => malla.state !== "cerrada")
+
+export const shownMalla = (mallas: Malla[], chosenId: string | null): Malla | null => mallas.find((malla) => malla.id === chosenId) ?? mallas[0] ?? null
+
+export const isOfMalla = (item: { malla_name?: string | null }, malla: Pick<Malla, "code">): boolean => item.malla_name === mallaLabel(malla)
+
 /** Value of the «Nueva malla» entry: choosing it creates a malla instead of selecting one (malla ids are UUIDs). */
 const NEW_MALLA = "nueva-malla"
 
 type MallaToolbarProps = {
   mallas: Malla[]
   selected: Malla
+  disabled?: boolean
+  className?: string
   onSelect: (mallaId: string) => void
-  onCreate: () => void
+  onCreate?: () => void
 }
 
-/** Picks the malla shown on the page (the vigente one by default), each with its state and cycles, and offers to create another. */
-export function MallaToolbar({ mallas, selected, onSelect, onCreate }: MallaToolbarProps) {
+export function MallaToolbar({ mallas, selected, disabled, className, onSelect, onCreate }: MallaToolbarProps) {
   return (
-    <div className="w-full max-w-72" data-tour="malla-selector">
-      <Select value={selected.id} onValueChange={(value) => (value === NEW_MALLA ? onCreate() : onSelect(value))}>
+    <div className={cn("w-full max-w-72", className)} data-tour="malla-selector">
+      <Select value={selected.id} disabled={disabled} onValueChange={(value) => (value === NEW_MALLA ? onCreate?.() : onSelect(value))}>
         <SelectTrigger id="malla-selector" aria-label="Malla" className="w-full">
           <SelectValue placeholder="Elija una malla" />
         </SelectTrigger>
@@ -36,13 +44,17 @@ export function MallaToolbar({ mallas, selected, onSelect, onCreate }: MallaTool
               </SelectItem>
             ))}
           </SelectGroup>
-          <SelectSeparator />
-          <SelectGroup>
-            <SelectItem value={NEW_MALLA}>
-              <BookPlus aria-hidden="true" />
-              Nueva malla
-            </SelectItem>
-          </SelectGroup>
+          {onCreate ? (
+            <>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectItem value={NEW_MALLA}>
+                  <BookPlus aria-hidden="true" />
+                  Nueva malla
+                </SelectItem>
+              </SelectGroup>
+            </>
+          ) : null}
         </SelectContent>
       </Select>
     </div>

@@ -4,9 +4,9 @@ import { createContext, useContext, type ReactNode } from "react"
 const SelectContext = createContext<(value: string) => void>(() => undefined)
 
 export const selectStub = {
-  Select: ({ value, onValueChange, children }: { value?: string; onValueChange?: (value: string) => void; children?: ReactNode }) => (
-    <SelectContext.Provider value={onValueChange ?? (() => undefined)}>
-      <div data-select data-selected={value}>{children}</div>
+  Select: ({ value, onValueChange, disabled, children }: { value?: string; onValueChange?: (value: string) => void; disabled?: boolean; children?: ReactNode }) => (
+    <SelectContext.Provider value={onValueChange && !disabled ? onValueChange : () => undefined}>
+      <div data-select data-selected={value} data-disabled={disabled ? "true" : undefined}>{children}</div>
     </SelectContext.Provider>
   ),
   SelectTrigger: ({ children, "aria-label": label }: { children?: ReactNode; "aria-label"?: string }) => <div aria-label={label}>{children}</div>,

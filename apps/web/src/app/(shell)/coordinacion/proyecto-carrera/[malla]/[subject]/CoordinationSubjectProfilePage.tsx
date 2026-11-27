@@ -54,7 +54,10 @@ const FRAME_CLASS = "mx-auto w-full max-w-[90rem]"
 const ACTIONS_SKELETON = ["w-32", "w-48"]
 const profileSkeleton = <LoadingSkeleton variant="form" rows={1} sidebar />
 
-const projectPath = (career: AdminCareer | null): string => (career ? paths.admin.careerProject(career.code) : paths.coordination.careerProject)
+const projectPath = (career: AdminCareer | null, mallaCode: string): string => {
+  const path = career ? paths.admin.careerProject(career.code) : paths.coordination.careerProject
+  return mallaCode ? `${path}?malla=${encodeURIComponent(mallaCode.toLowerCase())}` : path
+}
 
 function BackToProject({ onClick }: { onClick: () => void }) {
   return (
@@ -68,6 +71,7 @@ function BackToProject({ onClick }: { onClick: () => void }) {
 /** The screen while the subject of the address is being found. */
 export function SubjectProfilePending({ adminCareer, error, onRetry }: { adminCareer: AdminCareer | null; error: string | null; onRetry: () => void }) {
   const router = useRouter()
+  const mallaCode = String(useParams<{ malla?: string }>()?.malla ?? "")
 
   return (
     <PageFrame
@@ -78,7 +82,7 @@ export function SubjectProfilePending({ adminCareer, error, onRetry }: { adminCa
       className={FRAME_CLASS}
       loading={!error}
       actionsSkeleton={error ? [] : ACTIONS_SKELETON}
-      eyebrow={<BackToProject onClick={() => goBack(router, projectPath(adminCareer))} />}
+      eyebrow={<BackToProject onClick={() => goBack(router, projectPath(adminCareer, mallaCode))} />}
     >
       {error ? <LoadErrorState message={error} onRetry={onRetry} /> : profileSkeleton}
     </PageFrame>
@@ -102,11 +106,11 @@ const loadProfile = async (subjectId: string, careerId: string | null): Promise<
   }
 }
 
-function SubjectProfile({ subjectId, adminCareer }: { subjectId: string; adminCareer: AdminCareer | null }) {
+function SubjectProfile({ subjectId, mallaCode, adminCareer }: { subjectId: string; mallaCode: string; adminCareer: AdminCareer | null }) {
   const router = useRouter()
   const careerId = adminCareer?.id ?? null
   useAcademicCareerScope(careerId)
-  const projectHref = projectPath(adminCareer)
+  const projectHref = projectPath(adminCareer, mallaCode)
   const subjectHref = ({ malla_code: malla, codigo_asignatura: code }: Subject): string =>
     adminCareer ? paths.admin.careerProjectSubject(adminCareer.code, malla, code) : paths.coordination.careerProjectSubject(malla, code)
   const queryClient = useQueryClient()
@@ -125,7 +129,7 @@ function SubjectProfile({ subjectId, adminCareer }: { subjectId: string; adminCa
   const { open: discardOpen, ask: askToDiscard, decide: decideDiscard } = useDiscardConfirmation()
 
   const lockReason = data?.lockReason ?? null
-  const subjects = data?.subjects ?? []
+  const subjects = (data?.subjects ?? []).filter((subject) => sameCode(subject.malla_code, mallaCode))
   const fields = data?.fields ?? []
   const byCycle = new Map<number, Subject[]>()
   for (const subject of subjects) byCycle.set(subject.ciclo, [...(byCycle.get(subject.ciclo) ?? []), subject])
@@ -391,5 +395,5 @@ export default function CoordinationSubjectProfilePage({ adminCareer = null }: {
     return <SubjectProfilePending adminCareer={adminCareer} error={queryErrorMessage(subjects, "No se pudo abrir el proyecto de carrera")} onRetry={() => void subjects.refetch()} />
   }
 
-  return <SubjectProfile key={subjectId} subjectId={subjectId} adminCareer={adminCareer} />
+  return <SubjectProfile key={subjectId} subjectId={subjectId} mallaCode={mallaCode} adminCareer={adminCareer} />
 }

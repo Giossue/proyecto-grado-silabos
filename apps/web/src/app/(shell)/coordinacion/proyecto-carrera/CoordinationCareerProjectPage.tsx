@@ -7,12 +7,14 @@ import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
 import { type ScheduledSubjects } from "@/api/career-academics"
 import { AdminCareerBackLink, AdminCareerTabs, type AdminCareer } from "@/components/domain/academic/AdminCareerNavigation"
+import { MallaToolbar, isOfMalla, openMallas, shownMalla } from "@/components/domain/academic/curriculum/MallaToolbar"
 import { FichaImportDialog } from "@/components/domain/academic/FichaImportDialog"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { SupportDocumentsPanel } from "@/components/domain/academic/SupportDocumentsPanel"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { EmptyState } from "@/components/domain/EmptyState"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
+import { MallaSelectorSkeleton } from "@/components/domain/loading/MallaSelectorSkeleton"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { ProcessLockAlert } from "@/components/domain/ProcessLockAlert"
@@ -27,12 +29,13 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAcademicCareerScope } from "@/composables/useAcademicCareerScope"
 import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
+import { sameCode } from "@/composables/useCodeLookup"
 import { paths } from "@/lib/routes"
 import { rowLinkClass } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
 import { cn, withoutFinalPeriod } from "@/lib/utils"
 import { queryErrorMessage } from "@/lib/queryClient"
-import { coordinatorCareerQuery, scheduledSubjectsQuery } from "@/queries/careerAcademics"
+import { coordinatorCareerQuery, mallasQuery, scheduledSubjectsQuery } from "@/queries/careerAcademics"
 
 // `malla_name` comes with each subject since careers can have several mallas (S8).
 type Subject = ScheduledSubjects["options"]["activeSubjects"][number] & { malla_name?: string | null }
@@ -65,7 +68,12 @@ function TabsSkeleton() {
   )
 }
 
-const subjectsSkeleton = <LoadingSkeleton variant="accordion" rows={3} filters={2} />
+const subjectsSkeleton = (
+  <div className="flex min-w-0 flex-col gap-4">
+    <MallaSelectorSkeleton />
+    <LoadingSkeleton variant="accordion" rows={3} filters={2} />
+  </div>
+)
 
 /** Administration's screen while the career of the address is being found. */
 export function AdminCareerProjectPending({ careerCode, error, onRetry }: { careerCode: string; error: string | null; onRetry: () => void }) {
@@ -94,13 +102,24 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
   const scope = useQuery(coordinatorCareerQuery(careerId))
   const query = useQuery({ ...scheduledSubjectsQuery(careerId), enabled: typeof scope.data === "string" })
   const data = query.data ?? null
-  const loading = scope.isFetching || query.isFetching
+  const mallasState = useQuery({ ...mallasQuery(careerId), enabled: typeof scope.data === "string" })
+  const loading = scope.isFetching || query.isFetching || mallasState.isFetching
   const loadError = queryErrorMessage(scope, LOAD_ERROR) ?? queryErrorMessage(query, LOAD_ERROR)
+  const subjectsError = loadError ?? queryErrorMessage(mallasState, LOAD_ERROR)
+  const subjectsReady = data !== null && mallasState.data !== undefined
 
-  const subjects = useMemo((): Subject[] => (data?.options.activeSubjects ?? []).filter((subject) => subject.generates_syllabus !== false), [data])
+  const addressMalla = searchParams.get("malla")
+  const [chosenMalla, setChosenMalla] = useState({ address: addressMalla, code: addressMalla })
+  if (chosenMalla.address !== addressMalla) setChosenMalla({ address: addressMalla, code: addressMalla })
+  const mallas = openMallas(mallasState.data ?? [])
+  const malla = shownMalla(mallas, mallas.find((item) => sameCode(item.code, chosenMalla.code ?? ""))?.id ?? null)
+
+  const subjects = useMemo(
+    (): Subject[] => (data?.options.activeSubjects ?? []).filter((subject) => malla !== null && isOfMalla(subject, malla) && subject.generates_syllabus !== false),
+    [data, malla],
+  )
   const filter = useClientFilter(subjects, searchable, subjectFilters)
   const cycleOptions = [...new Set(subjects.map(cycleLabel))].sort(compareCycles)
-  const severalMallas = new Set(subjects.map((subject) => subject.malla_name).filter(Boolean)).size > 1
   const byCycle = new Map<string, Subject[]>()
   for (const subject of filter.items) byCycle.set(cycleLabel(subject), [...(byCycle.get(cycleLabel(subject)) ?? []), subject])
   const groups = [...byCycle].sort(([left], [right]) => compareCycles(left, right)).map(([cycle, list]) => ({ cycle, list }))
@@ -108,15 +127,28 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
     if (scope.data === null) router.replace(paths.dashboard)
   }, [scope.data, router])
 
-  const load = (): Promise<void> => Promise.all([scope.refetch(), query.refetch()]).then(() => undefined)
+  const load = (): Promise<void> => Promise.all([scope.refetch(), query.refetch(), mallasState.refetch()]).then(() => undefined)
+
+  const replaceAddress = (name: string, value: string | null): void => {
+    const query = new URLSearchParams(searchParams.toString())
+    if (value === null) query.delete(name)
+    else query.set(name, value)
+    const search = query.toString()
+    const base = adminCareer ? paths.admin.careerProject(adminCareer.code) : paths.coordination.careerProject
+    router.replace(search ? `${base}?${search}` : base)
+  }
 
   const changeTab = (value: string): void => {
     setTab(value)
-    const query = new URLSearchParams(searchParams.toString())
-    if (value === "documentos") query.set("tab", "documentos")
-    else query.delete("tab")
-    const search = query.toString()
-    router.replace(search ? `${paths.coordination.careerProject}?${search}` : paths.coordination.careerProject)
+    replaceAddress("tab", value === "documentos" ? value : null)
+  }
+
+  const chooseMalla = (mallaId: string): void => {
+    const next = mallas.find((item) => item.id === mallaId)
+    if (!next) return
+    setChosenMalla({ address: addressMalla, code: next.code })
+    filter.clear()
+    replaceAddress("malla", next.code.toLowerCase())
   }
 
   const saved = async (message = "Proyecto de carrera guardado"): Promise<void> => {
@@ -180,12 +212,11 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
             </TabsTrigger>
           </TabsList>
         )}
+        {!documents && subjectsReady && !subjectsError && malla ? <MallaToolbar className="max-sm:max-w-none" mallas={mallas} selected={malla} onSelect={chooseMalla} /> : null}
         <TabsContent value="materias" className="flex flex-col gap-4">
-          {loadError ? (
-            <LoadErrorState message={loadError} onRetry={() => void load()} />
-          ) : loading && !data ? (
-            subjectsSkeleton
-          ) : data ? (
+          {subjectsError ? (
+            <LoadErrorState message={subjectsError} onRetry={() => void load()} />
+          ) : subjectsReady ? (
             <div className="flex flex-col gap-4">
               <ClientFilterBar
                 filter={filter}
@@ -236,9 +267,11 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
               />
 
               <div data-tour="career-subjects" className="flex flex-col gap-2">
-                {!groups.length ? <EmptyState title={filter.active ? "Ninguna materia coincide con la búsqueda" : "La malla todavía no tiene materias"} /> : null}
+                {!groups.length ? (
+                  <EmptyState title={filter.active ? "Ninguna materia coincide con la búsqueda" : malla ? "La malla todavía no tiene materias" : "La carrera no tiene mallas vigentes"} />
+                ) : null}
                 {groups.map((group) => (
-                  <Collapsible key={`${group.cycle}-${filter.active}`} defaultOpen={filter.active} className="group/cycle rounded-md bg-card ring-1 ring-surface-ring">
+                  <Collapsible key={`${malla?.id}-${group.cycle}-${filter.active}`} defaultOpen={filter.active} className="group/cycle rounded-md bg-card ring-1 ring-surface-ring">
                     <CollapsibleTrigger className="flex w-full items-center gap-2 px-4 py-3 text-left font-semibold">
                       <span className="flex-1">{group.cycle === "Sin ciclo" ? group.cycle : `Ciclo ${group.cycle}`}</span>
                       <Badge variant={completeCount(group.list) === group.list.length ? "success" : "warning"} aria-label={`${completeCount(group.list)} de ${group.list.length} asignaturas completas`}>
@@ -259,7 +292,6 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
                                 </CardTitle>
                               </CardHeader>
                               <CardContent className="flex flex-wrap items-center gap-2">
-                                {severalMallas && subject.malla_name ? <Badge variant="outline">{subject.malla_name}</Badge> : null}
                                 <StatusBadge label={statusOf(subject)} tone={subject.profile_complete ? "success" : "warning"} />
                               </CardContent>
                             </Card>
@@ -271,6 +303,8 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
                 ))}
               </div>
             </div>
+          ) : loading ? (
+            subjectsSkeleton
           ) : null}
         </TabsContent>
         {careerId ? null : (

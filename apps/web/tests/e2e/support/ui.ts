@@ -10,6 +10,14 @@ export async function chooseOption(page: Page, trigger: Locator, option: string 
   await page.getByRole("option", { name: option }).first().click()
 }
 
+export async function chooseFirstOption(page: Page, trigger: Locator): Promise<string> {
+  await trigger.click()
+  const option = page.getByRole("option").first()
+  const label = ((await option.textContent()) ?? "").trim()
+  await option.click()
+  return label
+}
+
 export async function dragBetween(page: Page, from: Locator, to: Locator): Promise<void> {
   await to.scrollIntoViewIfNeeded()
   await from.scrollIntoViewIfNeeded()

@@ -2,6 +2,7 @@ import { fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getScheduledSubjects, getSubjectProfile, getSubjectProfilePreview, saveSubjectProfile, type ScheduledSubjects, type SubjectProfile } from "@/api/career-academics"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
+import { trackNavigation } from "@/lib/goBack"
 import { navigation } from "@/test/nextNavigation"
 import { NotFoundBoundary } from "@/test/notFoundBoundary"
 import { flush, renderWithProviders } from "@/test/render"
@@ -227,11 +228,38 @@ describe("Página del proyecto de carrera de una materia", () => {
     expect(document.querySelectorAll('[data-skeleton="form-editor"]')).toHaveLength(1)
   })
 
-  it("el enlace de arriba vuelve a la lista de materias", async () => {
+  it("el enlace de arriba vuelve a la lista de materias de la misma malla", async () => {
     await mountPage()
     fireEvent.click([...document.querySelectorAll("button")].find((item) => item.textContent?.includes("Volver al proyecto de carrera"))!)
     await flush()
-    expect(navigation.push).toHaveBeenCalledWith("/coordinacion/proyecto-carrera")
+    expect(navigation.push).toHaveBeenCalledWith("/coordinacion/proyecto-carrera?malla=sw-9")
+  })
+
+  it("si venía de la lista vuelve atrás, con la malla que tenía elegida", async () => {
+    trackNavigation("/coordinacion/proyecto-carrera/sw-9/m-2", "/coordinacion/proyecto-carrera?malla=sw-9")
+    await mountPage()
+    fireEvent.click([...document.querySelectorAll("button")].find((item) => item.textContent?.includes("Volver al proyecto de carrera"))!)
+    await flush()
+
+    expect(navigation.back).toHaveBeenCalledTimes(1)
+    expect(navigation.push).not.toHaveBeenCalled()
+    trackNavigation("/", null)
+  })
+
+  it("«Cambiar de materia» ofrece solo las materias de la misma malla", async () => {
+    vi.mocked(getScheduledSubjects).mockResolvedValue({
+      ...scheduled(),
+      options: {
+        activeSubjects: [
+          subject("m2", "Matemática Discreta", 1),
+          subject("m6", "Matemática de la malla anterior", 1, { malla_code: "SW-8" }),
+          subject("m3", "Estructuras de Datos", 2),
+        ],
+      },
+    } as unknown as ScheduledSubjects)
+    await mountPage()
+
+    expect([...document.querySelectorAll("[data-value]")].map((option) => option.textContent)).toEqual(["Matemática Discreta", "Estructuras de Datos"])
   })
 
   it("con cambios sin guardar pregunta antes de pasar a otra materia", async () => {

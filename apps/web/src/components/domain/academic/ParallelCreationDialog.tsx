@@ -12,13 +12,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { DialogFooter } from "@/components/ui/dialog"
 import { FieldGroup } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientPagination } from "@/composables/useClientPagination"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
+import { parallelCodeChoices } from "@/lib/parallelCodes"
 import { shiftLabel } from "@/lib/parallelShifts"
-import { VALIDATION_LIMITS } from "@/lib/validationLimits"
 
 type Parallel = { id: string; code: string; shift: string | null; editable?: boolean; deletable?: boolean }
 type Assignment = { id: string; parallel_id: string; user_id: string; user_name: string; active: boolean; editable: boolean }
@@ -121,14 +120,14 @@ export function ParallelCreationDialog({ shiftOptions, subjectId, parallels, tea
     const parallel = parallels.find((item) => item.id === id)
     if (!id || !parallel) return
     const editable = parallel.editable !== false
-    if (editable && (!editCode.trim() || !editShift)) {
-      setRowError("Escriba el código y elija la jornada del paralelo")
+    if (editable && (!editCode || !editShift)) {
+      setRowError("Elija el paralelo y la jornada")
       return
     }
     await runRowAction(async () => {
       let result: { message: string } = { message: "Sin cambios" }
-      if (editable && (editCode.trim() !== parallel.code || editShift !== (parallel.shift || defaultShift))) {
-        result = await updateParallel(id, { code: editCode.trim(), shift: editShift })
+      if (editable && (editCode !== parallel.code || editShift !== (parallel.shift || defaultShift))) {
+        result = await updateParallel(id, { code: editCode, shift: editShift })
       }
       if (teacherEditable(id) && editTeacher !== teacherOf(id)) result = await replaceTeacher(id, editTeacher)
 
@@ -152,16 +151,22 @@ export function ParallelCreationDialog({ shiftOptions, subjectId, parallels, tea
     setError(null)
   }
 
+  const newCodeId = `parallel-code-${subjectId}`
+  const newShiftId = `parallel-shift-${subjectId}`
+  const newTeacherId = `parallel-teacher-${subjectId}`
+
   const submit = async (): Promise<void> => {
     if (saving) return
-    if (!code.trim() || !shift || !newTeacher) {
-      setError("Escriba el código y elija la jornada y el docente del paralelo")
+    const missing = !code ? newCodeId : !shift ? newShiftId : !newTeacher ? newTeacherId : null
+    if (missing) {
+      setError("Elija el paralelo, la jornada y el docente del paralelo")
+      document.getElementById(missing)?.focus()
       return
     }
     setSaving(true)
     setError(null)
     try {
-      const result = await createParallels({ subject_id: subjectId, codes: [code.trim()], shift, user_id: newTeacher })
+      const result = await createParallels({ subject_id: subjectId, codes: [code], shift, user_id: newTeacher })
       onSaved?.(result.message)
       reset()
     } catch (reason) {
@@ -171,9 +176,27 @@ export function ParallelCreationDialog({ shiftOptions, subjectId, parallels, tea
     }
   }
 
-  const shiftSelect = (value: string, onChange: (value: string) => void, label: string) => (
+  const codeSelect = (value: string, onChange: (value: string) => void, label: string, choices: string[], field: { id?: string; invalid?: boolean } = {}) => (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-36" aria-label={label}>
+      <SelectTrigger id={field.id} className="min-w-24" aria-label={label} aria-invalid={field.invalid || undefined}>
+        <SelectValue placeholder="Elija el paralelo" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          {choices.length === 0 ? <SelectLabel>No quedan letras libres</SelectLabel> : null}
+          {choices.map((choice) => (
+            <SelectItem key={choice} value={choice}>
+              {choice}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  )
+
+  const shiftSelect = (value: string, onChange: (value: string) => void, label: string, field: { id?: string; invalid?: boolean } = {}) => (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger id={field.id} className="w-36" aria-label={label} aria-invalid={field.invalid || undefined}>
         <SelectValue placeholder="Elija la jornada" />
       </SelectTrigger>
       <SelectContent>
@@ -233,14 +256,15 @@ export function ParallelCreationDialog({ shiftOptions, subjectId, parallels, tea
                             <TableCell>{parallel.code}</TableCell>
                           ) : (
                             <TableCell>
-                              <Input
-                                value={editCode}
-                                onChange={(event) => setEditCode(event.target.value)}
-                                maxLength={VALIDATION_LIMITS.parallelCode}
-                                className="w-20"
-                                aria-label={`Código del paralelo ${parallel.code}`}
-                                aria-invalid={!editCode.trim()}
-                              />
+                              {codeSelect(
+                                editCode,
+                                setEditCode,
+                                `Código del paralelo ${parallel.code}`,
+                                parallelCodeChoices(
+                                  parallels.filter((item) => item.id !== parallel.id),
+                                  parallel.code,
+                                ),
+                              )}
                             </TableCell>
                           )}
                           {parallel.editable === false ? (
@@ -261,7 +285,7 @@ export function ParallelCreationDialog({ shiftOptions, subjectId, parallels, tea
                                 type="button"
                                 size="icon-sm"
                                 variant="ghost"
-                                disabled={rowBusy || !editCode.trim() || !editShift}
+                                disabled={rowBusy}
                                 aria-label={`Guardar paralelo ${parallel.code}`}
                                 onClick={() => void saveEdit()}
                               >
@@ -313,25 +337,12 @@ export function ParallelCreationDialog({ shiftOptions, subjectId, parallels, tea
                   {adding ? (
                     <TableRow>
                       <TableCell>
-                        <Input
-                          id={`parallel-code-${subjectId}`}
-                          value={code}
-                          onChange={(event) => setCode(event.target.value)}
-                          maxLength={VALIDATION_LIMITS.parallelCode}
-                          className="w-20"
-                          placeholder="Ej. B"
-                          aria-label="Código del nuevo paralelo"
-                          aria-invalid={Boolean(error) && !code.trim()}
-                          onKeyDown={(event) => {
-                            if (event.key !== "Enter") return
-                            event.preventDefault()
-                            void submit()
-                          }}
-                        />
+                        {codeSelect(code, setCode, "Código del nuevo paralelo", parallelCodeChoices(parallels), { id: newCodeId, invalid: Boolean(error) && !code })}
                       </TableCell>
-                      <TableCell>{shiftSelect(shift, setShift, "Jornada del nuevo paralelo")}</TableCell>
+                      <TableCell>{shiftSelect(shift, setShift, "Jornada del nuevo paralelo", { id: newShiftId, invalid: Boolean(error) && !shift })}</TableCell>
                       <TableCell>
                         <TeacherSelect
+                          id={newTeacherId}
                           value={newTeacher}
                           onValueChange={setNewTeacher}
                           teachers={teacherUsers ?? []}
@@ -346,7 +357,7 @@ export function ParallelCreationDialog({ shiftOptions, subjectId, parallels, tea
                             type="button"
                             size="icon-sm"
                             variant="ghost"
-                            disabled={saving || !code.trim() || !shift || !newTeacher}
+                            disabled={saving}
                             aria-label="Guardar nuevo paralelo"
                             onClick={() => void submit()}
                           >

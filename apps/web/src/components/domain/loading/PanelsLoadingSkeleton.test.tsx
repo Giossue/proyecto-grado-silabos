@@ -47,4 +47,15 @@ describe("esqueletos de paneles, ajustes y estructura académica", () => {
     expect(container.querySelector(`[data-skeleton="${marker}"]`)).not.toBeNull()
     expect(container.querySelectorAll('[data-skeleton="table-filters"] [data-slot="skeleton"]')).toHaveLength(filters)
   })
+
+  it("en materias y asignaciones el desplegable de malla va sobre la búsqueda; en docentes no hay", () => {
+    const schedule = render(<LoadingSkeleton variant="academic-structure" mode="schedule" rows={2} />)
+    const marker = schedule.container.querySelector('[data-skeleton="scheduled-subjects"]')!
+    expect(marker.firstElementChild!.getAttribute("data-skeleton")).toBe("malla-selector")
+    expect(marker.querySelector('[data-skeleton="table-toolbar"]')).not.toBeNull()
+    schedule.unmount()
+
+    const teachers = render(<LoadingSkeleton variant="academic-structure" mode="teachers" rows={2} />)
+    expect(teachers.container.querySelector('[data-skeleton="malla-selector"]')).toBeNull()
+  })
 })

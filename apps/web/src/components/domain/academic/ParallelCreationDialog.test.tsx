@@ -1,4 +1,5 @@
-import { fireEvent } from "@testing-library/react"
+import { fireEvent, screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { type ComponentProps } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { ParallelCreationDialog } from "@/components/domain/academic/ParallelCreationDialog"
@@ -46,10 +47,38 @@ const mountDialog = async (extra: Partial<DialogProps> = {}) => {
   await flush()
 }
 const button = (label: string) => document.body.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
-const type = async (input: HTMLInputElement, value: string) => {
-  fireEvent.change(input, { target: { value } })
+const ADD_CODE = "Código del nuevo paralelo"
+const codeBox = (label: string): HTMLElement => screen.getByRole("combobox", { name: label })
+const offeredCodes = async (label: string): Promise<string[]> => {
+  const actor = userEvent.setup()
+  await actor.click(codeBox(label))
+  const names = within(await screen.findByRole("listbox"))
+    .queryAllByRole("option")
+    .map((option) => option.textContent ?? "")
+  await actor.keyboard("{Escape}")
+  await flush()
+
+  return names
+}
+const chooseCode = async (label: string, code: string): Promise<void> => {
+  const actor = userEvent.setup()
+  await actor.click(codeBox(label))
+  await actor.click(await screen.findByRole("option", { name: code }))
   await flush()
 }
+const chooseNewTeacher = async (): Promise<void> => {
+  fireEvent.click(button("Docente del nuevo paralelo")!)
+  await flush()
+  fireEvent.click(document.body.querySelector<HTMLElement>('[data-slot="command-item"]')!)
+  await flush()
+}
+const openAddRow = async (): Promise<void> => {
+  fireEvent.click(buttonContaining("Agregar paralelo")!)
+  await flush()
+}
+const ALPHABET = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"]
+const lettersBut = (...taken: string[]): string[] => ALPHABET.filter((letter) => !taken.includes(letter))
+const withCodes = (...codes: string[]) => codes.map((code, index) => ({ id: `p-${index}`, code, shift: "matutina", editable: true, deletable: true }))
 
 describe("ParallelCreationDialog", () => {
   it("propone la jornada matutina y la envía siempre al crear", async () => {
@@ -59,7 +88,7 @@ describe("ParallelCreationDialog", () => {
     expect(document.body.textContent).not.toContain("Sin jornada")
     fireEvent.click(buttonContaining("Agregar paralelo")!)
     await flush()
-    await type(document.body.querySelector<HTMLInputElement>("#parallel-code-subject-1")!, "C")
+    await chooseCode(ADD_CODE, "C")
     fireEvent.click(button("Docente del nuevo paralelo")!)
     await flush()
     expect([...document.body.querySelectorAll('[data-slot="command-item"]')].map((option) => option.textContent?.trim())).toEqual(["DOCENTE UNO"])
@@ -73,19 +102,128 @@ describe("ParallelCreationDialog", () => {
     expect(onSaved.mock.calls).toEqual([["Creado"]])
   })
 
-  it("no crea un paralelo con código y jornada completos si falta el docente", async () => {
+  it("no crea un paralelo con código y jornada completos si falta el docente: lo marca y lleva el foco allí", async () => {
     await mountDialog()
-    fireEvent.click(buttonContaining("Agregar paralelo")!)
-    await flush()
-    await type(document.body.querySelector<HTMLInputElement>("#parallel-code-subject-1")!, "C")
+    await openAddRow()
+    await chooseCode(ADD_CODE, "C")
     expect(button("Docente del nuevo paralelo")?.textContent).toContain("Elija el docente")
     expect(button("Docente del nuevo paralelo")?.getAttribute("aria-required")).toBe("true")
 
-    expect(button("Guardar nuevo paralelo")!.disabled).toBe(true)
+    expect(button("Guardar nuevo paralelo")!.disabled).toBe(false)
     fireEvent.click(button("Guardar nuevo paralelo")!)
     await flush()
 
     expect(api.createParallels).not.toHaveBeenCalled()
+    expect(onSaved).not.toHaveBeenCalled()
+    expect(document.body.textContent).toContain("Elija el paralelo, la jornada y el docente del paralelo")
+    expect(button("Docente del nuevo paralelo")?.getAttribute("aria-invalid")).toBe("true")
+    expect(codeBox(ADD_CODE).getAttribute("aria-invalid")).toBeNull()
+    expect(document.activeElement).toBe(button("Docente del nuevo paralelo"))
+  })
+
+  it("sin paralelo elegido, guardar lo marca primero y lleva el foco a la lista", async () => {
+    await mountDialog()
+    await openAddRow()
+    fireEvent.click(button("Guardar nuevo paralelo")!)
+    await flush()
+
+    expect(api.createParallels).not.toHaveBeenCalled()
+    expect(codeBox(ADD_CODE).getAttribute("aria-invalid")).toBe("true")
+    expect(button("Docente del nuevo paralelo")?.getAttribute("aria-invalid")).toBe("true")
+    expect(document.activeElement).toBe(codeBox(ADD_CODE))
+  })
+
+  it("mientras se guarda el paralelo nuevo no se puede volver a enviar", async () => {
+    api.createParallels.mockReturnValue(new Promise(() => undefined))
+    await mountDialog()
+    await openAddRow()
+    await chooseCode(ADD_CODE, "C")
+    await chooseNewTeacher()
+    fireEvent.click(button("Guardar nuevo paralelo")!)
+    await flush()
+    expect(button("Guardar nuevo paralelo")!.disabled).toBe(true)
+    fireEvent.click(button("Guardar nuevo paralelo")!)
+    await flush()
+
+    expect(api.createParallels).toHaveBeenCalledTimes(1)
+  })
+
+  it("el paralelo se elige de una lista, sin casilla de texto, con las letras de la A a la Z que la materia no usa", async () => {
+    await mountDialog()
+    await openAddRow()
+
+    expect(screen.queryByRole("textbox", { name: ADD_CODE })).toBeNull()
+    expect(codeBox(ADD_CODE).textContent).toBe("Elija el paralelo")
+    expect(await offeredCodes(ADD_CODE)).toEqual(lettersBut("A", "B"))
+  })
+
+  it("una letra usada en minúscula o con espacios tampoco se ofrece, y un código largo no quita ninguna", async () => {
+    await mountDialog({ parallels: withCodes("a", " C ", "B1", "Nocturno") })
+    await openAddRow()
+
+    expect(await offeredCodes(ADD_CODE)).toEqual(lettersBut("A", "C"))
+  })
+
+  it("sin letras libres la lista lo dice y no se envía nada", async () => {
+    await mountDialog({ parallels: withCodes(...ALPHABET) })
+    await openAddRow()
+    const actor = userEvent.setup()
+    await actor.click(codeBox(ADD_CODE))
+    const list = await screen.findByRole("listbox")
+
+    expect(within(list).queryAllByRole("option")).toHaveLength(0)
+    expect(list.textContent).toContain("No quedan letras libres")
+    await actor.keyboard("{Escape}")
+  })
+
+  it("la letra de un paralelo eliminado vuelve a ofrecerse", async () => {
+    const view = renderWithProviders(<ParallelCreationDialog {...base} />)
+    await flush()
+    await openAddRow()
+    view.rerender(<ParallelCreationDialog {...base} parallels={[base.parallels[0]!]} />)
+    await flush()
+
+    expect(await offeredCodes(ADD_CODE)).toEqual(lettersBut("A"))
+  })
+
+  it("al editar, la lista ofrece la letra actual y las libres, sin las de los otros paralelos", async () => {
+    await mountDialog()
+    fireEvent.click(button("Editar paralelo B")!)
+    await flush()
+
+    expect(codeBox("Código del paralelo B").textContent).toBe("B")
+    expect(await offeredCodes("Código del paralelo B")).toEqual(lettersBut("A"))
+  })
+
+  it.each([["B1"], ["a"], ["Paralelo nocturno"]])("un paralelo guardado como «%s» conserva su código al cambiar solo la jornada", async (code) => {
+    api.updateParallel.mockResolvedValue({ message: "Paralelo actualizado." })
+    await mountDialog({ parallels: withCodes(code, "C") })
+    fireEvent.click(button(`Editar paralelo ${code}`)!)
+    await flush()
+    expect(codeBox(`Código del paralelo ${code}`).textContent).toBe(code)
+
+    const actor = userEvent.setup()
+    await actor.click(screen.getByRole("combobox", { name: `Jornada del paralelo ${code}` }))
+    await actor.click(await screen.findByRole("option", { name: "Nocturna" }))
+    await flush()
+    fireEvent.click(button(`Guardar paralelo ${code}`)!)
+    await flush()
+
+    expect(api.updateParallel.mock.calls).toEqual([["p-0", { code, shift: "nocturna" }]])
+  })
+
+  it("un código que no es una letra encabeza la lista y no se pierde aunque se abra y se guarde sin cambios", async () => {
+    await mountDialog({ parallels: withCodes("B1", "C") })
+    fireEvent.click(button("Editar paralelo B1")!)
+    await flush()
+
+    expect(await offeredCodes("Código del paralelo B1")).toEqual(["B1", ...lettersBut("C")])
+    expect(codeBox("Código del paralelo B1").textContent).toBe("B1")
+    fireEvent.click(button("Guardar paralelo B1")!)
+    await flush()
+
+    expect(api.updateParallel).not.toHaveBeenCalled()
+    expect(onChanged.mock.calls).toEqual([["Sin cambios"]])
   })
 
   it("edita en línea un paralelo registrado y solo ofrece eliminar el que no tiene actividad", async () => {
@@ -97,7 +235,7 @@ describe("ParallelCreationDialog", () => {
 
     fireEvent.click(button("Editar paralelo B")!)
     await flush()
-    await type(document.body.querySelector<HTMLInputElement>('input[aria-label="Código del paralelo B"]')!, "D")
+    await chooseCode("Código del paralelo B", "D")
     fireEvent.click(button("Guardar paralelo B")!)
     await flush()
 
@@ -105,16 +243,18 @@ describe("ParallelCreationDialog", () => {
     expect(onChanged.mock.calls[0]).toEqual(["Paralelo actualizado."])
   })
 
-  it("no guarda un paralelo sin código", async () => {
+  it("mientras se guarda la edición no se puede volver a enviar", async () => {
+    api.updateParallel.mockReturnValue(new Promise(() => undefined))
     await mountDialog()
-    fireEvent.click(button("Editar paralelo A")!)
+    fireEvent.click(button("Editar paralelo B")!)
     await flush()
-    await type(document.body.querySelector<HTMLInputElement>('input[aria-label="Código del paralelo A"]')!, " ")
-    expect(button("Guardar paralelo A")!.disabled).toBe(true)
-    fireEvent.click(button("Guardar paralelo A")!)
+    await chooseCode("Código del paralelo B", "D")
+    expect(button("Guardar paralelo B")!.disabled).toBe(false)
+    fireEvent.click(button("Guardar paralelo B")!)
     await flush()
 
-    expect(api.updateParallel).not.toHaveBeenCalled()
+    expect(button("Guardar paralelo B")!.disabled).toBe(true)
+    expect(api.updateParallel).toHaveBeenCalledTimes(1)
   })
 
   it("busca al editar, conserva al docente actual fuera de la lista y guarda solo al confirmar", async () => {

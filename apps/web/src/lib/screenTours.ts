@@ -13,6 +13,7 @@ const METRICS = '[data-tour="metrics"]';
 const DEADLINE = '[data-tour="deadline"]';
 const SHEET = '[aria-label="Vista previa del sílabo"]';
 const CHECKLIST = '.driver-checklist-launcher';
+const MALLA = '[data-tour="malla-selector"]';
 
 const shell = {
   menu: step('[data-sidebar="sidebar"]', 'Menú', 'Aquí están todas sus pantallas. El botón de arriba a la izquierda lo esconde o lo muestra', 'right'),
@@ -78,6 +79,7 @@ export const screenTours: Record<string, TourStep[]> = {
     step(SHEET, 'El sílabo', 'Así quedó en esa versión. Use «Resaltar cambios» para ver qué cambió', 'top'),
   ],
   '/coordinacion/materias-asignaciones': [
+    step(MALLA, 'Malla', 'Se ve una malla a la vez. Elija aquí cuál', 'bottom'),
     step(FILTERS, 'Buscar', 'Busque una materia o filtre por ciclo, paralelo o jornada', 'bottom'),
     step(TABLE, 'Materias', 'Marque materias para agregar paralelos o poner docente a varias a la vez. Pulse una para cambiar sus paralelos', 'top'),
     step('[aria-label="Acciones masivas de materias"]', 'Para lo marcado', 'Agregue un paralelo o asigne jornada y docente a todo lo que marcó', 'bottom'),
@@ -90,6 +92,7 @@ export const screenTours: Record<string, TourStep[]> = {
   '/coordinacion/proyecto-carrera': [
     step(TABS, 'Materias y documentos', 'Cambie entre el proyecto de cada materia y los documentos de apoyo', 'bottom'),
     step(ACTIONS, 'Excel o documentos', 'En «Materias», llene varias a la vez con un Excel. En «Documentos de apoyo», suba un archivo', 'left'),
+    step(MALLA, 'Malla', 'En «Materias» se ve una malla a la vez. Elija aquí cuál', 'bottom'),
     step(FILTERS, 'Buscar', 'Busque una materia o filtre por ciclo o si está completa', 'bottom'),
     step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenar su proyecto. El docente lo recibe ya escrito', 'top'),
     step(TABLE, 'Documentos de apoyo', 'Archivos para que sus docentes conozcan mejor sus materias. Pulse uno para verlo', 'top'),
@@ -100,6 +103,7 @@ export const screenTours: Record<string, TourStep[]> = {
   ],
   '/coordinacion/malla': [
     step(ACTIONS, 'Editar malla', 'Cambie ciclos, materias y requisitos. También puede subir la malla con un Excel', 'left'),
+    step(MALLA, 'Malla', 'Elija qué malla ver o cambiar. Al final de la lista puede crear otra', 'bottom'),
     step('[aria-label="Zoom de la malla"]', 'Tamaño de la malla', 'Ajústela al ancho o elija 50 %, 75 % o 100 %. Se mueve con la rueda o las barras', 'right'),
     // Pasos del editor: solo aparecen mientras se edita.
     step('[data-tour="curriculum-back"]', 'Volver', 'Sale del editor', 'bottom'),

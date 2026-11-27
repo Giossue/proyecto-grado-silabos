@@ -16,6 +16,16 @@ describe("goBack", () => {
     expect(target.push).not.toHaveBeenCalled()
   })
 
+  it("reconoce la lista aunque su dirección lleve parámetros", () => {
+    trackNavigation("/coordinacion/proyecto-carrera/sw-9/m-2", "/coordinacion/proyecto-carrera?malla=sw-9")
+    const target = router()
+
+    goBack(target, "/coordinacion/proyecto-carrera?malla=sw-9")
+
+    expect(target.back).toHaveBeenCalled()
+    expect(target.push).not.toHaveBeenCalled()
+  })
+
   it("sin historial de la lista, va a la lista", () => {
     trackNavigation("/coordinacion/revisiones/r-1", "/coordinacion/revisiones/otra-revision")
     const target = router()

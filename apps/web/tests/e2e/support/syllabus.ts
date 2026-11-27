@@ -1,7 +1,7 @@
 import path from "node:path"
 import { expect, type Locator, type Page } from "@playwright/test"
 import { certificatePassword, signaturesDir, type Account } from "./accounts"
-import { chooseOption, rowNamed, uniqueSuffix } from "./ui"
+import { chooseFirstOption, chooseOption, rowNamed } from "./ui"
 
 const autosaveUrl = /\/api\/v1\/teacher\/syllabi\/[^/]+\/fields\/[^/]+$/
 
@@ -254,12 +254,11 @@ export async function submitSyllabus(page: Page, account: Account): Promise<void
 }
 
 export async function addTeacherParallel(page: Page, subject: string, teacherName: string): Promise<string> {
-  const code = `L${uniqueSuffix()}`
   await page.goto("/coordinacion/materias-asignaciones")
   await page.getByRole("cell", { name: subject, exact: true }).click()
   const dialog = page.getByRole("dialog", { name: "Paralelos y docentes de la materia" })
   await dialog.getByRole("button", { name: "Agregar paralelo" }).click()
-  await dialog.getByRole("textbox", { name: "Código del nuevo paralelo" }).fill(code)
+  const code = await chooseFirstOption(page, dialog.getByRole("combobox", { name: "Código del nuevo paralelo" }))
   await chooseOption(page, dialog.getByRole("combobox", { name: "Jornada del nuevo paralelo" }), "Vespertina")
   await chooseOption(page, dialog.getByRole("combobox", { name: "Docente del nuevo paralelo" }), teacherName)
   await dialog.getByRole("button", { name: "Guardar nuevo paralelo" }).click()

@@ -4,12 +4,12 @@ import { ArrowLeft, Pencil, PencilLine, Save, Undo2, UserPlus } from "lucide-rea
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useEffectEvent, useState, type CSSProperties } from "react"
+import { useEffect, useEffectEvent, useRef, useState, type CSSProperties } from "react"
 import { type Curriculum } from "@/api/career-academics"
 import type { BoardInset } from "@/components/domain/academic/curriculum/CurriculumCanvas"
 import { AdminCareerBackLink, AdminCareerTabs, type AdminCareer } from "@/components/domain/academic/AdminCareerNavigation"
 import { MallaDialog } from "@/components/domain/academic/curriculum/MallaDialog"
-import { MallaToolbar, mallaLabel } from "@/components/domain/academic/curriculum/MallaToolbar"
+import { MallaToolbar, mallaLabel, shownMalla } from "@/components/domain/academic/curriculum/MallaToolbar"
 import { useCurriculumDraft } from "@/components/domain/academic/curriculum/useCurriculumDraft"
 import { ScheduledSubjectsTab } from "@/components/domain/academic/ScheduledSubjectsTab"
 import { TeacherAssignmentsPanel } from "@/components/domain/academic/TeacherAssignmentsPanel"
@@ -104,8 +104,7 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
   const mallasState = useQuery({ ...mallasQuery(adminCareerId), enabled: careerId !== null })
   const mallas = mallasState.data ?? null
   const [chosenMallaId, setChosenMallaId] = useState<string | null>(null)
-  // The list comes vigente first, so the default is the vigente malla (or the first one when none is vigente).
-  const selectedMalla = mallas?.find((malla) => malla.id === chosenMallaId) ?? mallas?.[0] ?? null
+  const selectedMalla = shownMalla(mallas ?? [], chosenMallaId)
   const withoutMallas = mallas !== null && mallas.length === 0
   const curriculumState = useQuery({ ...curriculumQuery(selectedMalla?.id ?? "", adminCareerId), enabled: selectedMalla !== null })
   const scheduleState = useQuery({ ...scheduledSubjectsQuery(adminCareerId), enabled: careerId !== null })
@@ -179,13 +178,6 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
     await Promise.all([reloadCurriculum(), reload(mallasState, "No se pudieron actualizar las mallas")])
   }
 
-  const handleMallaSaved = async (notice: string, mallaId: string): Promise<void> => {
-    toast.success(notice)
-    setChosenMallaId(mallaId)
-    await reload(mallasState, "No se pudieron actualizar las mallas")
-    if (mallaId === curriculum?.curriculum.id) await reloadCurriculum()
-  }
-
   const draft = useCurriculumDraft({
     curriculumId: curriculum?.curriculum.id ?? "",
     subjects: curriculum?.subjects ?? NO_SUBJECTS,
@@ -197,6 +189,27 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
   if (!editingCurriculum && draft.dirty) draft.discard()
   const { open: discardOpen, ask: askToDiscard, decide: decideDiscard } = useDiscardConfirmation()
   useLeaveGuard({ needed: () => draft.dirty, confirm: askToDiscard, navigate: (href) => router.push(href) })
+
+  const switchMalla = async (mallaId: string): Promise<void> => {
+    if (mallaId === selectedMalla?.id) return
+    if (draft.dirty) {
+      if (!(await askToDiscard())) return
+      draft.discard()
+    }
+    setChosenMallaId(mallaId)
+  }
+
+  const latestSwitchMalla = useRef(switchMalla)
+  useEffect(() => {
+    latestSwitchMalla.current = switchMalla
+  })
+
+  const handleMallaSaved = async (notice: string, mallaId: string): Promise<void> => {
+    toast.success(notice)
+    await reload(mallasState, "No se pudieron actualizar las mallas")
+    if (mallaId === curriculum?.curriculum.id) await reloadCurriculum()
+    else await latestSwitchMalla.current(mallaId)
+  }
 
   const warnBeforeUnload = useEffectEvent((event: BeforeUnloadEvent): void => {
     if (!draft.dirty) return
@@ -224,7 +237,10 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
     const result = await curriculumState.refetch()
     const current = result.data
     if (result.isError || !current) setActionError(errorMessage(result.error, "No se pudo comprobar si la malla puede editarse"))
-    else setEditingCurriculum(current.curriculum.editable && !current.curriculum.lock_reason)
+    else {
+      setChosenMallaId(current.curriculum.id)
+      setEditingCurriculum(current.curriculum.editable && !current.curriculum.lock_reason)
+    }
     setOpeningEditor(false)
   }
 
@@ -338,7 +354,11 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
           ) : null}
           {mode === "curriculum" && curriculum ? (
             <CurriculumCanvas
-              header={!editingCurriculum && mallas && selectedMalla ? <MallaToolbar mallas={mallas} selected={selectedMalla} onSelect={setChosenMallaId} onCreate={() => setCreateMallaOpen(true)} /> : null}
+              header={
+                mallas && selectedMalla ? (
+                  <MallaToolbar mallas={mallas} selected={selectedMalla} disabled={draft.saving} onSelect={(mallaId) => void switchMalla(mallaId)} onCreate={() => setCreateMallaOpen(true)} />
+                ) : null
+              }
               career={curriculum.career}
               modalityOptions={curriculum.modalityOptions}
               curriculum={curriculum.curriculum}
@@ -356,6 +376,7 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
           {mode === "schedule" ? (
             <ScheduledSubjectsTab
               data={schedule}
+              mallas={mallas ?? []}
               assignments={assignments.teacherAssignments}
               teacherUsers={assignments.options.teacherUsers}
               onChanged={(message) => void handleScheduleChanged(message)}

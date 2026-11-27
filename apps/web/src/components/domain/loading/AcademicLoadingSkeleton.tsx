@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton"
+import { MallaSelectorSkeleton } from "./MallaSelectorSkeleton"
 import { range } from "./range"
 import { TableLoadingSkeleton } from "./TableLoadingSkeleton"
 
@@ -8,20 +9,17 @@ type AcademicLoadingSkeletonProps = {
 }
 
 export function AcademicLoadingSkeleton({ mode = "schedule", rows = 5 }: AcademicLoadingSkeletonProps) {
-  if (mode !== "curriculum") {
+  if (mode === "schedule") {
     return (
-      <TableLoadingSkeleton
-        data-skeleton={mode === "schedule" ? "scheduled-subjects" : "teachers"}
-        rows={rows}
-        columns={mode === "schedule" ? 5 : 3}
-        filters={mode === "schedule" ? 3 : 1}
-        actions={false}
-        selectable={mode === "schedule"}
-        badges={mode === "teachers" ? [3] : []}
-        filterWidth="lg:w-44"
-        search
-      />
+      <div data-skeleton="scheduled-subjects" className="flex min-w-0 flex-col gap-4">
+        <MallaSelectorSkeleton />
+        <TableLoadingSkeleton rows={rows} columns={5} filters={3} actions={false} selectable filterWidth="lg:w-44" search />
+      </div>
     )
+  }
+
+  if (mode === "teachers") {
+    return <TableLoadingSkeleton data-skeleton="teachers" rows={rows} columns={3} filters={1} actions={false} badges={[3]} filterWidth="lg:w-44" search />
   }
 
   // Same shape as the canvas: sizes follow curriculumCanvasLayout (not imported, so this does not load the canvas library).

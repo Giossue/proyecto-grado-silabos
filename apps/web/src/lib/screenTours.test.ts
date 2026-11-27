@@ -35,6 +35,19 @@ describe('screenTours', () => {
     expect(selectors).not.toContain('[data-slot="table-container"]');
   });
 
+  it.each([
+    ['/coordinacion/malla', 'Elija qué malla ver o cambiar. Al final de la lista puede crear otra'],
+    ['/coordinacion/materias-asignaciones', 'Se ve una malla a la vez. Elija aquí cuál'],
+    ['/coordinacion/proyecto-carrera', 'En «Materias» se ve una malla a la vez. Elija aquí cuál'],
+  ])('la guía de %s señala el desplegable de malla', (screen, description) => {
+    const found = (screenTours[screen] ?? []).filter((item) => item.selector === '[data-tour="malla-selector"]');
+    expect(found).toEqual([expect.objectContaining({ title: 'Malla', description })]);
+  });
+
+  it('la guía de «Materias y asignaciones» empieza por la malla y conserva sus demás pasos', () => {
+    expect((screenTours['/coordinacion/materias-asignaciones'] ?? []).map((item) => item.title)).toEqual(['Malla', 'Buscar', 'Materias', 'Para lo marcado']);
+  });
+
   it('la guía de la plantilla habla de quién llena el campo, no de si se puede editar', () => {
     const selection = (screenTours['/admin/plantilla'] ?? []).find((item) => item.selector === '[data-tour="template-selection"]');
     expect(selection?.description).toBe('Pulse un campo de la hoja y aquí elige quién lo llena, lo mueve o lo borra');

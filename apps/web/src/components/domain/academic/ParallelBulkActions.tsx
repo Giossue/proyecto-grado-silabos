@@ -50,6 +50,7 @@ type ParallelBulkActionsProps = {
   onChanged: (message: string) => void
   onFailed: (message: string) => void
   onClear: () => void
+  onBusyChange?: (busy: boolean) => void
 }
 
 const NO_TEACHER = "none"
@@ -80,8 +81,12 @@ const purgeHandling = (affected = 0, message: (count: number) => string = shiftM
   return "confirmed"
 }
 
-export function ParallelBulkActions({ items, parallelIds, shiftOptions, teacherUsers, assignments, onChanged, onFailed, onClear }: ParallelBulkActionsProps) {
-  const [busy, setBusy] = useState(false)
+export function ParallelBulkActions({ items, parallelIds, shiftOptions, teacherUsers, assignments, onChanged, onFailed, onClear, onBusyChange }: ParallelBulkActionsProps) {
+  const [busy, setBusyState] = useState(false)
+  const setBusy = (value: boolean): void => {
+    setBusyState(value)
+    onBusyChange?.(value)
+  }
   const [addOpen, setAddOpen] = useState(false)
   const addForm = useSchemaForm(addSchema, { defaultValues: { shift: "", user_id: "" } })
   const addShift = String(addForm.watch("shift") ?? "")
