@@ -8,7 +8,7 @@ import { kohaFetch } from "../../server/library/kohaHttp"
 import { SettingsController } from "./settings.controller"
 import { SettingsRepository } from "./settings.repository"
 import { SettingsService } from "./settings.service"
-import { CONNECTION_FETCH, LIBRARY_DIRECTORY, PASSWORD_VERIFIER, SETTINGS_ENVIRONMENT } from "./settings.tokens"
+import { LIBRARY_DIRECTORY, PASSWORD_VERIFIER, SETTINGS_ENVIRONMENT } from "./settings.tokens"
 
 @Module({
   controllers: [SettingsController],
@@ -17,7 +17,6 @@ import { CONNECTION_FETCH, LIBRARY_DIRECTORY, PASSWORD_VERIFIER, SETTINGS_ENVIRO
     SettingsService,
     { provide: SETTINGS_ENVIRONMENT, useValue: () => process.env },
     { provide: PASSWORD_VERIFIER, useValue: bcryptVerify },
-    { provide: CONNECTION_FETCH, useValue: (url: string, init: RequestInit) => fetch(url, init) },
     {
       provide: LIBRARY_DIRECTORY,
       useFactory: (prisma: PrismaService) => async () => createCatalog(await catalogSettings(prisma), kohaFetch).libraries(),

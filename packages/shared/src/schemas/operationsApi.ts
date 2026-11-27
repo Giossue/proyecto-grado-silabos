@@ -23,17 +23,6 @@ export const notificationSettingsBody = z.object({
   digest_time: z.string().describe("Hora del resumen diario (HH:MM)."),
 })
 
-export const aiSettingsBody = z.object({
-  current_password: currentPassword,
-  driver: z.enum(["disabled", "deepseek"]),
-  base_url: z.string().max(255).nullable().optional().describe("Dirección https del proveedor; obligatoria si el asistente está activo."),
-  model: z.string().max(64).nullable().optional().describe("Modelo; obligatorio si el asistente está activo."),
-  api_key: z.string().max(500).nullable().optional().describe("Clave nueva; se guarda cifrada y nunca se devuelve."),
-  clear_api_key: z.boolean().optional().describe("Borra la clave guardada."),
-  connect_timeout: z.number().int().min(1).max(30),
-  timeout: z.number().int().min(5).max(300),
-})
-
 export const teacherAssistantSettingsBody = z.object({
   enabled: z.boolean().describe("Activa el asistente de IA en el sílabo del docente."),
 })

@@ -43,6 +43,10 @@ describe('screenTours', () => {
     }
   });
 
+  it('la guía de «Sistema» ya no habla de conectar un proveedor de IA', () => {
+    expect((screenTours['/admin/configuracion/sistema'] ?? []).map((item) => item.title)).toEqual(['Correos', 'Asistente del docente', 'Biblioteca']);
+  });
+
   it('en «Sistema» se señala el interruptor del asistente del docente', () => {
     expect(stepOf('/admin/configuracion/sistema', '[data-tour="settings-teacher-ai"]')?.description).toContain('Empieza apagado');
   });

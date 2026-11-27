@@ -260,7 +260,7 @@
     ],
     "uri": "api/v1/admin/system-settings/{section}",
     "wheres": {
-      "section": "notificaciones|ia|biblioteca|asistente-docente"
+      "section": "notificaciones|biblioteca|asistente-docente"
     },
     "bindings": {}
   },
@@ -270,7 +270,7 @@
     ],
     "uri": "api/v1/admin/system-settings/{section}/test",
     "wheres": {
-      "section": "ia|biblioteca"
+      "section": "biblioteca"
     },
     "bindings": {}
   },

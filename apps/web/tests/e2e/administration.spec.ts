@@ -292,7 +292,7 @@ test.describe.serial("administration: convocations, settings and template", () =
       await page.reload()
       await expect(hour).toHaveValue(value)
     }
-    for (const section of [/^Asistente de IA/, /^Biblioteca \(Koha\)/]) {
+    for (const section of [/^Asistente del docente/, /^Biblioteca \(Koha\)/]) {
       await page.getByRole("button", { name: section }).click()
       await expect(page.getByRole("region", { name: section })).toBeVisible()
     }

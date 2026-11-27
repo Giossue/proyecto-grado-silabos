@@ -2,13 +2,12 @@ import { fromController } from "../auth/controllerResponse"
 import { requireSession } from "../auth/requireSession"
 import type { AppSession, SessionUser } from "../auth/types"
 import { phpBoolean } from "../identity/accountRules"
-import { encrypt } from "../http/encrypter"
 import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { forbidden, apiJson, serverError, validationError } from "../http/responses"
 import { throttle, type RateLimiter, type Throttle } from "../http/throttle"
 import { PASSWORD_SECTIONS, systemSettingsSchema } from "@silabos/shared/schemas/operations"
 import { validateSchema } from "../http/schemaValidation"
-import { describeSettings, effectiveSettings, SECRET, TEACHER_ASSISTANT_SETTING, type SystemSettingsDeps } from "./systemSettings"
+import { describeSettings, effectiveSettings, TEACHER_ASSISTANT_SETTING, type SystemSettingsDeps } from "./systemSettings"
 
 export type SettingRow = { field: string; value: unknown }
 
@@ -16,7 +15,6 @@ export type SystemSettingsWriteDeps = SystemSettingsDeps & {
   limiter: RateLimiter
   verifyPassword: (plain: string, hash: string) => Promise<boolean | null>
   save: (rows: SettingRow[], actorId: string, at: number) => Promise<void>
-  fetch: (url: string, init: RequestInit) => Promise<Response>
   libraries: () => Promise<unknown[]>
 }
 
@@ -24,14 +22,6 @@ function phpString(value: PhpValue | undefined): string {
   if (value === undefined || value === null || value === false) return ""
   if (value === true) return "1"
   return isPhpArray(value) ? "Array" : String(value)
-}
-
-function phpIntval(value: PhpValue | undefined): number {
-  if (typeof value === "number") return Math.trunc(value)
-  if (typeof value === "boolean") return value ? 1 : 0
-  if (typeof value !== "string") return 0
-  const match = /^[ \t\n\r\v\f]*([+-]?\d+)/.exec(value)
-  return match ? Number(match[1]) : 0
 }
 
 function filled(value: PhpValue | undefined): boolean {
@@ -48,22 +38,10 @@ function sectionValues(section: string, input: PhpArray): SettingRow[] {
     ]
   }
   if (section === "asistente-docente") return [{ field: TEACHER_ASSISTANT_SETTING, value: phpBoolean(input.enabled) }]
-  if (section === "biblioteca") {
-    return [
-      { field: "library.driver", value: phpString(input.driver) },
-      { field: "library.base_url", value: url("base_url") },
-    ]
-  }
-  const rows: SettingRow[] = [
-    { field: "ai.driver", value: phpString(input.driver) },
-    { field: "ai.base_url", value: url("base_url") },
-    { field: "ai.model", value: filled(input.model) ? phpString(input.model) : null },
-    { field: "ai.connect_timeout", value: phpIntval(input.connect_timeout) },
-    { field: "ai.timeout", value: phpIntval(input.timeout) },
+  return [
+    { field: "library.driver", value: phpString(input.driver) },
+    { field: "library.base_url", value: url("base_url") },
   ]
-  if (phpBoolean(input.clear_api_key)) rows.push({ field: SECRET, value: null })
-  else if (filled(input.api_key)) rows.push({ field: SECRET, value: phpString(input.api_key) })
-  return rows
 }
 
 async function passwordMatches(section: string, input: PhpArray, user: SessionUser, deps: SystemSettingsWriteDeps): Promise<boolean | null> {
@@ -110,38 +88,8 @@ export async function saveSystemSettings(session: AppSession, section: string, i
   if (matches === null) return fromController(serverError())
   const { errors } = await validateSchema(systemSettingsSchema(section, input, matches), input)
   if (errors !== null) return fromController(validationError(errors))
-  const key = deps.bridge.config.key
-  const rows = sectionValues(section, input)
-  await deps.save(
-    rows.map((row) => ({ field: row.field, value: row.field === SECRET && typeof row.value === "string" ? encrypt(row.value, key, false) : row.value })),
-    session.user.id,
-    deps.bridge.now(),
-  )
-  return apiJson(describeSettings(await deps.stored(), deps.environment(), key))
-}
-
-async function aiConnection(settings: Record<string, unknown>, deps: SystemSettingsWriteDeps): Promise<{ ok: boolean; message: string }> {
-  const text = (field: string) => phpString(settings[field] as PhpValue | undefined)
-  if (text("ai.driver").trim().toLowerCase() !== "deepseek") return { ok: false, message: "El asistente de IA está desactivado" }
-  const apiKey = text(SECRET).trim()
-  if (apiKey === "") return { ok: false, message: "Falta la clave del proveedor de IA" }
-  const base = text("ai.base_url").trim().replace(/\/+$/, "")
-  if (!base.startsWith("https://")) return { ok: false, message: "La dirección del proveedor debe empezar con https://" }
-  const timeout = Math.max(5, Math.min(30, phpIntval(settings["ai.timeout"] as PhpValue | undefined)))
-  let response: Response
-  try {
-    response = await deps.fetch(`${base}/models`, {
-      method: "GET",
-      headers: { Accept: "application/json", Authorization: `Bearer ${apiKey}` },
-      redirect: "manual",
-      signal: AbortSignal.timeout(timeout * 1000),
-    })
-  } catch {
-    return { ok: false, message: "No se pudo conectar con el proveedor de IA" }
-  }
-  if (response.status >= 200 && response.status < 300) return { ok: true, message: "Conexión correcta con el proveedor de IA" }
-  if (response.status === 401 || response.status === 403) return { ok: false, message: "El proveedor no aceptó la clave" }
-  return { ok: false, message: `El proveedor de IA respondió con un error (${response.status})` }
+  await deps.save(sectionValues(section, input), session.user.id, deps.bridge.now())
+  return apiJson(describeSettings(await deps.stored(), deps.environment()))
 }
 
 async function libraryConnection(settings: Record<string, unknown>, deps: SystemSettingsWriteDeps): Promise<{ ok: boolean; message: string }> {
@@ -155,14 +103,12 @@ async function libraryConnection(settings: Record<string, unknown>, deps: System
   return { ok: true, message: count === 1 ? "Conexión correcta: 1 biblioteca" : `Conexión correcta: ${count} bibliotecas` }
 }
 
-export async function testSystemSettings(request: Request, section: string, deps: SystemSettingsWriteDeps): Promise<Response> {
+export async function testSystemSettings(request: Request, deps: SystemSettingsWriteDeps): Promise<Response> {
   const authorized = await administrator(request, deps)
   if (authorized instanceof Response) return authorized
-  return authorized.finish(await systemSettingsConnection(section, deps))
+  return authorized.finish(await systemSettingsConnection(deps))
 }
 
-export async function systemSettingsConnection(section: string, deps: SystemSettingsWriteDeps): Promise<Response> {
-  const settings = effectiveSettings(await deps.stored(), deps.environment(), deps.bridge.config.key)
-  const result = section === "ia" ? await aiConnection(settings, deps) : await libraryConnection(settings, deps)
-  return apiJson(result)
+export async function systemSettingsConnection(deps: SystemSettingsWriteDeps): Promise<Response> {
+  return apiJson(await libraryConnection(effectiveSettings(await deps.stored(), deps.environment()), deps))
 }

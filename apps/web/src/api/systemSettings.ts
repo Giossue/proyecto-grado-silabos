@@ -5,21 +5,12 @@ type Field<T> = { value: T; source: SettingSource };
 
 export type SystemSettings = {
   notifications: { emails: Field<boolean | null>; digest_time: Field<string | null> };
-  ai: {
-    driver: Field<string | null>;
-    base_url: Field<string | null>;
-    model: Field<string | null>;
-    /** La clave nunca llega: solo si hay una guardada. */
-    api_key: { configured: boolean; source: SettingSource };
-    connect_timeout: Field<number | null>;
-    timeout: Field<number | null>;
-  };
   library: { driver: Field<string | null>; base_url: Field<string | null> };
   teacher_assistant: { enabled: Field<boolean | null> };
 };
 
-export type SettingsSection = 'notificaciones' | 'ia' | 'biblioteca' | 'asistente-docente';
-export type ConnectionSection = Extract<SettingsSection, 'ia' | 'biblioteca'>;
+export type SettingsSection = 'notificaciones' | 'biblioteca' | 'asistente-docente';
+export type ConnectionSection = Extract<SettingsSection, 'biblioteca'>;
 
 export const getSystemSettings = (): Promise<SystemSettings> => api<SystemSettings>('/admin/system-settings');
 

@@ -60,7 +60,6 @@ export const screenTours: Record<string, TourStep[]> = {
   ],
   '/admin/configuracion/sistema': [
     step('[data-tour="settings-notices"]', 'Correos', 'Active o apague el resumen de pendientes y elija a qué hora llega', 'bottom'),
-    step('[data-tour="settings-ai"]', 'Asistente', 'Conecte el asistente con un servicio de inteligencia artificial y pruebe que funcione', 'bottom'),
     step('[data-tour="settings-teacher-ai"]', 'Asistente del docente', 'Enciéndalo para que los docentes pidan ideas a la IA desde su sílabo. Empieza apagado', 'bottom'),
     step('[data-tour="settings-library"]', 'Biblioteca', 'Conecte el catálogo de la biblioteca para que los docentes busquen libros', 'top'),
   ],

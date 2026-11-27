@@ -4,13 +4,10 @@ import { schemaErrors } from "./issues"
 import { screenHelpSchema, systemSettingsSchema } from "./operations"
 
 describe("systemSettingsSchema", () => {
-  it("requires the AI address and model unless the assistant is disabled", async () => {
-    const valid = { current_password: "x", connect_timeout: 5, timeout: 30 }
-    expect(await schemaErrors(systemSettingsSchema("ia", { driver: "deepseek" }, true), { ...valid, driver: "deepseek" })).toEqual({
-      base_url: ["Escriba la dirección del proveedor de IA."],
-      model: ["Escriba el modelo de IA."],
+  it("keeps asking for the current password for any section it does not know, such as the removed AI one", async () => {
+    expect(await schemaErrors(systemSettingsSchema("ia", { driver: "disabled" }, false), { current_password: "x", driver: "disabled" })).toEqual({
+      current_password: ["La contraseña actual no es correcta."],
     })
-    expect(await schemaErrors(systemSettingsSchema("ia", { driver: "disabled" }, true), { ...valid, driver: "disabled" })).toEqual({})
   })
 
   it("requires the Koha address only for Koha and checks the current password", async () => {

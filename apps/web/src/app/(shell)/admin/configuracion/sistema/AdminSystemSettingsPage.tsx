@@ -1,13 +1,12 @@
 "use client"
 
-import { Bell, Bot, GraduationCap, Library, PlugZap, Save, Trash2, Undo2 } from "lucide-react"
+import { Bell, GraduationCap, Library, PlugZap, Save } from "lucide-react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { ApiError } from "@/api/client"
-import { testSystemConnection, updateSystemSettings, type ConnectionSection, type SettingsSection, type SystemSettings } from "@/api/systemSettings"
+import { testSystemConnection, updateSystemSettings, type SettingsSection, type SystemSettings } from "@/api/systemSettings"
 import { PasswordConfirmDialog } from "@/components/PasswordConfirmDialog"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
-import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { SettingsAccordionSection } from "@/components/domain/SettingsAccordionSection"
@@ -19,51 +18,32 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { SettingsLayout } from "@/layouts/settings/Layout"
-import { useShownWhileClosing } from "@/lib/dialogExit"
 import { toast } from "@/lib/toast"
-import { cn } from "@/lib/utils"
 import { queryErrorMessage } from "@/lib/queryClient"
 import { configurationKeys, systemSettingsQuery } from "@/queries/configuration"
 
 type NotificationsForm = { emails: boolean; digest_time: string }
-type AiForm = { driver: string; base_url: string; model: string; api_key: string; clear_api_key: boolean; connect_timeout: number | string; timeout: number | string }
 type LibraryForm = { driver: string; base_url: string }
 type TeacherAssistantForm = { enabled: boolean }
-type Forms = { notifications: NotificationsForm; ai: AiForm; library: LibraryForm; teacherAssistant: TeacherAssistantForm }
-type Snapshot = { notifications: string; ai: string; library: string; teacherAssistant: string }
+type Forms = { notifications: NotificationsForm; library: LibraryForm; teacherAssistant: TeacherAssistantForm }
+type Snapshot = { notifications: string; library: string; teacherAssistant: string }
 
-const EMPTY_SNAPSHOT: Snapshot = { notifications: "", ai: "", library: "", teacherAssistant: "" }
+const EMPTY_SNAPSHOT: Snapshot = { notifications: "", library: "", teacherAssistant: "" }
 
 const formsFrom = (value: SystemSettings): Forms => ({
   notifications: {
     emails: value.notifications.emails.value ?? true,
     digest_time: value.notifications.digest_time.value ?? "08:00",
   },
-  ai: {
-    driver: value.ai.driver.value ?? "disabled",
-    base_url: value.ai.base_url.value ?? "",
-    model: value.ai.model.value ?? "",
-    api_key: "",
-    clear_api_key: false,
-    connect_timeout: value.ai.connect_timeout.value ?? 2,
-    timeout: value.ai.timeout.value ?? 20,
-  },
   library: { driver: value.library.driver.value ?? "disabled", base_url: value.library.base_url.value ?? "" },
   teacherAssistant: { enabled: value.teacher_assistant.enabled.value === true },
 })
 
-const snapshot = ({ notifications, ai, library, teacherAssistant }: Forms): Snapshot => ({
+const snapshot = ({ notifications, library, teacherAssistant }: Forms): Snapshot => ({
   notifications: JSON.stringify(notifications),
-  ai: JSON.stringify({ ...ai, api_key: ai.api_key.trim() }),
   library: JSON.stringify(library),
   teacherAssistant: JSON.stringify(teacherAssistant),
 })
-
-const numberModel = (value: string): number | string => {
-  const parsed = Number.parseFloat(value)
-
-  return Number.isNaN(parsed) ? value : parsed
-}
 
 const DEFAULT_CONFIRM_DESCRIPTION = "Por seguridad, confirme su contraseña actual para guardar"
 
@@ -73,23 +53,20 @@ export default function AdminSystemSettingsPage() {
   const [settings, setSettings] = useState<SystemSettings | null>(null)
   const loadError = queryErrorMessage(query, "No se pudo cargar la configuración del sistema")
   const [saving, setSaving] = useState<SettingsSection | null>(null)
-  const [testing, setTesting] = useState<ConnectionSection | null>(null)
+  const [testing, setTesting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [requestError, setRequestError] = useState<string | null>(null)
-  const [confirmFor, setConfirmFor] = useState<ConnectionSection | null>(null)
+  const [confirming, setConfirming] = useState(false)
   const [openSection, setOpenSection] = useState("notificaciones")
   const [notifications, setNotifications] = useState<NotificationsForm>({ emails: true, digest_time: "08:00" })
-  const [ai, setAi] = useState<AiForm>({ driver: "disabled", base_url: "", model: "", api_key: "", clear_api_key: false, connect_timeout: 2, timeout: 20 })
   const [library, setLibrary] = useState<LibraryForm>({ driver: "disabled", base_url: "" })
   const [teacherAssistant, setTeacherAssistant] = useState<TeacherAssistantForm>({ enabled: false })
   const [baseline, setBaseline] = useState<Snapshot>(EMPTY_SNAPSHOT)
-  const shownConfirmFor = useShownWhileClosing(confirmFor)
 
   if (query.data && query.data !== settings) {
     const forms = formsFrom(query.data)
     setSettings(query.data)
     setNotifications(forms.notifications)
-    setAi(forms.ai)
     setLibrary(forms.library)
     setTeacherAssistant(forms.teacherAssistant)
     setBaseline(snapshot(forms))
@@ -99,80 +76,62 @@ export default function AdminSystemSettingsPage() {
     void query.refetch()
   }
 
-  const current = snapshot({ notifications, ai, library, teacherAssistant })
+  const current = snapshot({ notifications, library, teacherAssistant })
   const dirty = {
     notificaciones: current.notifications !== baseline.notifications,
-    ia: current.ai !== baseline.ai,
     biblioteca: current.library !== baseline.library,
     "asistente-docente": current.teacherAssistant !== baseline.teacherAssistant,
   }
-  const keyPlaceholder = settings?.ai.api_key.configured ? "Escriba una clave nueva solo para cambiarla" : "Escriba la clave del proveedor"
-  const clearKeyLabel = ai.clear_api_key ? "No quitar la clave" : "Quitar la clave"
 
   const save = async (section: SettingsSection, currentPassword?: string): Promise<void> => {
     setSaving(section)
     setErrors({})
     setRequestError(null)
-    const apiKey = ai.api_key.trim()
     const body: Record<string, unknown> =
-      section === "notificaciones"
-        ? { ...notifications }
-        : section === "asistente-docente"
-          ? { ...teacherAssistant }
-          : section === "biblioteca"
-            ? { ...library, current_password: currentPassword }
-            : {
-                driver: ai.driver,
-                base_url: ai.base_url,
-                model: ai.model,
-                connect_timeout: ai.connect_timeout,
-                timeout: ai.timeout,
-                current_password: currentPassword,
-                ...(ai.clear_api_key ? { clear_api_key: true } : apiKey ? { api_key: apiKey } : {}),
-              }
+      section === "notificaciones" ? { ...notifications } : section === "asistente-docente" ? { ...teacherAssistant } : { ...library, current_password: currentPassword }
     try {
       queryClient.setQueryData(configurationKeys.systemSettings(), await updateSystemSettings(section, body))
-      setConfirmFor(null)
+      setConfirming(false)
       toast.success("Ajustes guardados")
     } catch (reason) {
       if (reason instanceof ApiError) {
         const failed: Record<string, string> = Object.fromEntries(Object.entries(reason.errors).map(([key, values]) => [key, values[0] ?? reason.message]))
         setErrors(failed)
         if (Object.keys(failed).length === 0) setRequestError(reason.message)
-        if (!failed.current_password) setConfirmFor(null)
+        if (!failed.current_password) setConfirming(false)
       } else {
         setRequestError("No se pudieron guardar los ajustes")
-        setConfirmFor(null)
+        setConfirming(false)
       }
     } finally {
       setSaving(null)
     }
   }
 
-  const openConfirm = (section: ConnectionSection): void => {
+  const openConfirm = (): void => {
     setErrors((previous) => Object.fromEntries(Object.entries(previous).filter(([key]) => key !== "current_password")))
-    setConfirmFor(section)
+    setConfirming(true)
   }
 
-  const test = async (section: ConnectionSection): Promise<void> => {
-    setTesting(section)
+  const test = async (): Promise<void> => {
+    setTesting(true)
     try {
-      const result = await testSystemConnection(section)
+      const result = await testSystemConnection("biblioteca")
       if (result.ok) toast.success(result.message)
       else toast.error(result.message)
     } catch (reason) {
       toast.error(reason instanceof ApiError ? reason.message : "No se pudo probar la conexión")
     } finally {
-      setTesting(null)
+      setTesting(false)
     }
   }
 
   const saveIcon = (section: SettingsSection) =>
     saving === section ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" aria-hidden="true" />
 
-  const testButton = (section: ConnectionSection) => (
-    <Button type="button" variant="outline" disabled={testing !== null} onClick={() => void test(section)}>
-      {testing === section ? <Spinner data-icon="inline-start" /> : <PlugZap data-icon="inline-start" aria-hidden="true" />}
+  const testButton = (
+    <Button type="button" variant="outline" disabled={testing} onClick={() => void test()}>
+      {testing ? <Spinner data-icon="inline-start" /> : <PlugZap data-icon="inline-start" aria-hidden="true" />}
       Probar conexión
     </Button>
   )
@@ -220,128 +179,6 @@ export default function AdminSystemSettingsPage() {
                   {saveIcon("notificaciones")}
                   Guardar
                 </Button>
-              </div>
-            </SettingsAccordionSection>
-
-            <SettingsAccordionSection value="ia" data-tour="settings-ai" title="Asistente de IA" description="Proveedor que responde al asistente de la plantilla" icon={Bot}>
-              <Field data-invalid={Boolean(errors.driver)}>
-                <FieldLabel htmlFor="settings-ai-driver" required>
-                  Proveedor
-                </FieldLabel>
-                <Select value={ai.driver} onValueChange={(driver) => setAi((previous) => ({ ...previous, driver }))}>
-                  <SelectTrigger id="settings-ai-driver">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="disabled">Desactivado</SelectItem>
-                      <SelectItem value="deepseek">DeepSeek</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-              {ai.driver !== "disabled" ? (
-                <>
-                  <Field data-invalid={Boolean(errors.base_url)}>
-                    <FieldLabel htmlFor="settings-ai-url" required>
-                      Dirección del proveedor
-                    </FieldLabel>
-                    <Input
-                      id="settings-ai-url"
-                      value={ai.base_url}
-                      onChange={(event) => setAi((previous) => ({ ...previous, base_url: event.target.value }))}
-                      placeholder="Ej. https://api.deepseek.com"
-                      autoComplete="off"
-                      aria-required="true"
-                    />
-                    {errors.base_url ? <FieldError errors={[errors.base_url]} /> : null}
-                  </Field>
-                  <Field data-invalid={Boolean(errors.model)}>
-                    <FieldLabel htmlFor="settings-ai-model" required>
-                      Modelo
-                    </FieldLabel>
-                    <Input
-                      id="settings-ai-model"
-                      value={ai.model}
-                      onChange={(event) => setAi((previous) => ({ ...previous, model: event.target.value }))}
-                      placeholder="Ej. deepseek-chat"
-                      autoComplete="off"
-                      aria-required="true"
-                    />
-                    {errors.model ? <FieldError errors={[errors.model]} /> : null}
-                  </Field>
-                  <Field data-invalid={Boolean(errors.api_key)}>
-                    <FieldLabel htmlFor="settings-ai-key">Clave del proveedor</FieldLabel>
-                    <div className="relative">
-                      <Input
-                        id="settings-ai-key"
-                        value={ai.api_key}
-                        onChange={(event) => setAi((previous) => ({ ...previous, api_key: event.target.value }))}
-                        type="password"
-                        autoComplete="off"
-                        disabled={ai.clear_api_key}
-                        placeholder={keyPlaceholder}
-                        className={cn(settings.ai.api_key.configured && "pr-10")}
-                      />
-                      {settings.ai.api_key.configured ? (
-                        <IconTooltip label={clearKeyLabel}>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute inset-y-px right-px h-auto rounded-l-none rounded-r-md px-3 text-muted-foreground hover:bg-transparent hover:text-foreground"
-                            aria-label={clearKeyLabel}
-                            aria-pressed={ai.clear_api_key}
-                            onClick={() => setAi((previous) => ({ ...previous, clear_api_key: !previous.clear_api_key, api_key: "" }))}
-                          >
-                            {ai.clear_api_key ? <Undo2 className="size-4" aria-hidden="true" /> : <Trash2 className="size-4" aria-hidden="true" />}
-                          </Button>
-                        </IconTooltip>
-                      ) : null}
-                    </div>
-                    {ai.clear_api_key ? <FieldDescription>La clave se quitará al guardar</FieldDescription> : null}
-                    {errors.api_key ? <FieldError errors={[errors.api_key]} /> : null}
-                  </Field>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Field data-invalid={Boolean(errors.connect_timeout)}>
-                      <FieldLabel htmlFor="settings-ai-connect" required>
-                        Espera para conectar (s)
-                      </FieldLabel>
-                      <Input
-                        id="settings-ai-connect"
-                        value={ai.connect_timeout}
-                        onChange={(event) => setAi((previous) => ({ ...previous, connect_timeout: numberModel(event.target.value) }))}
-                        type="number"
-                        min="1"
-                        max="30"
-                        aria-required="true"
-                      />
-                      {errors.connect_timeout ? <FieldError errors={[errors.connect_timeout]} /> : null}
-                    </Field>
-                    <Field data-invalid={Boolean(errors.timeout)}>
-                      <FieldLabel htmlFor="settings-ai-timeout" required>
-                        Espera de respuesta (s)
-                      </FieldLabel>
-                      <Input
-                        id="settings-ai-timeout"
-                        value={ai.timeout}
-                        onChange={(event) => setAi((previous) => ({ ...previous, timeout: numberModel(event.target.value) }))}
-                        type="number"
-                        min="5"
-                        max="300"
-                        aria-required="true"
-                      />
-                      {errors.timeout ? <FieldError errors={[errors.timeout]} /> : null}
-                    </Field>
-                  </div>
-                </>
-              ) : null}
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" disabled={saving !== null || !dirty.ia} onClick={() => openConfirm("ia")}>
-                  {saveIcon("ia")}
-                  Guardar
-                </Button>
-                {testButton("ia")}
               </div>
             </SettingsAccordionSection>
 
@@ -400,7 +237,7 @@ export default function AdminSystemSettingsPage() {
                 </Select>
               </Field>
               {library.driver === "koha" ? (
-                <Field data-invalid={Boolean(errors.base_url && confirmFor !== "ia")}>
+                <Field data-invalid={Boolean(errors.base_url)}>
                   <FieldLabel htmlFor="settings-library-url" required>
                     Dirección del catálogo
                   </FieldLabel>
@@ -415,11 +252,11 @@ export default function AdminSystemSettingsPage() {
                 </Field>
               ) : null}
               <div className="flex flex-wrap gap-2">
-                <Button type="button" disabled={saving !== null || !dirty.biblioteca} onClick={() => openConfirm("biblioteca")}>
+                <Button type="button" disabled={saving !== null || !dirty.biblioteca} onClick={openConfirm}>
                   {saveIcon("biblioteca")}
                   Guardar
                 </Button>
-                {testButton("biblioteca")}
+                {testButton}
               </div>
             </SettingsAccordionSection>
           </Accordion>
@@ -427,16 +264,12 @@ export default function AdminSystemSettingsPage() {
       )}
 
       <PasswordConfirmDialog
-        open={confirmFor !== null}
-        onOpenChange={(open) => {
-          if (!open) setConfirmFor(null)
-        }}
-        title={shownConfirmFor === "ia" ? "Guardar el asistente de IA" : "Guardar la biblioteca"}
+        open={confirming}
+        onOpenChange={setConfirming}
+        title="Guardar la biblioteca"
         description={errors.current_password ?? DEFAULT_CONFIRM_DESCRIPTION}
         confirmLabel="Guardar"
-        onConfirm={(password) => {
-          if (confirmFor) void save(confirmFor, password)
-        }}
+        onConfirm={(password) => void save("biblioteca", password)}
       />
     </SettingsLayout>
   )

@@ -13,14 +13,14 @@ export function SettingsLoadingSkeleton({ section = "profile", rows = 4 }: Setti
   if (section === "system") {
     return (
       <div className="-mt-2 flex min-w-0 flex-col" data-settings-section="system">
-        {range(4).map((item) => (
+        {range(3).map((item) => (
           <div key={item} data-skeleton="settings-accordion-item" className="border-b last:border-b-0">
             <div className="flex items-start justify-between gap-4 py-4">
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <Skeleton className="size-4 shrink-0" />
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <div className="flex h-5 items-center">
-                    <Skeleton className={cn("h-4 max-w-full", item === 3 ? "w-36" : "w-28")} />
+                    <Skeleton className={cn("h-4 max-w-full", item === 2 ? "w-36" : "w-28")} />
                   </div>
                   <div className="flex h-5 items-center">
                     <Skeleton className={cn("h-4 max-w-full", item === 1 ? "w-80" : "w-96")} />

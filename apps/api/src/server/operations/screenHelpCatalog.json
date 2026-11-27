@@ -9,7 +9,7 @@
     },
     "/admin/configuracion/sistema": {
         "title": "Sistema",
-        "content": "Aquí se configuran el resumen diario por correo, el asistente, el asistente del docente y la conexión con la biblioteca.\n\n«Asistente del docente» activa o apaga la ayuda con IA en el sílabo del docente; empieza apagado y no cambia el asistente de la plantilla. Lo que puede leer se elige campo por campo en la plantilla del sílabo.\n\nAbra cada parte para cambiarla. Algunas piden su contraseña antes de guardar."
+        "content": "Aquí se configuran el resumen diario por correo, el asistente del docente y la conexión con la biblioteca.\n\n«Asistente del docente» activa o apaga la ayuda con IA en el sílabo del docente; empieza apagado y no cambia el asistente de la plantilla. Lo que puede leer se elige campo por campo en la plantilla del sílabo.\n\nAbra cada parte para cambiarla. La biblioteca pide su contraseña antes de guardar."
     },
     "/admin/periodos": {
         "title": "Periodos académicos",

@@ -1,7 +1,6 @@
 import type { Db } from "../../prisma/db"
 import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
-import { DecryptError, decrypt } from "../http/encrypter"
 import { apiJson } from "../http/responses"
 
 export type SettingsEnvironment = Record<string, string | undefined>
@@ -12,17 +11,10 @@ export type SystemSettingsDeps = {
   environment: () => SettingsEnvironment
 }
 
-export const SECRET = "ai.api_key"
 export const TEACHER_ASSISTANT_SETTING = "teacher_assistant.enabled"
-const FIELDS: [field: string, section: "notifications" | "ai" | "library" | "teacher_assistant"][] = [
+const FIELDS: [field: string, section: "notifications" | "library" | "teacher_assistant"][] = [
   ["notifications.emails", "notifications"],
   ["notifications.digest_time", "notifications"],
-  ["ai.driver", "ai"],
-  ["ai.base_url", "ai"],
-  ["ai.model", "ai"],
-  ["ai.api_key", "ai"],
-  ["ai.connect_timeout", "ai"],
-  ["ai.timeout", "ai"],
   ["library.driver", "library"],
   ["library.base_url", "library"],
   [TEACHER_ASSISTANT_SETTING, "teacher_assistant"],
@@ -47,14 +39,6 @@ function phpBool(value: unknown): boolean {
   return Boolean(value)
 }
 
-function phpInt(value: unknown): number {
-  if (typeof value === "number") return Math.trunc(value)
-  if (typeof value === "boolean") return value ? 1 : 0
-  if (typeof value !== "string") return 0
-  const match = /^[ \t\n\r\v\f]*([+-]?\d+)/.exec(value)
-  return match ? Number(match[1]) : 0
-}
-
 function phpStringCast(value: unknown): string {
   if (typeof value === "string") return value
   if (value === true) return "1"
@@ -67,12 +51,6 @@ export function environmentSettings(environment: SettingsEnvironment): Record<st
   return {
     "notifications.emails": phpBool(envValue(environment, "NOTIFICATION_EMAILS", true)),
     "notifications.digest_time": /^([01]?\d|2[0-3]):[0-5]\d$/.test(time) ? time : "08:00",
-    "ai.driver": envValue(environment, "AI_DRIVER", "disabled"),
-    "ai.base_url": envValue(environment, "AI_BASE_URL"),
-    "ai.model": envValue(environment, "AI_MODEL"),
-    "ai.api_key": envValue(environment, "AI_API_KEY"),
-    "ai.connect_timeout": phpInt(envValue(environment, "AI_CONNECT_TIMEOUT", 2)),
-    "ai.timeout": phpInt(envValue(environment, "AI_TIMEOUT", 20)),
     "library.driver": envValue(environment, "CATALOG_DRIVER", "disabled"),
     "library.base_url": envValue(environment, "KOHA_BASE_URL"),
     [TEACHER_ASSISTANT_SETTING]: false,
@@ -94,33 +72,16 @@ export async function teacherAssistantEnabledOn(db: Db): Promise<boolean> {
   return (await storedSettingsOn(db)()).get(TEACHER_ASSISTANT_SETTING) === true
 }
 
-export function effectiveSettings(stored: Map<string, unknown>, environment: SettingsEnvironment, key: Buffer): Record<string, unknown> {
+export function effectiveSettings(stored: Map<string, unknown>, environment: SettingsEnvironment): Record<string, unknown> {
   const defaults = environmentSettings(environment)
-  const result: Record<string, unknown> = {}
-  for (const [field] of FIELDS) {
-    const saved = stored.has(field)
-    let value = saved ? stored.get(field) : defaults[field]
-    if (saved && field === SECRET && typeof value === "string") {
-      try {
-        value = decrypt(value, key, false)
-      } catch (error) {
-        if (!(error instanceof DecryptError)) throw error
-        value = null
-      }
-    }
-    result[field] = value
-  }
-  return result
+  return Object.fromEntries(FIELDS.map(([field]) => [field, stored.has(field) ? stored.get(field) : defaults[field]]))
 }
 
-export function describeSettings(stored: Map<string, unknown>, environment: SettingsEnvironment, key: Buffer) {
-  const effective = effectiveSettings(stored, environment, key)
-  const result: Record<string, Record<string, unknown>> = { notifications: {}, ai: {}, library: {}, teacher_assistant: {} }
+export function describeSettings(stored: Map<string, unknown>, environment: SettingsEnvironment) {
+  const effective = effectiveSettings(stored, environment)
+  const result: Record<string, Record<string, unknown>> = { notifications: {}, library: {}, teacher_assistant: {} }
   for (const [field, section] of FIELDS) {
-    const value = effective[field]
-    const source = stored.has(field) ? "pantalla" : "entorno"
-    const name = field.slice(field.indexOf(".") + 1)
-    result[section][name] = field === SECRET ? { configured: typeof value === "string" && value !== "", source } : { value, source }
+    result[section][field.slice(field.indexOf(".") + 1)] = { value: effective[field], source: stored.has(field) ? "pantalla" : "entorno" }
   }
   return result
 }
@@ -133,5 +94,5 @@ export async function showSystemSettings(request: Request, deps: SystemSettingsD
 }
 
 export async function systemSettingsOf(deps: SystemSettingsDeps): Promise<Response> {
-  return apiJson(describeSettings(await deps.stored(), deps.environment(), deps.bridge.config.key))
+  return apiJson(describeSettings(await deps.stored(), deps.environment()))
 }

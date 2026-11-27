@@ -6,7 +6,7 @@ import { systemSettingsOf, type SettingsEnvironment } from "../../server/operati
 import { administratorDenial, saveSystemSettings, systemSettingsConnection, type SystemSettingsWriteDeps } from "../../server/operations/systemSettingsWrites"
 import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
 import { SettingsRepository } from "./settings.repository"
-import { CONNECTION_FETCH, LIBRARY_DIRECTORY, PASSWORD_VERIFIER, SETTINGS_ENVIRONMENT } from "./settings.tokens"
+import { LIBRARY_DIRECTORY, PASSWORD_VERIFIER, SETTINGS_ENVIRONMENT } from "./settings.tokens"
 
 @Injectable()
 export class SettingsService {
@@ -16,7 +16,6 @@ export class SettingsService {
     @Inject(RATE_LIMITER) private readonly limiter: RateLimiter,
     @Inject(SETTINGS_ENVIRONMENT) private readonly environment: () => SettingsEnvironment,
     @Inject(PASSWORD_VERIFIER) private readonly verifyPassword: SystemSettingsWriteDeps["verifyPassword"],
-    @Inject(CONNECTION_FETCH) private readonly fetch: SystemSettingsWriteDeps["fetch"],
     @Inject(LIBRARY_DIRECTORY) private readonly libraries: SystemSettingsWriteDeps["libraries"],
   ) {}
 
@@ -28,8 +27,8 @@ export class SettingsService {
     return administratorDenial(session) ?? saveSystemSettings(session, section, input, this.deps())
   }
 
-  async test(session: AppSession, section: string): Promise<Response> {
-    return administratorDenial(session) ?? systemSettingsConnection(section, this.deps())
+  async test(session: AppSession): Promise<Response> {
+    return administratorDenial(session) ?? systemSettingsConnection(this.deps())
   }
 
   private deps(): SystemSettingsWriteDeps {
@@ -40,7 +39,6 @@ export class SettingsService {
       environment: this.environment,
       verifyPassword: this.verifyPassword,
       save: (rows, actorId, at) => this.settings.save(rows, actorId, at),
-      fetch: this.fetch,
       libraries: this.libraries,
     }
   }

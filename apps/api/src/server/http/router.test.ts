@@ -28,7 +28,9 @@ describe("routesMatching", () => {
   it("honours optional parameters and where constraints like Laravel's compiled routes", () => {
     expect(routesMatching("/api/v1/admin/academic").flatMap((route) => route.methods)).toEqual(["GET", "HEAD"])
     expect(routesMatching("/api/v1/admin/academic/carrera").flatMap((route) => route.methods).sort()).toEqual(["GET", "HEAD", "POST"])
-    expect(routesMatching("/api/v1/admin/system-settings/ia").flatMap((route) => route.methods)).toEqual(["PUT"])
+    expect(routesMatching("/api/v1/admin/system-settings/biblioteca").flatMap((route) => route.methods)).toEqual(["PUT"])
+    expect(routesMatching("/api/v1/admin/system-settings/ia")).toEqual([])
+    expect(routesMatching("/api/v1/admin/system-settings/ia/test")).toEqual([])
     expect(routesMatching("/api/v1/admin/system-settings/otra")).toEqual([])
     expect(routesMatching("/api/v1/coordination/academic/curriculum/no-uuid")).toEqual([])
   })

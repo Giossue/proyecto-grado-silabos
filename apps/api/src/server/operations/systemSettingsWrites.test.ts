@@ -2,8 +2,7 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import settingsGolden from "./__fixtures__/system-settings-golden.json"
-import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, testKey, type FakeWorld } from "../auth/testing"
-import { decrypt, encrypt } from "../http/encrypter"
+import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { createRateLimiter, type RateLimiter } from "../http/throttle"
 import type { SettingsEnvironment } from "./systemSettings"
 import { testSystemSettings, updateSystemSettings, type SystemSettingsWriteDeps } from "./systemSettingsWrites"
@@ -29,8 +28,6 @@ let stored: Map<string, unknown>
 let environment: SettingsEnvironment
 let limiter: RateLimiter
 let writes: { field: string; value: unknown; actorId: string; at: number }[]
-let fetched: { url: string; init: RequestInit }[]
-let fetchResult: () => Promise<Response>
 let libraries: () => Promise<unknown[]>
 
 function deps(): SystemSettingsWriteDeps {
@@ -45,10 +42,6 @@ function deps(): SystemSettingsWriteDeps {
         writes.push({ field: row.field, value: row.value, actorId, at })
         stored.set(row.field, row.value)
       }
-    },
-    fetch: async (url, init) => {
-      fetched.push({ url, init })
-      return fetchResult()
     },
     libraries: () => libraries(),
   }
@@ -75,8 +68,8 @@ async function update(section: string, body: unknown, headers: Record<string, st
   return { status: response.status, text, json: JSON.parse(text) as Record<string, unknown>, headers: response.headers }
 }
 
-async function probe(section: string) {
-  const response = await testSystemSettings(request("POST", `/api/v1/admin/system-settings/${section}/test`), section, deps())
+async function probe() {
+  const response = await testSystemSettings(request("POST", "/api/v1/admin/system-settings/biblioteca/test"), deps())
   return { status: response.status, json: JSON.parse(await response.text()) as Record<string, unknown> }
 }
 
@@ -90,8 +83,6 @@ beforeEach(() => {
   environment = { ...ENVIRONMENT }
   limiter = createRateLimiter()
   writes = []
-  fetched = []
-  fetchResult = async () => new Response("{}", { status: 200 })
   libraries = async () => [{ code: "BC" }, { code: "BG" }]
 })
 
@@ -105,7 +96,7 @@ describe("PUT admin/system-settings/{section}", () => {
       return
     }
     expect(response.status).toBe(200)
-    const saved = Object.fromEntries(writes.map((write) => [write.field, write.field === "ai.api_key" && typeof write.value === "string" ? decrypt(write.value, testKey, false) : write.value]))
+    const saved = Object.fromEntries(writes.map((write) => [write.field, write.value]))
     expect(saved).toEqual(sample.settings)
   })
 
@@ -127,7 +118,6 @@ describe("PUT admin/system-settings/{section}", () => {
     const on = await update("asistente-docente", { enabled: true })
     expect(on.status).toBe(200)
     expect(on.json.teacher_assistant).toEqual({ enabled: { value: true, source: "pantalla" } })
-    expect(on.json.ai).toMatchObject({ driver: { value: "deepseek", source: "entorno" } })
     expect(writes).toEqual([{ field: "teacher_assistant.enabled", value: true, actorId: golden.userId, at: NOW }])
 
     writes = []
@@ -147,19 +137,19 @@ describe("PUT admin/system-settings/{section}", () => {
     expect(writes).toEqual([])
   })
 
-  it("encrypts a new AI key, keeps it when omitted and clears it on request", async () => {
-    const base = { current_password: PASSWORD, driver: "deepseek", base_url: "https://api.deepseek.com/", model: "deepseek-chat", connect_timeout: 2, timeout: 50 }
-    await update("ia", { ...base, api_key: "sk-nueva" })
-    const key = writes.find((write) => write.field === "ai.api_key")
-    expect(typeof key?.value === "string" && decrypt(key.value, testKey, false)).toBe("sk-nueva")
-    expect(writes.find((write) => write.field === "ai.base_url")?.value).toBe("https://api.deepseek.com")
-    writes = []
-    const kept = await update("ia", base)
-    expect(writes.map((write) => write.field)).not.toContain("ai.api_key")
-    expect((kept.json.ai as Record<string, unknown>).api_key).toEqual({ configured: true, source: "pantalla" })
-    writes = []
-    await update("ia", { ...base, clear_api_key: true })
-    expect(writes.find((write) => write.field === "ai.api_key")?.value).toBeNull()
+  it("never saves a section it does not know, such as the removed AI one, even with the right password", async () => {
+    const rejected = await update("ia", { current_password: PASSWORD, driver: "disabled", api_key: "sk-nueva", connect_timeout: 2, timeout: 50 })
+    expect(rejected.status).toBe(422)
+    expect(writes).toEqual([])
+  })
+
+  it("saves the library only with the current password", async () => {
+    const library = { driver: "koha", base_url: "https://biblioteca.ueb.edu.ec/" }
+    expect((await update("biblioteca", library)).status).toBe(422)
+    expect((await update("biblioteca", { ...library, current_password: "otra" })).status).toBe(422)
+    expect(writes).toEqual([])
+    expect((await update("biblioteca", { ...library, current_password: PASSWORD })).status).toBe(200)
+    expect(writes.map((write) => [write.field, write.value])).toEqual([["library.driver", "koha"], ["library.base_url", "https://biblioteca.ueb.edu.ec"]])
   })
 
   it("answers 500 when the current password is a list, like PHP's password_verify", async () => {
@@ -179,38 +169,14 @@ describe("PUT admin/system-settings/{section}", () => {
   })
 })
 
-describe("POST admin/system-settings/{section}/test", () => {
-  it("checks the AI provider with the saved key and reports Laravel's messages", async () => {
-    stored.set("ai.api_key", encrypt("sk-guardada", testKey, false))
-    expect(await probe("ia")).toEqual({ status: 200, json: { ok: true, message: "Conexión correcta con el proveedor de IA" } })
-    expect(fetched[0].url).toBe("https://api.deepseek.com/models")
-    expect(new Headers(fetched[0].init.headers).get("authorization")).toBe("Bearer sk-guardada")
-    expect(fetched[0].init.redirect).toBe("manual")
-    fetchResult = async () => new Response("", { status: 401 })
-    expect((await probe("ia")).json).toEqual({ ok: false, message: "El proveedor no aceptó la clave" })
-    fetchResult = async () => new Response("", { status: 302 })
-    expect((await probe("ia")).json).toEqual({ ok: false, message: "El proveedor de IA respondió con un error (302)" })
-    fetchResult = async () => Promise.reject(new TypeError("fetch failed"))
-    expect((await probe("ia")).json).toEqual({ ok: false, message: "No se pudo conectar con el proveedor de IA" })
-  })
-
-  it("explains why the AI test cannot run", async () => {
-    environment = { ...ENVIRONMENT, AI_DRIVER: "disabled" }
-    expect((await probe("ia")).json).toEqual({ ok: false, message: "El asistente de IA está desactivado" })
-    environment = { ...ENVIRONMENT, AI_API_KEY: "  " }
-    expect((await probe("ia")).json).toEqual({ ok: false, message: "Falta la clave del proveedor de IA" })
-    environment = { ...ENVIRONMENT, AI_BASE_URL: "http://api.deepseek.com" }
-    expect((await probe("ia")).json).toEqual({ ok: false, message: "La dirección del proveedor debe empezar con https://" })
-    expect(fetched).toEqual([])
-  })
-
+describe("POST admin/system-settings/biblioteca/test", () => {
   it("counts the Koha libraries", async () => {
-    expect((await probe("biblioteca")).json).toEqual({ ok: true, message: "Conexión correcta: 2 bibliotecas" })
+    expect((await probe()).json).toEqual({ ok: true, message: "Conexión correcta: 2 bibliotecas" })
     libraries = async () => [{ code: "BC" }]
-    expect((await probe("biblioteca")).json).toEqual({ ok: true, message: "Conexión correcta: 1 biblioteca" })
+    expect((await probe()).json).toEqual({ ok: true, message: "Conexión correcta: 1 biblioteca" })
     libraries = async () => Promise.reject(new Error("caído"))
-    expect((await probe("biblioteca")).json).toEqual({ ok: false, message: "No se pudo consultar el catálogo de la biblioteca" })
+    expect((await probe()).json).toEqual({ ok: false, message: "No se pudo consultar el catálogo de la biblioteca" })
     environment = { ...ENVIRONMENT, CATALOG_DRIVER: "disabled" }
-    expect((await probe("biblioteca")).json).toEqual({ ok: false, message: "La búsqueda en la biblioteca está desactivada" })
+    expect((await probe()).json).toEqual({ ok: false, message: "La búsqueda en la biblioteca está desactivada" })
   })
 })
