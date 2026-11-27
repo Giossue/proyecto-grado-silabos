@@ -99,18 +99,19 @@ export function ScreenHelpButton({ editorMode = false, anchored = false }: { edi
             className={cn(
               "fixed scroll-lock-offset z-40 size-12 rounded-full bg-ring text-background shadow-menu hover:bg-ring/90 [&_svg]:size-5",
               anchored && "sm:absolute",
-              "left-4", editorMode ? "max-sm:bottom-20" : "max-sm:bottom-(--page-mobile-actions-bottom)",
+              "left-4 sm:right-4 sm:left-auto", editorMode ? "max-sm:bottom-20" : "max-sm:bottom-(--page-mobile-actions-bottom)",
               editorMode ? "sm:bottom-4" : "sm:bottom-20",
               "max-sm:transition-all max-sm:duration-200 max-sm:ease-out",
               hidden && "max-sm:pointer-events-none max-sm:translate-y-24 max-sm:opacity-0",
             )}
             aria-label="Ayuda de esta pantalla"
+            data-floating-tool=""
             onClick={() => void start()}
           >
             <CircleHelp aria-hidden="true" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="right">Ayuda de esta pantalla</TooltipContent>
+        <TooltipContent side="left">Ayuda de esta pantalla</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   )

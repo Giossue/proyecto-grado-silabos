@@ -31,7 +31,7 @@ describe("ScreenHelpButton", () => {
     sessionState.clear()
   })
 
-  it("sin menú lateral, como en la revisión, queda fijo abajo a la izquierda de la ventana", async () => {
+  it("sin menú lateral, como en la revisión, queda fijo abajo a la derecha de la ventana (a la izquierda en celular)", async () => {
     vi.mocked(listAvailableScreenHelp).mockResolvedValue({ help: [help] })
     signIn()
     renderWithProviders(<main><ScreenHelpButton editorMode /></main>)
@@ -39,7 +39,7 @@ describe("ScreenHelpButton", () => {
 
     expect(button()).toHaveClass("fixed", "left-4", "sm:bottom-4")
     expect(button()).not.toHaveClass("sm:absolute")
-    expect(button()).not.toHaveClass("sm:right-4")
+    expect(button()).toHaveClass("sm:right-4", "sm:left-auto")
   })
 
   it("sin elementos que señalar, la guía muestra el texto completo de la pantalla", async () => {
@@ -91,7 +91,7 @@ describe("ScreenHelpButton", () => {
     await flush()
 
     expect(button()).toHaveClass("fixed", "sm:bottom-20", "left-4")
-    expect(button()).not.toHaveClass("sm:right-4")
+    expect(button()).toHaveClass("sm:right-4", "sm:left-auto")
   })
 
   it("en el editor de la plantilla va abajo a la izquierda, lejos del botón «Asistente»", async () => {
@@ -101,7 +101,7 @@ describe("ScreenHelpButton", () => {
     await flush()
 
     expect(button()).toHaveClass("left-4", "sm:bottom-4", "max-sm:bottom-20")
-    expect(button()).not.toHaveClass("sm:right-4")
+    expect(button()).toHaveClass("sm:right-4", "sm:left-auto")
   })
 
   it("en móvil se esconde al bajar y reaparece al subir, como los botones principales", async () => {

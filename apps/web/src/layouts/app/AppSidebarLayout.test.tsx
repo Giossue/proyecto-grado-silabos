@@ -183,7 +183,7 @@ describe("AppSidebarLayout", () => {
     expect(sessionState.current.value?.active_role).toBeNull()
   })
 
-  it("la ayuda y la accesibilidad flotan siempre a la izquierda del contenido, sin tapar el menú lateral", async () => {
+  it("la ayuda y la accesibilidad flotan abajo a la derecha del contenido, apiladas sobre los otros botones", async () => {
     vi.mocked(listAvailableScreenHelp).mockResolvedValueOnce({ help: [{ screen: "/admin/periodos", title: "Periodos", content: "Ayuda" }] })
     await act(() => screenHelpState.load())
     await mountShell()
@@ -192,10 +192,12 @@ describe("AppSidebarLayout", () => {
 
     expect(help.closest("#contenido")).not.toBeNull()
     expect(help).toHaveClass("sm:absolute", "left-4")
-    expect(help).not.toHaveClass("sm:right-4")
-    expect(accessibility).toHaveClass("absolute", "left-4")
+    expect(help).toHaveClass("sm:right-4", "sm:left-auto")
+    expect(help).toHaveAttribute("data-floating-tool")
+    expect(accessibility).toHaveClass("absolute", "right-4")
+    expect(accessibility).toHaveAttribute("data-floating-tool")
     expect(accessibility).not.toHaveClass("fixed")
-    expect(accessibility).not.toHaveClass("right-4")
+    expect(accessibility).not.toHaveClass("left-4")
   })
 
   it("permite alternar el tema desde el menú de usuario, no desde la barra, y conserva la preferencia", async () => {

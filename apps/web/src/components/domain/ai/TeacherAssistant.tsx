@@ -129,6 +129,7 @@ export function TeacherAssistant({ syllabusId, chat, open, onOpenChange, onBefor
           id={PANEL_ID}
           tabIndex={-1}
           aria-label="Asistente IA"
+          data-assistant-panel=""
           className="fixed right-6 bottom-24 scroll-lock-offset z-40 h-[min(var(--layout-assistant-height),calc(100dvh-7rem))] w-(--layout-syllabus-aside-width) max-w-[calc(100vw-2rem)] outline-hidden max-sm:inset-x-4 max-sm:top-20 max-sm:right-4 max-sm:bottom-[calc(var(--page-mobile-actions-bottom)+4.25rem)] max-sm:h-auto max-sm:w-auto"
           onKeyDown={(event) => {
             if (event.key === "Escape" && !event.defaultPrevented) close()
@@ -247,6 +248,7 @@ export function TeacherAssistant({ syllabusId, chat, open, onOpenChange, onBefor
         ref={toggleButton}
         type="button"
         data-tour="teacher-assistant"
+        data-floating-anchor=""
         className={cn(
           "fixed right-6 bottom-6 scroll-lock-offset z-40 h-12 rounded-full px-5 shadow-menu transition-[color,background-color,box-shadow,translate,opacity]",
           "max-sm:right-[calc(var(--page-mobile-actions-right)+4.25rem)] max-sm:bottom-[calc(var(--page-mobile-actions-bottom)+0.25rem)]",

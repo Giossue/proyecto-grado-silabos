@@ -989,8 +989,18 @@
     --driver-popover-font-family: var(--font-sans, inherit);
     color: var(--card-foreground);
 }
+@media (width >= 40rem) {
+    body:has(.setup-checklist .driver-checklist-launcher, [data-floating-anchor]) [data-floating-tool] {
+        translate: 0 -4rem;
+    }
+
+    body:has([data-assistant-panel]) [data-floating-tool] {
+        visibility: hidden;
+    }
+}
+
 .driver-checklist.setup-checklist {
-    z-index: 40;
+    z-index: 41;
     margin-right: var(--removed-body-scroll-bar-size, 0px);
     --driver-checklist-offset-x: 1rem;
     --driver-checklist-offset-y: 1rem;
