@@ -146,14 +146,11 @@ describe("proposals", () => {
 
     const outcome = await run()
 
-    const snapshot = await snapshotOf(world)
-    const target = snapshot.fields.find((readable) => readable.field.key === "descripcion")!.targets[0]
     expect(outcome).toMatchObject({ status: "completado", message: "Le propongo una descripción.", errorCode: null, steps: 2, gatewayVersion: "guion" })
     expect(outcome.proposals).toEqual([
       {
         fieldId: await idOf("descripcion"),
         target: { kind: "campo", space: null, fieldKey: "descripcion", fieldLabel: "Descripción" },
-        baseHash: target.baseHash,
         text: "Estudia las redes de computadoras.",
         basis: "El objetivo general y las horas de la asignatura.",
       },

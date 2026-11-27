@@ -56,7 +56,7 @@ async function close(messageId: string, deps: Pick<TeacherAnswerDeps, "store" | 
   await deps.store.transaction(async (tx) => {
     const message = await tx.lockMessage(messageId)
     if (!isOpen(message)) return
-    await tx.updateAnswer(messageId, { state: "fallido", content: failure(error), sentFields: [], errorCode, completedAt: deps.now() })
+    await tx.updateAnswer(messageId, { state: "fallido", content: failure(error), sentFields: [], proposals: [], errorCode, completedAt: deps.now() })
   })
 }
 
@@ -75,16 +75,10 @@ async function complete(messageId: string, outcome: TeacherOutcome, deps: Teache
         version_pasarela: outcome.gatewayVersion,
       },
       sentFields: outcome.sentFields,
+      proposals: outcome.proposals.map((proposal) => ({ ...proposal, id: deps.newProposalId() })),
       errorCode: outcome.errorCode,
       completedAt: deps.now(),
     })
-    if (outcome.proposals.length === 0) return
-    await tx.replacePendingProposals(
-      message.syllabusId,
-      message.userId,
-      outcome.proposals.map((proposal) => ({ fieldId: proposal.fieldId, space: proposal.target.space })),
-    )
-    for (const [position, proposal] of outcome.proposals.entries()) await tx.insertProposal({ ...proposal, id: deps.newProposalId(), messageId, position })
   })
 }
 
@@ -92,7 +86,7 @@ export async function answerTeacherAssistant(messageId: string, deps: TeacherAns
   const message = await deps.store.transaction(async (tx) => {
     const locked = await tx.lockMessage(messageId)
     if (!isOpen(locked)) return null
-    await tx.updateAnswer(messageId, { state: "en_ejecucion", content: locked.content, sentFields: [], errorCode: null, completedAt: null })
+    await tx.updateAnswer(messageId, { state: "en_ejecucion", content: locked.content, sentFields: [], proposals: [], errorCode: null, completedAt: null })
     return locked
   })
   if (message === null) return

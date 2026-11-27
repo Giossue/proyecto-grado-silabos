@@ -7,7 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import golden from "../../server/http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../../server/auth/testing"
 import type { TeacherAssistantRouteDeps } from "../../server/ai/teacherAssistantRoutes"
-import { CAREER_ID, fakeTeacherStore, storeWorld, SYLLABUS_ID, type StoreWorld } from "../../server/ai/teacherStoreTesting"
+import { CAREER_ID, fakeTeacherStore, storeWorld, SYLLABUS_ID, type StoreWorld, proposalsIn } from "../../server/ai/teacherStoreTesting"
 import { assistantSnapshot } from "../../server/ai/teacherContext"
 import { fieldByKey, templatesOf } from "../../server/ai/teacherTesting"
 import { testConfig } from "../../server/ai/testing"
@@ -103,24 +103,18 @@ async function seedProposals(): Promise<void> {
   const snapshot = assistantSnapshot({ template: world.template, templates: await templatesOf(world), values: world.values, allowedKeys: world.allowed, academicContext: world.context })
   const readable = snapshot.fields[0]
   const target = readable.targets[0]
-  const base = { syllabusId: SYLLABUS_ID, userId: golden.userId, sentFields: [], errorCode: null, createdAt: world.clock }
-  world.messages = [
-    { ...base, id: "a1", role: "usuario", state: "completado", replyTo: null, content: { texto: "Pedido" }, key: "k" },
-    { ...base, id: "b1", role: "asistente", state: "completado", replyTo: "a1", content: { texto: "Hecho." }, key: null },
-  ]
-  world.proposals = [PROPOSAL, SECOND].map((id, position) => ({
+  const base = { syllabusId: SYLLABUS_ID, userId: golden.userId, sentFields: [], proposals: [], errorCode: null, createdAt: world.clock }
+  const proposals = [PROPOSAL, SECOND].map((id) => ({
     id,
-    messageId: "b1",
-    syllabusId: SYLLABUS_ID,
-    userId: golden.userId,
-    position,
-    state: "pendiente",
     fieldId: fieldByKey(world.template, "descripcion").id,
     target: { kind: target.kind, space: target.space, fieldKey: "descripcion", fieldLabel: "Descripción" },
-    baseHash: target.baseHash,
     text: "Estudia redes.",
     basis: "Los datos.",
   }))
+  world.messages = [
+    { ...base, id: "a1", role: "usuario", state: "completado", replyTo: null, content: { texto: "Pedido" }, key: "k" },
+    { ...base, id: "b1", role: "asistente", state: "completado", replyTo: "a1", content: { texto: "Hecho." }, proposals, key: null },
+  ]
 }
 
 describe("the teacher assistant routes served by Nest", () => {
@@ -145,7 +139,7 @@ describe("the teacher assistant routes served by Nest", () => {
     const discarded = await call("post", `${PATH}/proposals/${SECOND}/discard`)
 
     expect([accepted.status, discarded.status]).toEqual([404, 404])
-    expect(world.proposals.map((item) => item.state)).toEqual(["pendiente", "pendiente"])
+    expect(proposalsIn(world).map((item) => item.state)).toEqual(["pendiente", "pendiente"])
   })
 
   it("ask for a session and find the syllabus before anything else", async () => {

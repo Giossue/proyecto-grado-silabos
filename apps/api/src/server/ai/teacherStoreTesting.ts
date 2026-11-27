@@ -1,6 +1,6 @@
 import { fakeTemplateStore } from "../configuration/testing"
 import type { DraftSyllabus } from "../syllabus/draftField"
-import { OPEN_ANSWER_STATES, type TeacherAssistantStore, type TeacherAssistantTx, type TeacherMessage, type TeacherProposal } from "./teacherAssistantStore"
+import { OPEN_ANSWER_STATES, proposalsOf, type TeacherAssistantStore, type TeacherAssistantTx, type TeacherMessage, type TeacherProposal } from "./teacherAssistantStore"
 import type { SyllabusReading } from "./teacherContext"
 import { SUBJECT_ID, teacherWorld, type TeacherWorld } from "./teacherTesting"
 
@@ -13,7 +13,6 @@ export type StoreWorld = TeacherWorld & {
   facts: Omit<DraftSyllabus, "id" | "currentTeacher">
   version: number
   messages: TeacherMessage[]
-  proposals: TeacherProposal[]
   deleted: Set<string>
   clock: number
 }
@@ -37,7 +36,6 @@ export function storeWorld(userId: string, allowed: string[] = []): StoreWorld {
     },
     version: 3,
     messages: [],
-    proposals: [],
     deleted: new Set(),
     clock: 1_800_000_000,
   }
@@ -46,6 +44,15 @@ export function storeWorld(userId: string, allowed: string[] = []): StoreWorld {
 const copy = <T>(value: T): T => structuredClone(value)
 const stored = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 const open = (message: TeacherMessage) => message.role === "asistente" && OPEN_ANSWER_STATES.includes(message.state)
+
+export function proposalsIn(world: StoreWorld): TeacherProposal[] {
+  const conversations = new Map<string, TeacherMessage[]>()
+  for (const message of world.messages) {
+    const key = `${message.syllabusId}:${message.userId}`
+    conversations.set(key, [...(conversations.get(key) ?? []), message])
+  }
+  return [...conversations.values()].flatMap((messages) => structuredClone(proposalsOf(messages)))
+}
 
 export function fakeTeacherStore(world: StoreWorld): TeacherAssistantStore {
   const reading: SyllabusReading = {
@@ -85,8 +92,8 @@ export function fakeTeacherStore(world: StoreWorld): TeacherAssistantStore {
         return result
       },
       insertMessage: async (message) => {
-        const row: TeacherMessage = { ...stored(message), sentFields: [], errorCode: null, createdAt: world.clock }
-        if (open(row) && mine(row.syllabusId, row.userId).some(open)) throw new Error("mensajes_ia_docente_pedido_abierto_unica")
+        const row: TeacherMessage = { ...stored(message), sentFields: [], proposals: [], errorCode: null, createdAt: world.clock }
+        if (open(row) && mine(row.syllabusId, row.userId).some(open)) throw new Error("mensajes_ia_pedido_abierto_unica")
         write(() => {
           world.messages.push(row)
           return () => void (world.messages = world.messages.filter((item) => item.id !== row.id))
@@ -97,24 +104,10 @@ export function fakeTeacherStore(world: StoreWorld): TeacherAssistantStore {
         write(() => {
           const before = copy(world.messages.find((message) => message.id === id)!)
           world.messages = world.messages.map((message) =>
-            message.id === id ? { ...message, state: change.state, content: stored(change.content), sentFields: [...change.sentFields], errorCode: change.errorCode } : message,
+            message.id === id ? { ...message, state: change.state, content: stored(change.content), sentFields: [...change.sentFields], proposals: stored(change.proposals), errorCode: change.errorCode } : message,
           )
           return () => void (world.messages = world.messages.map((message) => (message.id === id ? before : message)))
         })
-      },
-      replacePendingProposals: async (syllabusId, userId, targets) => {
-        world.proposals = world.proposals.map((proposal) =>
-          proposal.syllabusId === syllabusId &&
-          proposal.userId === userId &&
-          proposal.state === "pendiente" &&
-          targets.some((target) => target.fieldId === proposal.fieldId && target.space === proposal.target.space)
-            ? { ...proposal, state: "reemplazada" }
-            : proposal,
-        )
-      },
-      insertProposal: async (proposal) => {
-        const message = world.messages.find((item) => item.id === proposal.messageId)!
-        world.proposals.push({ ...stored(proposal), syllabusId: message.syllabusId, userId: message.userId, state: "pendiente" })
       },
     }
   }
@@ -126,23 +119,22 @@ export function fakeTeacherStore(world: StoreWorld): TeacherAssistantStore {
     message: async (id) => found(world.messages, id),
     conversation: async (syllabusId, userId, limit) => {
       const messages = copy(mine(syllabusId, userId).slice(-limit))
-      return { messages, proposals: copy(world.proposals.filter((proposal) => messages.some((message) => message.id === proposal.messageId))) }
+      return { messages, proposals: copy(proposalsOf(messages)) }
     },
     earlierTurns: async (question, limit) => {
       const own = mine(question.syllabusId, question.userId)
       const position = own.findIndex((message) => message.id === question.id)
-      return own
+      const answers = own
         .slice(0, position)
         .filter((message) => message.role === "asistente" && message.state === "completado")
         .slice(-limit)
-        .map((answer) => ({
-          question: String(own.find((message) => message.id === answer.replyTo)!.content.texto),
-          answer: String(answer.content.texto),
-          proposals: world.proposals
-            .filter((proposal) => proposal.messageId === answer.id)
-            .map((proposal) => ({ label: proposal.target.fieldLabel, state: proposal.state, text: proposal.text })),
-          sentFields: [...answer.sentFields],
-        }))
+      const proposals = proposalsOf(answers)
+      return answers.map((answer) => ({
+        question: String(own.find((message) => message.id === answer.replyTo)!.content.texto),
+        answer: String(answer.content.texto),
+        proposals: proposals.filter((proposal) => proposal.messageId === answer.id).map((proposal) => ({ label: proposal.target.fieldLabel, state: proposal.state, text: proposal.text })),
+        sentFields: [...answer.sentFields],
+      }))
     },
     async transaction(work) {
       const held: (() => void)[] = []

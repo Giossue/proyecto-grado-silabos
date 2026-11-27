@@ -8,7 +8,7 @@ import { userTag } from "./templateAssistant"
 import { answerTeacherAssistant, failTeacherAssistant, teacherSessionOn, type TeacherAnswerDeps } from "./teacherAnswerJob"
 import { TEACHER_NOT_ALLOWED } from "./teacherAssistant"
 import type { TeacherMessage } from "./teacherAssistantStore"
-import { CAREER_ID, fakeTeacherStore, storeWorld, SYLLABUS_ID, type StoreWorld } from "./teacherStoreTesting"
+import { CAREER_ID, fakeTeacherStore, storeWorld, SYLLABUS_ID, type StoreWorld, proposalsIn } from "./teacherStoreTesting"
 import {
   coordinationWrites,
   COORDINATOR_NAME,
@@ -74,7 +74,7 @@ function asks(text: string, userId = TEACHER, syllabusId = SYLLABUS_ID): string 
   world.clock++
   const question = nextId("a0000000")
   const answer = nextId("b0000000")
-  const base = { syllabusId, userId, sentFields: [], errorCode: null, createdAt: world.clock }
+  const base = { syllabusId, userId, sentFields: [], proposals: [], errorCode: null, createdAt: world.clock }
   world.messages.push(
     { ...base, id: question, role: "usuario", state: "completado", replyTo: null, content: { texto: text }, key: question },
     { ...base, id: answer, role: "asistente", state: "pendiente", replyTo: question, content: { texto: "" }, key: null },
@@ -107,7 +107,7 @@ describe("the job that answers the teacher", () => {
 
     expect(answerOf(id)).toMatchObject({ state: "completado", errorCode: null, content: { texto: "Le propongo esto.", pasos: 2, version_pasarela: "guion", uso: { prompt: 200, completion: 20, cached: 160 } } })
     expect(answerOf(id).sentFields.toSorted()).toEqual([idOf("descripcion"), idOf("objetivo_general")].toSorted())
-    expect(world.proposals).toMatchObject([
+    expect(proposalsIn(world)).toMatchObject([
       { messageId: id, syllabusId: SYLLABUS_ID, userId: TEACHER, position: 0, state: "pendiente", fieldId: idOf("descripcion"), text: "Estudia redes.", basis: "El objetivo general.", target: { kind: "campo", fieldKey: "descripcion" } },
     ])
   })
@@ -171,7 +171,7 @@ describe("the job that answers the teacher", () => {
 
     expect(gateway.requests).toEqual([])
     expect(answerOf(id)).toMatchObject({ state: "fallido", errorCode: "no_permitido", content: { texto: "", error: TEACHER_NOT_ALLOWED } })
-    expect(world.proposals).toEqual([])
+    expect(proposalsIn(world)).toEqual([])
   })
 
   it("stops between two calls when the switch is turned off while it works", async () => {
@@ -190,7 +190,7 @@ describe("the job that answers the teacher", () => {
 
     expect(answerOf(id)).toMatchObject({ state: "fallido", errorCode: BUSY, content: { texto: "", error: "El asistente está ocupado. Inténtelo en unos minutos." } })
     expect(JSON.stringify(answerOf(id))).not.toContain("detalle del proveedor")
-    expect(world.proposals).toEqual([])
+    expect(proposalsIn(world)).toEqual([])
   })
 
   it("lets an unexpected error reach the queue, which marks the job as failed", async () => {
@@ -221,14 +221,14 @@ describe("the job that answers the teacher", () => {
     await answerTeacherAssistant(id, deps())
 
     expect(world.messages).toEqual([])
-    expect(world.proposals).toEqual([])
+    expect(proposalsIn(world)).toEqual([])
   })
 
   it("replaces a pending proposal only for the same target", async () => {
     await ask("Uno", read("descripcion", "objetivo_general"), reply("Dos propuestas.", proposal("descripcion", "Primera"), proposal("objetivo_general", "Otra")))
     await ask("Dos", read("descripcion"), reply("Nueva.", proposal("descripcion", "Segunda")))
 
-    expect(world.proposals.map((item) => [item.text, item.state])).toEqual([
+    expect(proposalsIn(world).map((item) => [item.text, item.state])).toEqual([
       ["Primera", "reemplazada"],
       ["Otra", "pendiente"],
       ["Segunda", "pendiente"],
@@ -314,6 +314,6 @@ describe("conversations of two teachers", () => {
     expect(gateway.requests[0].messages).toHaveLength(1)
     expect(sent()).not.toContain("DEL-PRIMERO")
     expect(gateway.requests[0].userTag).toBe(userTag(OTHER_TEACHER, "clave-de-prueba", "doc"))
-    expect(world.proposals.map((item) => [item.userId, item.state])).toEqual([[TEACHER, "pendiente"]])
+    expect(proposalsIn(world).map((item) => [item.userId, item.state])).toEqual([[TEACHER, "pendiente"]])
   })
 })

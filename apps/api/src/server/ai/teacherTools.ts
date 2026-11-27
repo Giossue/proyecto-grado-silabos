@@ -12,7 +12,7 @@ const MESSAGE_CHARACTERS = 4000
 const BASIS_CHARACTERS = 600
 
 export type ProposalTarget = { kind: TargetKind; space: number | null; fieldKey: string; fieldLabel: string }
-export type OfferedProposal = { fieldId: string; target: ProposalTarget; baseHash: string; text: string; basis: string }
+export type OfferedProposal = { fieldId: string; target: ProposalTarget; text: string; basis: string }
 
 export type TeacherToolSession = { snapshot: AssistantSnapshot; read: Set<string>; delivered: ReadonlySet<string>; proposals: OfferedProposal[] }
 
@@ -76,7 +76,6 @@ function proposalOf(raw: unknown, position: number, session: TeacherToolSession,
   return {
     fieldId: readable.field.id,
     target: { kind: target.kind, space: target.space, fieldKey: readable.field.key, fieldLabel: readable.label },
-    baseHash: target.baseHash,
     text,
     basis: strLimit(basis, BASIS_CHARACTERS),
   }

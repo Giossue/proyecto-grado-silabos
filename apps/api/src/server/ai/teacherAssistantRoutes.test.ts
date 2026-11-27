@@ -8,7 +8,7 @@ import { institutionDay } from "./teacherQuota"
 import { aiConfig, type AiConfig } from "./config"
 import { answerTeacherAssistant } from "./teacherAnswerJob"
 import { sendTeacherAssistantMessage, showTeacherAssistant, type TeacherAssistantRouteDeps } from "./teacherAssistantRoutes"
-import { CAREER_ID, fakeTeacherStore, OTHER_SYLLABUS_ID, storeWorld, SYLLABUS_ID, type StoreWorld } from "./teacherStoreTesting"
+import { CAREER_ID, fakeTeacherStore, OTHER_SYLLABUS_ID, storeWorld, SYLLABUS_ID, type StoreWorld, proposalsIn } from "./teacherStoreTesting"
 import type { TeacherAssistantStore } from "./teacherAssistantStore"
 import { docOf, line, teacherWrites } from "./teacherTesting"
 import { call, resetCallSequence, scriptedGateway, testConfig } from "./testing"
@@ -111,7 +111,7 @@ async function answered(destinos: [string, string][], keys: string[] = ["descrip
     teacherSession: async () => ({ user: makeUser(), activeRole: sessions.assignments[0], eligibleRoles: sessions.assignments, session: { id: "", token: "", userId: TEACHER, activeRoleAssignmentId: null, cookies: [] } }),
     newProposalId: () => nextId("e0000000"),
   })
-  return world.proposals.slice(-destinos.length)
+  return proposalsIn(world).slice(-destinos.length)
 }
 
 const messagesOf = (response: { json: PhpRecord }) => response.json.messages as (PhpRecord & { proposals: PhpRecord[] })[]
@@ -184,14 +184,14 @@ describe("authorization of every route", () => {
   const routes = (options: Options) => [() => show(options), () => send("Pedido", KEY(50), options)]
 
   async function expectEverywhere(status: number, json: PhpRecord | null, options: Options = {}) {
-    const before = structuredClone({ messages: world.messages, proposals: world.proposals })
+    const before = structuredClone({ messages: world.messages, proposals: proposalsIn(world) })
     const queued = dispatched.length
     for (const route of routes(options)) {
       const response = await route()
       expect(response.status).toBe(status)
       if (json !== null) expect(response.json).toEqual(json)
     }
-    expect({ messages: world.messages, proposals: world.proposals }).toEqual(before)
+    expect({ messages: world.messages, proposals: proposalsIn(world) }).toEqual(before)
     expect(dispatched).toHaveLength(queued)
   }
 
@@ -226,10 +226,10 @@ describe("authorization of every route", () => {
     ["the provider is not configured", () => void (config = aiConfig({ AI_DRIVER: "deepseek" }))],
   ])("refuses to send when %s", async (_case, change) => {
     change()
-    const before = structuredClone({ messages: world.messages, proposals: world.proposals })
+    const before = structuredClone({ messages: world.messages, proposals: proposalsIn(world) })
 
     expect(await send("Pedido", KEY(51))).toMatchObject({ status: 422, json: { message: OFF, errors: { assistant: [OFF] } } })
-    expect({ messages: world.messages, proposals: world.proposals }).toEqual(before)
+    expect({ messages: world.messages, proposals: proposalsIn(world) }).toEqual(before)
     expect(dispatched).toHaveLength(1)
     enabled = true
     config = testConfig()

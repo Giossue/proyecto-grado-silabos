@@ -1,4 +1,3 @@
-import { definitionHash } from "../ficha/definitionHash"
 import { list, phpEquals, phpString, record, type PhpRecord } from "../configuration/phpValues"
 import { profileTemplates } from "../configuration/subjectProfileFields"
 import { fieldSection, teacherEditable, templateFields, type SyllabusTemplate, type TemplateField } from "../configuration/templatePresentation"
@@ -23,7 +22,6 @@ import {
 import type { TemplateStore } from "../shared/templateStore"
 import { draftDocument, draftFieldLimit, draftLimitProblem } from "../syllabus/draftField"
 import { buildIdentification } from "../syllabus/identificationCard"
-import { canonical } from "./php"
 import { aiReadableFields, holdsDisabilityData } from "./readableFields"
 
 export const SYSTEM_DATA = "[dato del sistema]"
@@ -72,7 +70,6 @@ export type AssistantTarget = {
   kind: TargetKind
   space: number | null
   path: number[]
-  baseHash: string
   text: string
   maxCharacters: number | null
 }
@@ -169,15 +166,13 @@ function textSpaces(mold: PhpRecord, node: PhpRecord, path: number[], inTable: b
   return actual.flatMap((child, index) => (expected[index] === undefined ? [] : textSpaces(expected[index], child, [...path, index], inTable || mold.type === "table", answers)))
 }
 
-const hashOf = (node: unknown): string => definitionHash(canonical(node))
-
 function targetsOf(key: string, source: unknown, document: PhpRecord, rendering: Omit<Rendering, "markers">): AssistantTarget[] {
   const { definition } = rendering
   const plain: Rendering = { ...rendering, markers: new Map() }
   const textOf = (node: PhpRecord) => sendable(tidy(innerText(node, plain, null)), definition)
   if (writtenWhole(source, definition)) {
     if (!plainOnly(document)) return []
-    return [{ name: key, kind: "campo", space: null, path: [], baseHash: hashOf(document), text: textOf(document), maxCharacters: null }]
+    return [{ name: key, kind: "campo", space: null, path: [], text: textOf(document), maxCharacters: null }]
   }
   if (!responsesEnabled(definition)) return []
   return textSpaces(answerShape(source, definition), document, [], false, rendering.answers).map(({ path, node }, index) => ({
@@ -185,7 +180,6 @@ function targetsOf(key: string, source: unknown, document: PhpRecord, rendering:
     kind: "espacio",
     space: index + 1,
     path,
-    baseHash: hashOf(node),
     text: textOf(node),
     maxCharacters: node.type === RESPONSE_NODE ? Number(record(node.attrs).maxLength ?? RESPONSE_CHARACTERS) : null,
   }))

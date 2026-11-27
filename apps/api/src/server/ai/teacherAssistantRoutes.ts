@@ -160,7 +160,7 @@ export function sendTeacherAssistantMessageFor(request: Request, auth: TeacherAs
       const open = await tx.openAnswer(syllabusId, userId)
       if (open !== null) {
         if (!isStale(open, deps.now())) refuse("busy", REQUEST_OPEN)
-        await tx.updateAnswer(open.id, { state: "fallido", content: { texto: "", error: TEACHER_UNAVAILABLE }, sentFields: [], errorCode: "asistente_fallido", completedAt: deps.now() })
+        await tx.updateAnswer(open.id, { state: "fallido", content: { texto: "", error: TEACHER_UNAVAILABLE }, sentFields: [], proposals: [], errorCode: "asistente_fallido", completedAt: deps.now() })
       }
       const limited = await gate.hit()
       if (limited !== null) {

@@ -7,13 +7,18 @@ import { createTemplateStore } from "../shared/templateStore"
 import type { DraftSyllabus } from "../syllabus/draftField"
 import { draftTx, syllabusFacts } from "../syllabus/draftFieldStore"
 import { allowedAiKeysOn } from "./readPermissionStore"
-import type { HistoryTurn, OfferedProposal } from "./teacherAssistant"
+import { openSessionSql } from "./sessionStore"
+import type { HistoryTurn, OfferedProposal, ProposalTarget } from "./teacherAssistant"
 import type { SyllabusReading } from "./teacherContext"
 
 export type TeacherMessageState = "pendiente" | "en_ejecucion" | "completado" | "fallido"
 export type TeacherProposalState = "pendiente" | "aceptada" | "descartada" | "reemplazada"
+type DecidedState = Extract<TeacherProposalState, "aceptada" | "descartada">
 
 export const OPEN_ANSWER_STATES: TeacherMessageState[] = ["pendiente", "en_ejecucion"]
+
+export type NewTeacherProposal = OfferedProposal & { id: string }
+export type TeacherOffer = NewTeacherProposal & { state?: DecidedState }
 
 export type TeacherMessage = {
   id: string
@@ -24,16 +29,15 @@ export type TeacherMessage = {
   replyTo: string | null
   content: PhpRecord
   sentFields: string[]
+  proposals: TeacherOffer[]
   errorCode: string | null
   key: string | null
   createdAt: number
 }
 
 export type NewTeacherMessage = Pick<TeacherMessage, "id" | "syllabusId" | "userId" | "role" | "state" | "replyTo" | "content" | "key">
-export type AnswerChange = { state: TeacherMessageState; content: PhpRecord; sentFields: string[]; errorCode: string | null; completedAt: number | null }
-export type NewTeacherProposal = OfferedProposal & { id: string; messageId: string; position: number }
-export type TeacherProposal = NewTeacherProposal & { syllabusId: string; userId: string; state: TeacherProposalState }
-export type ReplacedTarget = { fieldId: string; space: number | null }
+export type AnswerChange = { state: TeacherMessageState; content: PhpRecord; sentFields: string[]; proposals: NewTeacherProposal[]; errorCode: string | null; completedAt: number | null }
+export type TeacherProposal = NewTeacherProposal & { messageId: string; syllabusId: string; userId: string; position: number; state: TeacherProposalState }
 
 export interface TeacherAssistantTx {
   lockConversation(syllabusId: string, userId: string): Promise<void>
@@ -42,8 +46,6 @@ export interface TeacherAssistantTx {
   insertMessage(message: NewTeacherMessage): Promise<void>
   lockMessage(id: string): Promise<TeacherMessage | null>
   updateAnswer(id: string, change: AnswerChange): Promise<void>
-  replacePendingProposals(syllabusId: string, userId: string, targets: ReplacedTarget[]): Promise<void>
-  insertProposal(proposal: NewTeacherProposal): Promise<void>
 }
 
 export interface TeacherAssistantStore {
@@ -55,28 +57,62 @@ export interface TeacherAssistantStore {
   transaction<T>(work: (tx: TeacherAssistantTx) => Promise<T>): Promise<T>
 }
 
-const MESSAGE = Prisma.sql`select m.mensaje_ia_docente_id::text as id, m.silabo_id::text as "syllabusId", m.usuario_id::text as "userId", m.rol as role, m.estado as state,
-  m.respuesta_a_id::text as "replyTo", ${jsonText(Prisma.raw("m.contenido_mensaje"))} as content, m.campos_enviados::text[] as "sentFields", m.codigo_error as "errorCode",
-  m.clave_idempotencia as key, floor(extract(epoch from m.creado_en))::double precision as "createdAt"
-  from mensajes_ia_docente m`
+const sameTarget = (left: TeacherOffer, right: TeacherOffer) => left.fieldId === right.fieldId && left.target.space === right.target.space
 
-const PROPOSAL = Prisma.sql`select p.propuesta_ia_docente_id::text as id, p.mensaje_ia_docente_id::text as "messageId", m.silabo_id::text as "syllabusId", m.usuario_id::text as "userId",
-  p.posicion_propuesta as position, p.definicion_campo_id::text as "fieldId", ${jsonText(Prisma.raw("p.destino_propuesta"))} as target, p.huella_destino_base as "baseHash",
-  p.texto_propuesta as text, p.fundamento_propuesta as basis, p.estado_propuesta as state
-  from propuestas_ia_docente p inner join mensajes_ia_docente m on m.mensaje_ia_docente_id = p.mensaje_ia_docente_id`
+export function proposalsOf(conversation: TeacherMessage[]): TeacherProposal[] {
+  return conversation.flatMap((message, index) =>
+    message.proposals.map((offer, position) => {
+      const replaced = conversation.slice(index + 1).some((later) => later.proposals.some((next) => sameTarget(next, offer)))
+      return { ...offer, messageId: message.id, syllabusId: message.syllabusId, userId: message.userId, position, state: offer.state ?? (replaced ? "reemplazada" : "pendiente") }
+    }),
+  )
+}
 
-type MessageRow = Omit<TeacherMessage, "content"> & { content: string }
-type ProposalRow = Omit<TeacherProposal, "target"> & { target: string }
-type TurnRow = { id: string; question: string; answer: string; sentFields: string[] }
+type StoredOffer = { id: string; campo_id: string; destino: ProposalTarget; texto: string; fundamento: string; estado?: DecidedState }
+type MessageRow = Omit<TeacherMessage, "content" | "sentFields" | "proposals"> & { content: string }
 
-const messageOf = (row: MessageRow): TeacherMessage => ({ ...row, content: JSON.parse(row.content) as PhpRecord, createdAt: Number(row.createdAt) })
-const proposalOf = (row: ProposalRow): TeacherProposal => ({ ...row, position: Number(row.position), target: JSON.parse(row.target) as TeacherProposal["target"] })
+const offerOf = ({ id, campo_id, destino, texto, fundamento, estado }: StoredOffer): TeacherOffer => ({
+  id,
+  fieldId: campo_id,
+  target: destino,
+  text: texto,
+  basis: fundamento,
+  ...(estado === undefined ? {} : { state: estado }),
+})
 
-const conversationOf = (alias: string, syllabusId: string, userId: string) =>
-  Prisma.sql`${Prisma.raw(alias)}.silabo_id = ${syllabusId}::uuid and ${Prisma.raw(alias)}.usuario_id = ${userId}::uuid`
+const storedOffer = (offer: NewTeacherProposal): StoredOffer => ({ id: offer.id, campo_id: offer.fieldId, destino: offer.target, texto: offer.text, fundamento: offer.basis })
+
+function messageOf(row: MessageRow): TeacherMessage {
+  const { campos_enviados: sent, propuestas: offers, ...content } = JSON.parse(row.content) as PhpRecord
+  return {
+    ...row,
+    content,
+    sentFields: (sent as string[] | undefined) ?? [],
+    proposals: ((offers as StoredOffer[] | undefined) ?? []).map(offerOf),
+    createdAt: Number(row.createdAt),
+  }
+}
+
+function answerContent({ content, sentFields, proposals }: AnswerChange): PhpRecord {
+  return {
+    ...content,
+    ...(sentFields.length === 0 ? {} : { campos_enviados: sentFields }),
+    ...(proposals.length === 0 ? {} : { propuestas: proposals.map(storedOffer) }),
+  }
+}
+
+const COLUMNS = Prisma.sql`m.mensaje_ia_id::text as id, s.silabo_id::text as "syllabusId", s.usuario_id::text as "userId", m.rol as role, m.estado as state,
+  m.respuesta_a_id::text as "replyTo", ${jsonText(Prisma.raw("m.contenido_mensaje"))} as content, m.codigo_error as "errorCode",
+  m.clave_idempotencia as key, floor(extract(epoch from m.creado_en))::double precision as "createdAt"`
+
+const MESSAGES = Prisma.sql`from mensajes_ia m inner join sesiones_ia s on s.sesion_ia_id = m.sesion_ia_id`
+
+const ownedBy = (syllabusId: string, userId: string) => Prisma.sql`s.silabo_id = ${syllabusId}::uuid and s.usuario_id = ${userId}::uuid`
+const conversationOf = (syllabusId: string, userId: string) => Prisma.sql`${ownedBy(syllabusId, userId)} and s.cerrada_en is null`
+const teacherMessage = (id: string) => Prisma.sql`m.mensaje_ia_id = ${id}::uuid and s.silabo_id is not null`
 
 async function messageWhere(db: Db, where: Prisma.Sql, lock = false): Promise<TeacherMessage | null> {
-  const [row] = await db.$queryRaw<MessageRow[]>`${MESSAGE} where ${where} limit 1 ${lock ? Prisma.sql`for update` : Prisma.empty}`
+  const [row] = await db.$queryRaw<MessageRow[]>`select ${COLUMNS} ${MESSAGES} where ${where} limit 1 ${lock ? Prisma.sql`for update of m` : Prisma.empty}`
   return row ? messageOf(row) : null
 }
 
@@ -95,39 +131,28 @@ function readingOn(db: Db): SyllabusReading {
 export function teacherAssistantTx(db: Db): TeacherAssistantTx {
   return {
     async lockConversation(syllabusId, userId) {
-      await db.$executeRaw`select pg_advisory_xact_lock(hashtextextended(${`mensajes_ia_docente:${syllabusId}:${userId}`}, 0))`
+      await db.$executeRaw`select pg_advisory_xact_lock(hashtextextended(${`sesiones_ia:${syllabusId}:${userId}`}, 0))`
     },
     async answerByKey(syllabusId, userId, key) {
-      const [row] = await db.$queryRaw<{ id: string }[]>`select a.mensaje_ia_docente_id::text as id
-        from mensajes_ia_docente q inner join mensajes_ia_docente a on a.respuesta_a_id = q.mensaje_ia_docente_id
-        where ${conversationOf("q", syllabusId, userId)} and q.clave_idempotencia = ${key} limit 1`
+      const [row] = await db.$queryRaw<{ id: string }[]>`select a.mensaje_ia_id::text as id
+        from mensajes_ia q inner join sesiones_ia s on s.sesion_ia_id = q.sesion_ia_id
+          inner join mensajes_ia a on a.respuesta_a_id = q.mensaje_ia_id
+        where ${ownedBy(syllabusId, userId)} and q.clave_idempotencia = ${key} limit 1`
       return row?.id ?? null
     },
-    openAnswer: (syllabusId, userId) => messageWhere(db, Prisma.sql`${conversationOf("m", syllabusId, userId)} and m.estado = any(${OPEN_ANSWER_STATES}::text[])`, true),
+    openAnswer: (syllabusId, userId) => messageWhere(db, Prisma.sql`${conversationOf(syllabusId, userId)} and m.estado = any(${OPEN_ANSWER_STATES}::text[])`, true),
     async insertMessage(message) {
-      await db.$executeRaw`insert into mensajes_ia_docente (mensaje_ia_docente_id, silabo_id, usuario_id, respuesta_a_id, rol, estado, contenido_mensaje, clave_idempotencia)
-        values (${message.id}::uuid, ${message.syllabusId}::uuid, ${message.userId}::uuid, ${message.replyTo}::uuid, ${message.role}, ${message.state},
-          ${jsonbValue(JSON.stringify(message.content))}, ${message.key})`
+      await db.$executeRaw`${openSessionSql(message.userId, { syllabusId: message.syllabusId })}
+        insert into mensajes_ia (mensaje_ia_id, sesion_ia_id, respuesta_a_id, rol, estado, contenido_mensaje, clave_idempotencia)
+        select ${message.id}::uuid, sesion.sesion_ia_id, ${message.replyTo}::uuid, ${message.role}::text, ${message.state}::text,
+          ${jsonbValue(JSON.stringify(message.content))}, ${message.key}::text
+        from sesion`
     },
-    lockMessage: (id) => messageWhere(db, Prisma.sql`m.mensaje_ia_docente_id = ${id}::uuid`, true),
+    lockMessage: (id) => messageWhere(db, teacherMessage(id), true),
     async updateAnswer(id, change) {
-      await db.$executeRaw`update mensajes_ia_docente set estado = ${change.state}, contenido_mensaje = ${jsonbValue(JSON.stringify(change.content))},
-          campos_enviados = ${change.sentFields}::uuid[], codigo_error = ${change.errorCode},
-          completado_en = ${change.completedAt === null ? Prisma.sql`null` : fromEpoch(change.completedAt)}
-        where mensaje_ia_docente_id = ${id}::uuid and rol = 'asistente'`
-    },
-    async replacePendingProposals(syllabusId, userId, targets) {
-      for (const target of targets) {
-        await db.$executeRaw`update propuestas_ia_docente p set estado_propuesta = 'reemplazada' from mensajes_ia_docente m
-          where m.mensaje_ia_docente_id = p.mensaje_ia_docente_id and ${conversationOf("m", syllabusId, userId)} and p.estado_propuesta = 'pendiente'
-            and p.definicion_campo_id = ${target.fieldId}::uuid and (p.destino_propuesta ->> 'space') is not distinct from ${target.space === null ? null : String(target.space)}::text`
-      }
-    },
-    async insertProposal(proposal) {
-      await db.$executeRaw`insert into propuestas_ia_docente (propuesta_ia_docente_id, mensaje_ia_docente_id, posicion_propuesta, definicion_campo_id, destino_propuesta,
-          huella_destino_base, texto_propuesta, fundamento_propuesta)
-        values (${proposal.id}::uuid, ${proposal.messageId}::uuid, ${proposal.position}, ${proposal.fieldId}::uuid, ${jsonbValue(JSON.stringify(proposal.target))},
-          ${proposal.baseHash}, ${proposal.text}, ${proposal.basis})`
+      await db.$executeRaw`update mensajes_ia set estado = ${change.state}, contenido_mensaje = ${jsonbValue(JSON.stringify(answerContent(change)))},
+          codigo_error = ${change.errorCode}, completado_en = ${change.completedAt === null ? Prisma.sql`null` : fromEpoch(change.completedAt)}
+        where mensaje_ia_id = ${id}::uuid and rol = 'asistente'`
     },
   }
 }
@@ -136,31 +161,25 @@ export function createTeacherAssistantStore(prisma: PrismaService): TeacherAssis
   return {
     reading: readingOn(prisma),
     syllabus: (id, userId) => syllabusFacts(prisma, id, userId),
-    message: (id) => messageWhere(prisma, Prisma.sql`m.mensaje_ia_docente_id = ${id}::uuid`),
+    message: (id) => messageWhere(prisma, teacherMessage(id)),
     async conversation(syllabusId, userId, limit) {
-      const latest = await prisma.$queryRaw<MessageRow[]>`${MESSAGE} where ${conversationOf("m", syllabusId, userId)} order by m.creado_en desc limit ${limit}`
+      const latest = await prisma.$queryRaw<MessageRow[]>`select ${COLUMNS} ${MESSAGES} where ${conversationOf(syllabusId, userId)} order by m.creado_en desc limit ${limit}`
       const messages = latest.map(messageOf).reverse()
-      if (messages.length === 0) return { messages, proposals: [] }
-      const ids = messages.map((message) => message.id)
-      const proposals = await prisma.$queryRaw<ProposalRow[]>`${PROPOSAL} where p.mensaje_ia_docente_id = any(${ids}::uuid[]) order by p.posicion_propuesta`
-      return { messages, proposals: proposals.map(proposalOf) }
+      return { messages, proposals: proposalsOf(messages) }
     },
     async earlierTurns(question, limit) {
-      const found = await prisma.$queryRaw<TurnRow[]>`select a.mensaje_ia_docente_id::text as id, q.contenido_mensaje ->> 'texto' as question,
-          a.contenido_mensaje ->> 'texto' as answer, a.campos_enviados::text[] as "sentFields"
-        from mensajes_ia_docente a inner join mensajes_ia_docente q on q.mensaje_ia_docente_id = a.respuesta_a_id
-          and q.silabo_id = a.silabo_id and q.usuario_id = a.usuario_id
-        where ${conversationOf("a", question.syllabusId, question.userId)} and a.rol = 'asistente' and a.estado = 'completado'
-          and a.creado_en < (select actual.creado_en from mensajes_ia_docente actual where actual.mensaje_ia_docente_id = ${question.id}::uuid)
-        order by a.creado_en desc limit ${limit}`
-      if (found.length === 0) return []
-      const ids = found.map((turn) => turn.id)
-      const proposals = (await prisma.$queryRaw<ProposalRow[]>`${PROPOSAL} where p.mensaje_ia_docente_id = any(${ids}::uuid[]) order by p.posicion_propuesta`).map(proposalOf)
-      return found.reverse().map(({ id, question: asked, answer, sentFields }) => ({
+      const found = await prisma.$queryRaw<(MessageRow & { question: string })[]>`select q.contenido_mensaje ->> 'texto' as question, ${COLUMNS} ${MESSAGES}
+          inner join mensajes_ia q on q.mensaje_ia_id = m.respuesta_a_id and q.sesion_ia_id = m.sesion_ia_id
+        where ${conversationOf(question.syllabusId, question.userId)} and m.rol = 'asistente' and m.estado = 'completado'
+          and m.creado_en < (select actual.creado_en from mensajes_ia actual where actual.mensaje_ia_id = ${question.id}::uuid)
+        order by m.creado_en desc limit ${limit}`
+      const turns = found.reverse().map(({ question: asked, ...row }) => ({ asked, answer: messageOf(row) }))
+      const proposals = proposalsOf(turns.map((turn) => turn.answer))
+      return turns.map(({ asked, answer }) => ({
         question: asked,
-        answer,
-        sentFields,
-        proposals: proposals.filter((proposal) => proposal.messageId === id).map((proposal) => ({ label: proposal.target.fieldLabel, state: proposal.state, text: proposal.text })),
+        answer: String(answer.content.texto),
+        sentFields: answer.sentFields,
+        proposals: proposals.filter((proposal) => proposal.messageId === answer.id).map((proposal) => ({ label: proposal.target.fieldLabel, state: proposal.state, text: proposal.text })),
       }))
     },
     transaction: (work) => inTransaction(prisma, (tx) => work(teacherAssistantTx(tx))),
