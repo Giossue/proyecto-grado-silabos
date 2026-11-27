@@ -172,6 +172,7 @@ describe("NotificationsPopover", () => {
     await mountOpen(user)
 
     expect(document.body.textContent).toContain("No tiene notificaciones sin leer en este período")
+    expect(document.querySelector('[data-slot="empty"]')!.closest('[data-slot="card"]')).toBeNull()
   })
 
   it("sin ámbito elegido muestra el contexto y no ofrece la página completa", async () => {

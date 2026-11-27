@@ -9,11 +9,10 @@ import { ConvocationOpeningDialog } from "@/components/domain/syllabus/Convocati
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { afterDialogExit, useShownWhileClosing } from "@/lib/dialogExit"
 import { SERVER_ERROR, serverMessage, useSchemaForm } from "@/lib/forms"
 import { errorMessage } from "@/lib/queryClient"
-import { withoutFinalPeriod } from "@/lib/utils"
+import { setupChecklistState } from "@/state/setupChecklist"
 import { convocationTransitionSchema } from "@silabos/shared/schemas/syllabus"
 
 type Transition = "pausar" | "reanudar"
@@ -34,11 +33,10 @@ const DIALOGS: Record<Transition, { title: string; description: string; label: s
 
 type ConvocationActionsProps = {
   convocation: CoordinationConvocation
-  blockedReason?: string
   onChanged?: (message: string) => void
 }
 
-export function ConvocationActions({ convocation, blockedReason, onChanged }: ConvocationActionsProps) {
+export function ConvocationActions({ convocation, onChanged }: ConvocationActionsProps) {
   const [pending, setPending] = useState<Transition | null>(null)
   const shownPending = useShownWhileClosing(pending)
   const [openingOpen, setOpeningOpen] = useState(false)
@@ -68,22 +66,9 @@ export function ConvocationActions({ convocation, blockedReason, onChanged }: Co
   }
 
   const trigger =
-    convocation.convocation_id === null && !convocation.can_open && blockedReason ? (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="inline-flex" tabIndex={0}>
-              <Button type="button" disabled>
-                <Play data-icon="inline-start" aria-hidden="true" />
-                Abrir periodo académico
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{withoutFinalPeriod(blockedReason)}</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    ) : convocation.convocation_id === null ? (
-      <Button type="button" disabled={!convocation.can_open} onClick={() => setOpeningOpen(true)}>
+    convocation.convocation_id === null ? (
+      // With something left to do, the button opens «Antes de empezar», which says what is missing.
+      <Button type="button" onClick={() => (convocation.can_open ? setOpeningOpen(true) : setupChecklistState.requestOpen())}>
         <Play data-icon="inline-start" aria-hidden="true" />
         Abrir periodo académico
       </Button>

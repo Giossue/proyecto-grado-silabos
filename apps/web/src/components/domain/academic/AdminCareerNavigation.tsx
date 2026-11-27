@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { paths } from "@/lib/routes"
 
+/** The career Administration works on: `id` for the API, `code` for page addresses. */
+export type AdminCareer = { id: string; code: string }
+
 export type AdminCareerScreen = "curriculum" | "schedule" | "teachers" | "project"
 
 const screens: Array<{ value: AdminCareerScreen; label: string; icon: typeof BookOpenCheck; href: (career: string) => string }> = [
@@ -27,11 +30,11 @@ export function AdminCareerBackLink() {
   )
 }
 
-export function AdminCareerTabs({ careerId, current }: { careerId: string; current: AdminCareerScreen }) {
+export function AdminCareerTabs({ careerCode, current }: { careerCode: string; current: AdminCareerScreen }) {
   const router = useRouter()
   const go = (value: string): void => {
     const screen = screens.find((item) => item.value === value)
-    if (screen && screen.value !== current) router.push(screen.href(careerId))
+    if (screen && screen.value !== current) router.push(screen.href(careerCode))
   }
 
   return (

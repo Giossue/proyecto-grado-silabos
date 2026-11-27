@@ -70,7 +70,7 @@ export function createMallaDeps(prisma: PrismaService, mallas: MallaDeps["mallas
     mallas,
     mallaCodeTaken: (careerId, code, except) =>
       hasRows(
-        prisma.$queryRaw<unknown[]>`select mallas.malla_id from mallas where mallas.carrera_id = ${careerId}::uuid and mallas.codigo_malla = ${code}
+        prisma.$queryRaw<unknown[]>`select mallas.malla_id from mallas where mallas.carrera_id = ${careerId}::uuid and lower(mallas.codigo_malla) = lower(${code})
           ${except === null ? Prisma.empty : Prisma.sql`and mallas.malla_id <> ${except}::uuid`} limit 1`,
       ),
     transaction: (work) => inTransaction(prisma, (tx) => work(mallaTx(tx))),

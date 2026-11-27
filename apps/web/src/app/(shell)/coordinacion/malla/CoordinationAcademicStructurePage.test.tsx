@@ -310,7 +310,7 @@ describe("CoordinationAcademicStructurePage, varias mallas", () => {
 describe("CoordinationAcademicStructurePage para una carrera elegida por Administración", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    navigation.reset("/admin/estructura-academica/carreras/career-9/materias-asignaciones")
+    navigation.reset("/admin/carreras/RED/materias-asignaciones")
     vi.mocked(getMallas).mockResolvedValue([{ ...MALLAS[0], id: "malla-redes" }])
     vi.mocked(getCurriculum).mockResolvedValue({ ...curriculum(), career: { id: "career-9", name: "Redes", modality: null } } as unknown as Curriculum)
     vi.mocked(getScheduledSubjects).mockResolvedValue({ career: { id: "career-9", name: "Redes", lock_reason: null }, scheduledSubjects: [], options: { shiftOptions: [], activeSubjects: [] } } as never)
@@ -318,7 +318,7 @@ describe("CoordinationAcademicStructurePage para una carrera elegida por Adminis
   })
 
   it("lee la carrera indicada sin mirar el rol activo y muestra su nombre, la vuelta y las vistas de la carrera", async () => {
-    const view = renderWithProviders(<CoordinationAcademicStructurePage mode="curriculum" careerId="career-9" />)
+    const view = renderWithProviders(<CoordinationAcademicStructurePage mode="curriculum" adminCareer={{ id: "career-9", code: "RED" }} />)
     await flush()
 
     expect(getSession).not.toHaveBeenCalled()
@@ -333,13 +333,13 @@ describe("CoordinationAcademicStructurePage para una carrera elegida por Adminis
     expect([...document.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent)).toEqual(["Malla", "Materias y paralelos", "Docentes", "Proyecto de carrera"])
 
     fireEvent.mouseDown([...document.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent === "Materias y paralelos")!, { button: 0 })
-    expect(navigation.push).toHaveBeenLastCalledWith("/admin/estructura-academica/carreras/career-9/materias-asignaciones")
+    expect(navigation.push).toHaveBeenLastCalledWith("/admin/carreras/red/materias-asignaciones")
     view.unmount()
     expect(academicCareerScope()).toBeNull()
   })
 
   it("alinea con la malla la cabecera, los botones y las pestañas", async () => {
-    renderWithProviders(<CoordinationAcademicStructurePage mode="curriculum" careerId="career-9" />)
+    renderWithProviders(<CoordinationAcademicStructurePage mode="curriculum" adminCareer={{ id: "career-9", code: "RED" }} />)
     await flush()
     const tabsRow = (): HTMLElement => document.querySelector<HTMLElement>('[aria-label="Trabajo de la carrera"]')!.closest<HTMLElement>("[data-career-tabs]")!
     expect(tabsRow().getAttribute("style")).toBeNull()
@@ -361,7 +361,7 @@ describe("CoordinationAcademicStructurePage para una carrera elegida por Adminis
   })
 
   it("las demás vistas de la carrera muestran cabecera y pestañas sin esperar a ninguna malla", async () => {
-    renderWithProviders(<CoordinationAcademicStructurePage mode="schedule" careerId="career-9" />)
+    renderWithProviders(<CoordinationAcademicStructurePage mode="schedule" adminCareer={{ id: "career-9", code: "RED" }} />)
     await flush()
     expect(document.querySelector('[data-tour="page-header"]')!.classList).not.toContain("lg:invisible")
     expect(document.querySelector("[data-career-tabs]")!.classList).not.toContain("lg:invisible")

@@ -202,6 +202,15 @@ describe("POST /api/v1/admin/academic/careers/import", () => {
     ])
   })
 
+  it("rejects career codes outside the standard format and creates nothing", async () => {
+    const file = await xlsx([CAREERS_HEADER, [FACULTY_NAME, "Híbrida", "NC 1", "Con espacio", "3"], [FACULTY_NAME, "Híbrida", "NC-Ñ", "Con eñe", "3"], [FACULTY_NAME, "Híbrida", "NC-2", "Válida", "3"]])
+    const body = await json(await careers(file, { confirm: "1" }))
+    const message = "El código solo admite letras sin tilde, números y guiones simples (por ejemplo SW-B1-001)."
+    expect(body.rows.map((row: { errors: string[] }) => row.errors)).toEqual([[message], [message], []])
+    expect(body.created).toBe(0)
+    expect(state.careers).toHaveLength(1)
+  })
+
   it("validates the upload before the role and the role before reading the file", async () => {
     signIn("docente", CAREER)
     expect(await (await careers(null)).text()).toBe('{"message":"El campo archivo es obligatorio.","errors":{"file":["El campo archivo es obligatorio."]}}')
@@ -347,6 +356,14 @@ describe("POST /api/v1/coordination/academic/curriculum-import", () => {
     const generates = (code: string) => state.subjects.find((subject) => subject.code === code)?.columns.genera_silabo_asignatura
     expect(["SIL-001", "SIL-002", "SIL-003", "SIL-004"].map(generates)).toEqual([true, false, true, true])
     expect(state.subjects.filter((subject) => subject.cycle === 1).map((subject) => subject.position)).toEqual([0, 1, 2, 3, 4])
+  })
+
+  it("rejects subject codes outside the standard format", async () => {
+    const file = await xlsx([CURRICULUM_HEADER, ["SW_B1", "Guion bajo", "1", "Unidad básica", "", "1", "1", "1", "1", ""], ["SW-B1-009", "Válida", "1", "Unidad básica", "", "1", "1", "1", "1", ""]])
+    const body = await json(await curriculum(file, { confirm: "1" }))
+    expect(body.rows.map((row: { errors: string[] }) => row.errors)).toEqual([["El código solo admite letras sin tilde, números y guiones simples (por ejemplo SW-B1-001)."], []])
+    expect(body.created).toBe(0)
+    expect(state.subjects).toHaveLength(1)
   })
 
   it("keeps PHP's renumbered keys when codes are integers", async () => {

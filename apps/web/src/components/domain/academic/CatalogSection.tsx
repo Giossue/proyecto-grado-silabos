@@ -167,7 +167,7 @@ export function CatalogSection({ catalogs, options, onChanged }: CatalogSectionP
                 </TableCell>
                 <TableCell className="text-center" data-card-hide="true">{career ? (career.modality_label ?? "Sin modalidad") : "—"}</TableCell>
                 <TableCell className="text-center" data-card-hide="true" title="Ciclos de la malla vigente">{career ? (career.cycle_count ?? "Sin malla vigente") : "—"}</TableCell>
-                <TableCell>{career?.active ? <CareerWorkLinks careerId={career.id} careerName={career.name} /> : null}</TableCell>
+                <TableCell>{career?.active ? <CareerWorkLinks careerCode={career.code} careerName={career.name} /> : null}</TableCell>
               </TableRow>
             ))
           )}

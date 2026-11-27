@@ -24,7 +24,7 @@ describe("screen help about career teachers", () => {
 
 describe("screen help about bulk actions in the career project", () => {
   it("explains both bulk actions on the coordination and administration lists", () => {
-    for (const path of ["/coordinacion/proyecto-carrera", "/admin/estructura-academica/carreras/:career/proyecto-carrera"] as const) {
+    for (const path of ["/coordinacion/proyecto-carrera", "/admin/carreras/:career/proyecto-carrera"] as const) {
       const text = JSON.stringify(catalog[path])
       expect(text).toContain("«Acciones masivas»")
       expect(text).toContain("«Usar el texto de la plantilla»")

@@ -2,7 +2,7 @@
 
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
+import { notFound, useParams, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo } from "react"
 import { ApiError } from "@/api/client"
@@ -18,6 +18,7 @@ import { SortableHead, SortSelect, SortStatus } from "@/components/domain/TableS
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableEmpty, TableHeader, TableRow } from "@/components/ui/table"
+import { sameCode, useCodeLookup } from "@/composables/useCodeLookup"
 import { useClientPagination } from "@/composables/useClientPagination"
 import { useTableSort, type SortColumns, type TableSort } from "@/composables/useTableSort"
 import { formatDateDisplay } from "@/lib/dateDisplay"
@@ -25,7 +26,7 @@ import { syllabusStateLabel } from "@silabos/shared/lib/syllabusStates"
 import { goBack } from "@/lib/goBack"
 import { failedQuery, queryErrorMessage } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
-import { teacherHistoryCareerQuery } from "@/queries/teacher"
+import { teacherHistoryCareerQuery, teacherHistoryQuery } from "@/queries/teacher"
 import { activateRow, rowLinkClass } from "@/lib/rowActivation"
 
 const NO_SYLLABI: HistorySyllabus[] = []
@@ -56,10 +57,14 @@ function HistoryHeader({ sort }: { sort: HistorySort }) {
 
 export default function TeacherHistoryCareerPage() {
   const router = useRouter()
-  const { career } = useParams<{ career: string }>()
-  const query = useQuery(teacherHistoryCareerQuery(String(career)))
-  const careerName = query.data?.career.name ?? null
-  const syllabi = query.data?.syllabi ?? null
+  const careerCode = String(useParams<{ career: string }>().career)
+  const history = useQuery(teacherHistoryQuery())
+  // Only the careers of the teacher's own history can be named by the address.
+  const careerId = useCodeLookup(careerCode, history, (data) => data.careers.find((item) => sameCode(item.code, careerCode))?.id)
+  const careerQuery = useQuery({ ...teacherHistoryCareerQuery(careerId ?? ""), enabled: careerId !== null })
+  const query = careerId === null ? history : careerQuery
+  const careerName = careerQuery.data?.career.name ?? null
+  const syllabi = careerQuery.data?.syllabi ?? null
   const failed = failedQuery(query)
   const status = failed && query.error instanceof ApiError ? query.error.status : null
   const error = status === 401 || status === 404 ? null : queryErrorMessage(query, "No se pudo cargar el historial de la carrera")
@@ -82,8 +87,9 @@ export default function TeacherHistoryCareerPage() {
 
   useEffect(() => {
     if (status === 401) router.replace(paths.login)
-    else if (status === 404) router.replace(paths.teacher.history)
   }, [router, status])
+
+  if (status === 404) notFound()
 
   const load = (): void => {
     void query.refetch()

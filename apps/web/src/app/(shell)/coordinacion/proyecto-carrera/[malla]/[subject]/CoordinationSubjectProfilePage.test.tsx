@@ -3,10 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getScheduledSubjects, getSubjectProfile, getSubjectProfilePreview, saveSubjectProfile, type ScheduledSubjects, type SubjectProfile } from "@/api/career-academics"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 import { navigation } from "@/test/nextNavigation"
+import { NotFoundBoundary } from "@/test/notFoundBoundary"
 import { flush, renderWithProviders } from "@/test/render"
 import CoordinationSubjectProfilePage from "./CoordinationSubjectProfilePage"
 
-const route = vi.hoisted(() => ({ params: { subject: "m2" } as Record<string, string> }))
+const route = vi.hoisted(() => ({ params: { malla: "SW-9", subject: "M-2" } as Record<string, string> }))
 
 vi.mock("next/navigation", async () => ({ ...(await import("@/test/nextNavigation")), useParams: () => route.params }))
 vi.mock("@/api/career-academics", async (importOriginal) => ({
@@ -35,12 +36,13 @@ vi.mock("@/components/domain/syllabus/FreeTextEditor", () => ({
 vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: ({ message }: { message?: string }) => <div data-testid="process-lock">{message}</div> }))
 vi.mock("@/components/domain/syllabus/SyllabusDocumentPreview", () => ({ SyllabusDocumentPreview: () => <div data-preview /> }))
 
+const subject = (id: string, nombre: string, ciclo: number, extra: Record<string, unknown> = {}) => ({ id, codigo_asignatura: id.replace("m", "M-"), malla_code: "SW-9", nombre, ciclo, ...extra })
 const blank: DocumentNode = { type: "doc", content: [{ type: "paragraph" }] }
 const written: DocumentNode = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Texto de la carrera" }] }] }
 const scheduled = (lock: string | null = null) =>
   ({
     career: { lock_reason: lock, lock: lock ? { label: "Edición bloqueada", reason: lock } : null },
-    options: { activeSubjects: [{ id: "m2", nombre: "Matemática Discreta", ciclo: 1 }] },
+    options: { activeSubjects: [subject("m2", "Matemática Discreta", 1)] },
   }) as unknown as ScheduledSubjects
 const profile = (extra: Partial<SubjectProfile> = {}): SubjectProfile => ({
   fields: [
@@ -61,7 +63,7 @@ const subjectOption = (id: string): Element => document.querySelector(`[data-val
 
 describe("Página del proyecto de carrera de una materia", () => {
   beforeEach(() => {
-    navigation.reset("/coordinacion/proyecto-carrera/m2")
+    navigation.reset("/coordinacion/proyecto-carrera/SW-9/M-2")
     vi.mocked(getScheduledSubjects).mockResolvedValue(scheduled())
     vi.mocked(getSubjectProfile).mockResolvedValue(profile())
     vi.mocked(saveSubjectProfile).mockReset()
@@ -72,10 +74,10 @@ describe("Página del proyecto de carrera de una materia", () => {
       ...scheduled(),
       options: {
         activeSubjects: [
-          { id: "m3", nombre: "Estructuras de Datos", ciclo: 2 },
-          { id: "m1", nombre: "Álgebra", ciclo: 1 },
-          { id: "m4", nombre: "Prácticas", ciclo: 1, generates_syllabus: false },
-          { id: "m2", nombre: "Matemática Discreta", ciclo: 1 },
+          subject("m3", "Estructuras de Datos", 2),
+          subject("m1", "Álgebra", 1),
+          subject("m4", "Prácticas", 1, { generates_syllabus: false }),
+          subject("m2", "Matemática Discreta", 1),
         ],
       },
     } as unknown as ScheduledSubjects)
@@ -86,14 +88,14 @@ describe("Página del proyecto de carrera de una materia", () => {
     expect(document.querySelector('[aria-label="Materia siguiente"]')).toBeNull()
     fireEvent.click(subjectOption("m3"))
     await flush()
-    expect(navigation.push).toHaveBeenLastCalledWith("/coordinacion/proyecto-carrera/m3")
+    expect(navigation.push).toHaveBeenLastCalledWith("/coordinacion/proyecto-carrera/sw-9/m-3")
     expect(navigation.push).toHaveBeenCalledTimes(1)
   })
 
   it("pone el selector de materia a la izquierda, sobre las secciones, también en la vista previa", async () => {
     vi.mocked(getScheduledSubjects).mockResolvedValue({
       ...scheduled(),
-      options: { activeSubjects: [{ id: "m2", nombre: "Matemática Discreta", ciclo: 1 }, { id: "m3", nombre: "Estructuras de Datos", ciclo: 2 }] },
+      options: { activeSubjects: [subject("m2", "Matemática Discreta", 1), subject("m3", "Estructuras de Datos", 2)] },
     } as unknown as ScheduledSubjects)
     vi.mocked(getSubjectProfilePreview).mockResolvedValue({ presentation: {}, sections: [] } as never)
     await mountPage()
@@ -235,7 +237,7 @@ describe("Página del proyecto de carrera de una materia", () => {
   it("con cambios sin guardar pregunta antes de pasar a otra materia", async () => {
     vi.mocked(getScheduledSubjects).mockResolvedValue({
       ...scheduled(),
-      options: { activeSubjects: [{ id: "m2", nombre: "Matemática Discreta", ciclo: 1 }, { id: "m3", nombre: "Estructuras de Datos", ciclo: 2 }] },
+      options: { activeSubjects: [subject("m2", "Matemática Discreta", 1), subject("m3", "Estructuras de Datos", 2)] },
     } as unknown as ScheduledSubjects)
     await mountPage()
     fireEvent.click(document.querySelector('[data-id="ficha-f1"]')!)
@@ -248,6 +250,43 @@ describe("Página del proyecto de carrera de una materia", () => {
 
     fireEvent.click(button("Salir y descartar cambios"))
     await flush()
-    expect(navigation.push).toHaveBeenLastCalledWith("/coordinacion/proyecto-carrera/m3")
+    expect(navigation.push).toHaveBeenLastCalledWith("/coordinacion/proyecto-carrera/sw-9/m-3")
+  })
+
+  it("distingue materias con el mismo código por el código de su malla", async () => {
+    vi.mocked(getScheduledSubjects).mockResolvedValue({
+      ...scheduled(),
+      options: { activeSubjects: [subject("m5", "Cálculo anterior", 1, { codigo_asignatura: "M-2", malla_code: "SW-8" }), subject("m2", "Matemática Discreta", 1)] },
+    } as unknown as ScheduledSubjects)
+    await mountPage()
+
+    expect(getSubjectProfile).toHaveBeenLastCalledWith("m2")
+    expect(document.querySelector('[data-tour="page-header"]')!.textContent).toContain("Matemática Discreta")
+  })
+
+  it.each([
+    { malla: "SW-9", subject: "NOPE" },
+    { malla: "NOPE", subject: "M-2" },
+    { malla: "SW-9", subject: "m2" },
+  ])("con $malla/$subject muestra 404 y no abre ningún proyecto", async (params) => {
+    const silent = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    route.params = params
+    vi.mocked(getSubjectProfile).mockClear()
+    renderWithProviders(<NotFoundBoundary><CoordinationSubjectProfilePage /></NotFoundBoundary>)
+    await flush()
+
+    expect(document.querySelector('[data-testid="not-found"]')).not.toBeNull()
+    expect(getSubjectProfile).not.toHaveBeenCalled()
+    route.params = { malla: "SW-9", subject: "M-2" }
+    silent.mockRestore()
+  })
+
+  it("mientras busca la materia muestra el esqueleto, sin 404", async () => {
+    vi.mocked(getScheduledSubjects).mockImplementation(() => new Promise(() => undefined))
+    renderWithProviders(<NotFoundBoundary><CoordinationSubjectProfilePage /></NotFoundBoundary>)
+    await flush()
+
+    expect(document.querySelectorAll('[data-skeleton="form-editor"]')).toHaveLength(1)
+    expect(document.querySelector('[data-testid="not-found"]')).toBeNull()
   })
 })

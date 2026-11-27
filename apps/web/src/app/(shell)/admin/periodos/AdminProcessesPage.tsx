@@ -62,6 +62,7 @@ export default function AdminProcessesPage() {
   const error = queryErrorMessage(query, "No se pudieron cargar los periodos académicos")
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
   const rowActions = useRef<ConvocationRowActionsHandle>(null)
   const loaded = governance !== null && processData !== null
   const setupReady = (summary?.setup?.steps ?? []).every((step) => step.key === "process" || step.done)
@@ -111,16 +112,7 @@ export default function AdminProcessesPage() {
       loading={!loaded && !error}
       actionsSkeleton={loading && !loaded ? ["w-44"] : []}
       actions={
-        loaded && !setupReady ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex" tabIndex={0}>
-                <ConvocationPeriodDialog disabled onSaved={(message) => void changed(message)} />
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>Complete «Antes de empezar» para abrir un periodo académico</TooltipContent>
-          </Tooltip>
-        ) : loaded && inProgress ? (
+        loaded && setupReady && inProgress ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="inline-flex" tabIndex={0}>
@@ -130,7 +122,12 @@ export default function AdminProcessesPage() {
             <TooltipContent>Hay un periodo académico abierto o pausado. Finalícelo o elimínelo antes de abrir otro</TooltipContent>
           </Tooltip>
         ) : loaded ? (
-          <ConvocationPeriodDialog onSaved={(message) => void changed(message)} />
+          // With setup steps left, the button opens «Antes de empezar» instead of the form.
+          <ConvocationPeriodDialog
+            open={creating}
+            onOpenChange={(open) => (open && !setupReady ? setupChecklistState.requestOpen() : setCreating(open))}
+            onSaved={(message) => void changed(message)}
+          />
         ) : null
       }
     >

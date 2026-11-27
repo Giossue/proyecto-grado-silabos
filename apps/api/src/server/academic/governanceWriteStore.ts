@@ -162,7 +162,7 @@ export function createGovernanceWriteDeps(prisma: PrismaService, options: WriteO
     careerCodeTaken: (code, except) =>
       found(
         prisma,
-        Prisma.sql`select carreras.carrera_id from carreras where carreras.codigo_carrera = ${code}
+        Prisma.sql`select carreras.carrera_id from carreras where lower(carreras.codigo_carrera) = lower(${code})
           ${except === null ? Prisma.empty : Prisma.sql`and carreras.carrera_id::text <> ${except}`} limit 1`,
       ),
     transaction: (work) => inTransactionAfterCommit(prisma, (tx, afterCommit) => work(governanceWriteTx(tx, afterCommit, now(), options))),

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
 import { type ScheduledSubjects } from "@/api/career-academics"
-import { AdminCareerBackLink, AdminCareerTabs } from "@/components/domain/academic/AdminCareerNavigation"
+import { AdminCareerBackLink, AdminCareerTabs, type AdminCareer } from "@/components/domain/academic/AdminCareerNavigation"
 import { FichaImportDialog } from "@/components/domain/academic/FichaImportDialog"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { SupportDocumentsPanel } from "@/components/domain/academic/SupportDocumentsPanel"
@@ -52,9 +52,46 @@ const compareCycles = (left: string, right: string): number => left.localeCompar
 const completeCount = (list: Subject[]): number => list.filter((subject) => subject.profile_complete).length
 const selectAllLabel = (cycle: string): string => (cycle === "Sin ciclo" ? "Seleccionar todas las materias sin ciclo" : `Seleccionar todo el ciclo ${cycle}`)
 
-export default function CoordinationCareerProjectPage({ careerId = null }: { careerId?: string | null }) {
+const PAGE_TITLE = "Proyecto de carrera por materia"
+const SUBJECTS_DESCRIPTION = "Contenido de cada materia que se copia en sus sílabos"
+const LOAD_ERROR = "No se pudo cargar el proyecto de carrera"
+
+function TabsSkeleton() {
+  return (
+    <div data-skeleton="table-tabs" className="flex h-11 items-center gap-2" aria-hidden="true">
+      {["w-16", "w-36"].map((width) => (
+        <div key={width} className="flex h-full items-center gap-2 px-4">
+          <Skeleton className="size-4" />
+          <Skeleton className={cn("h-4", width)} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const subjectsSkeleton = <LoadingSkeleton variant="accordion" rows={3} filters={2} />
+
+/** Administration's screen while the career of the address is being found. */
+export function AdminCareerProjectPending({ careerCode, error, onRetry }: { careerCode: string; error: string | null; onRetry: () => void }) {
+  return (
+    <PageFrame title={PAGE_TITLE} description={SUBJECTS_DESCRIPTION} size="wide" loading={!error} actionsSkeleton={error ? [] : ["w-44"]} eyebrow={<AdminCareerBackLink />}>
+      <AdminCareerTabs careerCode={careerCode} current="project" />
+      {error ? (
+        <LoadErrorState message={error} onRetry={onRetry} />
+      ) : (
+        <div className="flex flex-col gap-4">
+          <TabsSkeleton />
+          {subjectsSkeleton}
+        </div>
+      )}
+    </PageFrame>
+  )
+}
+
+export default function CoordinationCareerProjectPage({ adminCareer = null }: { adminCareer?: AdminCareer | null }) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const careerId = adminCareer?.id ?? null
   useAcademicCareerScope(careerId)
   const [tab, setTab] = useState(() => (careerId === null && searchParams.get("tab") === "documentos" ? "documentos" : "materias"))
   const [uploadOpen, setUploadOpen] = useState(false)
@@ -63,7 +100,7 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
   const query = useQuery({ ...scheduledSubjectsQuery(careerId), enabled: typeof scope.data === "string" })
   const data = query.data ?? null
   const loading = scope.isFetching || query.isFetching
-  const loadError = queryErrorMessage(scope, "No se pudo cargar el proyecto de carrera") ?? queryErrorMessage(query, "No se pudo cargar el proyecto de carrera")
+  const loadError = queryErrorMessage(scope, LOAD_ERROR) ?? queryErrorMessage(query, LOAD_ERROR)
 
   const subjects = useMemo((): Subject[] => (data?.options.activeSubjects ?? []).filter((subject) => subject.generates_syllabus !== false), [data])
   const filter = useClientFilter(subjects, searchable, subjectFilters)
@@ -105,14 +142,15 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
   const documents = tab === "documentos"
   const profileLock = data?.career.profile_lock_reason ?? null
   const fichaImport = <FichaImportDialog disabled={Boolean(profileLock)} onApplied={(message) => void saved(message)} />
-  const subjectHref = (subject: string): string => (careerId ? paths.admin.careerProjectSubject(careerId, subject) : paths.coordination.careerProjectSubject(subject))
-  const title = documents ? "Documentos de apoyo" : careerId && data ? `Proyecto de ${data.career.name}` : "Proyecto de carrera por materia"
+  const subjectHref = ({ malla_code: malla, codigo_asignatura: code }: Subject): string =>
+    adminCareer ? paths.admin.careerProjectSubject(adminCareer.code, malla, code) : paths.coordination.careerProjectSubject(malla, code)
+  const title = documents ? "Documentos de apoyo" : careerId && data ? `Proyecto de ${data.career.name}` : PAGE_TITLE
 
   return (
     <PageFrame
       title={title}
       eyebrow={careerId ? <AdminCareerBackLink /> : null}
-      description={documents ? "Material de la carrera que sus docentes pueden consultar" : "Contenido de cada materia que se copia en sus sílabos"}
+      description={documents ? "Material de la carrera que sus docentes pueden consultar" : SUBJECTS_DESCRIPTION}
       size="wide"
       loading={!data && !loadError}
       actionsSkeleton={!data && !loadError ? [documents ? "w-40" : "w-44"] : []}
@@ -141,17 +179,10 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
         )
       }
     >
-      {careerId ? <AdminCareerTabs careerId={careerId} current="project" /> : null}
+      {adminCareer ? <AdminCareerTabs careerCode={adminCareer.code} current="project" /> : null}
       <Tabs value={tab} onValueChange={changeTab} className="gap-4">
         {!data && !loadError ? (
-          <div data-skeleton="table-tabs" className="flex h-11 items-center gap-2" aria-hidden="true">
-            {["w-16", "w-36"].map((width) => (
-              <div key={width} className="flex h-full items-center gap-2 px-4">
-                <Skeleton className="size-4" />
-                <Skeleton className={cn("h-4", width)} />
-              </div>
-            ))}
-          </div>
+          <TabsSkeleton />
         ) : careerId ? null : (
           <TabsList className="h-11 justify-start" aria-label="Vistas del proyecto de carrera">
             <TabsTrigger value="materias" className="flex-none gap-2 px-4 data-[state=active]:font-semibold">
@@ -168,7 +199,7 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
           {loadError ? (
             <LoadErrorState message={loadError} onRetry={() => void load()} />
           ) : loading && !data ? (
-            <LoadingSkeleton variant="accordion" rows={3} filters={2} />
+            subjectsSkeleton
           ) : data ? (
             <div className="flex flex-col gap-4">
               <ClientFilterBar
@@ -258,7 +289,7 @@ export default function CoordinationCareerProjectPage({ careerId = null }: { car
                                   onCheckedChange={(checked) => selectSubjects([subject], checked === true)}
                                 />
                                 <CardTitle>
-                                  <Link href={subjectHref(subject.id)} className={cn(rowLinkClass, "after:absolute after:inset-0 after:rounded-[inherit] focus-visible:ring-0")}>
+                                  <Link href={subjectHref(subject)} className={cn(rowLinkClass, "after:absolute after:inset-0 after:rounded-[inherit] focus-visible:ring-0")}>
                                     {subject.nombre}
                                   </Link>
                                 </CardTitle>

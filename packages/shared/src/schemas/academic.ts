@@ -27,6 +27,12 @@ export const LIBRARIES_MAX = 20
 
 type Exists = (value: unknown) => Promise<boolean>
 
+/** Career, malla and subject codes are part of page addresses. */
+export const CODE_PATTERN = /^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$/
+export const CODE_FORMAT_MESSAGE = "El código solo admite letras sin tilde, números y guiones simples (por ejemplo SW-B1-001)."
+// Forms validate what was typed and the API stores it without surrounding spaces.
+const codeFormat = () => is.satisfying((value) => typeof value !== "string" || CODE_PATTERN.test(value.trim()), CODE_FORMAT_MESSAGE)
+
 const purge = () => nullableField("confirmación de borrado", [is.boolean()])
 
 export const statusSchema = z.object({ active: requiredField("activo", [is.boolean()]) })
@@ -49,7 +55,7 @@ export function careerSchema({ facultyExists, codeAvailable, updating }: { facul
   return z.object({
     faculty_id: requiredField("facultad", [is.uuid(), ...(facultyExists ? [is.existing(facultyExists)] : [])]),
     modality: requiredField("modalidad", [is.string(), is.oneOf(STUDY_MODALITIES)]),
-    code: requiredField("código", [is.string(), is.max(CODE_MAX), ...(codeAvailable ? [is.unique(codeAvailable, "Ya existe una carrera con ese código.")] : [])]),
+    code: requiredField("código", [is.string(), is.max(CODE_MAX), codeFormat(), ...(codeAvailable ? [is.unique(codeAvailable, "Ya existe una carrera con ese código.")] : [])]),
     nombre: requiredField("nombre", [is.string(), is.max(NAME_MAX)]),
     ...(updating ? { confirm_purge: purge() } : { cycle_count: requiredField("cantidad de ciclos", [is.integer(), is.min(1), is.max(CYCLE_LIMIT)]) }),
   })
@@ -88,7 +94,7 @@ export const MALLA_STATES = Object.keys(MALLA_STATE_LABELS)
 
 /** A career's curriculum (malla), identified by a code unique in the career (same rules as career and subject codes). Creating asks for its cycles and the malla starts vigente; editing changes code or state (cycles have their own schema). */
 export function mallaSchema({ codeAvailable, updating }: { codeAvailable?: Exists; updating: boolean }) {
-  const code = [is.string(), is.max(CODE_MAX), ...(codeAvailable ? [is.unique(codeAvailable, "Ya existe una malla con ese código en esta carrera.")] : [])]
+  const code = [is.string(), is.max(CODE_MAX), codeFormat(), ...(codeAvailable ? [is.unique(codeAvailable, "Ya existe una malla con ese código en esta carrera.")] : [])]
   const state = [is.string(), is.oneOf(MALLA_STATES)]
   return z.object({
     code: updating ? sometimesField("código", code, { required: true }) : requiredField("código", code),
@@ -124,7 +130,7 @@ const hours = (label: string) => requiredField(label, [is.numeric(), is.min(0), 
 
 export function subjectSchema(codeAvailable?: Exists) {
   return z.object({
-    code: requiredField("código", [is.string(), is.max(CODE_MAX), ...(codeAvailable ? [is.unique(codeAvailable, "Ya existe una materia con ese código.")] : [])]),
+    code: requiredField("código", [is.string(), is.max(CODE_MAX), codeFormat(), ...(codeAvailable ? [is.unique(codeAvailable, "Ya existe una materia con ese código.")] : [])]),
     nombre: requiredField("nombre", [is.string(), is.max(NAME_MAX)]),
     cycle: requiredField("ciclo", [is.integer(), is.min(1), is.max(CYCLE_LIMIT)]),
     position: nullableField("posición", [is.integer(), is.min(0), is.max(999)]),

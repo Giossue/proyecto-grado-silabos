@@ -27,7 +27,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
   const showsFlyout = state === "collapsed" && !isMobile
   const isItemActive = (item: NavItem): boolean =>
     item.isActive === true ||
-    isCurrentOrParentUrl(item.href) ||
+    [item.href, ...(item.activeUrls ?? [])].some((url) => isCurrentOrParentUrl(url)) ||
     (item.items?.some((child) => isCurrentOrParentUrl(child.href)) ?? false)
 
   return (

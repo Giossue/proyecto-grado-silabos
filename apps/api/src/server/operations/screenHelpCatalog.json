@@ -23,23 +23,23 @@
         "title": "Facultades y carreras",
         "content": "Aquí están las facultades y las carreras de la universidad.\n\nPulse una fila para cambiar sus datos. Nada se borra: lo que ya no se usa se desactiva y se puede volver a activar. Las carreras también se pueden subir con un Excel.\n\nSi hay un periodo académico abierto, un aviso arriba le explica qué pasa con los sílabos si cambia algo."
     },
-    "/admin/estructura-academica/carreras/:career/malla": {
+    "/admin/carreras/:career/malla": {
         "title": "Malla de la carrera",
         "content": "Aquí cambia la malla de la carrera que eligió en «Facultades y carreras», igual que lo haría su coordinación.\n\nPulse «Editar malla» para cambiarla o súbala con un Excel. Arriba pasa a sus paralelos, sus docentes o su proyecto de carrera.\n\nSi hay un periodo académico abierto, la malla no se puede cambiar."
     },
-    "/admin/estructura-academica/carreras/:career/materias-asignaciones": {
+    "/admin/carreras/:career/materias-asignaciones": {
         "title": "Materias y paralelos de la carrera",
         "content": "Aquí prepara los paralelos de la carrera que eligió, su jornada y el docente de cada uno.\n\nSi cambia el docente de un paralelo, su sílabo empieza de cero. El sistema le pregunta antes y avisa al docente.\n\nLa revisión y la aprobación de los sílabos siguen siendo de la coordinación."
     },
-    "/admin/estructura-academica/carreras/:career/docentes": {
+    "/admin/carreras/:career/docentes": {
         "title": "Docentes de la carrera",
         "content": "Aquí están los docentes de la carrera que eligió.\n\nCree uno o suba varios con un Excel; cada uno recibe un correo para entrar. Pulse un docente para reenviarle la invitación, desactivarlo o reactivarlo. El desactivado sigue en la lista como «Inactivo»."
     },
-    "/admin/estructura-academica/carreras/:career/proyecto-carrera": {
+    "/admin/carreras/:career/proyecto-carrera": {
         "title": "Proyecto de la carrera",
         "content": "Aquí escribe los campos editables del sílabo de cada materia de la carrera que eligió. Cada campo se abre en un editor con el texto de la plantilla: cámbielo ahí mismo y use «Configurar campo» (la tuerca) donde el docente deba responder. Lo demás le llega fijo al docente. Cada campo debe quedar definido para que la coordinación pueda abrir el periodo académico.\n\nPulse una materia para abrir su página, o llene varias a la vez con «Importar desde Excel». Para resolver varios «Sin definir» a la vez, marque las materias (o «Seleccionar todo» en un ciclo), elija los campos y use «Acciones masivas»: «Usar el texto de la plantilla» deja el campo definido con el texto de la plantilla tal cual, y «Que lo escriba el docente» lo deja como «Texto libre» para el docente. Solo se tocan los campos sin definir; los que ya están definidos no cambian. Los documentos de apoyo los sube la coordinación."
     },
-    "/admin/estructura-academica/carreras/:career/proyecto-carrera/:subject": {
+    "/admin/carreras/:career/proyecto-carrera/:malla/:subject": {
         "title": "Proyecto de carrera de una materia",
         "content": "Elija una sección a la izquierda y escriba sus campos a la derecha. Lo que escriba le llega fijo al docente.\n\nUn campo vacío sale como «Sin definir»: escriba su texto o use «Configurar campo» y marque un tipo. Mientras quede alguno, la coordinación no puede abrir el periodo académico."
     },
@@ -119,7 +119,7 @@
         "title": "Proyecto de carrera",
         "content": "Aquí escribe los campos editables del sílabo de cada materia. Cada campo se abre en un editor con el texto de la plantilla: cámbielo ahí mismo y use «Configurar campo» (la tuerca) donde el docente deba responder. Lo demás le llega fijo al docente. Cada campo debe quedar definido: mientras falte alguno en una materia, no se puede abrir el periodo académico de la carrera.\n\nPulse una materia para abrir su página, o llene varias a la vez con «Importar desde Excel».\n\nPara resolver varios «Sin definir» a la vez, marque las materias (o «Seleccionar todo» en un ciclo), elija los campos y use «Acciones masivas»: «Usar el texto de la plantilla» deja el campo definido con el texto de la plantilla tal cual, y «Que lo escriba el docente» lo deja como «Texto libre» para el docente. Solo se tocan los campos sin definir; los que ya están definidos no cambian.\n\nEn «Documentos de apoyo» suba archivos para que sus docentes conozcan mejor sus materias.\n\nSe puede cambiar, también con «Importar desde Excel» y «Acciones masivas», antes de abrir el periodo académico y mientras esté abierto. Con el periodo académico en pausa o finalizado queda solo para consulta."
     },
-    "/coordinacion/proyecto-carrera/:subject": {
+    "/coordinacion/proyecto-carrera/:malla/:subject": {
         "title": "Proyecto de carrera de una materia",
         "content": "Elija una sección a la izquierda y escriba sus campos a la derecha. Cada campo editable se abre en un editor con el texto de la plantilla, y ese texto se cambia ahí mismo. Lo que escriba le llega fijo al docente.\n\nCada campo debe quedar definido: cambie su texto o use «Configurar campo». Con «Texto libre» lo escribe el docente y se borra lo que usted tenía ahí; con «Elegir una» o «Elegir varias» él elige de la lista que usted escribe. Los que faltan salen como «Sin definir», y mientras quede alguno no se puede abrir el periodo académico de la carrera.\n\nLas respuestas que puso Administración llegan ya puestas; selecciónelas para cambiar sus opciones en esta materia. No puede quitar una respuesta ni una opción que la plantilla usa para mostrar u ocultar otra parte. Si Administración cambia después el texto de la plantilla, esta materia conserva su versión.\n\n«Vista previa» muestra cómo recibirá el sílabo el docente. Pulse «Guardar información» antes de salir.\n\nSe puede cambiar, también con «Importar desde Excel», antes de abrir el periodo académico y mientras esté abierto. Con el periodo académico en pausa o finalizado queda solo para consulta."
     },

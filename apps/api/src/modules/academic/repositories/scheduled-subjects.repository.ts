@@ -6,7 +6,7 @@ import { IN_PROGRESS, SYLLABUS_SCOPE, TOUCHED_SYLLABUS } from "../../../server/a
 import { mallaLabelSql, openCurriculum } from "../../../server/syllabus/syllabusSql"
 import type { CareerParallelRecord, ScheduledSubjectRecord, ScheduledSubjectsRepository } from "../../../server/academic/scheduledSubjects"
 
-type SubjectRow = { id: string; codigo: string; nombre: string; ciclo: number | null; activo: boolean; genera: boolean; modalidad: string | null; malla: string }
+type SubjectRow = { id: string; codigo: string; nombre: string; ciclo: number | null; activo: boolean; genera: boolean; modalidad: string | null; malla: string; codigo_malla: string }
 
 @Injectable()
 export class ScheduledSubjectsPrismaRepository implements ScheduledSubjectsRepository {
@@ -49,7 +49,7 @@ export class ScheduledSubjectsPrismaRepository implements ScheduledSubjectsRepos
   async careerSubjects(careerId: string): Promise<ScheduledSubjectRecord[]> {
     const found = await this.prisma.$queryRaw<SubjectRow[]>`select asignatura.asignatura_id::text as id, asignatura.codigo_asignatura as codigo, asignatura.nombre_asignatura as nombre,
         asignatura.ciclo_asignatura as ciclo, asignatura.asignatura_activa as activo, asignatura.genera_silabo_asignatura as genera,
-        coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modalidad, ${mallaLabelSql("malla")} as malla
+        coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modalidad, ${mallaLabelSql("malla")} as malla, malla.codigo_malla
       from asignaturas asignatura
       inner join mallas malla on malla.malla_id = asignatura.malla_id
       left join carreras carrera on carrera.carrera_id = asignatura.carrera_id
@@ -64,6 +64,7 @@ export class ScheduledSubjectsPrismaRepository implements ScheduledSubjectsRepos
       generatesSyllabus: row.genera,
       modality: row.modalidad,
       mallaName: row.malla,
+      mallaCode: row.codigo_malla,
     }))
   }
 }

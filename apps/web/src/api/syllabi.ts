@@ -184,7 +184,7 @@ export const submitTeacherSyllabus = (
       }),
     },
   );
-export type HistoryCareer = { id: string; name: string; syllabi_count: number };
+export type HistoryCareer = { id: string; code: string; name: string; syllabi_count: number };
 
 export type HistorySyllabus = {
   id: string;

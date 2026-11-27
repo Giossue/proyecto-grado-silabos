@@ -345,7 +345,7 @@ export function createCareerWriteDeps(prisma: PrismaService, options: WriteOptio
       subjectExists(
         prisma,
         ...[
-          Prisma.sql`asignaturas.codigo_asignatura = ${code}`,
+          Prisma.sql`lower(asignaturas.codigo_asignatura) = lower(${code})`,
           Prisma.sql`asignaturas.malla_id = ${mallaId}::uuid`,
           ...(except === null ? [] : [Prisma.sql`asignaturas.asignatura_id <> ${except}::uuid`]),
         ],

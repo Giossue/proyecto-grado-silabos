@@ -24,6 +24,8 @@ export type ScheduledSubjectRecord = {
   modality: string | null
   /** Name of the malla of the subject; the list only holds subjects of mallas that are not closed. */
   mallaName?: string | null
+  /** Code of that malla: with the subject code it names the subject in page addresses. */
+  mallaCode?: string | null
 }
 
 export type CareerParallelRecord = { id: string; subjectId: string; code: string; shift: string | null }
@@ -119,6 +121,7 @@ export async function scheduledSubjectsResponse(request: Request, career: Career
             nombre: subject.name,
             ciclo: subject.cycle,
             malla_name: subject.mallaName ?? null,
+            malla_code: subject.mallaCode ?? null,
             generates_syllabus: subject.generatesSyllabus,
             profile_complete: (counts?.filled ?? 0) === (counts?.total ?? 0),
             profile_filled: counts?.filled ?? 0,

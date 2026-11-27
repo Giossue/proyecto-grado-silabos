@@ -12,6 +12,8 @@ export type NavItem = {
     href: NavigableHref;
     icon?: LucideIcon;
     isActive?: boolean;
+    /** Other address prefixes that belong to this entry. */
+    activeUrls?: string[];
     badge?: number;
     items?: NavItem[];
 };

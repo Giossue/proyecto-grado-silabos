@@ -30,6 +30,7 @@ export type TeacherSyllabusRow = {
 export type PastSyllabusRow = {
   id: string
   careerId: string
+  careerCode: string
   career: string
   subject: string
   period: string
@@ -111,11 +112,11 @@ export async function teacherHistory(request: Request, deps: TeacherSyllabusDeps
 export async function teacherHistoryFor(request: Request, authenticated: AppSession, deps: TeacherSyllabusDeps): Promise<Response> {
   const authorized = await teacherInput(request, authenticated)
   if (authorized instanceof Response) return authorized
-  const groups = new Map<string, { id: string; name: string; syllabi_count: number }>()
+  const groups = new Map<string, { id: string; code: string; name: string; syllabi_count: number }>()
   for (const item of await deps.syllabi.past(authorized.session.user.id, null)) {
     const group = groups.get(item.careerId)
     if (group) group.syllabi_count++
-    else groups.set(item.careerId, { id: item.careerId, name: item.career, syllabi_count: 1 })
+    else groups.set(item.careerId, { id: item.careerId, code: item.careerCode, name: item.career, syllabi_count: 1 })
   }
   return apiJson({ careers: [...groups.values()].sort((left, right) => strnatcasecmp(left.name, right.name)) })
 }

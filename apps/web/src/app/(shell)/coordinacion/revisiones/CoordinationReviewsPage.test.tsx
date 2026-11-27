@@ -1,3 +1,4 @@
+import { setupChecklistState } from "@/state/setupChecklist"
 import { fireEvent, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -80,13 +81,17 @@ describe("CoordinationReviewsPage", () => {
     unmount()
   })
 
-  it("sin todo listo, «Abrir periodo académico» queda deshabilitado y explica por qué", async () => {
+  it("sin todo listo, «Abrir periodo académico» sigue activo y abre «Antes de empezar»", async () => {
     vi.mocked(getDashboard).mockResolvedValue({ ...summary(null), coordination_convocation: { ...summary(null).coordination_convocation!, can_open: false } })
     const { container, unmount } = mountPage()
     await flush()
 
     const open = [...container.querySelectorAll<HTMLButtonElement>(".actions button")].find((button) => button.textContent?.includes("Abrir periodo académico"))!
-    expect(open.disabled).toBe(true)
+    expect(open.disabled).toBe(false)
+    const requests = setupChecklistState.openRequests.value
+    fireEvent.click(open)
+    await flush()
+    expect(setupChecklistState.openRequests.value).toBe(requests + 1)
     unmount()
   })
 

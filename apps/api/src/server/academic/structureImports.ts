@@ -9,7 +9,7 @@ import { xlsxDownload } from "../excel/workbook"
 import type { PhpArray } from "../http/input"
 import { apiJson, validationError } from "../http/responses"
 import { validateSchema } from "../http/schemaValidation"
-import { mallaTargetSchema } from "@silabos/shared/schemas/academic"
+import { CODE_FORMAT_MESSAGE, CODE_PATTERN, mallaTargetSchema } from "@silabos/shared/schemas/academic"
 import { settle } from "../syllabus/reviewDecisions"
 import type { CareerContext, CareerWriteTx } from "./careerWrites"
 import { insertCareerSubject } from "./careerWrites"
@@ -41,7 +41,7 @@ const NO = "No"
 const CAREER_NOTES = [
   "Una fila por carrera; no deje filas vacías entre registros.",
   "Facultad y Modalidad: elija una opción de la lista.",
-  "Código de carrera: único en el sistema, por ejemplo SW.",
+  "Código de carrera: único en el sistema, por ejemplo SW. Solo letras sin tilde, números y guiones simples.",
   "Número de ciclos: un entero entre 1 y 30.",
   "Las facultades no se importan: se crean una por una.",
 ]
@@ -49,7 +49,7 @@ const CAREER_NOTES = [
 const CURRICULUM_NOTES = [
   "Una fila por materia; no deje filas vacías entre registros.",
   "Las materias se cargan en la malla elegida en la pantalla antes de subir el archivo.",
-  "Código: único en la malla, por ejemplo SW-B1-001.",
+  "Código: único en la malla, por ejemplo SW-B1-001. Solo letras sin tilde, números y guiones simples.",
   "Ciclo: un número entre 1 y el número de ciclos de la malla.",
   "Unidad de organización y Modalidad: elija una opción de la lista (la modalidad es opcional).",
   "Genera sílabo: Sí o No. Si la materia no lleva sílabo, elija No; si la deja vacía se toma Sí.",
@@ -198,6 +198,7 @@ async function checkCareers(rows: ImportRow[], deps: StructureImportDeps): Promi
     if (facultyId === null) errors.push("La facultad no existe o está inactiva.")
     if (modality === null) errors.push("La modalidad no es válida.")
     if (code === "" || phpLength(code) > 80) errors.push("El código es obligatorio y admite hasta 80 caracteres.")
+    else if (!CODE_PATTERN.test(code)) errors.push(CODE_FORMAT_MESSAGE)
     else if (taken.has(codeKey)) errors.push("Ya existe una carrera con este código.")
     else if (seen.has(codeKey)) errors.push(`El código se repite en la fila ${seen.get(codeKey)}.`)
     if (!seen.has(codeKey)) seen.set(codeKey, row.line)
@@ -269,6 +270,7 @@ async function checkCurriculum(rows: ImportRow[], malla: ImportMalla, deps: Stru
     const code = values.codigo.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, "")
     const codeKey = importKey(code)
     if (code === "" || phpLength(code) > 80) errors.push("El código es obligatorio y admite hasta 80 caracteres.")
+    else if (!CODE_PATTERN.test(code)) errors.push(CODE_FORMAT_MESSAGE)
     else if (existing.has(codeKey)) errors.push("La malla ya tiene una materia con este código.")
     else if (seen.has(codeKey)) errors.push(`El código se repite en la fila ${seen.get(codeKey)}.`)
     if (!seen.has(codeKey)) seen.set(codeKey, row.line)

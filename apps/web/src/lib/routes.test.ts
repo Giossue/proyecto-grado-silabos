@@ -1,4 +1,8 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { isValidIntendedRoute } from '@/lib/intended-route';
+import { matchRoute, NOT_FOUND_PATH } from '@/lib/routeTable';
 import { areaForPath, paths, roleDocuments, roleEntry, roleHome, roleNotifications, roleSetting, routeRegistry, type RoleCode } from '@/lib/routes';
 
 describe('contrato de rutas', () => {
@@ -79,17 +83,50 @@ describe('contrato de rutas', () => {
     expect(Object.keys(paths.teacher)).not.toContain('formation');
   });
 
-  it('Administración abre la malla, los paralelos, los docentes y el proyecto de una carrera bajo «Facultades y carreras»', () => {
-    expect(paths.admin.careerCurriculum('c/1')).toBe('/admin/estructura-academica/carreras/c%2F1/malla');
-    expect(paths.admin.careerProjectSubject('c1', 'm1')).toBe('/admin/estructura-academica/carreras/c1/proyecto-carrera/m1');
-    const adminCareer = routeRegistry.filter((route) => route.path.startsWith('/admin/estructura-academica/carreras/'));
+  it('Administración abre la malla, los paralelos, los docentes y el proyecto de una carrera con enlaces de códigos', () => {
+    expect(paths.admin.careerCurriculum('c/1')).toBe('/admin/carreras/c%2F1/malla');
+    expect(paths.admin.careerSchedule('SW')).toBe('/admin/carreras/sw/materias-asignaciones');
+    expect(paths.admin.careerTeachers('SW')).toBe('/admin/carreras/sw/docentes');
+    expect(paths.admin.careerProject('SW')).toBe('/admin/carreras/sw/proyecto-carrera');
+    expect(paths.admin.careerProjectSubject('SW', 'SW-9', 'SW-101')).toBe('/admin/carreras/sw/proyecto-carrera/sw-9/sw-101');
+    expect(paths.coordination.careerProjectSubject('SW-9', 'SW-101')).toBe('/coordinacion/proyecto-carrera/sw-9/sw-101');
+    expect(paths.teacher.historyCareer('SW')).toBe('/docente/historial/sw');
+    const adminCareer = routeRegistry.filter((route) => route.path.startsWith('/admin/carreras/'));
     expect(adminCareer.map((route) => [route.path, route.component])).toEqual([
-      ['/admin/estructura-academica/carreras/:career/malla', 'CoordinationAcademicStructurePage'],
-      ['/admin/estructura-academica/carreras/:career/materias-asignaciones', 'CoordinationAcademicStructurePage'],
-      ['/admin/estructura-academica/carreras/:career/docentes', 'CoordinationAcademicStructurePage'],
-      ['/admin/estructura-academica/carreras/:career/proyecto-carrera', 'CoordinationCareerProjectPage'],
-      ['/admin/estructura-academica/carreras/:career/proyecto-carrera/:subject', 'CoordinationSubjectProfilePage'],
+      ['/admin/carreras/:career/malla', 'CoordinationAcademicStructurePage'],
+      ['/admin/carreras/:career/materias-asignaciones', 'CoordinationAcademicStructurePage'],
+      ['/admin/carreras/:career/docentes', 'CoordinationAcademicStructurePage'],
+      ['/admin/carreras/:career/proyecto-carrera', 'CoordinationCareerProjectPage'],
+      ['/admin/carreras/:career/proyecto-carrera/:malla/:subject', 'CoordinationSubjectProfilePage'],
     ]);
     expect(adminCareer.every((route) => route.roles?.join() === 'administrador')).toBe(true);
+  });
+
+  it('cada pantalla con código tiene ruta, página y guarda; los enlaces antiguos quedan como página no encontrada', () => {
+    const screens = [
+      ['/admin/carreras/sw/malla', '(shell)/admin/carreras/[career]/malla', 'administrador'],
+      ['/admin/carreras/sw/materias-asignaciones', '(shell)/admin/carreras/[career]/materias-asignaciones', 'administrador'],
+      ['/admin/carreras/sw/docentes', '(shell)/admin/carreras/[career]/docentes', 'administrador'],
+      ['/admin/carreras/sw/proyecto-carrera', '(shell)/admin/carreras/[career]/proyecto-carrera', 'administrador'],
+      ['/admin/carreras/sw/proyecto-carrera/sw-9/sw-101', '(shell)/admin/carreras/[career]/proyecto-carrera/[malla]/[subject]', 'administrador'],
+      ['/coordinacion/proyecto-carrera/SW-9/SW-101', '(shell)/coordinacion/proyecto-carrera/[malla]/[subject]', 'coordinador'],
+      ['/docente/historial/SW', '(shell)/docente/historial/[career]', 'docente'],
+    ];
+    for (const [path, folder, role] of screens) {
+      expect(matchRoute(path!).record.meta.roles, path).toEqual([role]);
+      expect(existsSync(join('src', 'app', ...folder!.split('/'), 'page.tsx')), path).toBe(true);
+      expect(isValidIntendedRoute(path), path).toBe(true);
+    }
+    const uuid = '01a1c5bc-79ca-7331-8f0f-66d63f61c699';
+    for (const path of [
+      `/admin/estructura-academica/carreras/${uuid}/malla`,
+      `/admin/estructura-academica/carreras/${uuid}/docentes`,
+      `/admin/estructura-academica/carreras/${uuid}/proyecto-carrera/${uuid}`,
+      `/coordinacion/proyecto-carrera/${uuid}`,
+    ]) {
+      expect(matchRoute(path).record.path, path).toBe(NOT_FOUND_PATH);
+      expect(isValidIntendedRoute(path), path).toBe(false);
+    }
+    expect(existsSync(join('src', 'app', '(shell)', 'admin', 'estructura-academica', '[section]', '[career]'))).toBe(false);
   });
 });

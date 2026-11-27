@@ -31,7 +31,7 @@ let marks: { syllabus: string[]; teacher: string[]; sent: string[]; started: str
 let templates: FakeTemplateWorld
 
 function subject(overrides: Partial<ScheduledSubjectRecord>): ScheduledSubjectRecord {
-  return { id: ALGORITHMS, code: "SW-B1-001", name: "Algoritmos", cycle: 1, active: true, generatesSyllabus: true, modality: "presencial", mallaName: "Malla SW-9", ...overrides }
+  return { id: ALGORITHMS, code: "SW-B1-001", name: "Algoritmos", cycle: 1, active: true, generatesSyllabus: true, modality: "presencial", mallaName: "Malla SW-9", mallaCode: "SW-9", ...overrides }
 }
 
 const academic = (): AcademicStructureRepository => ({
@@ -100,7 +100,7 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
       subject({}),
       subject({ id: RETIRED, code: "SW-B1-002", name: "Retirada", active: false }),
       subject({ id: RETIRED_WITH_PARALLEL, code: "SW-B1-003", name: "Retirada con paralelo", active: false, cycle: null, modality: null, generatesSyllabus: false }),
-      subject({ id: NETWORKS, code: "SW-B2-004", name: "Redes", cycle: 2, mallaName: "Malla SW-8" }),
+      subject({ id: NETWORKS, code: "SW-B2-004", name: "Redes", cycle: 2, mallaName: "Malla SW-8", mallaCode: "SW-8" }),
     ]
     const respuestas = goldenFields.findIndex((field) => field.key === "respuestas")
     templates.values = [{ fieldId: fieldId(respuestas), subjectId: NETWORKS, value: goldenFields[respuestas].stored }]
@@ -119,8 +119,8 @@ describe("GET /api/v1/coordination/academic/scheduled-subjects", () => {
         `{"subject_id":"${NETWORKS}","label":"SW-B2-004 · Redes","subject_code":"SW-B2-004","subject_name":"Redes","subject_cycle":2,"profile_complete":false,"generates_syllabus":true,"modality_name":"Presencial","malla_name":"Malla SW-8","parallels":[],"editable":true}],` +
         `"options":{"faculties":[],"careers":[],"periods":[],"modalityOptions":${MODALITIES},"shiftOptions":${SHIFTS},"currentCurricula":[],` +
         `"activeSubjects":[` +
-        `{"id":"${ALGORITHMS}","codigo_asignatura":"SW-B1-001","nombre":"Algoritmos","ciclo":1,"malla_name":"Malla SW-9","generates_syllabus":true,"profile_complete":false,"profile_filled":0,"profile_total":13},` +
-        `{"id":"${NETWORKS}","codigo_asignatura":"SW-B2-004","nombre":"Redes","ciclo":2,"malla_name":"Malla SW-8","generates_syllabus":true,"profile_complete":false,"profile_filled":1,"profile_total":13}],` +
+        `{"id":"${ALGORITHMS}","codigo_asignatura":"SW-B1-001","nombre":"Algoritmos","ciclo":1,"malla_name":"Malla SW-9","malla_code":"SW-9","generates_syllabus":true,"profile_complete":false,"profile_filled":0,"profile_total":13},` +
+        `{"id":"${NETWORKS}","codigo_asignatura":"SW-B2-004","nombre":"Redes","ciclo":2,"malla_name":"Malla SW-8","malla_code":"SW-8","generates_syllabus":true,"profile_complete":false,"profile_filled":1,"profile_total":13}],` +
         `"scheduledSubjects":[],"parallels":[],"teacherUsers":[]}}`,
     )
   })

@@ -69,6 +69,7 @@ function pastRow(row: SyllabusDetailRow): PastSyllabusRow {
   return {
     id: row.id,
     careerId: row.career_id,
+    careerCode: row.career_code,
     career: row.career,
     subject: row.subject,
     period: row.period,

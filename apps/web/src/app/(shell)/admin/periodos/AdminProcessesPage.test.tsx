@@ -1,3 +1,4 @@
+import { setupChecklistState } from "@/state/setupChecklist"
 import { act, fireEvent } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -27,7 +28,9 @@ vi.mock("@/components/domain/PageFrame", () => ({
   ),
 }))
 vi.mock("@/components/domain/syllabus/ConvocationPeriodDialog", () => ({
-  ConvocationPeriodDialog: ({ disabled }: { disabled?: boolean }) => <div data-period-dialog data-disabled={String(Boolean(disabled))} />,
+  ConvocationPeriodDialog: ({ disabled, open, onOpenChange }: { disabled?: boolean; open?: boolean; onOpenChange?: (open: boolean) => void }) => (
+    <button type="button" data-period-dialog data-disabled={String(Boolean(disabled))} data-open={String(Boolean(open))} onClick={() => onOpenChange?.(true)} />
+  ),
 }))
 vi.mock("@/components/domain/syllabus/ConvocationRowActions", () => ({
   ConvocationRowActions: ({ onChanged }: { onChanged?: (message: string) => void }) => {
@@ -126,7 +129,7 @@ describe("AdminProcessesPage", () => {
     unmount()
   })
 
-  it("muestra arriba los indicadores y deja «Nuevo periodo académico» deshabilitada", async () => {
+  it("con pasos pendientes «Nuevo periodo académico» no se deshabilita y abre «Antes de empezar» en vez del formulario", async () => {
     api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
     api.getAcademicGovernance.mockResolvedValue({ lock_reason: null, catalogs: { faculties: [], careers: [], periods: [] }, options: {} })
     api.getProcesses.mockResolvedValue({ processes: [], template: null, periods: [], active_process: null })
@@ -140,7 +143,13 @@ describe("AdminProcessesPage", () => {
     await flush()
 
     expect(container.textContent).toContain("Carreras sin abrir")
-    expect(periodDialog(container).getAttribute("data-disabled")).toBe("true")
+    expect(periodDialog(container).getAttribute("data-disabled")).toBe("false")
+    expect(document.body.textContent).not.toContain("para abrir un periodo académico")
+    const requests = setupChecklistState.openRequests.value
+    fireEvent.click(periodDialog(container))
+    await flush()
+    expect(setupChecklistState.openRequests.value).toBe(requests + 1)
+    expect(periodDialog(container).getAttribute("data-open")).toBe("false")
   })
 
   it("con todo finalizado permite abrir una nuevo periodo académico", async () => {
@@ -154,6 +163,11 @@ describe("AdminProcessesPage", () => {
     expect(container.textContent).not.toContain("Cerrado")
     expect(container.textContent).not.toContain("Periodo académico en curso")
     expect(periodDialog(container).getAttribute("data-disabled")).toBe("false")
+    const requests = setupChecklistState.openRequests.value
+    fireEvent.click(periodDialog(container))
+    await flush()
+    expect(periodDialog(container).getAttribute("data-open")).toBe("true")
+    expect(setupChecklistState.openRequests.value).toBe(requests)
     unmount()
   })
 

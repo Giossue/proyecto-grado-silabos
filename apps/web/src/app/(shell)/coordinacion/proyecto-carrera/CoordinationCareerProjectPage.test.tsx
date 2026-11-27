@@ -33,7 +33,7 @@ vi.mock("@/components/domain/academic/SupportDocumentsPanel", () => ({
 }))
 vi.mock("@/components/domain/ProcessLockAlert", () => ({ ProcessLockAlert: ({ message }: { message?: string }) => <div data-testid="process-lock">{message}</div> }))
 
-const subject = (id: string, nombre: string, ciclo: number, extra: Record<string, unknown> = {}) => ({ id, nombre, ciclo, generates_syllabus: true, profile_complete: true, ...extra })
+const subject = (id: string, nombre: string, ciclo: number, extra: Record<string, unknown> = {}) => ({ id, codigo_asignatura: id.toUpperCase(), malla_code: "SW-9", nombre, ciclo, generates_syllabus: true, profile_complete: true, ...extra })
 const CLOSED = "El proyecto de carrera no se puede editar con el periodo académico en pausa o finalizado."
 const scheduled = (subjects: unknown[]) => ({ career: { lock_reason: null, lock: null }, options: { activeSubjects: subjects } }) as unknown as ScheduledSubjects
 const mountPage = async () => {
@@ -96,8 +96,8 @@ describe("Proyecto de carrera", () => {
     await openCycles()
 
     const link = (name: string) => [...document.querySelectorAll<HTMLAnchorElement>('[data-slot="card-title"] a')].find((anchor) => anchor.textContent === name)
-    expect(link("Matemática Discreta")?.getAttribute("href")).toBe("/coordinacion/proyecto-carrera/m2")
-    expect(link("Estructuras de Datos")?.getAttribute("href")).toBe("/coordinacion/proyecto-carrera/m3")
+    expect(link("Matemática Discreta")?.getAttribute("href")).toBe("/coordinacion/proyecto-carrera/sw-9/m2")
+    expect(link("Estructuras de Datos")?.getAttribute("href")).toBe("/coordinacion/proyecto-carrera/sw-9/m3")
     expect(document.querySelector('[data-slot="card"][tabindex]')).toBeNull()
   })
 
@@ -286,19 +286,19 @@ describe("Acciones masivas del proyecto de carrera", () => {
 describe("Proyecto de carrera elegido por Administración", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    navigation.reset("/admin/estructura-academica/carreras/carrera-9/proyecto-carrera")
+    navigation.reset("/admin/carreras/RED/proyecto-carrera")
     vi.mocked(getScheduledSubjects).mockResolvedValue({ ...scheduled([subject("m2", "Matemática Discreta", 1)]), career: { name: "Redes", lock_reason: null, lock: null } } as unknown as ScheduledSubjects)
   })
 
   it("lee la carrera indicada, enlaza las materias a sus páginas de Administración y no ofrece documentos de apoyo", async () => {
-    renderWithProviders(<CoordinationCareerProjectPage careerId="carrera-9" />)
+    renderWithProviders(<CoordinationCareerProjectPage adminCareer={{ id: "carrera-9", code: "RED" }} />)
     await flush()
     await openCycles()
 
     expect(getSession).not.toHaveBeenCalled()
     expect(getScheduledSubjects).toHaveBeenCalledWith("carrera-9")
     expect(document.querySelector('[data-tour="page-header"]')!.textContent).toContain("Proyecto de Redes")
-    expect(document.querySelector<HTMLAnchorElement>('[data-slot="card-title"] a')?.getAttribute("href")).toBe("/admin/estructura-academica/carreras/carrera-9/proyecto-carrera/m2")
+    expect(document.querySelector<HTMLAnchorElement>('[data-slot="card-title"] a')?.getAttribute("href")).toBe("/admin/carreras/red/proyecto-carrera/sw-9/m2")
     expect([...document.querySelectorAll('[role="tab"]')].some((tab) => tab.textContent === "Documentos de apoyo")).toBe(false)
     expect(document.querySelector('[data-testid="support-documents"]')).toBeNull()
   })

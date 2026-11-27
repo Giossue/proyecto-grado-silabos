@@ -21,16 +21,16 @@ describe("TeacherHistoryPage", () => {
   })
 
   it("lista las carreras con historial y abre la de la fila", async () => {
-    vi.mocked(getTeacherHistory).mockResolvedValue({ careers: [{ id: "c1", name: "Software", syllabi_count: 3 }] })
+    vi.mocked(getTeacherHistory).mockResolvedValue({ careers: [{ id: "c1", code: "SW", name: "Software", syllabi_count: 3 }] })
     const { container } = await mountPage()
 
     expect(container.textContent).toContain("Software")
     fireEvent.click(container.querySelector("tbody tr")!)
-    expect(navigation.push).toHaveBeenCalledWith("/docente/historial/c1")
+    expect(navigation.push).toHaveBeenCalledWith("/docente/historial/sw")
   })
 
   it("ordena por número de sílabos al pulsar su encabezado y marca aria-sort en esa columna", async () => {
-    vi.mocked(getTeacherHistory).mockResolvedValue({ careers: [{ id: "c1", name: "Software", syllabi_count: 12 }, { id: "c2", name: "Enfermería", syllabi_count: 3 }] })
+    vi.mocked(getTeacherHistory).mockResolvedValue({ careers: [{ id: "c1", code: "SW", name: "Software", syllabi_count: 12 }, { id: "c2", code: "ENF", name: "Enfermería", syllabi_count: 3 }] })
     const { container, getByRole } = await mountPage()
     const names = () => [...container.querySelectorAll("tbody tr a")].map((link) => link.textContent)
 

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import { schemaErrors } from "./issues"
-import { careerSchema, CODE_MAX, facultySchema, MALLA_STATE_LABELS, mallaSchema, mallaTargetSchema, parallelsSchema, periodSchema, requirementSchema, STUDY_MODALITIES, studyModalityLabel, subjectSchema } from "./academic"
+import { careerSchema, CODE_FORMAT_MESSAGE, CODE_MAX, facultySchema, MALLA_STATE_LABELS, mallaSchema, mallaTargetSchema, parallelsSchema, periodSchema, requirementSchema, STUDY_MODALITIES, studyModalityLabel, subjectSchema } from "./academic"
 
 const UUID = "01a1c5ba-2222-7000-8000-999999999999"
 
@@ -89,6 +89,30 @@ describe("academic schemas", () => {
     expect(await schemaErrors(schema, { code: "X".repeat(CODE_MAX + 1), cycle_count: 9 })).toEqual(
       await schemaErrors(careerSchema({ updating: false }).pick({ code: true }), { code: "X".repeat(CODE_MAX + 1) }),
     )
+  })
+
+  it("career, malla and subject codes admit only unaccented letters, numbers and single hyphens", async () => {
+    const schemas = {
+      career: careerSchema({ updating: false }).pick({ code: true }),
+      careerEdit: careerSchema({ updating: true }).pick({ code: true }),
+      malla: mallaSchema({ updating: false }).pick({ code: true }),
+      mallaEdit: mallaSchema({ updating: true }).pick({ code: true }),
+      subject: subjectSchema().pick({ code: true }),
+    }
+    for (const [name, schema] of Object.entries(schemas)) {
+      for (const code of ["SW", "sw-8", "SW-B1-001", "101", "  SW-10  "]) expect(await schemaErrors(schema, { code }), `${name} ${code}`).toEqual({})
+      for (const code of ["SW 8", "SW_8", "SW/8", "SW.8", "Año-1", "SW--8", "-SW", "SW-", "Malla (SW)"]) {
+        expect(await schemaErrors(schema, { code }), `${name} ${JSON.stringify(code)}`).toEqual({ code: [CODE_FORMAT_MESSAGE] })
+      }
+    }
+    expect(CODE_FORMAT_MESSAGE).toBe("El código solo admite letras sin tilde, números y guiones simples (por ejemplo SW-B1-001).")
+  })
+
+  it("does not ask whether a badly formed code is already taken", async () => {
+    let asked = 0
+    const schema = mallaSchema({ codeAvailable: async () => { asked++; return false }, updating: false })
+    expect(await schemaErrors(schema, { code: "SW 8", cycle_count: 9 })).toEqual({ code: [CODE_FORMAT_MESSAGE] })
+    expect(asked).toBe(0)
   })
 
   it("a malla is only vigente or cerrada", async () => {

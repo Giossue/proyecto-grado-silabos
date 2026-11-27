@@ -105,6 +105,8 @@ export type ScheduledSubjects = {
       nombre: string;
       ciclo: number;
       malla_name?: string | null;
+      /** With `codigo_asignatura` it names the subject in page addresses. */
+      malla_code: string;
       generates_syllabus: boolean;
       profile_complete?: boolean;
       profile_filled?: number;

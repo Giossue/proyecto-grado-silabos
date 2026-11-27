@@ -133,6 +133,6 @@ describe("CatalogSection", () => {
     renderWithProviders(<CatalogSection catalogs={withInactive} options={options} onChanged={vi.fn()} />)
 
     expect(screen.getAllByRole("link").map((link) => link.getAttribute("aria-label"))).toEqual(["Abrir carrera Software"])
-    expect(screen.getByRole("link", { name: "Abrir carrera Software" }).getAttribute("href")).toBe("/admin/estructura-academica/carreras/c1/malla")
+    expect(screen.getByRole("link", { name: "Abrir carrera Software" }).getAttribute("href")).toBe(`/admin/carreras/${catalogs.careers[0]!.code.toLowerCase()}/malla`)
   })
 })

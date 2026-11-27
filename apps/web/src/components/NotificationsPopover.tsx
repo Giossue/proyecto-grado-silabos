@@ -200,7 +200,7 @@ export function NotificationsPopover() {
           ) : error ? (
             <FeedbackAlert message={error} className="mx-4 mb-3" />
           ) : items.length === 0 ? (
-            <EmptyState className="mx-4 mb-3" title={status === "unread" ? "No tiene notificaciones sin leer en este período" : "No tiene notificaciones en este período"} />
+            <EmptyState bare className="mx-4 mb-3" title={status === "unread" ? "No tiene notificaciones sin leer en este período" : "No tiene notificaciones en este período"} />
           ) : (
             <ul className="flex flex-col divide-y border-t">
               {items.map((notification) => {

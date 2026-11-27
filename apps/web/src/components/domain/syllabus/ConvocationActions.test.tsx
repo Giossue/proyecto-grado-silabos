@@ -4,11 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import type { CoordinationConvocation } from "@/api/dashboard"
 import { ConvocationActions } from "@/components/domain/syllabus/ConvocationActions"
 import { DIALOG_EXIT_MS } from "@/lib/dialogExit"
+import { setupChecklistState } from "@/state/setupChecklist"
 import { flush, renderWithProviders } from "@/test/render"
 
 vi.mock("@/api/convocations", () => ({ transitionConvocation: vi.fn() }))
 
-const stubs = vi.hoisted(() => ({ fading: false, close: null as ((open: boolean) => void) | null, opened: null as ((message: string, id: string) => void) | null }))
+const stubs = vi.hoisted(() => ({ openingOpen: false, fading: false, close: null as ((open: boolean) => void) | null, opened: null as ((message: string, id: string) => void) | null }))
 
 vi.mock("@/components/ui/dialog", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/ui/dialog")>()
@@ -35,7 +36,8 @@ vi.mock("@/components/ui/dialog", async (importOriginal) => {
 })
 
 vi.mock("@/components/domain/syllabus/ConvocationOpeningDialog", () => ({
-  ConvocationOpeningDialog: (props: { onOpened?: (message: string, id: string) => void }) => {
+  ConvocationOpeningDialog: (props: { open?: boolean; onOpened?: (message: string, id: string) => void }) => {
+    stubs.openingOpen = Boolean(props.open)
     stubs.opened = props.onOpened ?? null
     return <div />
   },
@@ -75,6 +77,20 @@ describe("ConvocationActions", () => {
     const modal = container.querySelector("[data-modal]")!
     expect(modal.getAttribute("data-state")).toBe("closed")
     expect(modal.textContent).toContain("Pausar el periodo académico")
+  })
+
+  it.each([
+    ["si aún no se puede abrir, el botón sigue activo y abre «Antes de empezar»", false, 1, false],
+    ["si ya se puede abrir, abre el formulario de apertura", true, 0, true],
+  ])("%s", async (_case, canOpen, requested, formOpen) => {
+    renderWithProviders(<ConvocationActions convocation={{ process_id: "p-1", period: "2026-2027", convocation_id: null, can_open: canOpen, state: null, process_open: true }} />)
+    const button = [...document.querySelectorAll("button")].find((item) => item.textContent?.includes("Abrir periodo académico"))!
+    const before = setupChecklistState.openRequests.value
+    expect(button.disabled).toBe(false)
+    fireEvent.click(button)
+    await flush()
+    expect(setupChecklistState.openRequests.value - before).toBe(requested)
+    expect(stubs.openingOpen).toBe(formOpen)
   })
 
   it("avisa que abrió el periodo académico cuando el modal de apertura terminó de cerrarse", async () => {

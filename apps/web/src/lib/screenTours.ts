@@ -28,7 +28,7 @@ const checklist = step(CHECKLIST, 'Antes de empezar', 'Lo que falta preparar ant
 export const screenTours: Record<string, TourStep[]> = {
   '/admin/periodos': [
     step(METRICS, 'Resumen', 'Cómo va el periodo académico: avance, días que faltan y carreras que aún no empiezan', 'bottom'),
-    step(ACTIONS, 'Nuevo periodo académico', 'Ponga las fechas de clases y de entrega de sílabos. Se activa al terminar «Antes de empezar». Solo puede haber uno a la vez', 'left'),
+    step(ACTIONS, 'Nuevo periodo académico', 'Ponga las fechas de clases y de entrega de sílabos. Si faltan pasos, abre «Antes de empezar». Solo puede haber uno a la vez', 'left'),
     step(FILTERS, 'Buscar', 'Busque un período o filtre por estado', 'bottom'),
     step(TABLE, 'Períodos', 'Pulse un período para ver qué puede hacer: abrir, pausar, dar más plazo, finalizar o eliminar', 'top'),
     checklist,

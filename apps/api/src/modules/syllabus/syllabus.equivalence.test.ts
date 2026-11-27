@@ -333,6 +333,7 @@ function deps() {
         return Array.from({ length: careerId === null || careerId === CAREER ? state.pastCareerSyllabi : 0 }, (_, index) => ({
           id: `past-${index}`,
           careerId: CAREER,
+          careerCode: "SW",
           career: "Software",
           subject: `Asignatura ${index}`,
           period: `202${index}`,

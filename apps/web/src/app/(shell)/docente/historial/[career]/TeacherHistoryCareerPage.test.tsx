@@ -1,16 +1,17 @@
 import { fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ApiError } from "@/api/client"
-import { getTeacherHistoryCareer, type HistorySyllabus } from "@/api/syllabi"
+import { getTeacherHistory, getTeacherHistoryCareer, type HistorySyllabus } from "@/api/syllabi"
 import { SYLLABUS_PREVIEW_KEY } from "@/components/domain/syllabus/syllabusPreview"
 import { navigation } from "@/test/nextNavigation"
+import { NotFoundBoundary } from "@/test/notFoundBoundary"
 import { flush, renderWithProviders } from "@/test/render"
 import TeacherHistoryCareerPage from "./TeacherHistoryCareerPage"
 
-const params = vi.hoisted(() => ({ value: { career: "c1" } as Record<string, string> }))
+const params = vi.hoisted(() => ({ value: { career: "SW" } as Record<string, string> }))
 
 vi.mock("next/navigation", async () => ({ ...(await import("@/test/nextNavigation")), useParams: () => params.value }))
-vi.mock("@/api/syllabi", () => ({ getTeacherHistoryCareer: vi.fn() }))
+vi.mock("@/api/syllabi", () => ({ getTeacherHistory: vi.fn(), getTeacherHistoryCareer: vi.fn() }))
 
 const syllabus = (overrides: Partial<HistorySyllabus>): HistorySyllabus => ({
   id: "s1", subject: "Álgebra Lineal", period: "2025-2026", state: "aprobado", parallels: ["A"], guardado_en: null, ...overrides,
@@ -25,7 +26,10 @@ const mountPage = async () => {
 describe("TeacherHistoryCareerPage", () => {
   beforeEach(() => {
     vi.mocked(getTeacherHistoryCareer).mockReset()
-    navigation.reset("/docente/historial/c1")
+    navigation.reset("/docente/historial/SW")
+    vi.mocked(getTeacherHistory).mockReset()
+    vi.mocked(getTeacherHistory).mockResolvedValue({ careers: [{ id: "c1", code: "SW", name: "Software", syllabi_count: 2 }] })
+    params.value = { career: "SW" }
     sessionStorage.clear()
   })
 
@@ -79,10 +83,34 @@ describe("TeacherHistoryCareerPage", () => {
     expect(container.textContent).toContain("Todavía no tiene sílabos de períodos anteriores en esta carrera")
   })
 
-  it("si la carrera no existe vuelve al historial", async () => {
-    vi.mocked(getTeacherHistoryCareer).mockRejectedValue(new ApiError("No encontrado", 404))
-    await mountPage()
+  it.each(["NOPE", "c1"])("con el código desconocido %s muestra 404 sin pedir sus sílabos", async (code) => {
+    const silent = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    params.value = { career: code }
+    const { container } = renderWithProviders(<NotFoundBoundary><TeacherHistoryCareerPage /></NotFoundBoundary>)
+    await flush()
 
-    expect(navigation.replace).toHaveBeenCalledWith("/docente/historial")
+    expect(container.querySelector('[data-testid="not-found"]')).not.toBeNull()
+    expect(getTeacherHistoryCareer).not.toHaveBeenCalled()
+    expect(navigation.replace).not.toHaveBeenCalled()
+    silent.mockRestore()
+  })
+
+  it("si la API ya no encuentra la carrera muestra 404", async () => {
+    const silent = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    vi.mocked(getTeacherHistoryCareer).mockRejectedValue(new ApiError("No encontrado", 404))
+    const { container } = renderWithProviders(<NotFoundBoundary><TeacherHistoryCareerPage /></NotFoundBoundary>)
+    await flush(5)
+
+    expect(container.querySelector('[data-testid="not-found"]')).not.toBeNull()
+    silent.mockRestore()
+  })
+
+  it("mientras busca la carrera muestra el esqueleto, sin 404", async () => {
+    vi.mocked(getTeacherHistory).mockImplementation(() => new Promise(() => undefined))
+    const { container } = renderWithProviders(<NotFoundBoundary><TeacherHistoryCareerPage /></NotFoundBoundary>)
+    await flush()
+
+    expect(container.querySelector('[data-skeleton="page-title"]')).not.toBeNull()
+    expect(container.querySelector('[data-testid="not-found"]')).toBeNull()
   })
 })

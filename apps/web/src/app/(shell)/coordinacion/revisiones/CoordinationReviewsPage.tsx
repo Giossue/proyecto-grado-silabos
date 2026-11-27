@@ -69,7 +69,6 @@ export default function CoordinationReviewsPage() {
   const filtersActive = search !== ""
   const area = reviewAreaPaths()
   const convocationId = summary?.coordination_convocation?.convocation_id ?? null
-  const openHint = summary?.setup?.steps.find((step) => step.key === "convocation")?.hint ?? ""
 
   useEffect(() => {
     if (summary?.setup !== undefined) setupChecklistState.update(summary.setup)
@@ -145,7 +144,7 @@ export default function CoordinationReviewsPage() {
           </Link>
         </Button>
       }
-      actions={summary?.coordination_convocation ? <ConvocationActions convocation={summary.coordination_convocation} blockedReason={openHint} onChanged={(message) => void changed(message)} /> : null}
+      actions={summary?.coordination_convocation ? <ConvocationActions convocation={summary.coordination_convocation} onChanged={(message) => void changed(message)} /> : null}
     >
       {error ? (
         <LoadErrorState message={error} onRetry={() => void load(1, true)} />

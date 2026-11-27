@@ -38,7 +38,7 @@ export const SUBJECT_CODE = contextText(["subject", "code"], "asignatura.codigo_
 export const PARALLEL_CODE = contextText(["parallel", "code"], "paralelo.codigo_paralelo")
 
 export const SYLLABUS_DETAIL_COLUMNS = Prisma.sql`silabos.silabo_id::text as id, silabos.estado_silabo as state,
-  convocatoria.convocatoria_carrera_id::text as convocation_id, convocatoria.carrera_id::text as career_id, ${careerLabelSql("carrera")} as career,
+  convocatoria.convocatoria_carrera_id::text as convocation_id, convocatoria.carrera_id::text as career_id, ${careerLabelSql("carrera")} as career, carrera.codigo_carrera as career_code,
   ${SUBJECT_NAME} as subject, ${SUBJECT_CODE} as code, ${PARALLEL_CODE} as parallel, asignatura.nombre_asignatura as live_subject,
   periodo.codigo_periodo_academico as period, to_char(periodo.fecha_fin_periodo, 'YYYY-MM-DD') as period_ends_on,
   ${iso8601(Prisma.raw("silabos.iniciado_en"))} as started_at, ${iso8601(Prisma.raw("silabos.guardado_en"))} as saved_at`
@@ -49,6 +49,7 @@ export type SyllabusDetailRow = {
   convocation_id: string
   career_id: string
   career: string
+  career_code: string
   subject: string
   code: string
   parallel: string

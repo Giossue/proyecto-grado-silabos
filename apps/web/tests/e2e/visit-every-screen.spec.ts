@@ -28,10 +28,11 @@ async function walk(page: Page, visits: Visit[]): Promise<void> {
   issues.expectClean()
 }
 
-const sessionRoles = async (page: Page): Promise<{ career_id: string | null; code: string }[]> => {
-  const response = await page.request.get("/api/v1/session", { headers: { Accept: "application/json", Referer: page.url() } })
-  const body = (await response.json()) as { available_roles?: { career_id: string | null; code: string }[] }
-  return body.available_roles ?? []
+/** Code of the first career of the teacher's history, or undefined when there are no past periods. */
+const historyCareerCode = async (page: Page): Promise<string | undefined> => {
+  const response = await page.request.get("/api/v1/teacher/history", { headers: { Accept: "application/json", Referer: page.url() } })
+  const body = (await response.json()) as { careers?: { code: string }[] }
+  return body.careers?.[0]?.code
 }
 
 const roleScreens: Record<string, { key: AccountKey; visits: () => Visit[] }> = {
@@ -105,10 +106,12 @@ test.describe("screens reached from data", () => {
       else await page.goto(`/docente/mis-silabos/${await latestSyllabusOf(accounts.teacher.email)}`)
       await expect(page).toHaveURL(/\/docente\/mis-silabos\/[0-9a-f-]{36}$/)
       await expect(page.getByRole("tablist", { name: "Secciones del sílabo" }).or(page.getByRole("region", { name: "Vista previa del sílabo" }))).toBeVisible()
-      const career = (await sessionRoles(page)).find((role) => role.code === "docente")?.career_id
-      expect(career).toBeTruthy()
-      await expectScreen(page, { path: `/docente/historial/${career}`, landsOn: new RegExp(`/docente/historial(/${career})?$`) })
-      issues.expectClean([new RegExp(`^http 404: GET .*/api/v1/teacher/history/${career}$`), new RegExp(`status of 404 .* @ .*/docente/historial/${career}$`)])
+      const career = await historyCareerCode(page)
+      if (career) await expectScreen(page, { path: `/docente/historial/${career}` })
+      issues.expectClean()
+
+      await page.goto("/docente/historial/CODIGO-QUE-NO-EXISTE")
+      await expect(page.getByRole("heading", { name: "Página no encontrada" })).toBeVisible()
     })
   })
 
@@ -120,7 +123,7 @@ test.describe("screens reached from data", () => {
       await page.goto("/coordinacion/proyecto-carrera")
       await page.getByRole("button", { name: /^Ciclo 1 / }).click()
       await page.getByRole("list", { name: "Materias del ciclo 1" }).getByRole("heading").first().click()
-      await expect(page).toHaveURL(/\/coordinacion\/proyecto-carrera\/[0-9a-f-]{36}$/)
+      await expect(page).toHaveURL(/\/coordinacion\/proyecto-carrera\/[A-Za-z0-9-]+\/[A-Za-z0-9-]+$/)
       await expect(page.getByRole("heading", { level: 1 })).toContainText("Proyecto de carrera de")
 
       await page.goto("/coordinacion/revisiones?tab=seguimiento")

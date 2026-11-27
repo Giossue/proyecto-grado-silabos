@@ -48,7 +48,7 @@ export default function TeacherHistoryPage() {
     void query.refetch()
   }
 
-  const open = (career: HistoryCareer): void => router.push(paths.teacher.historyCareer(career.id))
+  const open = (career: HistoryCareer): void => router.push(paths.teacher.historyCareer(career.code))
 
   return (
     <PageFrame
@@ -88,7 +88,7 @@ export default function TeacherHistoryPage() {
                     onClick={(event) => activateRow(event.nativeEvent, () => open(career))}
                   >
                     <TableCell>
-                      <Link href={paths.teacher.historyCareer(career.id)} className={rowLinkClass}>{career.name}</Link>
+                      <Link href={paths.teacher.historyCareer(career.code)} className={rowLinkClass}>{career.name}</Link>
                     </TableCell>
                     <TableCell className="text-center">{career.syllabi_count}</TableCell>
                   </TableRow>

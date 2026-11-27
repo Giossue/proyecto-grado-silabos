@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState, type CSSProperties } from "react"
 import { type Curriculum } from "@/api/career-academics"
 import type { BoardInset } from "@/components/domain/academic/curriculum/CurriculumCanvas"
-import { AdminCareerBackLink, AdminCareerTabs } from "@/components/domain/academic/AdminCareerNavigation"
+import { AdminCareerBackLink, AdminCareerTabs, type AdminCareer } from "@/components/domain/academic/AdminCareerNavigation"
 import { MallaDialog } from "@/components/domain/academic/curriculum/MallaDialog"
 import { MallaToolbar, mallaLabel } from "@/components/domain/academic/curriculum/MallaToolbar"
 import { ScheduledSubjectsTab } from "@/components/domain/academic/ScheduledSubjectsTab"
@@ -69,8 +69,28 @@ const removeLegacyBreakdownMode = (): void => {
   window.history.replaceState(window.history.state, "", url)
 }
 
-export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerId = null }: { mode: AcademicStructureMode; careerId?: string | null }) {
+/** Administration's screen while the career of the address is being found. */
+export function AdminCareerStructurePending({ mode, careerCode, error, onRetry }: { mode: AcademicStructureMode; careerCode: string; error: string | null; onRetry: () => void }) {
+  return (
+    <PageFrame
+      title={pageTitles[mode]}
+      description={adminDescriptions[mode]}
+      size={mode === "curriculum" ? "full" : "wide"}
+      loading={!error}
+      actionsSkeleton={error ? [] : actionSkeletons[mode]}
+      eyebrow={<AdminCareerBackLink />}
+    >
+      <div data-career-tabs>
+        <AdminCareerTabs careerCode={careerCode} current={mode} />
+      </div>
+      {error ? <LoadErrorState message={error} onRetry={onRetry} /> : <LoadingSkeleton variant="academic-structure" mode={mode} />}
+    </PageFrame>
+  )
+}
+
+export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: { mode: AcademicStructureMode; adminCareer?: AdminCareer | null }) {
   const router = useRouter()
+  const adminCareerId = adminCareer?.id ?? null
   useAcademicCareerScope(adminCareerId)
   const scope = useQuery(coordinatorCareerQuery(adminCareerId))
   const careerId = typeof scope.data === "string" ? scope.data : null
@@ -240,13 +260,13 @@ export function CoordinationAcademicStructurePage({ mode, careerId: adminCareerI
         </>
       }
     >
-      {adminCareerId && !editingCurriculum ? (
+      {adminCareer && !editingCurriculum ? (
         <div
           data-career-tabs
           className={cn(alignedInset && "lg:pr-(--page-actions-inset) lg:pl-(--page-title-inset)", awaitingBoard && "lg:invisible")}
           style={alignedInset ? ({ "--page-title-inset": `${alignedInset.left}px`, "--page-actions-inset": `${alignedInset.right}px` } as CSSProperties) : undefined}
         >
-          <AdminCareerTabs careerId={adminCareerId} current={mode} />
+          <AdminCareerTabs careerCode={adminCareer.code} current={mode} />
         </div>
       ) : null}
       {actionError ? (

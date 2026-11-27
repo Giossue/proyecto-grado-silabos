@@ -21,7 +21,7 @@ export const mainNavItemsFor = (session: Session | null): NavItem[] => {
     return [
         ...(code === 'administrador'
             ? [
-                  { title: 'Facultades y carreras', href: paths.admin.academic, icon: Building2 },
+                  { title: 'Facultades y carreras', href: paths.admin.academic, activeUrls: [paths.admin.careers], icon: Building2 },
                   { title: 'Usuarios y roles', href: paths.admin.users, icon: UsersRound },
                   { title: 'Plantilla', href: paths.admin.template, icon: FileStack },
                   { title: 'Periodos académicos', href: paths.admin.convocations, icon: CalendarRange },
@@ -58,7 +58,7 @@ export function useActiveNavItem(): NavItem | null {
     for (const item of items) {
         const child = item.items?.find((c) => isCurrentOrParentUrl(c.href));
         if (child) return { ...child, icon: child.icon ?? item.icon };
-        if (isCurrentOrParentUrl(item.href)) return item;
+        if ([item.href, ...(item.activeUrls ?? [])].some((url) => isCurrentOrParentUrl(url))) return item;
     }
     return null;
 }

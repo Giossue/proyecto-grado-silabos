@@ -32,6 +32,7 @@ const row = (overrides: Partial<TeacherSyllabusRow> = {}): TeacherSyllabusRow =>
 const pastRow = (overrides: Partial<PastSyllabusRow> = {}): PastSyllabusRow => ({
   id: "50000000-0000-4000-8000-000000000009",
   careerId: CAREER,
+  careerCode: "SW",
   career: "Software",
   subject: "Álgebra",
   period: "2025-2",
@@ -156,10 +157,10 @@ describe("GET /api/v1/teacher/syllabi", () => {
 describe("GET /api/v1/teacher/history", () => {
   it("groups the past syllabi by career in natural name order", async () => {
     past = [
-      pastRow({ careerId: OTHER_CAREER, career: "Software 10" }),
+      pastRow({ careerId: OTHER_CAREER, careerCode: "SW-10", career: "Software 10" }),
       pastRow(),
       pastRow({ id: "50000000-0000-4000-8000-00000000000a" }),
-      pastRow({ id: "50000000-0000-4000-8000-00000000000b", careerId: "c0000000-0000-4000-8000-000000000003", career: "software 2" }),
+      pastRow({ id: "50000000-0000-4000-8000-00000000000b", careerId: "c0000000-0000-4000-8000-000000000003", careerCode: "SW-2", career: "software 2" }),
     ]
     const { status, text } = await history("/api/v1/teacher/history")
     expect(status).toBe(200)
@@ -167,9 +168,9 @@ describe("GET /api/v1/teacher/history", () => {
     expect(text).toBe(
       JSON.stringify({
         careers: [
-          { id: CAREER, name: "Software", syllabi_count: 2 },
-          { id: "c0000000-0000-4000-8000-000000000003", name: "software 2", syllabi_count: 1 },
-          { id: OTHER_CAREER, name: "Software 10", syllabi_count: 1 },
+          { id: CAREER, code: "SW", name: "Software", syllabi_count: 2 },
+          { id: "c0000000-0000-4000-8000-000000000003", code: "SW-2", name: "software 2", syllabi_count: 1 },
+          { id: OTHER_CAREER, code: "SW-10", name: "Software 10", syllabi_count: 1 },
         ],
       }),
     )

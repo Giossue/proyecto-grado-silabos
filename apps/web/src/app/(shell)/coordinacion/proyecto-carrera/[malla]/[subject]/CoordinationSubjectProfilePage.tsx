@@ -2,10 +2,11 @@
 
 import { ArrowLeft, Eye, PencilLine, Save } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useEffectEvent, useState } from "react"
 import { ApiError } from "@/api/client"
 import { getScheduledSubjects, getSubjectProfile, getSubjectProfilePreview, saveSubjectProfile, type ScheduledSubjects, type SubjectProfileField, type SubjectProfilePreview } from "@/api/career-academics"
+import type { AdminCareer } from "@/components/domain/academic/AdminCareerNavigation"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
@@ -22,6 +23,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAcademicCareerScope } from "@/composables/useAcademicCareerScope"
+import { sameCode, useCodeLookup } from "@/composables/useCodeLookup"
 import { useDiscardConfirmation } from "@/composables/useDiscardConfirmation"
 import { goBack } from "@/lib/goBack"
 import { RESPONSE_NODE, careerFieldUndecided, responseAttrs, responseNeedsOptions } from "@silabos/shared/lib/responseKinds"
@@ -30,7 +32,8 @@ import { nodesOfType, type DocumentNode } from "@silabos/shared/lib/templateDocu
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import { curriculumEditorState } from "@/state/curriculumEditor"
-import { careerAcademicKeys } from "@/queries/careerAcademics"
+import { queryErrorMessage } from "@/lib/queryClient"
+import { careerAcademicKeys, scheduledSubjectsQuery } from "@/queries/careerAcademics"
 
 type Subject = ScheduledSubjects["options"]["activeSubjects"][number]
 type Values = Record<string, DocumentNode | null>
@@ -41,6 +44,43 @@ const sectionOf = (field: SubjectProfileField): string => field.section?.trim() 
 const cycleLabel = (cycle: number): string => (cycle ? `Ciclo ${cycle}` : "Sin ciclo")
 const valuesFrom = (fields: SubjectProfileField[], stored: Record<string, DocumentNode | null | undefined>): Values =>
   Object.fromEntries(fields.map((field) => [field.id, stored[field.id] ?? field.template ?? field.content ?? null]))
+
+const PAGE_TITLE = "Proyecto de carrera"
+// Wider than the usual page, so it starts further left without reaching the edge on large screens.
+const FRAME_CLASS = "mx-auto w-full max-w-[90rem]"
+const ACTIONS_SKELETON = ["w-32", "w-48"]
+const profileSkeleton = <LoadingSkeleton variant="form" rows={1} sidebar />
+
+const projectPath = (career: AdminCareer | null): string => (career ? paths.admin.careerProject(career.code) : paths.coordination.careerProject)
+
+function BackToProject({ onClick }: { onClick: () => void }) {
+  return (
+    <Button type="button" variant="link" size="sm" className="h-auto px-0" onClick={onClick}>
+      <ArrowLeft aria-hidden="true" />
+      Volver al proyecto de carrera
+    </Button>
+  )
+}
+
+/** The screen while the subject of the address is being found. */
+export function SubjectProfilePending({ adminCareer, error, onRetry }: { adminCareer: AdminCareer | null; error: string | null; onRetry: () => void }) {
+  const router = useRouter()
+
+  return (
+    <PageFrame
+      title={PAGE_TITLE}
+      description=""
+      withoutDescription
+      size="full"
+      className={FRAME_CLASS}
+      loading={!error}
+      actionsSkeleton={error ? [] : ACTIONS_SKELETON}
+      eyebrow={<BackToProject onClick={() => goBack(router, projectPath(adminCareer))} />}
+    >
+      {error ? <LoadErrorState message={error} onRetry={onRetry} /> : profileSkeleton}
+    </PageFrame>
+  )
+}
 
 const loadProfile = async (subjectId: string, careerId: string | null): Promise<Loaded> => {
   const [scheduled, profile] = await Promise.all([getScheduledSubjects(careerId), getSubjectProfile(subjectId)])
@@ -59,11 +99,13 @@ const loadProfile = async (subjectId: string, careerId: string | null): Promise<
   }
 }
 
-function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: string | null }) {
+function SubjectProfile({ subjectId, adminCareer }: { subjectId: string; adminCareer: AdminCareer | null }) {
   const router = useRouter()
+  const careerId = adminCareer?.id ?? null
   useAcademicCareerScope(careerId)
-  const projectHref = careerId ? paths.admin.careerProject(careerId) : paths.coordination.careerProject
-  const subjectHref = (id: string): string => (careerId ? paths.admin.careerProjectSubject(careerId, id) : paths.coordination.careerProjectSubject(id))
+  const projectHref = projectPath(adminCareer)
+  const subjectHref = ({ malla_code: malla, codigo_asignatura: code }: Subject): string =>
+    adminCareer ? paths.admin.careerProjectSubject(adminCareer.code, malla, code) : paths.coordination.careerProjectSubject(malla, code)
   const queryClient = useQueryClient()
   const [data, setData] = useState<Loaded | null>(null)
   const [values, setValues] = useState<Values>({})
@@ -147,7 +189,8 @@ function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: 
   useLeaveGuard({ needed: () => changed, confirm: askToDiscard, navigate: (href) => router.push(href) })
 
   const openSubject = (id: string): void => {
-    if (id !== "" && id !== subjectId) void leave(() => router.push(subjectHref(id)))
+    const next = subjects.find((subject) => subject.id === id)
+    if (next && id !== subjectId) void leave(() => router.push(subjectHref(next)))
   }
 
   const loadPreview = async (): Promise<void> => {
@@ -199,20 +242,14 @@ function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: 
 
   return (
     <PageFrame
-      title={data?.subjectName ? `Proyecto de carrera de ${data.subjectName}` : "Proyecto de carrera"}
+      title={data?.subjectName ? `Proyecto de carrera de ${data.subjectName}` : PAGE_TITLE}
       description=""
       withoutDescription
       size="full"
-      // Wider than the usual page, so it starts further left without reaching the edge on large screens.
-      className="mx-auto w-full max-w-[90rem]"
+      className={FRAME_CLASS}
       loading={loading && !loadError}
-      actionsSkeleton={loading ? ["w-32", "w-48"] : []}
-      eyebrow={
-        <Button type="button" variant="link" size="sm" className="h-auto px-0" onClick={() => void leave(() => goBack(router, projectHref))}>
-          <ArrowLeft aria-hidden="true" />
-          Volver al proyecto de carrera
-        </Button>
-      }
+      actionsSkeleton={loading ? ACTIONS_SKELETON : []}
+      eyebrow={<BackToProject onClick={() => void leave(() => goBack(router, projectHref))} />}
       banner={lockReason ? <ProcessLockAlert banner message={lockReason} hideAction /> : null}
       actions={
         !loading && !loadError && fields.length > 0 ? (
@@ -232,7 +269,7 @@ function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: 
       {loadError ? (
         <LoadErrorState message={loadError} onRetry={load} />
       ) : loading ? (
-        <LoadingSkeleton variant="form" rows={1} sidebar />
+        profileSkeleton
       ) : fields.length === 0 ? (
         <Alert>
           <AlertDescription>La plantilla no tiene campos editables. Pídale a Administración que los agregue</AlertDescription>
@@ -339,9 +376,20 @@ function SubjectProfile({ subjectId, careerId }: { subjectId: string; careerId: 
   )
 }
 
-export default function CoordinationSubjectProfilePage({ careerId = null }: { careerId?: string | null }) {
-  const params = useParams<{ subject?: string }>()
-  const subjectId = String(params?.subject ?? "")
+export default function CoordinationSubjectProfilePage({ adminCareer = null }: { adminCareer?: AdminCareer | null }) {
+  const params = useParams<{ malla?: string; subject?: string }>()
+  const mallaCode = String(params?.malla ?? "")
+  const subjectCode = String(params?.subject ?? "")
+  const careerId = adminCareer?.id ?? null
+  const subjects = useQuery(scheduledSubjectsQuery(careerId))
+  // A subject code is only unique inside its malla.
+  const subjectId = useCodeLookup(`${careerId ?? ""}/${mallaCode}/${subjectCode}`, subjects, (data) =>
+    data.options.activeSubjects.find((subject) => sameCode(subject.malla_code, mallaCode) && sameCode(subject.codigo_asignatura, subjectCode))?.id,
+  )
 
-  return <SubjectProfile key={subjectId} subjectId={subjectId} careerId={careerId} />
+  if (subjectId === null) {
+    return <SubjectProfilePending adminCareer={adminCareer} error={queryErrorMessage(subjects, "No se pudo abrir el proyecto de carrera")} onRetry={() => void subjects.refetch()} />
+  }
+
+  return <SubjectProfile key={subjectId} subjectId={subjectId} adminCareer={adminCareer} />
 }
