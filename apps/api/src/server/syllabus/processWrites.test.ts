@@ -174,11 +174,7 @@ describe("DELETE /api/v1/admin/processes/{process}", () => {
     expect(response.text).toBe(JSON.stringify({ message: "Proceso de sílabos eliminado." }))
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, "lock:convocations", "lock:syllabi", "purge:2", `delete:${PROCESS}:${CONVOCATION}`, "commit"])
     const message = "Administración eliminó el proceso de sílabos 2026-2 y todos sus sílabos."
-    expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType, item.resourceId, item.periodId])).toEqual([
-      [TEACHER, `flujo:proceso.eliminado:${PROCESS}`, "Proceso de sílabos eliminado", message, "periodo_academico", PERIOD, PERIOD],
-      [COORDINATOR, `flujo:proceso.eliminado:${PROCESS}`, "Proceso de sílabos eliminado", message, "periodo_academico", PERIOD, PERIOD],
-      [LIBRARIAN, `flujo:proceso.eliminado:${PROCESS}`, "Proceso de sílabos eliminado", message, "periodo_academico", PERIOD, PERIOD],
-    ])
+    expect(notices.notifications).toEqual([])
     // No email of its own: the daily summary replaces it.
     expect(notices.mails).toEqual([])
   })
@@ -186,7 +182,7 @@ describe("DELETE /api/v1/admin/processes/{process}", () => {
   it("needs no message and ignores one if sent", async () => {
     expect((await destroy({})).status).toBe(200)
     expect((await destroy({ mensaje: ["x"] })).status).toBe(200)
-    expect(notices.notifications.every((item) => item.message === "Administración eliminó el proceso de sílabos 2026-2 y todos sus sílabos.")).toBe(true)
+    expect(notices.notifications).toEqual([])
   })
 
   it("is forbidden for other roles and for closed processes", async () => {
@@ -217,18 +213,7 @@ describe("POST /api/v1/admin/processes/{process}/reanudar", () => {
     expect(response.text).toBe(JSON.stringify({ message: "Proceso reanudado. Los envíos vuelven a admitirse." }))
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, "template-change:pause", `state:${PROCESS}:abierto`, "commit"])
     const at = "20270115080000007"
-    expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
-      [TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${TEACHER}:${at}`, "Se reanudó el proceso de sílabos", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
-      [
-        COORDINATOR,
-        `flujo:proceso.reanudado:${PROCESS}:${COORDINATOR}:${at}`,
-        "Administración reanudó el proceso de sílabos",
-        "Se retoman la edición y las revisiones de los sílabos del período 2026-2.",
-        "proceso_silabos",
-      ],
-      [TEACHER, `flujo:proceso.reanudado:${PROCESS}:${TEACHER}:${at}`, "Administración reanudó el proceso de sílabos", "Se retoman la edición y las revisiones de los sílabos del período 2026-2.", "proceso_silabos"],
-      [LIBRARIAN, `flujo:proceso.reanudado:${PROCESS}:${LIBRARIAN}:${at}`, "Administración reanudó el proceso de sílabos", "Se retoman la edición y las revisiones de los sílabos del período 2026-2.", "proceso_silabos"],
-    ])
+    expect(notices.notifications).toEqual([])
   })
 
   it("validates confirmar_rehacer as a boolean when present", async () => {
@@ -295,15 +280,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
     const response = await extend({ due_at: "2026-12-20" })
     expect(response.text).toBe(JSON.stringify({ message: "Plazo prorrogado para todos los procesos de sílabos." }))
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, `deadline:${PROCESS}:2026-12-21T04:59:59+00:00:1`, "commit"])
-    expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
-      [
-        TEACHER,
-        `flujo:proceso.plazo_extendido:${PROCESS}:${Date.UTC(2026, 11, 21, 4, 59, 59) / 1000}`,
-        "Plazo extendido",
-        "La entrega de sílabos del proceso «2026-2» se amplió hasta el 20 de diciembre de 2026, 23:59.",
-        "proceso_silabos",
-      ],
-    ])
+    expect(notices.notifications).toEqual([])
     expect(notices.mails).toEqual([])
   })
 
@@ -346,7 +323,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
         `generate:${CONVOCATION}`,
         "commit",
       ])
-      expect(notices.notifications.map((item) => item.type)).toEqual(["proceso.plazo_extendido"])
+      expect(notices.notifications).toEqual([])
     })
 
     it("asks to confirm a template change after closing and reports the pending changes too", async () => {

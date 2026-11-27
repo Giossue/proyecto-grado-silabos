@@ -134,10 +134,7 @@ describe("POST /api/v1/coordination/convocations", () => {
       "commit",
     ])
     const message = "Se abrió el proceso de sílabos de Software; la entrega vence el 10 de diciembre de 2026, 23:59."
-    expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType, item.resourceId, item.periodId])).toEqual([
-      [TEACHER, `flujo:convocatoria.abierta:${CONVOCATION}:${TEACHER}`, "Tiene 2 sílabos por elaborar", message, "convocatoria", CONVOCATION, PERIOD],
-      [OTHER_TEACHER, `flujo:convocatoria.abierta:${CONVOCATION}:${OTHER_TEACHER}`, "Tiene un sílabo por elaborar", message, "convocatoria", CONVOCATION, PERIOD],
-    ])
+    expect(notices.notifications).toEqual([])
     // No email of its own: the daily summary replaces it.
     expect(notices.mails).toEqual([])
   })
@@ -193,10 +190,7 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
     )
     expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierto`, "commit"])
     const at = "20270115080000123"
-    expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
-      [TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${TEACHER}:${at}`, "Se reanudó el proceso de sílabos", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
-      [OTHER_TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${OTHER_TEACHER}:${at}`, "Se reanudó el proceso de sílabos", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
-    ])
+    expect(notices.notifications).toEqual([])
     expect(notices.mails).toEqual([])
   })
 

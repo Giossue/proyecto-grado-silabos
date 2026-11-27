@@ -164,17 +164,7 @@ describe("GenerateSyllabusExportJob", () => {
       },
     ])
     expect(artifacts.get(ARTIFACT)).toEqual({ state: "completado", objectId: "0b000000-0000-4000-8000-000000000001", completedAt: NOW })
-    expect(notices.notifications).toEqual([
-      expect.objectContaining({
-        userId: TEACHER,
-        key: `flujo:silabo.aprobado:${REVISION}`,
-        type: "silabo.aprobado",
-        title: "Sílabo aprobado",
-        message: "Ya puede descargar el PDF firmado del sílabo de Biología, revisión 3.",
-        resourceType: "artefacto_exportacion",
-        resourceId: ARTIFACT,
-      }),
-    ])
+    expect(notices.notifications).toEqual([])
     // No email of its own: the daily summary replaces it.
     expect(notices.mails).toEqual([])
     expect(renders[0]).toMatchObject({ subject: "Biología", subjectCode: "C2", academicPeriod: "2026-2", revisionNumber: 3, generatedAt: "2026-11-24T15:00:00+00:00", locale: "es-EC" })
@@ -205,7 +195,7 @@ describe("GenerateSyllabusExportJob", () => {
     await generateSyllabusExport(ARTIFACT, deps())
     expect(objects).toHaveLength(1)
     expect(files.get(PATH)).toEqual(PDF)
-    expect(notices.notifications).toHaveLength(1)
+    expect(notices.notifications).toEqual([])
     expect(artifacts.get(ARTIFACT)?.state).toBe("completado")
   })
 

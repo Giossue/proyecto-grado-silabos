@@ -80,12 +80,12 @@ describe("DeadlineBanner", () => {
   })
 
   it.each([
-    ["docente", "administracion", "El proceso de sílabos está en pausaLe avisaremos cuando se reanude para que siga con sus sílabos"],
-    ["docente", "coordinacion", "El proceso de sílabos está en pausaLe avisaremos cuando se reanude para que siga con sus sílabos"],
-    ["coordinador", "administracion", "El proceso de sílabos está en pausaAdministración pausó el proceso de sílabos. Las revisiones se retoman cuando lo reanude; le avisaremos"],
+    ["docente", "administracion", "El proceso de sílabos está en pausaPodrá seguir con sus sílabos cuando se reanude"],
+    ["docente", "coordinacion", "El proceso de sílabos está en pausaPodrá seguir con sus sílabos cuando se reanude"],
+    ["coordinador", "administracion", "El proceso de sílabos está en pausaAdministración pausó el proceso de sílabos. Las revisiones se retoman cuando lo reanude"],
     ["coordinador", "coordinacion", "El proceso de sílabos de su carrera está en pausaLos docentes no editan y no se revisa. Puede cambiar la malla y el proyecto de carrera, y luego reanudarlo desde Revisión"],
     ["administrador", "administracion", "El proceso de sílabos está en pausaPuede reanudarlo desde Periodos académicos"],
-    ["bibliotecario", "administracion", "El proceso de sílabos está en pausaAdministración pausó el proceso de sílabos. Las revisiones se retoman cuando lo reanude; le avisaremos"],
+    ["bibliotecario", "administracion", "El proceso de sílabos está en pausaAdministración pausó el proceso de sílabos. Las revisiones se retoman cuando lo reanude"],
   ] as const)("en pausa, a %s (pausó %s) le dice lo que le toca", (audience, pausedBy, expected) => {
     expect(banner({ state: "paused", days_until_due: 0, paused_by: pausedBy }, audience).textContent).toBe(expected)
   })

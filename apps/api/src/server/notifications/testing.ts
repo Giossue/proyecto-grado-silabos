@@ -7,6 +7,7 @@ export type NotificationWorld = {
   subjects: Map<string, string>
   notifications: NotificationRow[]
   mails: QueuedMail[]
+  emailEvents?: string[]
 }
 
 export function notificationWorld(overrides: Partial<NotificationWorld> = {}): NotificationWorld {
@@ -39,7 +40,7 @@ export async function fakeNotificationTransaction<T>(world: NotificationWorld, n
     mail: async (mail) => void world.mails.push(mail),
     now,
     // Single-event emails are opt-in; tests of that path name the events they use.
-    email: { enabled: true, events: ["silabo.correccion_solicitada"] },
+    email: { enabled: true, events: world.emailEvents ?? ["silabo.correccion_solicitada"] },
     frontendUrl: "http://localhost:3000/",
   }
   const result = await work(scope)

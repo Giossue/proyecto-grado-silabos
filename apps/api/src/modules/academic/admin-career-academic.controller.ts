@@ -161,7 +161,7 @@ export class AdminCareerAcademicController {
   }
 
   @Post("parallels")
-  @ApiOperation({ summary: "Crea paralelos; si el proceso de sílabos está abierto y tienen docente, genera sus sílabos y avisa al docente." })
+  @ApiOperation({ summary: "Crea paralelos; si el proceso de sílabos está abierto y tienen docente, genera sus sílabos." })
   @ApiBody({ type: ParallelsDto })
   @ApiUnprocessableEntityResponse(VALIDATION)
   createParallels(@Req() request: ApiRequest, @Param("career") career: string): Promise<WebReply> {
@@ -174,7 +174,7 @@ export class AdminCareerAcademicController {
   }
 
   @Put("parallels/:parallel/teacher")
-  @ApiOperation({ summary: "Asigna o cambia el docente del paralelo; con proceso de sílabos abierto genera el sílabo y avisa al docente." })
+  @ApiOperation({ summary: "Asigna o cambia el docente del paralelo; con proceso de sílabos abierto genera el sílabo." })
   @ApiParam({ name: "parallel", format: "uuid" })
   @ApiBody({ type: ParallelTeacherDto })
   @ApiUnprocessableEntityResponse(VALIDATION)

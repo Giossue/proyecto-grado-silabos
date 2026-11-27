@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+import { fakeNotificationTransaction, notificationWorld, recipient } from "../notifications/testing"
 import { Prisma } from "../../generated/prisma/client"
 import type { Db } from "../../prisma/db"
 import { returnApprovals } from "./coordinationHandover"
@@ -340,6 +341,43 @@ describe("InProgressWork reconstruye sílabos con tablas a las que el docente ag
     const work = new InProgressWork(recordingDb(() => []).db, () => {}) as unknown as { stillFits(...input: unknown[]): unknown }
 
     expect(JSON.stringify(work.stillFits(target, own, editing("Lectura"), { template, definition: template.definition }))).toContain("Taller")
+  })
+})
+
+describe("aviso de sílabos que vuelven a borrador", () => {
+  const OTHER_SYLLABUS = "0195e7a0-0000-7000-8000-000000000008"
+  const TEACHER = "0195e7a0-0000-7000-8000-000000000009"
+
+  async function noticesFor(ids: string[]) {
+    const world = notificationWorld({ users: [recipient(TEACHER)], subjects: new Map(ids.map((id) => [id, "Cálculo"])) })
+    const answer = async (query: Prisma.Sql | readonly string[]) => (String("text" in query ? query.text : query.join(" ")).includes("docentes_vigentes_silabo") ? [{ id: TEACHER }] : [])
+    const db = { $queryRaw: answer, $executeRaw: async () => 1 } as unknown as Db
+    await fakeNotificationTransaction(world, 0, async (scope) => {
+      const work = new InProgressWork(db, scope.afterCommit, scope)
+      vi.spyOn(work, "clearHistory").mockResolvedValue([])
+      vi.spyOn(work as unknown as { convocationFacts: () => unknown }, "convocationFacts").mockResolvedValue(new Map([[CONVOCATION, { careerId: CAREER, periodId: PERIOD }]]) as never)
+      const internal = work as unknown as { applyChanges(pending: unknown[]): Promise<void> }
+      await internal.applyChanges(
+        ids.map((id, index) => ({
+          syllabus: { id, parallelId: PARALLEL, convocationId: CONVOCATION, state: "aprobado", context: {}, started: true, version: 3 },
+          context: { subject: { name: index === 0 ? "Cálculo" : "Álgebra" } },
+          documents: new Map(),
+          backToDraft: true,
+        })),
+      )
+    })
+    return world.notifications
+  }
+
+  it("con un sílabo avisa de ese sílabo", async () => {
+    expect(await noticesFor([SYLLABUS])).toEqual([expect.objectContaining({ userId: TEACHER, title: "Su sílabo cambió", resourceType: "silabo", resourceId: SYLLABUS })])
+  })
+
+  it("con varios del mismo cambio manda un solo aviso que los nombra", async () => {
+    const notices = await noticesFor([SYLLABUS, OTHER_SYLLABUS])
+    expect(notices).toHaveLength(1)
+    expect(notices[0]).toMatchObject({ type: "silabo.devuelto_borrador", title: "Sus sílabos cambiaron", resourceType: "carrera", resourceId: CAREER, periodId: PERIOD })
+    expect(notices[0]!.message).toBe("Cambiaron datos que usan los sílabos de Cálculo y Álgebra. Se conservó lo que había escrito; revíselos, envíelos y fírmelos de nuevo.")
   })
 })
 

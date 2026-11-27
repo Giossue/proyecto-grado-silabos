@@ -268,9 +268,9 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
     expect(response.status).toBe(200)
     expect(response.text).toBe(JSON.stringify({ message: "Sílabo reiniciado con todo su historial. El docente empieza de cero con la malla y la plantilla actuales." }))
     expect(log).toEqual(["begin", `lock:syllabus:${SYLLABUS}`, `restart:${SYLLABUS}:${syllabus.convocationId}:d0000000-0000-4000-8000-000000000001`, "commit"])
-    const message = "Coordinación eliminó el sílabo aprobado de Biología; elabórelo con la malla y la plantilla actuales."
+    const message = "Coordinación eliminó el sílabo aprobado de Biología. Se borró lo que había escrito; complételo de nuevo."
     expect(notices.notifications).toMatchObject([
-      { userId: TEACHER, key: `flujo:silabo.eliminado:${FRESH}`, type: "silabo.eliminado", title: "Su sílabo volvió a empezar", message, resourceType: "silabo", resourceId: FRESH },
+      { userId: TEACHER, key: `flujo:silabo.eliminado:${FRESH}`, type: "silabo.eliminado", title: "Su sílabo cambió", message, resourceType: "silabo", resourceId: FRESH },
     ])
     // No email of its own: the daily summary replaces it.
     expect(notices.mails).toEqual([])
@@ -278,7 +278,7 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
 
   it("needs no reason and ignores one if sent", async () => {
     expect((await reset({ reason: "no" })).status).toBe(200)
-    expect(notices.notifications[0]?.message).toBe("Coordinación eliminó el sílabo aprobado de Biología; elabórelo con la malla y la plantilla actuales.")
+    expect(notices.notifications[0]?.message).toBe("Coordinación eliminó el sílabo aprobado de Biología. Se borró lo que había escrito; complételo de nuevo.")
   })
 
   it("only lets the coordinator of the career reset an approved syllabus", async () => {

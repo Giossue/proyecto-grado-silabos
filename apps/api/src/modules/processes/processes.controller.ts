@@ -47,7 +47,7 @@ export class ProcessesController {
   @Authenticated(BOUND)
   @Roles(ADMINISTRATOR)
   @ApiParam(PROCESS)
-  @ApiOkResponse({ description: "Elimina el proceso de sílabos abierto o en pausa con sus sílabos y avisa a docentes, coordinación y biblioteca.", type: MessageDto })
+  @ApiOkResponse({ description: "Elimina el proceso de sílabos abierto o en pausa con sus sílabos.", type: MessageDto })
   @ApiNotFoundResponse(MISSING)
   @ApiUnprocessableEntityResponse(VALIDATION)
   remove(@WebRequest() original: Request, @CurrentSession() session: AppSession, @Preloaded() process: ProcessRow) {

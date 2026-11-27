@@ -24,11 +24,11 @@ const overdueNotice: Record<Audience, (due: string) => { headline: string; detai
 }
 
 const pausedNotice = (audience: Audience, pausedBy: DashboardDeadline["paused_by"]): Notice => {
-  if (audience === "docente") return { headline: "El proceso de sílabos está en pausa", detail: "Le avisaremos cuando se reanude para que siga con sus sílabos" }
+  if (audience === "docente") return { headline: "El proceso de sílabos está en pausa", detail: "Podrá seguir con sus sílabos cuando se reanude" }
   if (audience === "administrador") return { headline: "El proceso de sílabos está en pausa", detail: "Puede reanudarlo desde Periodos académicos" }
   if (audience === "coordinador" && pausedBy === "coordinacion") return { headline: "El proceso de sílabos de su carrera está en pausa", detail: "Los docentes no editan y no se revisa. Puede cambiar la malla y el proyecto de carrera, y luego reanudarlo desde Revisión" }
 
-  return { headline: "El proceso de sílabos está en pausa", detail: "Administración pausó el proceso de sílabos. Las revisiones se retoman cuando lo reanude; le avisaremos" }
+  return { headline: "El proceso de sílabos está en pausa", detail: "Administración pausó el proceso de sílabos. Las revisiones se retoman cuando lo reanude" }
 }
 
 const closedNotice: Record<Audience, string> = {

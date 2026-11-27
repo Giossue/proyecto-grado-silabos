@@ -59,10 +59,26 @@ describe("storeInternalNotifications", () => {
       users: [recipient(TEACHER, { verified: false }), recipient(OTHER, { preferences: { "silabo.correccion_solicitada": false } })],
     })
     await fakeNotificationTransaction(world, NOW, (scope) => storeInternalNotifications(scope, notice))
-    await fakeNotificationTransaction(world, NOW, (scope) => storeInternalNotifications(scope, { ...notice, eventType: "silabo.borrador", deduplicationKey: "x" }))
+    await fakeNotificationTransaction(world, NOW, (scope) => storeInternalNotifications(scope, { ...notice, eventType: "silabo.regenerado", deduplicationKey: "x" }))
     expect(world.notifications).toHaveLength(4)
     expect(world.mails).toEqual([])
   })
+
+  it.each(["silabo.correccion_solicitada", "silabo.devuelto_borrador", "silabo.regenerado", "silabo.eliminado", "proceso.plantilla_rehecho", "documento.exportacion_fallida"])("keeps %s inside the system", async (eventType) => {
+    const world = notificationWorld({ users: [recipient(TEACHER)] })
+    await fakeNotificationTransaction(world, NOW, (scope) => storeInternalNotifications(scope, { ...notice, eventType }))
+    expect(world.notifications).toHaveLength(1)
+  })
+
+  it.each(["convocatoria.abierta", "convocatoria.reanudada", "silabo.asignado", "silabo.aprobado", "silabo.enviado", "silabo.reenviado_biblioteca", "biblioteca.verificado", "proceso.reanudado", "proceso.plazo_extendido", "proceso.eliminado"])(
+    "no longer shows %s inside the system, but its optional email still goes out",
+    async (eventType) => {
+      const world = notificationWorld({ users: [recipient(TEACHER)], emailEvents: [eventType] })
+      await fakeNotificationTransaction(world, NOW, (scope) => storeInternalNotifications(scope, { ...notice, eventType }))
+      expect(world.notifications).toEqual([])
+      expect(world.mails).toHaveLength(1)
+    },
+  )
 
   it("sends nothing when the transaction fails", async () => {
     const world = notificationWorld({ users: [recipient(TEACHER)] })
@@ -88,8 +104,8 @@ describe("storeInternalNotifications", () => {
       }),
     )
     expect(world.notifications[0]).toMatchObject({
-      title: "Su sílabo volvió a empezar",
-      message: "Coordinación eliminó el sílabo aprobado de Cálculo I; elabórelo con la malla y la plantilla actuales.",
+      title: "Su sílabo cambió",
+      message: "Coordinación eliminó el sílabo aprobado de Cálculo I. Se borró lo que había escrito; complételo de nuevo.",
       resourceType: "silabo",
       resourceId: SYLLABUS,
     })

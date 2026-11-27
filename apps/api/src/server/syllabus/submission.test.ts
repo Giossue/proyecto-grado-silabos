@@ -250,7 +250,7 @@ describe("POST teacher/syllabi/{s}/submit", () => {
     expect(revisions).toEqual([{ id: NEW_ID, syllabusId: SYLLABUS, previousId: null, number: 1, key: KEY, version: 7, snapshot: SNAPSHOT, fingerprint: FINGERPRINT, submittedBy: golden.userId, submittedAt: NOW }])
     expect(submissions).toEqual([{ revisionId: NEW_ID, verifiedBy: null, verifiedAt: null, inherited: false }])
     expect(log).toEqual(["validate", "begin", `lock:${SYLLABUS}`, `submitted:${SYLLABUS}:8:${NOW}`, "commit"])
-    expect(notices.notifications.map((row) => [row.userId, row.key, row.title])).toEqual([[LIBRARIAN, `flujo:silabo.enviado:${NEW_ID}`, "Sílabo enviado"]])
+    expect(notices.notifications).toEqual([])
   })
 
   it("sends a syllabus the teacher opened and left as it came, without writing anything", async () => {
@@ -291,11 +291,11 @@ describe("POST teacher/syllabi/{s}/submit", () => {
     verification = { verifiedBy: VERIFIER, verifiedAt: NOW - 100, snapshot: { ...SNAPSHOT, sections: [{ key: "bibliografia", fields: [{ key: "basica", quien_llena: "docente", value: "Otro" }] }] } }
     await submit({ version_bloqueo: 7, idempotency_key: KEY })
     expect(submissions[0]).toMatchObject({ verifiedBy: null, inherited: false })
-    expect(notices.notifications.map((row) => row.key)).toEqual([`flujo:silabo.enviado:${NEW_ID}`])
+    expect(notices.notifications).toEqual([])
     latest = { id: PREVIOUS, number: 2, correctionStage: "biblioteca" }
     notices.notifications = []
     await submit({ version_bloqueo: 7, idempotency_key: KEY })
-    expect(notices.notifications.map((row) => [row.key, row.title])).toEqual([[`flujo:silabo.reenviado_biblioteca:${NEW_ID}`, "Sílabo corregido para revisar"]])
+    expect(notices.notifications).toEqual([])
   })
 
   it("re-checks the version and the state under the lock", async () => {

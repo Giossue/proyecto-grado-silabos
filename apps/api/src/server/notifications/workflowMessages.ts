@@ -1,9 +1,11 @@
 export const TEMPLATE_REDONE = "proceso.plantilla_rehecho"
 
+export const SYLLABUS_CHANGED = "Su sílabo cambió"
+
 export function workflowMessage(eventType: string, subject: string | null, revision: number | null): [string, string] {
   if (eventType === TEMPLATE_REDONE) {
     return [
-      "Sus sílabos volvieron a borrador",
+      "Sus sílabos cambiaron",
       "Administración cambió la plantilla del proceso de sílabos. Se conservó lo que ya había escrito; revíselos y envíelos otra vez.",
     ]
   }
@@ -21,10 +23,10 @@ export function workflowMessage(eventType: string, subject: string | null, revis
     case "silabo.aprobado":
       return ["Sílabo aprobado", `Ya puede descargar el PDF firmado del sílabo de ${subject}${revisionLabel}.`]
     case "silabo.eliminado":
-      return ["Su sílabo volvió a empezar", `Coordinación eliminó el sílabo aprobado de ${subject}; elabórelo con la malla y la plantilla actuales.`]
+      return [SYLLABUS_CHANGED, `Coordinación eliminó el sílabo aprobado de ${subject}. Se borró lo que había escrito; complételo de nuevo.`]
     case "silabo.devuelto_borrador":
       return [
-        "Su sílabo volvió a borrador",
+        SYLLABUS_CHANGED,
         `Cambiaron datos de la carrera, la malla o el proyecto de carrera que usa el sílabo de ${subject}. Se conservó lo que había escrito; revíselo, envíelo y fírmelo de nuevo.`,
       ]
     case "documento.exportacion_fallida":

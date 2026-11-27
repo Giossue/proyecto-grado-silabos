@@ -4,6 +4,15 @@ import type { AfterCommit } from "../queue/dispatch"
 import type { NotificationEmailConfig } from "./config"
 import { workflowMessage } from "./workflowMessages"
 
+const IN_APP_EVENTS = new Set([
+  "silabo.correccion_solicitada",
+  "silabo.devuelto_borrador",
+  "silabo.regenerado",
+  "silabo.eliminado",
+  "proceso.plantilla_rehecho",
+  "documento.exportacion_fallida",
+])
+
 export type NotificationRecipient = { id: string; name: string; email: string; verified: boolean; preferences: unknown }
 
 export type NotificationRow = {
@@ -55,6 +64,10 @@ export async function storeInternalNotifications(scope: NotificationScope, notic
   const ids = [...new Set(notice.recipientIds)]
   if (ids.length === 0) return 0
   const recipients = await scope.tx.recipients(ids)
+  if (!IN_APP_EVENTS.has(notice.eventType)) {
+    for (const recipient of recipients) email(scope, recipient, notice.eventType, notice.title, notice.message)
+    return recipients.length
+  }
   const periodId = notice.periodId ?? (await scope.tx.periodOf(notice.resourceType, notice.resourceId))
   for (const recipient of recipients) {
     const created = await scope.tx.create({

@@ -28,6 +28,7 @@ import {
 import { createTemplateStore, type TemplateStore } from "../shared/templateStore"
 import { recipientsOn } from "../notifications/queries"
 import { scheduleWorkflowNotification, storeInternalNotifications, type NotificationScope } from "../notifications/store"
+import { SYLLABUS_CHANGED } from "../notifications/workflowMessages"
 import { sameStructure, fieldResponseNormalize, documentIsEmpty } from "../configuration/templateRehearsal"
 import { dataGet } from "./identificationCard"
 import { openCurriculum } from "./syllabusSql"
@@ -219,7 +220,7 @@ export class InProgressWork {
   private async notifyRestarted(recipientIds: string[], subjects: string[], count: number, reason: string, resourceType: string, resourceId: string, periodId: string | null): Promise<void> {
     const names = subjectNames(subjects)
     const [title, which, complete] =
-      count > 1 ? ["Sus sílabos volvieron a empezar", `de los sílabos de ${names}`, "Complételos"] : ["Su sílabo volvió a empezar", `del sílabo de ${names}`, "Complételo"]
+      count > 1 ? ["Sus sílabos cambiaron", `de los sílabos de ${names}`, "Complételos"] : [SYLLABUS_CHANGED, `del sílabo de ${names}`, "Complételo"]
     await storeInternalNotifications(this.scope(), {
       eventType: "silabo.regenerado",
       deduplicationKey: `silabo.regenerado:${resourceId}:${randomUUID()}`,
@@ -643,6 +644,7 @@ export class InProgressWork {
     const returning = pending.filter((item) => item.backToDraft)
     if (returning.length > 0) await this.clearHistory(returning.map((item) => item.syllabus.id))
     const recipients = recipientsOn(this.executor)
+    const returned = new Map<string, PendingChange[]>()
     const contents = pending.some((item) => item.documents.size > 0) ? new Map(templateFields((await this.profileContext()).template).map((field) => [field.id, field.content])) : new Map<string, unknown>()
     for (const item of pending) {
       const { syllabus } = item
@@ -668,16 +670,44 @@ export class InProgressWork {
       if (item.backToDraft) {
         await this.executor.$executeRaw(Prisma.sql`update silabos set datos_academicos_silabo = ${JSON.stringify(phpShape(item.context))}::jsonb, estado_silabo = 'borrador',
           version_borrador = ${syllabus.version + 1}, guardado_en = to_timestamp(${this.now()}) where silabo_id = ${syllabus.id}::uuid`)
-        await scheduleWorkflowNotification(this.scope(), {
-          syllabusId: syllabus.id,
-          eventType: BACK_TO_DRAFT_EVENT,
-          deduplicationKey: `${BACK_TO_DRAFT_EVENT}:${syllabus.id}:${randomUUID()}`,
-          recipientIds: await recipients.teachersFor(syllabus.id),
-          revisionNumber: null,
-        })
+        for (const teacher of await recipients.teachersFor(syllabus.id)) returned.set(teacher, [...(returned.get(teacher) ?? []), item])
       } else {
         if (rewritten) await this.executor.$executeRaw(Prisma.sql`update silabos set version_borrador = ${syllabus.version + 1} where silabo_id = ${syllabus.id}::uuid`)
         await this.saveContext(syllabus, item.context)
+      }
+    }
+    await this.notifyBackToDraft(returned)
+  }
+
+  private async notifyBackToDraft(returned: Map<string, PendingChange[]>): Promise<void> {
+    if (returned.size === 0) return
+    const facts = await this.convocationFacts([...new Set([...returned.values()].flat().map((item) => item.syllabus.convocationId))])
+    for (const [teacher, items] of returned) {
+      const careers = Map.groupBy(items, (item) => `${facts.get(item.syllabus.convocationId)?.careerId ?? ""}|${facts.get(item.syllabus.convocationId)?.periodId ?? ""}`)
+      for (const [key, group] of careers) {
+        if (group.length === 1) {
+          await scheduleWorkflowNotification(this.scope(), {
+            syllabusId: group[0]!.syllabus.id,
+            eventType: BACK_TO_DRAFT_EVENT,
+            deduplicationKey: `${BACK_TO_DRAFT_EVENT}:${group[0]!.syllabus.id}:${randomUUID()}`,
+            recipientIds: [teacher],
+            revisionNumber: null,
+          })
+          continue
+        }
+        const [careerId, periodId] = key.split("|")
+        const subjects: string[] = []
+        for (const item of group) subjects.push(await this.subjectName({ ...item.syllabus, context: item.context as WorkSyllabus["context"] }))
+        await storeInternalNotifications(this.scope(), {
+          eventType: BACK_TO_DRAFT_EVENT,
+          deduplicationKey: `${BACK_TO_DRAFT_EVENT}:${careerId}:${teacher}:${randomUUID()}`,
+          recipientIds: [teacher],
+          title: "Sus sílabos cambiaron",
+          message: `Cambiaron datos que usan los sílabos de ${subjectNames([...new Set(subjects)])}. Se conservó lo que había escrito; revíselos, envíelos y fírmelos de nuevo.`,
+          resourceType: "carrera",
+          resourceId: careerId!,
+          periodId: periodId || null,
+        })
       }
     }
   }

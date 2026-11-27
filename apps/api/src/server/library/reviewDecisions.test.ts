@@ -164,7 +164,7 @@ describe("POST library/reviews/{r}/verify", () => {
       "commit",
     ])
     expect(stored.map((row) => [row.role, row.holder, row.revisionId])).toEqual([["biblioteca", "ROSA ELENA YÁNEZ CAMPOS", REVISION]])
-    expect(notices.notifications.map((row) => [row.userId, row.key, row.title])).toEqual([[COORDINATOR, `flujo:biblioteca.verificado:${REVISION}`, "Bibliografía verificada por Biblioteca"]])
+    expect(notices.notifications).toEqual([])
   })
 
   it("only lets an active librarian decide, before reading the signature", async () => {
