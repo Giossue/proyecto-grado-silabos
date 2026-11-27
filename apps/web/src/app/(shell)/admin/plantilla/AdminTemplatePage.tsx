@@ -1,6 +1,6 @@
 "use client"
 
-import { Bot, FileText, Pencil, RotateCcw, UserPen, X } from "lucide-react"
+import { Bot, Eye, FileText, Pencil, RotateCcw, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -155,7 +155,7 @@ export default function AdminTemplatePage() {
   }, [reloadFromMutation])
 
   // El texto dice qué hace el botón; por eso no lleva aria-pressed, que exige un nombre fijo.
-  const TeacherToggleIcon = !teacherView ? UserPen : editing ? Pencil : FileText
+  const TeacherToggleIcon = !teacherView ? Eye : editing ? Pencil : FileText
   const teacherToggle = (
     <Button
       type="button"
@@ -236,12 +236,6 @@ export default function AdminTemplatePage() {
             !editing ? (
               <>
                 {teacherToggle}
-                {!teacherView && payload?.processLock ? (
-                  <Button type="button" variant="outline" onClick={() => builder.current?.askAiAccess()}>
-                    <Bot data-icon="inline-start" aria-hidden="true" />
-                    Lo que lee la IA
-                  </Button>
-                ) : null}
                 {!teacherView ? (
                   <Button type="button" data-tour="template-edit" disabled={Boolean(payload?.processLock)} onClick={() => builder.current?.askEdit()}>
                     <Pencil data-icon="inline-start" aria-hidden="true" />

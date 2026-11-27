@@ -153,33 +153,6 @@ describe("«La IA puede leerlo» en el editor de la plantilla", () => {
     expect(saved.new_fields).toEqual(["campo"])
   })
 
-  it("con un periodo académico abierto se puede cambiar eligiendo el campo, sin abrir nada más de la plantilla", async () => {
-    const builder = await mountBuilder({ template, processLock: "Proceso activo" })
-    act(() => builder.handle.current!.askEdit())
-    await settle()
-    expect(body().querySelector("[data-template-ribbon]")).toBeNull()
-    expect(body().querySelector('[aria-label="Sección Uno"]')).toBeNull()
-
-    act(() => builder.handle.current!.askAiAccess())
-    await settle()
-    const pick = byLabel("Elegir el campo Anexo")!
-    expect(pick.disabled).toBe(false)
-    expect(pick.getAttribute("draggable")).toBe("false")
-    await click(pick)
-
-    expect(state()).toEqual({ checked: "false", disabled: false, description: "" })
-    expect([...body().querySelectorAll<HTMLButtonElement>("[data-field-filler] [data-filler]")].every((item) => item.disabled)).toBe(true)
-    expect(body().querySelector<HTMLInputElement>("[data-field-name-input]")!.disabled).toBe(true)
-    expect(byLabel("Eliminar el campo Anexo")!.disabled).toBe(true)
-    expect(byLabel("Duplicar el campo Anexo")!.disabled).toBe(true)
-    expect(body().querySelector("[data-insert-point]")).toBeNull()
-
-    await click(aiSwitch())
-    expect(templateApi.setTemplateAiPermission).toHaveBeenCalledWith("t1", "f4", true)
-    expect(checked()).toBe("true")
-    expect(byText("button", "Guardar")!.hasAttribute("disabled")).toBe(true)
-  })
-
   it("no deja cambiar nada hasta conocer el permiso y, si no carga, ofrece reintentar", async () => {
     vi.mocked(templateApi.getTemplateAiPermissions).mockRejectedValueOnce(new ApiError("Error", 500))
     await mountBuilder({ template })

@@ -377,21 +377,18 @@ describe("AdminTemplatePage", () => {
     expect(buttonWithText("Editar")!.disabled).toBe(true)
   })
 
-  it("con un periodo académico abierto deja cambiar solo lo que lee la IA", async () => {
+  it("con un periodo académico abierto no ofrece un botón aparte para lo que lee la IA", async () => {
     vi.mocked(getTemplate).mockResolvedValue({ ...payload, processLock: "Hay un proceso abierto" })
     await mountPage()
 
-    await click(buttonWithText("Lo que lee la IA"))
-    await click(body().querySelector('button[aria-label="Elegir el campo Descripción"]'))
-    const reading = one<HTMLButtonElement>('[role="switch"]')
-    expect(reading.disabled).toBe(false)
-    await click(reading)
+    expect(buttonWithText("Lo que lee la IA")).toBeUndefined()
+    expect(buttonWithText("Editar")!.disabled).toBe(true)
+  })
 
-    expect(setTemplateAiPermission).toHaveBeenCalledWith("template-1", "field-1", true)
-    expect(one('[role="switch"]').getAttribute("aria-checked")).toBe("true")
-    expect(buttonWithText("Guardar")!.disabled).toBe(true)
-    expect(body().textContent).toContain("Edición bloqueada")
-    expect(buttonWithText("Nueva sección")).toBeUndefined()
+  it("«Ver como docente» lleva el icono de un ojo", async () => {
+    await mountPage()
+
+    expect(buttonWithText("Ver como docente")!.querySelector("svg.lucide-eye")).not.toBeNull()
   })
 
   it("sin periodo académico abierto no ofrece «Lo que lee la IA»: el interruptor está al editar", async () => {
