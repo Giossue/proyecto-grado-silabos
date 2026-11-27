@@ -862,20 +862,6 @@
     margin-bottom: 0;
 }
 
-.teacher-form .free-text-editor:has(.free-text-editor__content > .tableWrapper:first-child) {
-    border: 0;
-    background-color: transparent;
-}
-
-.teacher-form .free-text-editor:has(.free-text-editor__content > .tableWrapper:first-child) :is([role='toolbar'], .free-text-editor__area ~ div) {
-    padding-inline: 0;
-}
-
-.teacher-form .free-text-editor .free-text-editor__area .free-text-editor__content:has(> .tableWrapper:first-child) {
-    min-height: 0;
-    padding: 0.5rem 1px 0;
-}
-
 .teacher-form .syllabus-readonly-field:has(.free-text-table) {
     padding: 0 1px;
     background-color: transparent;

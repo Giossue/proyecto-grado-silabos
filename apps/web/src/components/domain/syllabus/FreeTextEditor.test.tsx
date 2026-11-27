@@ -43,6 +43,23 @@ describe("Editor de documentos compartido", () => {
     }
   })
 
+  it("marca el botón del formato que tiene el texto donde está el cursor, mientras se usa el editor", async () => {
+    const { container, editor } = mountEditor({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Negro ", marks: [{ type: "bold" }] }, { type: "text", text: "normal" }] }] })
+    await flush()
+    const button = (label: string): HTMLButtonElement => container.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!
+
+    editor().commands.setTextSelection(3)
+    await waitFor(() => expect(button("Negrita").getAttribute("aria-pressed")).toBe("true"))
+    expect(button("Cursiva").getAttribute("aria-pressed")).toBe("false")
+    expect(container.querySelector(".free-text-editor")!.classList).toContain("group/editor")
+    for (const label of ["Negrita", "Cursiva", "Subrayado", "Lista con viñetas", "Lista numerada"]) {
+      expect(button(label).className.split(" "), label).toContain("group-focus-within/editor:aria-pressed:bg-primary")
+    }
+
+    editor().commands.setTextSelection(10)
+    await waitFor(() => expect(button("Negrita").getAttribute("aria-pressed")).toBe("false"))
+  })
+
   it("actualiza el nombre accesible del contenido cuando cambia la etiqueta", async () => {
     const element = (label: string) => <FreeTextEditor id="libre" label={label} value={null} variables={variables} />
     const view = render(element("Contenido de Campo sin nombre"))

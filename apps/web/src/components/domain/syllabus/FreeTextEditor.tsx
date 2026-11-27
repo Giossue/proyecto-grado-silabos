@@ -205,6 +205,8 @@ const editorExtensions = ({ bare, align, spaces, lockTables, admitsRows, blocks,
 const slashMatches = (variables: TemplateVariable[], query: string): TemplateVariable[] =>
   variables.filter((item) => item.label.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
 
+const PRESSED_TOOL = "group-focus-within/editor:aria-pressed:bg-primary group-focus-within/editor:aria-pressed:text-primary-foreground"
+
 function Separator() {
   return <span className="mx-0.5 h-5 w-px bg-border" aria-hidden="true" />
 }
@@ -212,7 +214,7 @@ function Separator() {
 function ToolButton({ label, pressed, disabled, onClick, children }: { label: string; pressed?: boolean; disabled: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <IconTooltip label={label}>
-      <Button type="button" variant="ghost" size="icon-sm" aria-label={label} aria-pressed={pressed} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={onClick}>
+      <Button type="button" variant="ghost" size="icon-sm" className={PRESSED_TOOL} aria-label={label} aria-pressed={pressed} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={onClick}>
         {children}
       </Button>
     </IconTooltip>
@@ -369,7 +371,7 @@ export function FreeTextEditor({
   }
 
   return (
-    <div className={cn("free-text-editor flex min-w-0 flex-col", spaces && "free-text-editor--app", bare ? "bg-transparent" : "rounded-md border border-border bg-background")} data-disabled={disabled || undefined}>
+    <div className={cn("free-text-editor group/editor flex min-w-0 flex-col", spaces && "free-text-editor--app", bare ? "bg-transparent" : "rounded-md border border-border bg-background")} data-disabled={disabled || undefined}>
       {editor && toolbar ? (
         <div role="toolbar" aria-label={`Formato de ${label}`} className="flex flex-wrap items-center gap-1 border-b p-1.5">
           <ToolButton label="Negrita" pressed={editor.isActive("bold")} disabled={readOnly} onClick={() => editor.chain().focus().toggleBold().run()}>
