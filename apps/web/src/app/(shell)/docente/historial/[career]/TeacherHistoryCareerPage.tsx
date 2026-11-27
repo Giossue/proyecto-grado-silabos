@@ -1,8 +1,9 @@
 "use client"
 
+import { useMissingPage } from "@/composables/useMissingPage"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { notFound, useParams, useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo } from "react"
 import { ApiError } from "@/api/client"
@@ -89,7 +90,7 @@ export default function TeacherHistoryCareerPage() {
     if (status === 401) router.replace(paths.login)
   }, [router, status])
 
-  if (status === 404) notFound()
+  useMissingPage(status === 404)
 
   const load = (): void => {
     void query.refetch()

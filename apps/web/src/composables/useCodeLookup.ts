@@ -1,5 +1,5 @@
-import { notFound } from 'next/navigation';
 import { useState } from 'react';
+import { useMissingPage } from '@/composables/useMissingPage';
 
 type LookupSource<TData> = { data: TData | undefined; isFetching: boolean; isError: boolean };
 
@@ -17,16 +17,11 @@ export function useCodeLookup<TData, TFound>(
     find: (data: NonNullable<TData>) => TFound | undefined,
 ): TFound | null {
     const [kept, setKept] = useState<{ address: string; found: TFound } | null>(null);
-    if (kept?.address === address) return kept.found;
+    const saved = kept?.address === address ? kept : null;
+    const data = saved ? undefined : (source.data ?? undefined);
+    const found = data === undefined ? undefined : find(data as NonNullable<TData>);
+    if (found !== undefined) setKept({ address, found });
+    useMissingPage(data !== undefined && found === undefined && !source.isFetching && !source.isError);
 
-    const { data } = source;
-    if (data === undefined || data === null) return null;
-    const found = find(data);
-    if (found !== undefined) {
-        setKept({ address, found });
-        return found;
-    }
-    if (!source.isFetching && !source.isError) notFound();
-
-    return null;
+    return saved ? saved.found : (found ?? null);
 }
