@@ -11,7 +11,7 @@
     "queue:smoke": "pnpm --filter @silabos/api run queue:smoke",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
-    "test:cambios": "pnpm -r exec vitest run --changed --reporter=dot --silent=passed-only",
+    "test:cambios": "pnpm -r exec vitest run --changed --silent=passed-only",
     "typecheck": "pnpm -r run typecheck",
     "test:e2e": "pnpm --filter @silabos/web run test:e2e",
     "db:pull": "pnpm --filter @silabos/api run db:pull",

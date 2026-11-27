@@ -59,6 +59,15 @@ cd packages/shared && npx vitest run
 ```
 
 - Proporcional al cambio: en ajustes pequeños, solo la prueba puntual.
+- Mientras programa, corra solo el archivo de prueba afectado (`npx vitest run <archivo> --silent=passed-only`). Antes del commit, `pnpm test:cambios` desde la raíz (si cambió la configuración, corre todo). La corrida completa, una sola vez al cerrar una tarea grande.
+- Imagen con podman, pruebas en pantalla y pruebas contra una copia de la base: solo cuando el cambio lo necesite, una vez y al final.
+
+## Buscar sin llenar el contexto
+
+- Primero ubique (`git grep -n` o `grep -rn` con `| head`), después lea solo el tramo (`sed -n 'A,Bp'`). No imprima archivos ni diffs completos: use `git diff --stat` y el diff del archivo que haga falta.
+- Recorte las salidas (`| grep`, `| tail`). En el navegador, prefiera un script que devuelva solo los datos buscados a listados de toda la pantalla, y una sola captura para confirmar.
+- Para recordar trabajo anterior: `docs/sistema.md` y el documento de `odd/tasks/` de la tarea; en Engram, buscar y abrir solo la nota que sirva.
+- Una sesión por tema.
 - Pruebas de punta a punta (Playwright): `E2E_PORT=3800 pnpm test:e2e` con `E2E_PASSWORD`, `E2E_P12_PASSWORD` y `E2E_SCRATCH_DIR`; antes detén los servidores de desarrollo y arranca Gotenberg (`podman start gotenberg-local`).
 - Agregar o quitar una ruta de la API exige tocar `apps/api/src/server/http/apiRoutes.json`, el controlador Nest, `apiContract.test.ts` (conteo) y las pruebas de rutas.
 - Una prueba de tiempos (`src/server/redis/lock.test.ts`) puede fallar en la corrida completa y pasar sola.
