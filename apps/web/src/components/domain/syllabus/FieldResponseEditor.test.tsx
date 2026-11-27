@@ -150,6 +150,13 @@ describe("FieldResponseEditor", () => {
     expect(hourLines(container)).toEqual(["ACD 0 de 32 · faltan 32", "AA 5 usadas"])
   })
 
+  it("sin el dato de la asignatura dice «1 usada» en singular", () => {
+    subjectHours("", "", "")
+    const { container } = mountEditor(block("unidades"), block("unidades", { units: withHours([[0, 0, "aa_h", "1"]]) }))
+
+    expect(hourLines(container)).toEqual(["AA 1 usada"])
+  })
+
   it("sin ningún dato de horas y sin nada escrito no muestra el contador", () => {
     subjectHours("", "", "")
     const { container } = mountEditor(block("unidades"), block("unidades", { units: units() }))

@@ -18,6 +18,17 @@ import { curriculumEditorState } from "@/state/curriculumEditor"
 import { templateEditorState } from "@/state/templateEditor"
 import type { BreadcrumbItem } from "@/types"
 
+const publishBannerHeight = (banner: HTMLDivElement | null) => {
+  if (!banner) return
+  const root = document.documentElement
+  const observer = new ResizeObserver(() => root.style.setProperty("--app-banner-height", `${banner.offsetHeight}px`))
+  observer.observe(banner)
+  return () => {
+    observer.disconnect()
+    root.style.removeProperty("--app-banner-height")
+  }
+}
+
 export function AppSidebarLayout({ breadcrumbs = [], children }: { breadcrumbs?: BreadcrumbItem[]; children: ReactNode }) {
   const [pageTitle, setPageTitle] = useState("")
   const pageTitleState = useMemo(() => ({ title: pageTitle, setTitle: setPageTitle }), [pageTitle])
@@ -35,7 +46,7 @@ export function AppSidebarLayout({ breadcrumbs = [], children }: { breadcrumbs?:
           <AppContent variant="sidebar" className={editorOpen ? "min-h-0 overflow-clip" : "min-h-0 overflow-clip max-sm:overflow-visible max-sm:pb-(--mobile-nav-height)"}>
             {!editorOpen ? <AppSidebarHeader breadcrumbs={breadcrumbs} pageTitle={pageTitle} sidebar={sidebarVisible} /> : null}
             {!editorOpen ? (
-              <div className="sticky top-0 z-20 shrink-0">
+              <div ref={publishBannerHeight} className="sticky top-0 z-20 shrink-0">
                 <RoleDeadlineBanner />
               </div>
             ) : null}

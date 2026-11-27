@@ -52,7 +52,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1)
 
 function BudgetLine({ budget: { label, used, limit } }: { budget: SumBudget }) {
-  if (limit === null) return <li>{`${label} ${formatTotal(used)} usadas`}</li>
+  if (limit === null) {
+    const total = formatTotal(used)
+    return <li>{`${label} ${total} ${total === "1" ? "usada" : "usadas"}`}</li>
+  }
   const left = limit - used
   const done = Math.abs(left) <= 0.001
   const over = !done && left < 0
@@ -415,7 +418,7 @@ export function BlockForm({ id, kind, blockProps, value, disabled = false, requi
   return (
     <div id={id} className={cn("flex flex-col gap-4", shownBudgets.length > 0 && "[&_:is(input,textarea,button)]:scroll-mt-24 max-sm:[&_:is(input,textarea,button)]:scroll-mt-48")}>
       {shownBudgets.length > 0 ? (
-        <div data-hours-budget="" className="sticky top-0 z-10 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-md bg-card px-4 py-3 text-sm shadow-surface ring-1 ring-surface-ring max-sm:top-(--app-header-height)">
+        <div data-hours-budget="" className="sticky top-0 z-10 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-md bg-card px-4 py-3 text-sm shadow-surface ring-1 ring-surface-ring max-sm:top-(--app-banner-height,0px)">
           <span className="font-semibold">Horas de la asignatura</span>
           <ul className="flex flex-wrap gap-x-6 gap-y-1 tabular-nums" aria-live="polite">
             {shownBudgets.map((budget) => (

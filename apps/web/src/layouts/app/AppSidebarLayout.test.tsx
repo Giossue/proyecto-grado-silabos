@@ -91,6 +91,28 @@ describe("AppSidebarLayout", () => {
     expect(getDeadline).toHaveBeenCalledTimes(calls + 1)
   })
 
+  it("publica la altura del aviso de plazo para lo que se fija debajo en el teléfono", async () => {
+    const observed: Array<{ target: Element; notify: () => void }> = []
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(private readonly callback: () => void) {}
+      observe(target: Element) { observed.push({ target, notify: this.callback }) }
+      unobserve() {}
+      disconnect() {}
+    })
+    try {
+      const { unmount } = await mountShell()
+      const banner = observed.find((entry) => entry.target.className === "sticky top-0 z-20 shrink-0")!
+      Object.defineProperty(banner.target, "offsetHeight", { configurable: true, value: 42 })
+      act(() => banner.notify())
+      expect(document.documentElement.style.getPropertyValue("--app-banner-height")).toBe("42px")
+
+      unmount()
+      expect(document.documentElement.style.getPropertyValue("--app-banner-height")).toBe("")
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it("muestra la navegación del rol y el indicador de notificaciones sin leer", async () => {
     await mountShell()
 
