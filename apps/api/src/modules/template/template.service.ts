@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common"
-import type { BridgeDeps } from "../../server/auth/types"
 import { facultyLogo, institutionLogo, publicSyllabusImage } from "../../server/configuration/logoRoutes"
+import { saveAiReadPermissionOf, showAiReadPermissionsOf } from "../../server/ai/readPermissionRoutes"
+import type { AppSession, BridgeDeps } from "../../server/auth/types"
 import { designTemplateTableOf, templateIndexOf, templateShowOf } from "../../server/configuration/templateBuilder"
 import { checkTemplateDraftOf, previewTemplateDraftOf, templateDraftImpactOf } from "../../server/configuration/templateDrafts"
 import { uploadTemplateLogoOf } from "../../server/configuration/templateLogo"
@@ -22,6 +23,7 @@ import { requestBody } from "../../server/files/uploads"
 import type { PhpArray } from "../../server/http/input"
 import type { StorageWriter } from "../../server/http/storageWriter"
 import { AUTH_BRIDGE } from "../auth/auth.tokens"
+import { AiPermissionsRepository } from "./ai-permissions.repository"
 import { LogosRepository } from "./logos.repository"
 import { TemplateLocksRepository } from "./template-locks.repository"
 import { TemplateProvisionRepository } from "./template-provision.repository"
@@ -39,6 +41,7 @@ export class TemplateService {
     @Inject(TemplateProvisionRepository) private readonly provision: TemplateProvisionRepository,
     @Inject(TemplateRehearsalRepository) private readonly rehearsal: TemplateRehearsalRepository,
     @Inject(LogosRepository) private readonly logos: LogosRepository,
+    @Inject(AiPermissionsRepository) private readonly aiPermissions: AiPermissionsRepository,
     @Inject(TEMPLATE_IDS) private readonly ids: TemplateIds,
     @Inject(TEMPLATE_STORAGE) private readonly storage: StorageWriter,
     @Inject(AUTH_BRIDGE) private readonly bridge: BridgeDeps,
@@ -134,6 +137,14 @@ export class TemplateService {
 
   destroyField(target: StructureTarget): Promise<Response> {
     return destroyFieldOf(target, this.structureDeps())
+  }
+
+  aiReadPermissions(session: AppSession, target: StructureTarget): Promise<Response> {
+    return showAiReadPermissionsOf(session, target.template, this.aiPermissions.store)
+  }
+
+  saveAiReadPermission(session: AppSession, input: PhpArray, target: StructureTarget, fieldId: string): Promise<Response> {
+    return saveAiReadPermissionOf(session, input, target.template, fieldId, this.aiPermissions.store)
   }
 
   schema(request: Request): Promise<Response> {

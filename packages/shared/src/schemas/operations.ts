@@ -23,6 +23,10 @@ export const notificationSettingsSchema = z.object({
   digest_time: requiredField("digest time", [is.string(), is.matches(DIGEST_TIME, "La hora debe tener el formato HH:MM.")]),
 })
 
+export const teacherAssistantSettingsSchema = z.object({
+  enabled: requiredField("asistente del docente", [is.boolean()]),
+})
+
 export function librarySettingsSchema({ driver, passwordMatches }: { driver: unknown; passwordMatches: boolean }) {
   return z.object({
     current_password: currentPassword(passwordMatches),
@@ -50,6 +54,7 @@ export function aiSettingsSchema({ driver, passwordMatches }: { driver: unknown;
 
 export function systemSettingsSchema(section: string, input: { driver?: unknown }, passwordMatches: boolean) {
   if (section === "notificaciones") return notificationSettingsSchema
+  if (section === "asistente-docente") return teacherAssistantSettingsSchema
   if (section === "biblioteca") return librarySettingsSchema({ driver: input.driver, passwordMatches })
   return aiSettingsSchema({ driver: input.driver, passwordMatches })
 }

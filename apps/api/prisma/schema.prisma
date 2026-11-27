@@ -437,6 +437,20 @@ model periodos_academicos {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model permisos_lectura_ia {
+  plantilla_id          String           @db.Uuid
+  clave_campo_plantilla String           @db.VarChar(120)
+  lectura_permitida     Boolean
+  modificado_por        String?          @db.Uuid
+  creado_en             DateTime         @default(now()) @db.Timestamptz(6)
+  actualizado_en        DateTime         @default(now()) @db.Timestamptz(6)
+  usuarios              usuarios?        @relation(fields: [modificado_por], references: [usuario_id], onUpdate: NoAction, map: "permisos_lectura_ia_modificado_por_fk")
+  plantilla_silabo      plantilla_silabo @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "permisos_lectura_ia_plantilla_id_fk")
+
+  @@id([plantilla_id, clave_campo_plantilla])
+  @@index([modificado_por])
+}
+
 model plantilla_silabo {
   plantilla_id            String                    @id @db.Uuid
   plantilla_modificada_en DateTime?                 @db.Timestamptz(6)
@@ -446,6 +460,7 @@ model plantilla_silabo {
   campos_plantilla        campos_plantilla[]
   definiciones_campo      definiciones_campo[]
   mensajes_ia_plantilla   mensajes_ia_plantilla[]
+  permisos_lectura_ia     permisos_lectura_ia[]
   propuestas_ia_plantilla propuestas_ia_plantilla[]
   secciones_plantilla     secciones_plantilla[]
 }
@@ -623,6 +638,7 @@ model usuarios {
   invitaciones_activacion_invitaciones_activacion_usuario_idTousuarios             invitaciones_activacion[] @relation("invitaciones_activacion_usuario_idTousuarios")
   mensajes_ia_plantilla                                                            mensajes_ia_plantilla[]
   notificaciones                                                                   notificaciones[]
+  permisos_lectura_ia                                                              permisos_lectura_ia[]
   propuestas_ia_plantilla_propuestas_ia_plantilla_decidida_porTousuarios           propuestas_ia_plantilla[] @relation("propuestas_ia_plantilla_decidida_porTousuarios")
   propuestas_ia_plantilla_propuestas_ia_plantilla_solicitada_porTousuarios         propuestas_ia_plantilla[] @relation("propuestas_ia_plantilla_solicitada_porTousuarios")
   revisiones_coordinacion                                                          revisiones_coordinacion[]

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common"
 import { PrismaService } from "../../prisma/prisma.service"
+import { allowAiReadingOn, retainAiPermissionsOn } from "../../server/ai/readPermissionStore"
 import { phpShape, type PhpRecord } from "../../server/configuration/phpValues"
 import type { ProvisionStore, ProvisionTx } from "../../server/configuration/templateProvisioner"
 import { type Db, TRANSACTION_OPTIONS } from "../../prisma/db"
@@ -8,12 +9,17 @@ import { structureStoreOn, structureTxOn } from "./template-structure.repository
 
 export function provisionTxOn(db: Db): ProvisionTx {
   const structure = structureTxOn(db)
+  const created = new Set<string>()
   return {
     anyTemplate: () => hasRows(db.$queryRaw<{ id: string }[]>`select plantilla_id::text as id from plantilla_silabo limit 1 for update`),
     lockTemplate: (templateId) => structure.lockTemplate(templateId),
     async insertTemplate(templateId, definition) {
       await db.$executeRaw`insert into plantilla_silabo (plantilla_id, definicion_plantilla) values (${templateId}::uuid, ${jsonbValue(JSON.stringify(phpShape(definition)))})`
+      created.add(templateId)
     },
+    createdHere: (templateId) => created.has(templateId),
+    allowAiReading: (templateId, keys) => allowAiReadingOn(db, templateId, keys),
+    retainAiPermissions: (templateId, keys) => retainAiPermissionsOn(db, templateId, keys),
     async hasStructure(templateId) {
       return (
         (await hasRows(db.secciones_plantilla.findMany({ where: { plantilla_id: templateId, vigente_en_plantilla: true }, select: { seccion_plantilla_id: true }, take: 1 }))) &&

@@ -53,7 +53,8 @@ describe("system settings", () => {
         '"ai":{"driver":{"value":"deepseek","source":"entorno"},"base_url":{"value":"https://api.deepseek.com","source":"entorno"},' +
         '"model":{"value":"deepseek-chat","source":"entorno"},"api_key":{"configured":true,"source":"entorno"},' +
         '"connect_timeout":{"value":2,"source":"entorno"},"timeout":{"value":50,"source":"entorno"}},' +
-        '"library":{"driver":{"value":"koha","source":"entorno"},"base_url":{"value":"https://biblioteca.ueb.edu.ec","source":"entorno"}}}',
+        '"library":{"driver":{"value":"koha","source":"entorno"},"base_url":{"value":"https://biblioteca.ueb.edu.ec","source":"entorno"}},' +
+        '"teacher_assistant":{"enabled":{"value":false,"source":"entorno"}}}',
     )
     expect(response.text).not.toContain("4c2e")
   })
@@ -76,7 +77,16 @@ describe("system settings", () => {
         timeout: { value: 20, source: "entorno" },
       },
       library: { driver: { value: "disabled", source: "entorno" }, base_url: { value: null, source: "entorno" } },
+      teacher_assistant: { enabled: { value: false, source: "entorno" } },
     })
+  })
+
+  it("keeps the teacher assistant off whatever the environment says and shows what Administration saved", async () => {
+    environment = { ...ENVIRONMENT, TEACHER_ASSISTANT_ENABLED: "true" }
+    expect(JSON.parse((await show()).text).teacher_assistant).toEqual({ enabled: { value: false, source: "entorno" } })
+
+    stored = new Map<string, unknown>([["teacher_assistant.enabled", true]])
+    expect(JSON.parse((await show()).text).teacher_assistant).toEqual({ enabled: { value: true, source: "pantalla" } })
   })
 
   it("prefers what Administration saved and reads the stored key encrypted", async () => {

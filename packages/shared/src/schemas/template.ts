@@ -31,6 +31,10 @@ type Failures = (value: unknown, attribute: string) => string[] | Promise<string
 
 export const officialFormatSchema = z.object({ official: sometimesField("formato oficial", [is.boolean()]) })
 
+export const aiReadPermissionSchema = z.object({ readable: requiredField("lectura de la IA", [is.boolean()]) })
+
+export const aiReadPermissionBody = z.object({ readable: z.boolean().describe("La IA del docente puede leer el campo.") })
+
 const SECTION_KEY_TAKEN = "La clave ya está siendo utilizada por otra sección."
 
 export function sectionSchema(takenKeys: readonly string[] | null) {

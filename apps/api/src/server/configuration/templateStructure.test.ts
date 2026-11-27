@@ -34,6 +34,7 @@ let syncs: DocumentSection[][]
 let inserted: StoredField[]
 let updates: { id: string; changes: Record<string, unknown> }[]
 let ids: string[]
+let permissions: Set<string>
 
 function documentOf(template: SyllabusTemplate): DocumentSection[] {
   return template.sections.map((section) => ({
@@ -110,6 +111,9 @@ const structure = (): StructureStore => ({
           log.push(`update ${id}`)
           updates.push({ id, changes })
         },
+        retainAiPermissions: async (_id, keys) => {
+          permissions = new Set([...permissions].filter((key) => keys.includes(key)))
+        },
       })
       log.push("commit")
       return result
@@ -160,6 +164,7 @@ const invalid = (errors: Record<string, string[]>) => {
 }
 
 beforeEach(() => {
+  permissions = new Set()
   world = {
     sessions: new Map([[SESSION_ID, { payload: sessionPayload(loggedInAttributes()), lastActivity: NOW - 60 }]]),
     users: [makeUser()],
@@ -391,5 +396,39 @@ describe("DELETE admin/template/{template}/structure/fields/{field}", () => {
     const response = await read(destroyField(request("DELETE", `fields/${block.fields[0].id}`), TEMPLATE_ID, block.fields[0].id, deps()))
     expect(response).toEqual({ status: 200, text: message("Campo eliminado.") })
     expect(syncs[0][2].blocks.map((entry) => entry.key)).toEqual(["objetivos_especificos"])
+  })
+})
+
+describe("AI read permissions across structure writes", () => {
+  const keysOf = () => templates.template!.sections.flatMap((section) => section.blocks.map((block) => block.key))
+
+  it("drops the permission of a removed field and keeps the others", async () => {
+    const [removed, kept] = keysOf()
+    const fieldId = templates.template!.sections[0].blocks[0].fields[0].id
+    permissions = new Set([removed, kept])
+
+    expect((await destroyField(request("DELETE", `fields/${fieldId}`), TEMPLATE_ID, fieldId, deps())).status).toBe(200)
+
+    expect([...permissions]).toEqual([kept])
+  })
+
+  it("drops the permissions of every field of a removed section", async () => {
+    const [first, second] = templates.template!.sections
+    permissions = new Set([...first.blocks.map((block) => block.key), second.blocks[0].key])
+
+    expect((await destroySection(request("DELETE", `sections/${first.id}`), TEMPLATE_ID, first.id, deps())).status).toBe(200)
+
+    expect([...permissions]).toEqual([second.blocks[0].key])
+  })
+
+  it("starts a newly added field without permission, even if one was left under its key", async () => {
+    const section = templates.template!.sections[0]
+    const kept = keysOf()[0]
+    permissions = new Set([kept, "campo_nuevo"])
+    const body = { key: "campo_nuevo", label: "Campo nuevo", quien_llena: "carrera", content: { type: "doc", content: [{ type: "paragraph" }] } }
+
+    expect((await storeField(request("POST", `sections/${section.id}/fields`, body), TEMPLATE_ID, section.id, deps())).status).toBe(201)
+
+    expect([...permissions]).toEqual([kept])
   })
 })

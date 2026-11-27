@@ -23,6 +23,7 @@ type TemplateSelectionToolsProps = {
   busy: boolean
   targets?: TemplateSectionTarget[]
   children?: ReactNode
+  aiRead?: ReactNode
   onFiller: (value: FieldFiller) => void
   onName: (label: string) => void
   onMove: (direction: -1 | 1) => void
@@ -67,7 +68,7 @@ export function TemplatePresetTool({ presets, allowed, disabled = false, onPrese
   )
 }
 
-export function TemplateSelectionTools({ selection, locked, busy, targets, children, onFiller, onName, onMove, onRemove, onOrientation, onDuplicate, onMoveTo }: TemplateSelectionToolsProps) {
+export function TemplateSelectionTools({ selection, locked, busy, targets, children, aiRead, onFiller, onName, onMove, onRemove, onOrientation, onDuplicate, onMoveTo }: TemplateSelectionToolsProps) {
   if (selection?.kind === "field") {
     const fieldName = nameOf(selection.field)
     return (
@@ -79,6 +80,12 @@ export function TemplateSelectionTools({ selection, locked, busy, targets, child
         <TemplateRibbonGroup label="¿Quién lo llena?">
           <TemplateFillerToggle field={selection.field} disabled={locked} onFiller={onFiller} />
         </TemplateRibbonGroup>
+        {aiRead ? (
+          <>
+            <TemplateRibbonDivider />
+            {aiRead}
+          </>
+        ) : null}
         {children ? (
           <>
             <TemplateRibbonDivider />

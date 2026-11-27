@@ -2,6 +2,7 @@ import { type MiddlewareConsumer, Module, type NestModule, RequestMethod } from 
 import { PhpInputMiddleware } from "../../common/middleware/php-input.middleware"
 import { AiModule } from "../ai/ai.module"
 import { TemplateAssistantController } from "../ai/template-assistant.controller"
+import { AiPermissionsRepository } from "./ai-permissions.repository"
 import { LogosRepository } from "./logos.repository"
 import { TemplateAssetsController } from "./template-assets.controller"
 import { TemplateLocksRepository } from "./template-locks.repository"
@@ -24,6 +25,7 @@ import { TEMPLATE_TOKEN_PROVIDERS } from "./template.tokens"
     TemplateStructureRepository,
     TemplateProvisionRepository,
     TemplateRehearsalRepository,
+    AiPermissionsRepository,
     LogosRepository,
     TemplateService,
     TemplatePreloader,

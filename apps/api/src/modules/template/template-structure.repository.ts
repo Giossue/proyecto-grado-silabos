@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common"
 import type { Prisma } from "../../generated/prisma/client"
 import { PrismaService } from "../../prisma/prisma.service"
+import { retainAiPermissionsOn } from "../../server/ai/readPermissionStore"
 import { phpJsonDecode } from "../../server/configuration/phpValues"
 import type { DocumentSection, FieldRecord, StructureStore, StructureTx } from "../../server/configuration/templateStructure"
 import { type Db, TRANSACTION_OPTIONS } from "../../prisma/db"
@@ -79,6 +80,7 @@ export function structureTxOn(db: Db): StructureTx {
       if (Object.keys(values).length === 0) return
       await db.definiciones_campo.updateMany({ where: { definicion_campo_id: id }, data: values })
     },
+    retainAiPermissions: (templateId, keys) => retainAiPermissionsOn(db, templateId, keys),
   }
 }
 

@@ -13,7 +13,8 @@ export type SystemSettingsDeps = {
 }
 
 export const SECRET = "ai.api_key"
-const FIELDS: [field: string, section: "notifications" | "ai" | "library"][] = [
+export const TEACHER_ASSISTANT_SETTING = "teacher_assistant.enabled"
+const FIELDS: [field: string, section: "notifications" | "ai" | "library" | "teacher_assistant"][] = [
   ["notifications.emails", "notifications"],
   ["notifications.digest_time", "notifications"],
   ["ai.driver", "ai"],
@@ -24,6 +25,7 @@ const FIELDS: [field: string, section: "notifications" | "ai" | "library"][] = [
   ["ai.timeout", "ai"],
   ["library.driver", "library"],
   ["library.base_url", "library"],
+  [TEACHER_ASSISTANT_SETTING, "teacher_assistant"],
 ]
 const FORBIDDEN = "No tiene permiso para hacer esto."
 
@@ -73,6 +75,7 @@ export function environmentSettings(environment: SettingsEnvironment): Record<st
     "ai.timeout": phpInt(envValue(environment, "AI_TIMEOUT", 20)),
     "library.driver": envValue(environment, "CATALOG_DRIVER", "disabled"),
     "library.base_url": envValue(environment, "KOHA_BASE_URL"),
+    [TEACHER_ASSISTANT_SETTING]: false,
   }
 }
 
@@ -85,6 +88,10 @@ export function storedSettingsOn(db: Db): () => Promise<Map<string, unknown>> {
       return new Map()
     }
   }
+}
+
+export async function teacherAssistantEnabledOn(db: Db): Promise<boolean> {
+  return (await storedSettingsOn(db)()).get(TEACHER_ASSISTANT_SETTING) === true
 }
 
 export function effectiveSettings(stored: Map<string, unknown>, environment: SettingsEnvironment, key: Buffer): Record<string, unknown> {
@@ -108,7 +115,7 @@ export function effectiveSettings(stored: Map<string, unknown>, environment: Set
 
 export function describeSettings(stored: Map<string, unknown>, environment: SettingsEnvironment, key: Buffer) {
   const effective = effectiveSettings(stored, environment, key)
-  const result: Record<string, Record<string, unknown>> = { notifications: {}, ai: {}, library: {} }
+  const result: Record<string, Record<string, unknown>> = { notifications: {}, ai: {}, library: {}, teacher_assistant: {} }
   for (const [field, section] of FIELDS) {
     const value = effective[field]
     const source = stored.has(field) ? "pantalla" : "entorno"

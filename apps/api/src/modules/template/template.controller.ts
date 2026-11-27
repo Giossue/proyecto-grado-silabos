@@ -1,11 +1,13 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put } from "@nestjs/common"
 import { ApiBody, ApiConsumes, ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiParam, ApiTags, ApiTooManyRequestsResponse, ApiUnprocessableEntityResponse } from "@nestjs/swagger"
 import { Authenticated } from "../../common/decorators/authenticated.decorator"
-import { Preloaded } from "../../common/decorators/current-session.decorator"
+import { CurrentSession, Preloaded } from "../../common/decorators/current-session.decorator"
 import { Roles } from "../../common/decorators/roles.decorator"
 import { MessageDto, ValidationErrorDto } from "../../common/dtos/api-responses.dto"
+import type { AppSession } from "../../server/auth/types"
 import type { StructureTarget } from "../../server/configuration/templateStructure"
 import type { PhpArray } from "../../server/http/input"
+import { AiReadPermissionDto } from "./dto/ai-read-permission.dto"
 import { OfficialFormatDto } from "./dto/official-format.dto"
 import { TemplateFieldPreloader, TemplatePreloader } from "./template.preloader"
 import { TemplateService } from "./template.service"
@@ -55,6 +57,27 @@ export class TemplateController {
   @ApiNotFoundResponse(MISSING)
   teacherPreview(@Preloaded() target: StructureTarget) {
     return this.templates.teacherPreview(target)
+  }
+
+  @Get(":template/ai-permissions")
+  @Authenticated(BOUND)
+  @Roles(ADMIN)
+  @ApiOkResponse({ description: "Por cada campo, si la IA del docente puede leerlo y, si está bloqueado, el motivo." })
+  @ApiNotFoundResponse(MISSING)
+  aiReadPermissions(@CurrentSession() session: AppSession, @Preloaded() target: StructureTarget) {
+    return this.templates.aiReadPermissions(session, target)
+  }
+
+  @Put(":template/ai-permissions/:field")
+  @Authenticated(BOUND)
+  @Roles(ADMIN)
+  @ApiParam({ name: "field", format: "uuid" })
+  @ApiBody({ type: AiReadPermissionDto })
+  @ApiOkResponse({ description: "Activa o desactiva la lectura de la IA en un campo, también con un periodo académico abierto." })
+  @ApiUnprocessableEntityResponse({ description: "Valor no válido, o se intenta activar un campo bloqueado." })
+  @ApiNotFoundResponse(MISSING)
+  saveAiReadPermission(@CurrentSession() session: AppSession, @PhpInput() input: PhpArray, @Preloaded() target: StructureTarget, @Param("field") field: string) {
+    return this.templates.saveAiReadPermission(session, input, target, field)
   }
 
   @Get(":template/json")

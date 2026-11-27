@@ -9,10 +9,11 @@ import { validateSchema } from "../http/schemaValidation"
 import { uuid7 } from "../http/uuid7"
 import { requestBoolean } from "../syllabus/inProgressWorkHelpers"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
+import { initialAiReadableKeys } from "../ai/readableFields"
 import { officialDefinition, officialSections } from "./officialTemplate"
 
 export { officialDefinition, officialSections }
-import type { PhpRecord } from "./phpValues"
+import { list, type PhpRecord } from "./phpValues"
 import { contentForField, DraftRequest, fieldDocument, prepareDraft, toRuntime, validatedSections, type DraftSection } from "./templateDraft"
 import type { SyllabusTemplate } from "./templatePresentation"
 import { boundTemplate, FORBIDDEN, managesTemplates } from "./templateReads"
@@ -35,6 +36,9 @@ export interface ProvisionTx {
   saveDefinition(templateId: string, definition: TemplateDefinition): Promise<void>
   coordinationFields(templateId: string): Promise<Map<string, string>>
   moveSubjectValues(from: string, to: string): Promise<void>
+  createdHere?(templateId: string): boolean
+  allowAiReading(templateId: string, keys: string[]): Promise<void>
+  retainAiPermissions(templateId: string, keys: string[]): Promise<void>
 }
 
 export interface ProvisionStore {
@@ -68,6 +72,11 @@ async function buildStructure(tx: ProvisionTx, deps: Pick<ProvisionDeps, "newBlo
   })
   await tx.syncDocument(templateId, sections)
   for (const field of fields) await tx.insertField({ id: deps.newFieldId(), ...field })
+  if (tx.createdHere?.(templateId)) await tx.allowAiReading(templateId, initialAiReadableKeys(structure, definition))
+}
+
+function fieldKeys(sections: DraftSection[]): string[] {
+  return sections.flatMap((section) => section.fields.map((field) => field.key))
 }
 
 async function retireStructure(tx: ProvisionTx, templateId: string): Promise<void> {
@@ -150,6 +159,7 @@ export async function formatTemplateOf(original: Request, bound: SyllabusTemplat
       await retireStructure(tx, template.id)
       await buildStructure(tx, deps, template.id, officialSections(), template.definition ?? officialDefinition())
       await tx.saveDefinition(template.id, officialDefinition())
+      await tx.retainAiPermissions(template.id, fieldKeys(officialSections()))
     })
     return apiJson({ message: "Plantilla restablecida al formato oficial." })
   })
@@ -169,6 +179,7 @@ export async function clearTemplateOf(original: Request, bound: SyllabusTemplate
     await deps.provision.transaction(async (tx) => {
       const template = await lockedTemplate(tx, bound.id)
       await retireStructure(tx, template.id)
+      await tx.retainAiPermissions(template.id, [])
     })
     return apiJson({ message: "Plantilla vaciada." })
   })
@@ -205,6 +216,8 @@ export async function importTemplateJsonOf(original: Request, raw: PhpArray, bou
         const old = previous.get(key)
         if (old !== undefined && old !== fieldId) await tx.moveSubjectValues(old, fieldId)
       }
+      const created = new Set(list(input.new_fields))
+      await tx.retainAiPermissions(template.id, fieldKeys(sections).filter((key) => !created.has(key)))
     })
     return apiJson({ message: "Plantilla importada desde el JSON." })
   })

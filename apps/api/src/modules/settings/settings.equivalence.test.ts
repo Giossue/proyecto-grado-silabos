@@ -111,7 +111,7 @@ function deps(): SystemSettingsWriteDeps {
   return { bridge: state.bridge, limiter: state.limiter, stored: repository.stored, environment, verifyPassword, save: repository.save, fetch: connectionFetch, libraries }
 }
 
-const SECTIONS = ["notificaciones", "ia", "biblioteca"]
+const SECTIONS = ["notificaciones", "ia", "biblioteca", "asistente-docente"]
 const TESTABLE = ["ia", "biblioteca"]
 
 async function legacy(web: Request): Promise<Response> {
@@ -194,6 +194,14 @@ describe("system settings served by Nest answer exactly like the route handlers 
     expect(statuses(answers)).toEqual([200, 200, 500, 422])
   })
 
+  it("saves and rejects the teacher assistant switch the same way", async () => {
+    const answers = await expectSame({ method: "PUT", path: `${BASE}/asistente-docente`, body: { enabled: true } }, { method: "PUT", path: `${BASE}/asistente-docente`, body: {} }, { method: "GET", path: BASE })
+    expect(statuses(answers)).toEqual([200, 422, 200])
+    expect(JSON.parse(answers[2].body).teacher_assistant).toEqual({ enabled: { value: true, source: "pantalla" } })
+    scenario = (current) => void (current.world = freshWorld("docente"))
+    expect(statuses(await expectSame({ method: "PUT", path: `${BASE}/asistente-docente`, body: { enabled: true } }))).toEqual([403])
+  })
+
   it("tests the AI provider and the library catalog with the same answers", async () => {
     const answers = [...(await expectSame({ method: "POST", path: `${BASE}/ia/test` }, { method: "POST", path: `${BASE}/biblioteca/test` }))]
     scenario = (current) => {
@@ -217,6 +225,8 @@ describe("system settings served by Nest answer exactly like the route handlers 
   it.each([
     ["PUT", `${BASE}/otra`],
     ["POST", `${BASE}/notificaciones/test`],
+    ["POST", `${BASE}/asistente-docente/test`],
+    ["GET", `${BASE}/asistente-docente`],
     ["POST", `${BASE}/otra/test`],
     ["GET", `${BASE}/ia`],
     ["DELETE", `${BASE}/ia`],

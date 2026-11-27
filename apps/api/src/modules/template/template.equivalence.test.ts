@@ -44,6 +44,9 @@ import { PrismaService } from "../../prisma/prisma.service"
 import { AuthModule } from "../auth/auth.module"
 import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
 import { AssistantRepository } from "../ai/assistant.repository"
+import { AI_BLOCKED_NOBODY, AI_BLOCKED_PROTECTED } from "../../server/ai/readableFields"
+import type { AiReadPermissionStore } from "../../server/ai/readPermissionStore"
+import { AiPermissionsRepository } from "./ai-permissions.repository"
 import { FallbackModule } from "../fallback/fallback.module"
 import { dispatchOracle, type OracleHandler, type OracleParams, type OracleRoute } from "../../common/testing/oracle-router"
 import { LogosRepository } from "./logos.repository"
@@ -77,6 +80,7 @@ type State = {
   faculties: StoredFaculty[]
   writes: string[]
   sequence: number
+  permissions: Set<string>
   limiter: RateLimiter
   bridge: BridgeDeps
   storage: StorageWriter
@@ -115,6 +119,7 @@ function freshState(): State {
     faculties: [{ id: FACULTY, logo: null }],
     writes: [],
     sequence: 0,
+    permissions: new Set(),
     limiter: createRateLimiter(),
     bridge: fakeDeps(adminWorld()),
     storage: createStorageWriter(root),
@@ -200,6 +205,7 @@ const structureTx = {
     if (template) state.templates.template = addField(template, field)
   },
   updateField: async (id: string, changes: unknown) => void state.writes.push(`update-field:${id}:${JSON.stringify(changes)}`),
+  retainAiPermissions: async (_id: string, keys: string[]) => void (state.permissions = new Set([...state.permissions].filter((key) => keys.includes(key)))),
 }
 
 const structure: StructureStore = {
@@ -226,6 +232,8 @@ const provisionTx: ProvisionTx = {
   syncDocument: (id, sections) => structureTx.syncDocument(id, sections),
   suffixRetiredSections: async (id) => void state.writes.push(`suffix:${id}`),
   insertField: (field) => structureTx.insertField(field),
+  allowAiReading: async (_id, keys) => void keys.forEach((key) => state.permissions.add(key)),
+  retainAiPermissions: (id, keys) => structureTx.retainAiPermissions(id, keys),
   saveDefinition: async (id, definition) => void state.writes.push(`definition:${id}:${createHash("sha256").update(JSON.stringify(definition)).digest("hex")}`),
   coordinationFields: async () =>
     new Map((current()?.sections ?? []).flatMap((section) => section.blocks.flatMap((block) => block.fields.filter((field) => field.responsible !== "institucional").map((field) => [block.key, field.id] as [string, string])))),
@@ -235,6 +243,20 @@ const provisionTx: ProvisionTx = {
 const provision: ProvisionStore = {
   templateLocked: async () => state.openProcess,
   transaction: (work) => withRollback(() => work(provisionTx)),
+}
+
+const permissionStore: AiReadPermissionStore = {
+  allowedKeys: async () => new Set(state.permissions),
+  transaction: (work) =>
+    work({
+      lockTemplate: (id) => structureTx.lockTemplate(id),
+      allowedKeys: async () => new Set(state.permissions),
+      save: async (templateId, key, allowed, actorId) => {
+        state.writes.push(`ai-permission:${templateId}:${key}:${allowed}:${actorId}`)
+        if (allowed) state.permissions.add(key)
+        else state.permissions.delete(key)
+      },
+    }),
 }
 
 const rehearsal: RehearsalStore = {
@@ -446,6 +468,8 @@ beforeAll(async () => {
     .useValue({ store: structure })
     .overrideProvider(TemplateProvisionRepository)
     .useValue({ store: provision })
+    .overrideProvider(AiPermissionsRepository)
+    .useValue({ store: permissionStore })
     .overrideProvider(TemplateRehearsalRepository)
     .useValue(rehearsal)
     .overrideProvider(LogosRepository)
@@ -672,5 +696,146 @@ describe("template routes served by Nest answer exactly like the route handlers 
     ["DELETE", "/logos/institucion"],
   ])("answers %s %s with the router answer of the contract", async (method, pathname) => {
     await expectSame({ method, path: pathname, cookie: false })
+  })
+})
+
+describe("AI read permission routes", () => {
+  type Entry = { id: string; key: string; readable: boolean; blocked_reason: string | null }
+  const path = `${BASE}/ai-permissions`
+  const idOf = (key: string) => goldenTemplate().sections.flatMap((section) => section.blocks).find((block) => block.key === key)!.fields[0].id
+  const put = (key: string, readable: unknown, extra: Partial<Call> = {}): Call => ({ method: "PUT", path: `${path}/${idOf(key)}`, body: { readable }, ...extra })
+  const send = async (call: Call) => {
+    const answer = await nest(call)
+    return { status: answer.status, body: JSON.parse(answer.body) as Record<string, unknown> }
+  }
+  const list = async () => (await send({ method: "GET", path })).body.fields as Entry[]
+  const entry = async (key: string) => (await list()).find((item) => item.key === key)
+
+  beforeEach(() => {
+    state = freshState()
+  })
+
+  it("lists every field with whether the AI reads it and why a field is blocked", async () => {
+    state.permissions = new Set(["descripcion", "asignatura", "firmas"])
+
+    const fields = await list()
+
+    expect(fields.map((item) => item.key)).toEqual(goldenTemplate().sections.flatMap((section) => section.blocks.map((block) => block.key)))
+    expect(fields.find((item) => item.key === "descripcion")).toEqual({ id: idOf("descripcion"), key: "descripcion", readable: true, blocked_reason: null })
+    expect(fields.find((item) => item.key === "unidades")).toMatchObject({ readable: false, blocked_reason: null })
+    expect(fields.find((item) => item.key === "asignatura")).toMatchObject({ readable: false, blocked_reason: AI_BLOCKED_PROTECTED })
+    expect(fields.find((item) => item.key === "firmas")).toMatchObject({ readable: false, blocked_reason: AI_BLOCKED_NOBODY })
+  })
+
+  it("turns a permission on and off while a period is open, without writing the template", async () => {
+    state.openProcess = true
+    state.lock = { period: "2026-1", deliveryOn: "2026-12-01" }
+
+    const on = await send(put("descripcion", true))
+    expect(on).toEqual({ status: 200, body: { message: "La IA ya puede leer este campo.", field: { id: idOf("descripcion"), key: "descripcion", readable: true, blocked_reason: null } } })
+    expect((await entry("descripcion"))?.readable).toBe(true)
+
+    const off = await send(put("descripcion", false))
+    expect(off.body).toMatchObject({ message: "La IA ya no lee este campo.", field: { readable: false } })
+    expect((await entry("descripcion"))?.readable).toBe(false)
+
+    expect(state.writes.filter((write) => !write.startsWith("lock:"))).toEqual([
+      `ai-permission:${TEMPLATE_ID}:descripcion:true:${golden.userId}`,
+      `ai-permission:${TEMPLATE_ID}:descripcion:false:${golden.userId}`,
+    ])
+  })
+
+  it.each([
+    ["asignatura", AI_BLOCKED_PROTECTED],
+    ["firmas", AI_BLOCKED_NOBODY],
+  ])("refuses to turn on the blocked field %s and still lets it be turned off", async (key, reason) => {
+    expect(await send(put(key, true))).toEqual({ status: 422, body: { message: reason, errors: { readable: [reason] } } })
+    expect(state.permissions.size).toBe(0)
+
+    expect((await send(put(key, false))).status).toBe(200)
+    expect(state.permissions.size).toBe(0)
+  })
+
+  it("rejects a value that is not true or false and writes nothing", async () => {
+    for (const value of [undefined, null, "si", [true]]) {
+      const answer = await send(put("descripcion", value))
+      expect(answer.status, String(value)).toBe(422)
+      expect(Object.keys(answer.body.errors as object)).toEqual(["readable"])
+    }
+    expect(state.writes).toEqual([])
+  })
+
+  it("answers 404 for an unknown template and for a field that is no longer in the template", async () => {
+    expect((await send({ method: "GET", path: `/api/v1/admin/template/${MISSING}/ai-permissions` })).status).toBe(404)
+    for (const field of [MISSING, "no-es-uuid"]) expect((await send({ method: "PUT", path: `${path}/${field}`, body: { readable: true } })).status).toBe(404)
+    expect(state.permissions.size).toBe(0)
+  })
+
+  it("belongs to Administration only", async () => {
+    const calls = [{ method: "GET", path }, put("descripcion", true)]
+    for (const call of calls) expect((await send({ ...call, cookie: false })).status).toBe(401)
+    for (const role of ["docente", "coordinador", "bibliotecario"]) {
+      state = { ...state, bridge: fakeDeps(adminWorld({ assignments: [makeAssignment({ id: ADMIN_ROLE, role })] })) }
+      for (const call of calls) expect((await send(call)).status, role).toBe(403)
+    }
+    state = { ...state, bridge: fakeDeps(adminWorld({ users: [makeUser({ active: false })] })) }
+    expect([(await send(calls[0])).status, (await send(calls[1])).status]).toEqual([403, 401])
+    expect(state.permissions.size).toBe(0)
+  })
+
+  it("keeps the permission of the fields that survive a save of the template, and never gives one to removed or new fields", async () => {
+    await send(put("descripcion", true))
+    await send(put("objetivo_general", true))
+    await send(put("ambientes_aprendizaje", true))
+    const saved = templateExport(new Request("http://localhost:3000/"), goldenTemplate(), goldenTemplate().definition) as { secciones: { clave: string; campos: { clave: string }[] }[] }
+    const sections = saved.secciones.map((section) => ({ ...section, campos: section.campos.filter((field) => field.clave !== "ambientes_aprendizaje") }))
+    const described = sections.find((section) => section.clave === "descripcion")!
+    described.campos.push({ ...described.campos[0], clave: "campo_agregado" })
+
+    expect((await send({ method: "PUT", path: `${BASE}/json`, body: { ...saved, secciones: sections } })).status).toBe(200)
+
+    const fields = await list()
+    expect(fields.filter((item) => item.readable).map((item) => item.key)).toEqual(["descripcion", "objetivo_general"])
+    expect(fields.find((item) => item.key === "descripcion")!.id).not.toBe(idOf("descripcion"))
+    expect(fields.find((item) => item.key === "campo_agregado")).toMatchObject({ readable: false, blocked_reason: null })
+    expect(fields.some((item) => item.key === "ambientes_aprendizaje")).toBe(false)
+    expect((await send(put("descripcion", false))).status).toBe(404)
+  })
+
+  it("saves the editor draft with new_fields, which only the permissions notice", async () => {
+    const draft = draftPayload as Record<string, unknown>
+    for (const check of ["check", "impact", "preview"]) {
+      const answers: string[] = []
+      for (const body of [draft, { ...draft, new_fields: ["descripcion"] }]) {
+        state = freshState()
+        answers.push((await nest({ method: "POST", path: `${BASE}/draft/${check}`, body, mask: true })).body)
+      }
+      expect(answers[1], check).toBe(answers[0])
+    }
+    state = freshState()
+    state.permissions = new Set(["descripcion", "objetivo_general"])
+
+    expect((await send({ method: "PUT", path: `${BASE}/json`, body: { ...draft, new_fields: ["descripcion"] } })).status).toBe(200)
+
+    expect([...state.permissions]).toEqual(["objetivo_general"])
+  })
+
+  it("drops the permission of a field removed through the structure routes", async () => {
+    await send(put("descripcion", true))
+    await send(put("objetivo_general", true))
+
+    expect((await nest({ method: "DELETE", path: `${BASE}/structure/fields/${idOf("descripcion")}` })).status).toBe(200)
+
+    expect([...state.permissions]).toEqual(["objetivo_general"])
+  })
+
+  it.each([
+    ["POST", "ai-permissions"],
+    ["DELETE", "ai-permissions"],
+    ["GET", `ai-permissions/${MISSING}`],
+    ["PATCH", `ai-permissions/${MISSING}`],
+  ])("answers %s …/%s with the router answer of the contract", async (method, suffix) => {
+    const answer = await nest({ method, path: `${BASE}/${suffix}`, cookie: false })
+    expect(answer.status).toBe(405)
   })
 })

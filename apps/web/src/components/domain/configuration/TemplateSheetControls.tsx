@@ -1,6 +1,6 @@
 "use client"
 
-import { GripVertical } from "lucide-react"
+import { GripVertical, MousePointerClick } from "lucide-react"
 import { memo, type DragEvent } from "react"
 import type { TemplateSectionPayload } from "@/api/template"
 import { TemplateInlineText } from "@/components/domain/configuration/TemplateInlineText"
@@ -17,6 +17,7 @@ type TemplateDragHandleProps = {
   id: string
   label: string
   disabled: boolean
+  still?: boolean
   selected: boolean
   className?: string
   onSelect: (kind: SheetItemKind, id: string) => void
@@ -37,7 +38,7 @@ const SECTION: InsertAction[] = [{ key: "section", label: "Nueva sección" }]
 const FIELD: InsertAction[] = [{ key: "field", label: "Agregar campo" }]
 const BOTH: InsertAction[] = [...SECTION, ...FIELD]
 
-export const TemplateDragHandle = memo(function TemplateDragHandle({ kind, id, label, disabled, selected, className, onSelect, onDragStart, onDragEnd }: TemplateDragHandleProps) {
+export const TemplateDragHandle = memo(function TemplateDragHandle({ kind, id, label, disabled, still = false, selected, className, onSelect, onDragStart, onDragEnd }: TemplateDragHandleProps) {
   return (
     <IconTooltip label={label}>
       <Button
@@ -45,15 +46,15 @@ export const TemplateDragHandle = memo(function TemplateDragHandle({ kind, id, l
         variant="ghost"
         size="icon-sm"
         data-drag-handle
-        draggable={!disabled}
+        draggable={!disabled && !still}
         disabled={disabled}
         aria-label={label}
-        className={cn("absolute cursor-grab text-muted-foreground opacity-0 focus-visible:opacity-100", className, selected && "opacity-100")}
+        className={cn("absolute text-muted-foreground opacity-0 focus-visible:opacity-100", still ? "cursor-pointer" : "cursor-grab", className, selected && "opacity-100")}
         onClick={() => onSelect(kind, id)}
         onDragStart={(event) => onDragStart(event, { kind, id })}
         onDragEnd={onDragEnd}
       >
-        <GripVertical aria-hidden="true" />
+        {still ? <MousePointerClick aria-hidden="true" /> : <GripVertical aria-hidden="true" />}
       </Button>
     </IconTooltip>
   )

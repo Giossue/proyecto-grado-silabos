@@ -42,6 +42,7 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
     vi.resetAllMocks()
     vi.useFakeTimers()
     vi.mocked(templateApi.importTemplateJson).mockResolvedValue({ message: "ok" })
+    vi.mocked(templateApi.getTemplateAiPermissions).mockResolvedValue({ fields: [] })
   })
   afterEach(() => {
     vi.useRealTimers()
@@ -82,7 +83,7 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
     await selectField("f1")
     expect(tabs()).toEqual(["Inicio", "Insertar", "Diseño", "Campo"])
     expect(tab("Campo")!.getAttribute("aria-selected")).toBe("true")
-    expect(groups(activePanel())).toEqual(["Nombre", "¿Quién lo llena?", "Reglas", "Organizar"])
+    expect(groups(activePanel())).toEqual(["Nombre", "¿Quién lo llena?", "Asistente del docente", "Reglas", "Organizar"])
     expect(activePanel().querySelector<HTMLInputElement>("[data-field-name-input]")!.value).toBe("Primero")
     expect([...activePanel().querySelectorAll("[data-field-filler] [data-filler]")].map((item) => item.textContent!.trim())).toEqual(["Nadie (texto fijo)", "Coordinación", "Solo el docente"])
     expect(activePanel().querySelector('[data-filler="carrera"]')!.getAttribute("data-state")).toBe("on")
@@ -107,7 +108,7 @@ describe("TemplateVisualBuilder: cinta con pestañas fija arriba y menú «Más�
   it("un campo No editable sin respuestas antes no muestra reglas, y sin tablas repetibles no hay grupo de tablas", async () => {
     await mountBuilder({ template, presets })
     await selectField("f2")
-    expect(groups(activePanel())).toEqual(["Nombre", "¿Quién lo llena?", "Organizar"])
+    expect(groups(activePanel())).toEqual(["Nombre", "¿Quién lo llena?", "Asistente del docente", "Organizar"])
     expect(activePanel().querySelector('[data-filler="institucional"]')!.getAttribute("data-state")).toBe("on")
     expect(activePanel().querySelector("[data-field-limit-tool]")).toBeNull()
     expect(activePanel().querySelector("[data-field-condition-tool]")).toBeNull()

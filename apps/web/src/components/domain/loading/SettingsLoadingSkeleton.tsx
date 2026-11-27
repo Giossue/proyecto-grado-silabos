@@ -13,7 +13,7 @@ export function SettingsLoadingSkeleton({ section = "profile", rows = 4 }: Setti
   if (section === "system") {
     return (
       <div className="-mt-2 flex min-w-0 flex-col" data-settings-section="system">
-        {range(3).map((item) => (
+        {range(4).map((item) => (
           <div key={item} data-skeleton="settings-accordion-item" className="border-b last:border-b-0">
             <div className="flex items-start justify-between gap-4 py-4">
               <div className="flex min-w-0 flex-1 items-center gap-3">

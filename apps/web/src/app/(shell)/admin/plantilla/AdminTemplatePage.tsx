@@ -236,6 +236,12 @@ export default function AdminTemplatePage() {
             !editing ? (
               <>
                 {teacherToggle}
+                {!teacherView && payload?.processLock ? (
+                  <Button type="button" variant="outline" onClick={() => builder.current?.askAiAccess()}>
+                    <Bot data-icon="inline-start" aria-hidden="true" />
+                    Lo que lee la IA
+                  </Button>
+                ) : null}
                 {!teacherView ? (
                   <Button type="button" data-tour="template-edit" disabled={Boolean(payload?.processLock)} onClick={() => builder.current?.askEdit()}>
                     <Pencil data-icon="inline-start" aria-hidden="true" />

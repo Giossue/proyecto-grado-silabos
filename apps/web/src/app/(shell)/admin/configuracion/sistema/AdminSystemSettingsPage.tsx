@@ -1,10 +1,10 @@
 "use client"
 
-import { Bell, Bot, Library, PlugZap, Save, Trash2, Undo2 } from "lucide-react"
+import { Bell, Bot, GraduationCap, Library, PlugZap, Save, Trash2, Undo2 } from "lucide-react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { ApiError } from "@/api/client"
-import { testSystemConnection, updateSystemSettings, type SettingsSection, type SystemSettings } from "@/api/systemSettings"
+import { testSystemConnection, updateSystemSettings, type ConnectionSection, type SettingsSection, type SystemSettings } from "@/api/systemSettings"
 import { PasswordConfirmDialog } from "@/components/PasswordConfirmDialog"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { IconTooltip } from "@/components/domain/IconTooltip"
@@ -13,7 +13,7 @@ import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { SettingsAccordionSection } from "@/components/domain/SettingsAccordionSection"
 import { Accordion } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
@@ -25,14 +25,14 @@ import { cn } from "@/lib/utils"
 import { queryErrorMessage } from "@/lib/queryClient"
 import { configurationKeys, systemSettingsQuery } from "@/queries/configuration"
 
-type ConnectionSection = Exclude<SettingsSection, "notificaciones">
 type NotificationsForm = { emails: boolean; digest_time: string }
 type AiForm = { driver: string; base_url: string; model: string; api_key: string; clear_api_key: boolean; connect_timeout: number | string; timeout: number | string }
 type LibraryForm = { driver: string; base_url: string }
-type Forms = { notifications: NotificationsForm; ai: AiForm; library: LibraryForm }
-type Snapshot = { notifications: string; ai: string; library: string }
+type TeacherAssistantForm = { enabled: boolean }
+type Forms = { notifications: NotificationsForm; ai: AiForm; library: LibraryForm; teacherAssistant: TeacherAssistantForm }
+type Snapshot = { notifications: string; ai: string; library: string; teacherAssistant: string }
 
-const EMPTY_SNAPSHOT: Snapshot = { notifications: "", ai: "", library: "" }
+const EMPTY_SNAPSHOT: Snapshot = { notifications: "", ai: "", library: "", teacherAssistant: "" }
 
 const formsFrom = (value: SystemSettings): Forms => ({
   notifications: {
@@ -49,12 +49,14 @@ const formsFrom = (value: SystemSettings): Forms => ({
     timeout: value.ai.timeout.value ?? 20,
   },
   library: { driver: value.library.driver.value ?? "disabled", base_url: value.library.base_url.value ?? "" },
+  teacherAssistant: { enabled: value.teacher_assistant.enabled.value === true },
 })
 
-const snapshot = ({ notifications, ai, library }: Forms): Snapshot => ({
+const snapshot = ({ notifications, ai, library, teacherAssistant }: Forms): Snapshot => ({
   notifications: JSON.stringify(notifications),
   ai: JSON.stringify({ ...ai, api_key: ai.api_key.trim() }),
   library: JSON.stringify(library),
+  teacherAssistant: JSON.stringify(teacherAssistant),
 })
 
 const numberModel = (value: string): number | string => {
@@ -79,6 +81,7 @@ export default function AdminSystemSettingsPage() {
   const [notifications, setNotifications] = useState<NotificationsForm>({ emails: true, digest_time: "08:00" })
   const [ai, setAi] = useState<AiForm>({ driver: "disabled", base_url: "", model: "", api_key: "", clear_api_key: false, connect_timeout: 2, timeout: 20 })
   const [library, setLibrary] = useState<LibraryForm>({ driver: "disabled", base_url: "" })
+  const [teacherAssistant, setTeacherAssistant] = useState<TeacherAssistantForm>({ enabled: false })
   const [baseline, setBaseline] = useState<Snapshot>(EMPTY_SNAPSHOT)
   const shownConfirmFor = useShownWhileClosing(confirmFor)
 
@@ -88,6 +91,7 @@ export default function AdminSystemSettingsPage() {
     setNotifications(forms.notifications)
     setAi(forms.ai)
     setLibrary(forms.library)
+    setTeacherAssistant(forms.teacherAssistant)
     setBaseline(snapshot(forms))
   }
 
@@ -95,11 +99,12 @@ export default function AdminSystemSettingsPage() {
     void query.refetch()
   }
 
-  const current = snapshot({ notifications, ai, library })
+  const current = snapshot({ notifications, ai, library, teacherAssistant })
   const dirty = {
     notificaciones: current.notifications !== baseline.notifications,
     ia: current.ai !== baseline.ai,
     biblioteca: current.library !== baseline.library,
+    "asistente-docente": current.teacherAssistant !== baseline.teacherAssistant,
   }
   const keyPlaceholder = settings?.ai.api_key.configured ? "Escriba una clave nueva solo para cambiarla" : "Escriba la clave del proveedor"
   const clearKeyLabel = ai.clear_api_key ? "No quitar la clave" : "Quitar la clave"
@@ -112,17 +117,19 @@ export default function AdminSystemSettingsPage() {
     const body: Record<string, unknown> =
       section === "notificaciones"
         ? { ...notifications }
-        : section === "biblioteca"
-          ? { ...library, current_password: currentPassword }
-          : {
-              driver: ai.driver,
-              base_url: ai.base_url,
-              model: ai.model,
-              connect_timeout: ai.connect_timeout,
-              timeout: ai.timeout,
-              current_password: currentPassword,
-              ...(ai.clear_api_key ? { clear_api_key: true } : apiKey ? { api_key: apiKey } : {}),
-            }
+        : section === "asistente-docente"
+          ? { ...teacherAssistant }
+          : section === "biblioteca"
+            ? { ...library, current_password: currentPassword }
+            : {
+                driver: ai.driver,
+                base_url: ai.base_url,
+                model: ai.model,
+                connect_timeout: ai.connect_timeout,
+                timeout: ai.timeout,
+                current_password: currentPassword,
+                ...(ai.clear_api_key ? { clear_api_key: true } : apiKey ? { api_key: apiKey } : {}),
+              }
     try {
       queryClient.setQueryData(configurationKeys.systemSettings(), await updateSystemSettings(section, body))
       setConfirmFor(null)
@@ -335,6 +342,36 @@ export default function AdminSystemSettingsPage() {
                   Guardar
                 </Button>
                 {testButton("ia")}
+              </div>
+            </SettingsAccordionSection>
+
+            <SettingsAccordionSection
+              value="asistente-docente"
+              title="Asistente del docente"
+              description="Ayuda con IA dentro del sílabo del docente"
+              icon={GraduationCap}
+            >
+              <Field orientation="horizontal">
+                <Switch
+                  id="settings-teacher-assistant"
+                  checked={teacherAssistant.enabled}
+                  onCheckedChange={(enabled) => setTeacherAssistant({ enabled })}
+                  aria-describedby="settings-teacher-assistant-help"
+                />
+                <FieldContent>
+                  <FieldLabel htmlFor="settings-teacher-assistant" className="font-normal">
+                    Activar el asistente del docente
+                  </FieldLabel>
+                  <FieldDescription id="settings-teacher-assistant-help">
+                    Apagado, el docente no ve el asistente. No cambia el asistente de la plantilla. Lo que la IA puede leer se elige campo por campo en la plantilla del sílabo
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+              <div>
+                <Button type="button" disabled={saving !== null || !dirty["asistente-docente"]} onClick={() => void save("asistente-docente")}>
+                  {saveIcon("asistente-docente")}
+                  Guardar
+                </Button>
               </div>
             </SettingsAccordionSection>
 

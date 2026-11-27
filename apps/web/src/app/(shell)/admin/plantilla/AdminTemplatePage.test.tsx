@@ -1,7 +1,7 @@
 import { act, fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getSession } from "@/api/session"
-import { checkTemplateDraft, createTemplate, getTemplate, getTemplateJson, getTemplateTeacherPreview, previewTemplateDraft, type TemplatePayload } from "@/api/template"
+import { checkTemplateDraft, createTemplate, getTemplate, getTemplateAiPermissions, getTemplateJson, getTemplateTeacherPreview, previewTemplateDraft, setTemplateAiPermission, type TemplatePayload } from "@/api/template"
 import { applyTemplateAssistantProposal, discardTemplateAssistantProposal, getTemplateAssistant, getTemplateAssistantProposal, sendTemplateAssistantMessage } from "@/api/templateAssistant"
 import { TemplateVisualBuilder } from "@/components/domain/configuration/TemplateVisualBuilder"
 import { navigation } from "@/test/nextNavigation"
@@ -29,6 +29,8 @@ vi.mock("@/api/template", async (importOriginal) => ({
   previewTemplateDraft: vi.fn(),
   checkTemplateDraft: vi.fn(),
   getTemplateDraftImpact: vi.fn(),
+  getTemplateAiPermissions: vi.fn(),
+  setTemplateAiPermission: vi.fn(),
 }))
 vi.mock("@/components/domain/configuration/TemplateVisualBuilder", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/domain/configuration/TemplateVisualBuilder")>()
@@ -113,6 +115,9 @@ describe("AdminTemplatePage", () => {
     vi.mocked(applyTemplateAssistantProposal).mockResolvedValue({ message: "Propuesta aplicada en el editor." })
     vi.mocked(discardTemplateAssistantProposal).mockResolvedValue({ message: "Propuesta descartada." })
     vi.mocked(checkTemplateDraft).mockResolvedValue({ problems: [] })
+    vi.mocked(getTemplateAiPermissions).mockResolvedValue({ fields: [{ id: "field-1", key: "descripcion", readable: false, blocked_reason: null }] })
+    vi.mocked(setTemplateAiPermission).mockReset()
+    vi.mocked(setTemplateAiPermission).mockResolvedValue({ message: "La IA ya puede leer este campo.", field: { id: "field-1", key: "descripcion", readable: true, blocked_reason: null } })
     vi.mocked(TemplateVisualBuilder).mockClear()
   })
 
@@ -370,6 +375,34 @@ describe("AdminTemplatePage", () => {
     expect(body().textContent).not.toContain("la plantilla no se puede cambiar")
     expect(buttonWithText("Nueva sección")).toBeUndefined()
     expect(buttonWithText("Editar")!.disabled).toBe(true)
+  })
+
+  it("con un periodo académico abierto deja cambiar solo lo que lee la IA", async () => {
+    vi.mocked(getTemplate).mockResolvedValue({ ...payload, processLock: "Hay un proceso abierto" })
+    await mountPage()
+
+    await click(buttonWithText("Lo que lee la IA"))
+    await click(body().querySelector('button[aria-label="Elegir el campo Descripción"]'))
+    const reading = one<HTMLButtonElement>('[role="switch"]')
+    expect(reading.disabled).toBe(false)
+    await click(reading)
+
+    expect(setTemplateAiPermission).toHaveBeenCalledWith("template-1", "field-1", true)
+    expect(one('[role="switch"]').getAttribute("aria-checked")).toBe("true")
+    expect(buttonWithText("Guardar")!.disabled).toBe(true)
+    expect(body().textContent).toContain("Edición bloqueada")
+    expect(buttonWithText("Nueva sección")).toBeUndefined()
+  })
+
+  it("sin periodo académico abierto no ofrece «Lo que lee la IA»: el interruptor está al editar", async () => {
+    await mountPage()
+    expect(buttonWithText("Lo que lee la IA")).toBeUndefined()
+
+    await startEditing()
+    fireEvent.pointerDown(one('[data-field-editor="field-1"]'))
+    await settle()
+
+    expect(one<HTMLButtonElement>('[role="switch"]').disabled).toBe(false)
   })
 
   it("crea sola la plantilla vacía si no existe y muestra solo el título y los logos", async () => {

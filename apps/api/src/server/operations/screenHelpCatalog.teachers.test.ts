@@ -50,3 +50,15 @@ describe("screen help about who fills each field", () => {
     }
   })
 })
+
+describe("screen help about what the teacher assistant may read", () => {
+  it("explains the per-field switch, how to reach it with an open period and what is never read", () => {
+    const text = catalog["/admin/plantilla"].content
+    for (const part of ["«La IA puede leerlo»", "«Lo que lee la IA»", "se guarda al instante", "estudiantes con discapacidad", "Un campo nuevo empieza apagado"]) expect(text).toContain(part)
+  })
+
+  it("names the general switch of the teacher assistant on the system settings screen", () => {
+    expect(catalog["/admin/configuracion/sistema"].content).toContain("«Asistente del docente»")
+    expect(catalog["/admin/configuracion/sistema"].content).toContain("apagado")
+  })
+})

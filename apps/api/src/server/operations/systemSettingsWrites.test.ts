@@ -123,6 +123,30 @@ describe("PUT admin/system-settings/{section}", () => {
     expect(response.json.notifications).toEqual({ emails: { value: true, source: "pantalla" }, digest_time: { value: "07:30", source: "pantalla" } })
   })
 
+  it("turns the teacher assistant on and off without a password and without touching the other settings", async () => {
+    const on = await update("asistente-docente", { enabled: true })
+    expect(on.status).toBe(200)
+    expect(on.json.teacher_assistant).toEqual({ enabled: { value: true, source: "pantalla" } })
+    expect(on.json.ai).toMatchObject({ driver: { value: "deepseek", source: "entorno" } })
+    expect(writes).toEqual([{ field: "teacher_assistant.enabled", value: true, actorId: golden.userId, at: NOW }])
+
+    writes = []
+    const off = await update("asistente-docente", { enabled: "0" })
+    expect(off.json.teacher_assistant).toEqual({ enabled: { value: false, source: "pantalla" } })
+    expect(writes).toEqual([{ field: "teacher_assistant.enabled", value: false, actorId: golden.userId, at: NOW }])
+  })
+
+  it("rejects a teacher assistant switch that is not true or false, and every other role", async () => {
+    for (const body of [{}, { enabled: "quizas" }, { enabled: [true] }]) {
+      const rejected = await update("asistente-docente", body)
+      expect(rejected.status).toBe(422)
+      expect(Object.keys(rejected.json.errors as object)).toEqual(["enabled"])
+    }
+    world.assignments = [makeAssignment({ role: "docente" })]
+    expect((await update("asistente-docente", { enabled: true })).status).toBe(403)
+    expect(writes).toEqual([])
+  })
+
   it("encrypts a new AI key, keeps it when omitted and clears it on request", async () => {
     const base = { current_password: PASSWORD, driver: "deepseek", base_url: "https://api.deepseek.com/", model: "deepseek-chat", connect_timeout: 2, timeout: 50 }
     await update("ia", { ...base, api_key: "sk-nueva" })

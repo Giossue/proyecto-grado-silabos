@@ -8,7 +8,7 @@ import { forbidden, apiJson, serverError, validationError } from "../http/respon
 import { throttle, type RateLimiter, type Throttle } from "../http/throttle"
 import { PASSWORD_SECTIONS, systemSettingsSchema } from "@silabos/shared/schemas/operations"
 import { validateSchema } from "../http/schemaValidation"
-import { describeSettings, effectiveSettings, SECRET, type SystemSettingsDeps } from "./systemSettings"
+import { describeSettings, effectiveSettings, SECRET, TEACHER_ASSISTANT_SETTING, type SystemSettingsDeps } from "./systemSettings"
 
 export type SettingRow = { field: string; value: unknown }
 
@@ -47,6 +47,7 @@ function sectionValues(section: string, input: PhpArray): SettingRow[] {
       { field: "notifications.digest_time", value: phpString(input.digest_time) },
     ]
   }
+  if (section === "asistente-docente") return [{ field: TEACHER_ASSISTANT_SETTING, value: phpBoolean(input.enabled) }]
   if (section === "biblioteca") {
     return [
       { field: "library.driver", value: phpString(input.driver) },

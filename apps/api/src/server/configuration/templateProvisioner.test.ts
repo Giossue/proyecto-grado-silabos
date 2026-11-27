@@ -2,7 +2,9 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
+import { initialAiReadableKeys } from "../ai/readableFields"
 import officialJson from "./officialTemplate.json"
+import { templateExport } from "./templateReads"
 import { fakeTemplateStore, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "./testing"
 import {
   clearTemplate,
@@ -30,11 +32,16 @@ let fields: { templateId: string; blockId: string; responsible: string }[]
 let definitions: unknown[]
 let coordination: Map<string, string>[]
 let ids: number
+let permissions: Set<string>
+let created: Set<string>
 
 const tx = (): ProvisionTx => ({
   anyTemplate: async () => (log.push("lock all"), exists),
   lockTemplate: async (id) => (log.push(`lock ${id}`), templates.template?.id === id ? templates.template : null),
-  insertTemplate: async (id, definition) => void (log.push(`insert ${id}`), definitions.push(definition)),
+  insertTemplate: async (id, definition) => void (log.push(`insert ${id}`), definitions.push(definition), created.add(id)),
+  createdHere: (id) => created.has(id),
+  allowAiReading: async (_id, keys) => void keys.forEach((key) => permissions.add(key)),
+  retainAiPermissions: async (_id, keys) => void (permissions = new Set([...permissions].filter((key) => keys.includes(key)))),
   hasStructure: async () => structure,
   syncDocument: async (id, sections) => void (log.push(`sync ${id} ${sections.length}`), documents.push(sections)),
   suffixRetiredSections: async (id) => void log.push(`suffix ${id}`),
@@ -91,6 +98,8 @@ beforeEach(() => {
   definitions = []
   coordination = []
   ids = 0
+  permissions = new Set()
+  created = new Set()
 })
 
 describe("official template", () => {
@@ -224,5 +233,82 @@ describe("PUT /api/v1/admin/template/{template}/json", () => {
 
     const english = await put({ version: 2, document: { paper: "a5" }, sections: [] })
     expect(JSON.parse(english.text).errors).toEqual({ definition: ["«document.paper»: use letter, a4, legal."] })
+  })
+})
+
+describe("AI read permissions across template writes", () => {
+  const field = (key: string, quien_llena = "carrera") => ({ key, label: key, quien_llena, content: "<p>Escriba</p>" })
+  const payload = (keys: string[], extra: Record<string, unknown> = {}) => ({ version: 2, sections: [{ key: "datos", title: "Datos", fields: keys.map((key) => field(key)) }], ...extra })
+  const save = async (body: unknown) => read(await importTemplateJson(send("PUT", `/api/v1/admin/template/${TEMPLATE_ID}/json`, body), TEMPLATE_ID, deps()))
+  const readable = () => [...permissions].toSorted()
+
+  it("turns on the initial values only when the official template is created for the first time", async () => {
+    exists = false
+    await createTemplate(send("POST", "/api/v1/admin/template", { official: true }), deps())
+
+    expect(readable()).toEqual(initialAiReadableKeys(officialSections(), officialDefinition()).toSorted())
+    expect(readable()).toContain("descripcion")
+    for (const off of ["asignatura", "formacion_docente", "indicadores_evaluacion", "firmas"]) expect(readable()).not.toContain(off)
+  })
+
+  it("turns nothing on for an empty template", async () => {
+    exists = false
+    await createTemplate(send("POST", "/api/v1/admin/template"), deps())
+
+    expect(readable()).toEqual([])
+  })
+
+  it("keeps the permission of a field that survives a save and drops the one of a removed field", async () => {
+    permissions = new Set(["resumen", "retirado"])
+
+    expect((await save(payload(["resumen", "nuevo"]))).status).toBe(200)
+    expect(readable()).toEqual(["resumen"])
+
+    await save(payload(["resumen", "nuevo", "retirado"]))
+    expect(readable()).toEqual(["resumen"])
+  })
+
+  it("does not hand the old permission to a field the editor created with a key that was already saved", async () => {
+    permissions = new Set(["resumen", "campo"])
+
+    expect((await save(payload(["resumen", "campo"], { new_fields: ["campo"] }))).status).toBe(200)
+
+    expect(readable()).toEqual(["resumen"])
+  })
+
+  it("keeps every permission when the exported JSON is imported again", async () => {
+    const kept = templates.template!.sections.flatMap((section) => section.blocks.map((block) => block.key)).slice(0, 3)
+    permissions = new Set(kept)
+    const exported = templateExport(new Request("http://localhost:3000/"), templates.template!, templates.template!.definition)
+
+    expect((await save(exported)).status).toBe(200)
+
+    expect(readable()).toEqual(kept.toSorted())
+  })
+
+  it("restoring the official format keeps the surviving permissions without turning others on", async () => {
+    permissions = new Set(["descripcion", "campo_propio"])
+
+    await formatTemplate(send("POST", `/api/v1/admin/template/${TEMPLATE_ID}/format`), TEMPLATE_ID, deps())
+
+    expect(readable()).toEqual(["descripcion"])
+  })
+
+  it("emptying the template drops every permission", async () => {
+    permissions = new Set(["descripcion", "resumen"])
+
+    await clearTemplate(send("DELETE", `/api/v1/admin/template/${TEMPLATE_ID}/structure`), TEMPLATE_ID, deps())
+
+    expect(readable()).toEqual([])
+  })
+
+  it("leaves the permissions alone when the save is rejected", async () => {
+    permissions = new Set(["resumen"])
+
+    expect((await save({ version: 3, sections: [] })).status).toBe(422)
+    locked = true
+    expect((await save(payload(["otro"]))).status).toBe(422)
+
+    expect(readable()).toEqual(["resumen"])
   })
 })

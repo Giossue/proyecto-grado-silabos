@@ -260,7 +260,7 @@
     ],
     "uri": "api/v1/admin/system-settings/{section}",
     "wheres": {
-      "section": "notificaciones|ia|biblioteca"
+      "section": "notificaciones|ia|biblioteca|asistente-docente"
     },
     "bindings": {}
   },
@@ -493,6 +493,28 @@
     "wheres": {},
     "bindings": {
       "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/template/{template}/ai-permissions",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "api/v1/admin/template/{template}/ai-permissions/{field}",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate",
+      "field": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\FieldDefinition"
     }
   },
   {

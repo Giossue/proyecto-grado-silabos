@@ -1,0 +1,40 @@
+# Asistente de IA para el docente
+
+Objetivo: un asistente en el sílabo del docente que lee lo que se le permite y entrega propuestas que el docente decide usar. Esta autorización cubre la etapa 1. Rama: main (AGENTS.md). Entrega: commits por tarea en main, sin PR. Pruebas: vitest en `apps/api`, `apps/web` y `packages/shared`.
+
+## Specs
+
+- S1 — Pedido (2026-11-27), textual: «me dijeron que añada la IA para el docente, que pueda leer los campos que el docente como tal pueda editar y el agente le de propuestas, pero ojo, no como el agente de admin, sino es más investigativo el de acá con la idea de que pueda dar buenas recomendaciones según el contexto».
+- S2 — Panel «Asistente IA» en el sílabo del docente: el docente escribe lo que necesita y el asistente responde con propuestas, cada una para un campo concreto y con en qué se basó. «Usar» coloca la propuesta en el campo para que la edite; «Descartar» la quita. El asistente nunca aplica, guarda ni envía por su cuenta.
+- S3 — En el editor de la plantilla, cada campo tiene un solo interruptor «La IA puede leerlo». Textual: «No, solo es lo puede leer o no, siempre que sean las que pueda editar el docente, pero creo que eso depende incluso de coordinador no?». La IA lee un campo solo si (a) el interruptor está activado y (b) ese docente puede editarlo en ese sílabo (`teacher_editable`, que ya refleja lo que Coordinación dejó en el proyecto de carrera: «Texto libre», «Elegir varias», línea vacía, celdas vacías y marcas antiguas). Coordinación no configura nada. En un campo con un espacio para el docente se lee el campo entero y solo se propone para ese espacio.
+- S4 — El permiso se configura en la plantilla y vale para todos los sílabos, pero se guarda fuera de la definición de la plantilla: se puede cambiar con un periodo abierto, no mueve `plantilla_silabo.plantilla_modificada_en`, no toca sílabos ni avisa a docentes, y rige desde el siguiente pedido.
+- S5 — Nunca se envían al proveedor: la tabla de identificación con estudiantes con discapacidad (el campo que la contiene queda bloqueado, no se puede activar) ni los nombres y correos de la identificación, tampoco a través de variables del sistema resueltas dentro de otros campos (docente, correo, formación, firmas y aprobación). Valores iniciales: activado en los campos actuales que llenan el docente o Coordinación; desactivado en «Formación y experiencia»; un campo nuevo empieza desactivado. Ningún campo queda legible sin que se haya activado para él (o sin la carga inicial de los campos actuales).
+- S6 — El panel avisa que usa IA (DeepSeek), qué se envía, que las respuestas son generadas por IA y hay que revisarlas, y pide no escribir datos personales. No se promete detectar nombres escritos dentro de un texto libre.
+- S7 — Interruptor general del asistente del docente, separado de los permisos por campo, apagado por omisión. Apagado: el docente no ve el botón y la API rechaza los pedidos. No cambia el asistente de la plantilla de Administración. Usa la misma configuración de proveedor del servidor (`AI_*`).
+- S8 — Solo funciona cuando ese docente puede editar ese sílabo (la misma regla de edición), comprobado en el servidor por registro, también al leer propuestas y al aceptarlas.
+- S9 — Límite: 20 pedidos por docente al día.
+- S10 — Siempre recibe el nombre de la asignatura, sus horas, créditos y semanas. Respuesta del usuario: «claro, sería genial que pueda hacer eso».
+- S11 — Etapa 1: propuestas «Usar» solo para campos de texto (incluidos espacios de texto del docente). Las tablas permitidas (unidades, bibliografía) se pueden leer como contexto. «Usar» pasa por el mismo guardado del sílabo, así que los límites y las tablas protegidas siguen valiendo.
+- S12 — Las pruebas usan respuestas simuladas (driver `baseline` o dobles). No se llama a DeepSeek con la clave real sin permiso del usuario.
+- S13 — Etapa 2 (después, fuera de esta autorización): internet con la API de búsqueda aparte de DeepSeek (`/v1/tools/search`, `/v1/tools/fetch`) como herramienta propia, decidido textual «ok, seríaa B entonces», más el catálogo Koha; mostrar enlaces; hasta 5 búsquedas por pedido.
+- S14 — Etapa 3 (después, fuera de esta autorización): «Usar» en unidades y bibliografía, respetando las horas; cada libro con respaldo en Koha o en un enlace comprobable, indicando cuál está en la biblioteca.
+
+Supuestos: en la etapa 1 no se envían sílabos anteriores, comentarios de revisión, documentos de apoyo ni campos que el docente no pueda editar.
+
+## Tasks
+
+- [ ] T1 (S3, S4, S5, S7) — permisos por campo e interruptor general (base, API, editor de plantilla, ajustes) — delegada (contexto) — pendiente.
+- [ ] T2 (S2, S5, S6, S8–S12) — asistente en el servidor: contexto protegido, pedidos, trabajo en segundo plano, propuestas y límite — delegada (contexto) — pendiente.
+- [ ] T3 (S2, S6, S7, S11) — panel en el sílabo del docente — delegada (contexto) — pendiente.
+- [ ] T4 (S1–S12) — verificación independiente de la etapa 1 (riesgo: datos guardados y datos enviados a un proveedor externo) — pendiente.
+
+## Log
+
+- L1 (2026-11-27) — pedido original, textual: «ok, entonces... ya estaría todo creo, me dijeron que añada la IA para el docente, que pueda leer los campos que el docente como tal pueda editar y el agente le de propuestas, pero ojo, no como el agente de admin, sino es más investigativo el de acá con la idea de que pueda dar buenas recomendaciones según el contexto».
+- L2 — «creo que la api de deepseek si lo permite, investigale bien porfa, antes que nada». Documentación oficial leída: existen herramientas de búsqueda del servidor (`deepseek_web_search`; la guía no aclara si se combinan con herramientas propias) y las API aparte de búsqueda y lectura (US$0,75 por 1000). Políticas: datos en China, sin plazo fijo de retención.
+- L3 — «ok, seríaa B entonces» (API de búsqueda aparte).
+- L4 — «podríamos configurarlo mejor? o sea desde plantilla para hacer que la ia pueda ver o no un campo en específico?» y «me refiero a que se pueda hacer eso, entiendo que sería a nivel plantilla no?».
+- L5 — «No, solo es lo puede leer o no, siempre que sean las que pueda editar el docente, pero creo que eso depende incluso de coordinador no?» (reemplaza la propuesta de tres opciones) y «en coordinacion como se llamaría? sería el de texto libre no?».
+- L6 — «entonces?? en resumen?». Se le resumió el diseño y se preguntó si la IA puede ver nombre de la asignatura, horas, créditos y semanas, avisando que con un «sí» empezaba la primera parte (panel con propuestas de texto, permisos y protecciones).
+- L7 — «claro, sería genial que pueda hacer eso». Autorizada la etapa 1.
+- L8 — Contexto observado: el proveedor se configura solo por variables de entorno (`ai/config.ts`); los ajustes de IA de Administración solo se muestran y prueban la conexión. La plantilla se bloquea con un periodo abierto (`templateLocked`) y cualquier cambio de `definicion_plantilla` mueve `plantilla_modificada_en`. El campo `asignatura` contiene la tabla `identificacion` con `disability`. `origin/main` se ha actualizado por push desde este clon sin que lo hiciera el agente.

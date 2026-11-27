@@ -158,7 +158,7 @@ describe("LoadingSkeleton", () => {
   it("muestra los ajustes del sistema como un acordeón con la primera sección abierta", () => {
     const { container } = render(<LoadingSkeleton variant="settings" settingsSection="system" />)
 
-    expect(all(container, '[data-skeleton="settings-accordion-item"]')).toHaveLength(3)
+    expect(all(container, '[data-skeleton="settings-accordion-item"]')).toHaveLength(4)
     expect(all(container, '[data-skeleton="settings-accordion-content"]')).toHaveLength(1)
     expect(container.querySelector('[data-skeleton="settings-field"]')).toBeNull()
   })

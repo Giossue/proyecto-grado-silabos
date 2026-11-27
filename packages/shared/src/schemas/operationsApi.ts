@@ -34,6 +34,10 @@ export const aiSettingsBody = z.object({
   timeout: z.number().int().min(5).max(300),
 })
 
+export const teacherAssistantSettingsBody = z.object({
+  enabled: z.boolean().describe("Activa el asistente de IA en el sílabo del docente."),
+})
+
 export const librarySettingsBody = z.object({
   current_password: currentPassword,
   driver: z.enum(["disabled", "koha"]),

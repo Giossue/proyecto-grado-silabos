@@ -6,7 +6,7 @@ import { Roles } from "../../common/decorators/roles.decorator"
 import { MessageDto, ValidationErrorDto } from "../../common/dtos/api-responses.dto"
 import type { AppSession } from "../../server/auth/types"
 import type { PhpArray } from "../../server/http/input"
-import { AiSettingsDto, LibrarySettingsDto, NotificationSettingsDto } from "./dto/system-settings.dto"
+import { AiSettingsDto, LibrarySettingsDto, NotificationSettingsDto, TeacherAssistantSettingsDto } from "./dto/system-settings.dto"
 import { SettingsService } from "./settings.service"
 
 const ADMINISTRATOR = "administrador"
@@ -25,7 +25,7 @@ export class SettingsController {
   @Get()
   @Authenticated({ verified: true, activeRole: "required" })
   @Roles(ADMINISTRATOR)
-  @ApiOkResponse({ description: "Ajustes de avisos, IA y biblioteca con su origen (pantalla o entorno)." })
+  @ApiOkResponse({ description: "Ajustes de avisos, IA, biblioteca y asistente del docente con su origen (pantalla o entorno)." })
   @ApiConflictResponse(ROLE_REQUIRED)
   show() {
     return this.settings.show()
@@ -59,6 +59,16 @@ export class SettingsController {
   @ApiTooManyRequestsResponse(THROTTLE)
   saveLibrary(@CurrentSession() session: AppSession, @Body() input: PhpArray) {
     return this.settings.save(session, "biblioteca", input)
+  }
+
+  @Put("asistente-docente")
+  @Authenticated(THROTTLED)
+  @ApiBody({ type: TeacherAssistantSettingsDto })
+  @ApiOkResponse(SAVED)
+  @ApiUnprocessableEntityResponse(VALIDATION)
+  @ApiTooManyRequestsResponse(THROTTLE)
+  saveTeacherAssistant(@CurrentSession() session: AppSession, @Body() input: PhpArray) {
+    return this.settings.save(session, "asistente-docente", input)
   }
 
   @Post("ia/test")

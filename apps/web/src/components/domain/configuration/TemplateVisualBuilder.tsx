@@ -7,6 +7,7 @@ import { ApiError } from "@/api/client"
 import { checkTemplateDraft, getTemplateDraftImpact, importTemplateJson, previewTemplateDraft, uploadTemplateLogo } from "@/api/template"
 import type { DesignedTable, RepeatableTableDesign, TemplateDraftImpact, TemplateDraftPayload, TemplateField, TemplatePayload, TemplatePreset, TemplateSectionPayload } from "@/api/template"
 import type { TemplateAssistantDraft, TemplateAssistantProposal } from "@/api/templateAssistant"
+import { TemplateAiReadSwitch } from "@/components/domain/configuration/TemplateAiReadSwitch"
 import { TemplateFieldConditionTool } from "@/components/domain/configuration/TemplateFieldConditionTool"
 import { TemplateDesignTools } from "@/components/domain/configuration/TemplateDesignTools"
 import { TemplateFieldContent } from "@/components/domain/configuration/TemplateFieldContent"
@@ -71,6 +72,7 @@ const RIBBON_PANEL = "data-[state=inactive]:hidden flex h-20 flex-none items-str
 
 export type TemplateVisualBuilderHandle = {
   askEdit: () => void
+  askAiAccess: () => void
   leave: () => void
   snapshot: () => TemplateAssistantDraft
   applyProposal: (proposal: TemplateAssistantProposal) => void
@@ -132,15 +134,18 @@ const sheetsOf = (entries: SheetEntry[]): Sheet[] => {
   return groups.length > 0 ? groups : [{ landscape: false, items: [] }]
 }
 
+const TEMPORARY_ID = "nuevo-"
 let temporary = 0
 const temporaryId = (): string => {
   temporary += 1
-  return `nuevo-${temporary}`
+  return `${TEMPORARY_ID}${temporary}`
 }
+const unsavedKeys = (sections: Sections): string[] => sections.flatMap((section) => section.fields).filter((field) => field.id.startsWith(TEMPORARY_ID)).map((field) => field.key)
 
 export function TemplateVisualBuilder({ template, processLock = null, logos, variables, presets, blockDesigns, onChanged, onDirty, onEditing, onDraftVersionChange, teacherAction, notice, replacement, ref }: TemplateVisualBuilderProps) {
   const locked = Boolean(processLock)
   const [preview, setPreview] = useState(true)
+  const [aiAccess, setAiAccess] = useState(false)
   const [leaveOpen, setLeaveOpen] = useState(false)
   const [selectedField, setSelectedField] = useState<string | null>(null)
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
@@ -211,6 +216,8 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   const shownTitle = preview && !awaitingReload ? template.titleBlock.text : titleDraft
   const changed = !preview && dirty
   const structureEditable = !readOnly && !locked && !busy
+  const choosingForAi = aiAccess && locked
+  const savedFields = new Map(template.sections.flatMap((section) => section.fields).map((field) => [field.id, field]))
   const draftVersion = `${editSession}:${revision}`
   const problemsByTarget = draftProblemsByTarget(problems)
   const usedSectionKeys = source.map((section) => section.key)
@@ -365,8 +372,10 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
       ...(field.max_length && field.quien_llena !== "institucional" ? { max_length: field.max_length } : {}),
     })),
   }))
+  const newFields = unsavedKeys(draft)
   const draftPayload = (): TemplateDraftPayload => ({
     version: 1,
+    ...(newFields.length ? { new_fields: newFields } : {}),
     title: titleDraft.trim() || template.titleBlock.text,
     layout: layoutDraft,
     ...(styleDraft ? { document: styleDraft } : {}),
@@ -418,6 +427,11 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   }
   const askEdit = (): void => {
     if (locked) return
+    setAiAccess(false)
+    startEditing()
+  }
+  const askAiAccess = (): void => {
+    setAiAccess(true)
     startEditing()
   }
   const applyProposal = (proposal: TemplateAssistantProposal): void => {
@@ -450,7 +464,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
     touched()
   }
 
-  useImperativeHandle(ref, () => ({ askEdit, leave, snapshot, applyProposal, draftVersion, payload: draftPayload }))
+  useImperativeHandle(ref, () => ({ askEdit, askAiAccess, leave, snapshot, applyProposal, draftVersion, payload: draftPayload }))
 
   const persist = async (body: TemplateDraftPayload): Promise<void> => {
     try {
@@ -1013,6 +1027,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                   locked={locked || previewing}
                   busy={busy}
                   targets={moveTargets}
+                  aiRead={selection.kind === "field" ? <TemplateAiReadSwitch key={selection.field.id} templateId={template.id} field={selection.field} saved={savedFields.get(selection.field.id) ?? null} /> : null}
                   onDuplicate={duplicateSelected}
                   onMoveTo={moveSelectedTo}
                   onFiller={setSelectedFiller}
@@ -1171,8 +1186,9 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
                             <TemplateDragHandle
                               kind="field"
                               id={field.id}
-                              label={`Arrastrar el campo ${fieldName(field)}`}
-                              disabled={locked || busy}
+                              label={choosingForAi ? `Elegir el campo ${fieldName(field)}` : `Arrastrar el campo ${fieldName(field)}`}
+                              disabled={(locked && !choosingForAi) || busy}
+                              still={choosingForAi}
                               selected={selectedField === field.id}
                               className={FIELD_HANDLE}
                               onSelect={selectFromHandle}

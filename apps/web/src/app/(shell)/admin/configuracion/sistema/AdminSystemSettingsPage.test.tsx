@@ -24,6 +24,7 @@ const settings = (): SystemSettings => ({
     timeout: { value: 50, source: "entorno" },
   },
   library: { driver: { value: "koha", source: "pantalla" }, base_url: { value: "http://biblioteca.ueb.edu.ec", source: "pantalla" } },
+  teacher_assistant: { enabled: { value: false, source: "entorno" } },
 })
 
 const button = (text: string): HTMLButtonElement[] =>
@@ -76,8 +77,8 @@ describe("Configuración › Sistema", () => {
     await flush()
 
     expect(
-      [...document.body.querySelectorAll('[data-slot="accordion-trigger"]')].map((item) => item.textContent?.trim().split(/Resumen|Proveedor|Catálogo/)[0]),
-    ).toEqual(["Notificaciones", "Asistente de IA", "Biblioteca (Koha)"])
+      [...document.body.querySelectorAll('[data-slot="accordion-trigger"]')].map((item) => item.textContent?.trim().split(/Resumen|Proveedor|Ayuda|Catálogo/)[0]),
+    ).toEqual(["Notificaciones", "Asistente de IA", "Asistente del docente", "Biblioteca (Koha)"])
     expect(document.body.querySelector("#settings-digest-time")).not.toBeNull()
     expect(document.body.querySelector("#settings-ai-driver")).toBeNull()
     await openSection("Asistente de IA")
@@ -123,6 +124,34 @@ describe("Configuración › Sistema", () => {
     await flush()
     await submitConfirmation("Demo-2026!")
     expect(updateSystemSettings).toHaveBeenLastCalledWith("ia", expect.objectContaining({ clear_api_key: true }))
+  })
+
+  it("el asistente del docente empieza apagado y se guarda solo, sin contraseña", async () => {
+    const on = { ...settings(), teacher_assistant: { enabled: { value: true, source: "pantalla" as const } } }
+    vi.mocked(updateSystemSettings).mockResolvedValue(on)
+    renderWithProviders(<AdminSystemSettingsPage />)
+    await flush()
+    await openSection("Asistente del docente")
+
+    const toggle = (): HTMLButtonElement => document.body.querySelector<HTMLButtonElement>("#settings-teacher-assistant")!
+    expect(toggle().getAttribute("role")).toBe("switch")
+    expect(toggle().getAttribute("aria-checked")).toBe("false")
+    expect(document.body.querySelector('label[for="settings-teacher-assistant"]')!.textContent).toBe("Activar el asistente del docente")
+    expect(document.body.textContent).toContain("No cambia el asistente de la plantilla")
+    expect(button("Guardar")[0]!.disabled).toBe(true)
+    expect(button("Probar conexión")).toHaveLength(0)
+
+    fireEvent.click(toggle())
+    await flush()
+    fireEvent.click(button("Guardar")[0]!)
+    await flush()
+
+    expect(updateSystemSettings).toHaveBeenCalledTimes(1)
+    expect(updateSystemSettings).toHaveBeenCalledWith("asistente-docente", { enabled: true })
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull()
+    expect(toast.success).toHaveBeenCalledWith("Ajustes guardados")
+    expect(toggle().getAttribute("aria-checked")).toBe("true")
+    expect(button("Guardar")[0]!.disabled).toBe(true)
   })
 
   it("«Probar conexión» avisa el resultado", async () => {
