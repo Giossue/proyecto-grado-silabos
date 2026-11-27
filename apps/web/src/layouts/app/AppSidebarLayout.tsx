@@ -53,7 +53,7 @@ export function AppSidebarLayout({ breadcrumbs = [], children }: { breadcrumbs?:
             <ScrollArea data-app-scroll className="min-h-0 flex-1">
               {children}
             </ScrollArea>
-            <ScreenHelpButton editorMode={editorOpen} corner={templateEditorOpen ? "left" : "right"} />
+            <ScreenHelpButton anchored editorMode={editorOpen} />
             {!editorOpen ? <SetupChecklist /> : null}
             {!editorOpen ? <AccessibilityDialog floating /> : null}
           </AppContent>

@@ -900,7 +900,7 @@
     z-index: 40;
     margin-right: var(--removed-body-scroll-bar-size, 0px);
     --driver-checklist-offset-x: 1rem;
-    --driver-checklist-offset-y: 9rem;
+    --driver-checklist-offset-y: 1rem;
 }
 .driver-active .driver-checklist.setup-checklist {
     display: flex;

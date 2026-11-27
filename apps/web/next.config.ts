@@ -4,6 +4,7 @@ const apiOrigin = (process.env.API_INTERNAL_URL ?? "http://localhost:8000").repl
 const apiPaths = ["/api", "/api/:path*", "/logos/:path*", "/images/silabo/:path*", "/plantilla.schema.json", "/auth/keycloak", "/auth/callback"]
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   ...(process.env.NEXT_OUTPUT === "standalone" ? { output: "standalone" as const } : {}),
   experimental: {
     proxyTimeout: 600_000,

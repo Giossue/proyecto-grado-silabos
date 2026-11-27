@@ -1,9 +1,11 @@
 import { act, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { listAvailableScreenHelp } from "@/api/screen-help"
 import { initializeTheme } from "@/composables/useAppearance"
 import { AppSidebarLayout } from "@/layouts/app/AppSidebarLayout"
 import { curriculumEditorState } from "@/state/curriculumEditor"
+import { screenHelpState } from "@/state/screenHelp"
 import { sessionState } from "@/state/session"
 import { logoutConfirmOpen } from "@/state/shellDialogs"
 import { navigation } from "@/test/nextNavigation"
@@ -177,6 +179,21 @@ describe("AppSidebarLayout", () => {
     expect(leaveActiveRole).toHaveBeenCalled()
     expect(navigation.pathname).toBe("/rol")
     expect(sessionState.current.value?.active_role).toBeNull()
+  })
+
+  it("la ayuda y la accesibilidad flotan siempre a la izquierda del contenido, sin tapar el menú lateral", async () => {
+    vi.mocked(listAvailableScreenHelp).mockResolvedValueOnce({ help: [{ screen: "/admin/periodos", title: "Periodos", content: "Ayuda" }] })
+    await act(() => screenHelpState.load())
+    await mountShell()
+    const help = screen.getByRole("button", { name: "Ayuda de esta pantalla" })
+    const accessibility = document.querySelector<HTMLElement>('#contenido button.size-12[aria-label="Accesibilidad"]')!
+
+    expect(help.closest("#contenido")).not.toBeNull()
+    expect(help).toHaveClass("sm:absolute", "left-4")
+    expect(help).not.toHaveClass("sm:right-4")
+    expect(accessibility).toHaveClass("absolute", "left-4")
+    expect(accessibility).not.toHaveClass("fixed")
+    expect(accessibility).not.toHaveClass("right-4")
   })
 
   it("permite alternar el tema desde el menú de usuario, no desde la barra, y conserva la preferencia", async () => {

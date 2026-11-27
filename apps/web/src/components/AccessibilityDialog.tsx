@@ -40,10 +40,10 @@ export function AccessibilityDialog({ floating, remote }: { floating?: boolean; 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {remote ? null : (
-        <IconTooltip label="Accesibilidad" side="left">
+        <IconTooltip label="Accesibilidad" side={floating ? "right" : "left"}>
           <DialogTrigger asChild>
             {floating ? (
-              <Button type="button" size="icon" className="fixed right-4 bottom-4 scroll-lock-offset z-40 size-12 rounded-full shadow-menu [&_svg]:size-5 max-sm:hidden" aria-label="Accesibilidad"><PersonStanding aria-hidden="true" /></Button>
+              <Button type="button" size="icon" className="absolute bottom-4 left-4 z-40 size-12 rounded-full shadow-menu [&_svg]:size-5 max-sm:hidden" aria-label="Accesibilidad"><PersonStanding aria-hidden="true" /></Button>
             ) : (
               <Button type="button" variant="ghost" size="icon-sm" aria-label="Accesibilidad"><PersonStanding data-icon="inline-start" aria-hidden="true" /></Button>
             )}

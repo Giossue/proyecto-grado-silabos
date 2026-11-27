@@ -31,6 +31,17 @@ describe("ScreenHelpButton", () => {
     sessionState.clear()
   })
 
+  it("sin menú lateral, como en la revisión, queda fijo abajo a la izquierda de la ventana", async () => {
+    vi.mocked(listAvailableScreenHelp).mockResolvedValue({ help: [help] })
+    signIn()
+    renderWithProviders(<main><ScreenHelpButton editorMode /></main>)
+    await flush()
+
+    expect(button()).toHaveClass("fixed", "left-4", "sm:bottom-4")
+    expect(button()).not.toHaveClass("sm:absolute")
+    expect(button()).not.toHaveClass("sm:right-4")
+  })
+
   it("sin elementos que señalar, la guía muestra el texto completo de la pantalla", async () => {
     vi.mocked(listAvailableScreenHelp).mockResolvedValue({ help: [help] })
     signIn()
@@ -79,16 +90,17 @@ describe("ScreenHelpButton", () => {
     renderWithProviders(<main><ScreenHelpButton /></main>)
     await flush()
 
-    expect(button()).toHaveClass("fixed", "sm:bottom-20", "sm:right-4")
+    expect(button()).toHaveClass("fixed", "sm:bottom-20", "left-4")
+    expect(button()).not.toHaveClass("sm:right-4")
   })
 
   it("en el editor de la plantilla va abajo a la izquierda, lejos del botón «Asistente»", async () => {
     vi.mocked(listAvailableScreenHelp).mockResolvedValue({ help: [help] })
     signIn()
-    renderWithProviders(<main><ScreenHelpButton editorMode corner="left" /></main>)
+    renderWithProviders(<main><ScreenHelpButton anchored editorMode /></main>)
     await flush()
 
-    expect(button()).toHaveClass("sm:left-4", "sm:bottom-4", "max-sm:bottom-20")
+    expect(button()).toHaveClass("left-4", "sm:bottom-4", "max-sm:bottom-20")
     expect(button()).not.toHaveClass("sm:right-4")
   })
 

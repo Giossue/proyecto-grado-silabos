@@ -29,7 +29,7 @@ const visible = (selector: string): HTMLElement | null => {
   return element && element.getClientRects().length > 0 ? element : null
 }
 
-export function ScreenHelpButton({ editorMode = false, corner = "right" }: { editorMode?: boolean; corner?: "left" | "right" }) {
+export function ScreenHelpButton({ editorMode = false, anchored = false }: { editorMode?: boolean; anchored?: boolean }) {
   const pathname = usePathname()
   const fullPath = useCurrentFullPath()
   const { hidden } = useScrollDirection()
@@ -98,7 +98,8 @@ export function ScreenHelpButton({ editorMode = false, corner = "right" }: { edi
             variant="secondary"
             className={cn(
               "fixed scroll-lock-offset z-40 size-12 rounded-full bg-ring text-background shadow-menu hover:bg-ring/90 [&_svg]:size-5",
-              "max-sm:left-4", editorMode ? "max-sm:bottom-20" : "max-sm:bottom-(--page-mobile-actions-bottom)", corner === "left" ? "sm:left-4" : "sm:right-4",
+              anchored && "sm:absolute",
+              "left-4", editorMode ? "max-sm:bottom-20" : "max-sm:bottom-(--page-mobile-actions-bottom)",
               editorMode ? "sm:bottom-4" : "sm:bottom-20",
               "max-sm:transition-all max-sm:duration-200 max-sm:ease-out",
               hidden && "max-sm:pointer-events-none max-sm:translate-y-24 max-sm:opacity-0",
@@ -109,7 +110,7 @@ export function ScreenHelpButton({ editorMode = false, corner = "right" }: { edi
             <CircleHelp aria-hidden="true" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side={corner === "left" ? "right" : "left"}>Ayuda de esta pantalla</TooltipContent>
+        <TooltipContent side="right">Ayuda de esta pantalla</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   )

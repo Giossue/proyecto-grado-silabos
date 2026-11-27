@@ -9,7 +9,7 @@ export function SyllabusEditorLayout({ children }: { children: ReactNode }) {
         <main id="contenido" tabIndex={-1} className="min-h-dvh w-full outline-hidden">
           {children}
         </main>
-        <ScreenHelpButton editorMode corner="left" />
+        <ScreenHelpButton editorMode />
       </TooltipProvider>
     </div>
   )
