@@ -7,7 +7,7 @@ import { academicCareerScope } from "@/api/careerScope"
 import { navigation } from "@/test/nextNavigation"
 import { curriculumEditorState } from "@/state/curriculumEditor"
 import { flush, renderWithProviders } from "@/test/render"
-import { CoordinationAcademicStructurePage } from "./CoordinationAcademicStructurePage"
+import { AdminCareerStructurePending, CoordinationAcademicStructurePage } from "./CoordinationAcademicStructurePage"
 
 vi.mock("next/navigation", () => import("@/test/nextNavigation"))
 
@@ -397,6 +397,32 @@ describe("CoordinationAcademicStructurePage, varias mallas", () => {
     if (mallas) vi.mocked(getMallas).mockResolvedValue(mallas)
     await mountPage()
     expect(document.querySelector('[data-tour="page-header"]')!.closest(".overflow-x-clip")!.classList.contains("max-w-6xl")).toBe(centered)
+  })
+
+  const centeredFrame = (): boolean => document.querySelector('[data-tour="page-header"]')!.closest(".overflow-x-clip")!.classList.contains("max-w-6xl")
+
+  it.each([
+    ["las mallas", () => vi.mocked(getMallas).mockImplementation(() => new Promise(() => undefined))],
+    ["la malla", () => vi.mocked(getCurriculum).mockImplementation(() => new Promise(() => undefined))],
+  ])("mientras llegan %s la carga usa el ancho centrado, no todo el ancho", async (_case, arrange) => {
+    arrange()
+    await mountPage()
+    expect(centeredFrame()).toBe(true)
+    expect(document.querySelector('[data-tour="page-header"]')!.classList).not.toContain("lg:invisible")
+  })
+
+  it("al cambiar de malla no salta al ancho centrado mientras llega la nueva", async () => {
+    await mountPage()
+    await measureBoard()
+    vi.mocked(getCurriculum).mockImplementation(() => new Promise(() => undefined))
+    fireEvent.click(document.querySelector('[data-tour="malla-selector"] [data-value="malla-8"]')!)
+    await flush()
+    expect(centeredFrame()).toBe(false)
+  })
+
+  it("la pantalla de Administración que busca la carrera también carga centrada", () => {
+    renderWithProviders(<AdminCareerStructurePending mode="curriculum" careerCode="sw" error={null} onRetry={() => undefined} />)
+    expect(centeredFrame()).toBe(true)
   })
 
   it("la descripción nombra la carrera aunque todavía no tenga mallas", async () => {

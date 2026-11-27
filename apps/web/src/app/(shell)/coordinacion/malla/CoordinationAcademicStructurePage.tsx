@@ -82,7 +82,7 @@ export function AdminCareerStructurePending({ mode, careerCode, error, onRetry }
     <PageFrame
       title={pageTitles[mode]}
       description={adminDescriptions[mode]}
-      size={mode === "curriculum" ? "full" : "wide"}
+      size="wide"
       loading={!error}
       actionsSkeleton={error ? [] : actionSkeletons[mode]}
       eyebrow={<AdminCareerBackLink />}
@@ -253,14 +253,15 @@ export function CoordinationAcademicStructurePage({ mode, adminCareer = null }: 
   // Everything above the malla, Administration's tabs included, shares the board's edges.
   const alignedInset = mode === "curriculum" && !withoutMallas ? boardInset : null
   // Only the drawn malla knows its edges: until then the header and tabs stay hidden instead of showing out of place.
-  const awaitingBoard = mode === "curriculum" && !withoutMallas && !loadError && boardInset === null
+  const drawsBoard = mode === "curriculum" && !withoutMallas && (curriculum !== null || boardInset !== null)
+  const awaitingBoard = drawsBoard && !loadError && boardInset === null
   const title = editingCurriculum && curriculum ? `${mallaLabel(curriculum.malla)} de ${curriculum.career.name}` : adminCareerId && careerName ? `${pageTitles[mode]} de ${careerName}` : pageTitles[mode]
 
   return (
     <PageFrame
       title={title}
       description={adminCareerId ? adminDescriptions[mode] : coordinationDescription}
-      size={mode === "curriculum" && !withoutMallas ? "full" : "wide"}
+      size={drawsBoard ? "full" : "wide"}
       titleInset={alignedInset?.left}
       actionsInset={alignedInset?.right}
       awaitingInsets={awaitingBoard}
