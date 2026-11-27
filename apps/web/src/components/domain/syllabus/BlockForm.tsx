@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { addCatalogBook, canAddCatalogBook } from "@/lib/blocks/catalog"
 import { holds } from "@silabos/shared/lib/blocks/condition"
+import { valueInLayoutOrder } from "@silabos/shared/lib/blocks/order"
 import { ruleFailures } from "@silabos/shared/lib/blocks/rules"
 import { blockDefinition, templateRuntime } from "@/lib/blocks/runtime"
 import { Scope, type Path } from "@silabos/shared/lib/blocks/scope"
@@ -375,7 +376,7 @@ export function BlockForm({ id, kind, blockProps, value, disabled = false, requi
   return (
     <div id={id} className="flex flex-col gap-4">
       {search}
-      {fields(Object.entries(definition.value), [], 0)}
+      {fields(Object.entries(valueInLayoutOrder(definition)), [], 0)}
     </div>
   )
 }

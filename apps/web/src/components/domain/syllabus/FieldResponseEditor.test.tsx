@@ -37,6 +37,21 @@ const mountEditor = (template: DocumentNode, value: DocumentNode | null) => moun
 const get = (container: HTMLElement, selector: string): HTMLElement => container.querySelector<HTMLElement>(selector)!
 const buttonText = (container: HTMLElement, text: string): HTMLButtonElement => [...container.querySelectorAll("button")].find((button) => button.textContent === text)!
 
+const reversed = (properties: Record<string, unknown>) => Object.fromEntries(Object.entries(properties).reverse())
+const scrambledDefinition = (): TemplateDefinitionPayload => {
+  const copy = structuredClone(definition) as unknown as TemplateDefinitionPayload
+  type List = { items: { properties: Record<string, unknown> } }
+  const unit = (copy.blocks.unidades!.value.units as unknown as List).items
+  const weeks = unit.properties.semanas as List
+  weeks.items.properties = reversed(weeks.items.properties)
+  unit.properties = reversed(unit.properties)
+  const books = (copy.blocks.bibliografia!.value.libros as unknown as List).items
+  books.properties = reversed(books.properties)
+  return copy
+}
+const heads = (container: Element) => [...container.querySelectorAll('[data-slot="table-head"]')].map((head) => head.textContent).filter((text) => text !== "Acciones")
+const precedes = (first: Element, second: Element) => Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
+
 describe("FieldResponseEditor", () => {
   beforeEach(() => setTemplateRuntime(definition as unknown as TemplateDefinitionPayload, { horas_docencia: "64", horas_practicas: "0", horas_autonomas: "0" }))
 
@@ -75,6 +90,28 @@ describe("FieldResponseEditor", () => {
     expect(value.units[0]!.nombre).toBe("Fundamentos")
   })
 
+  it("las columnas y los campos siguen el diseño de la tabla aunque la definición guardada venga desordenada", () => {
+    setTemplateRuntime(scrambledDefinition(), { horas_docencia: "64", horas_practicas: "0", horas_autonomas: "0" })
+    const filled = units().map((unit, index) => (index === 1 ? { ...unit, semanas: [] } : unit))
+    const { container } = mountEditor(block("unidades"), block("unidades", { units: filled }))
+
+    const first = get(container, '[aria-label="Unidad 1"]')
+    expect(heads(first)).toEqual(["Contenidos temáticos", "ACD", "APE", "AA", "Aprendizaje en contacto con el docente (ACD)", "Aprendizaje práctico-experimental (APE)", "Aprendizaje autónomo (AA)", "Evaluación de los aprendizajes"])
+    expect(precedes(get(container, "#campo-0-units-0-nombre"), get(container, "#campo-0-units-0-resultado"))).toBe(true)
+    expect(precedes(get(container, "#campo-0-units-0-resultado"), first.querySelector("table")!)).toBe(true)
+    expect(get(container, '[aria-label="Unidad 2"]').textContent).toContain("Falta: nombre de la unidad, resultados de aprendizaje, semanas")
+  })
+
+  it("la bibliografía sigue el orden de la tabla y no muestra horas", () => {
+    setTemplateRuntime(scrambledDefinition(), { horas_docencia: "64", horas_practicas: "0", horas_autonomas: "0" })
+    const books = [{ autor: "", titulo: "", anio: "", ciudad: "", editorial: "", isbn: "", codigo: "" }]
+    const { container } = mountEditor(block("bibliografia"), block("bibliografia", { libros: books }))
+
+    expect(heads(container)).toEqual(["Autor", "Título", "Año", "Ciudad", "Editorial", "ISBN", "Código"])
+    expect(container.querySelector("[data-hours-budget]")).toBeNull()
+    expect(container.querySelector('[data-slot="table-footer"]')).toBeNull()
+  })
+
   it("el docente agrega unidades hasta las que permite la plantilla", () => {
     const { container, emitted } = mountEditor(block("unidades"), block("unidades", { units: units() }))
 
@@ -82,7 +119,7 @@ describe("FieldResponseEditor", () => {
     expect((emitted().content![0]!.attrs!.value as { units: unknown[] }).units).toHaveLength(5)
   })
 
-  it("dice qué falta en cada unidad, sin badges ni contadores", () => {
+  it("dice qué falta en cada unidad, sin badges", () => {
     const filled = units().map((unit, index) => (index === 0 ? { ...unit, nombre: "Matrices", resultado: "Resuelve sistemas" } : index === 3 ? { ...unit, semanas: [] } : unit))
     const { container } = mountEditor(block("unidades"), block("unidades", { units: filled }))
 
