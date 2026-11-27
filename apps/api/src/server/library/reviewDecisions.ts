@@ -189,6 +189,6 @@ export async function commentBoundRevision(original: Request, session: AppSessio
         revisionNumber: revision.number,
       })
     })
-    return apiJson({ message: "Comentario enviado. El docente corregirá el sílabo y lo reenviará; volverá a biblioteca." }, 201)
+    return apiJson({ message: "Comentario enviado al docente." }, 201)
   })
 }

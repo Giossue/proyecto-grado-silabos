@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { CoordinatorReadiness } from "../dashboard/setupChecklist"
-import { convocationBlockers } from "./convocationWriteStore"
+import { convocationBlockers } from "../dashboard/setupChecklist"
 
 const ready: CoordinatorReadiness = {
   process: null,

@@ -4,7 +4,7 @@ import type { PrismaService } from "../../prisma/prisma.service"
 import { epochText, hasRows } from "../../prisma/sql"
 import { createTemplateStore } from "../shared/templateStore"
 import { createDashboardRepository } from "../dashboard/dashboardQueries"
-import { coordinatorReadiness, type CoordinatorReadiness } from "../dashboard/setupChecklist"
+import { convocationBlockers, coordinatorReadiness } from "../dashboard/setupChecklist"
 import { setupRepositoryOn } from "../dashboard/setupQueries"
 import { uuid7 } from "../http/uuid7"
 import { systemNow } from "../shared/clock"
@@ -24,23 +24,6 @@ export function institutionDay(seconds: number): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: process.env.DISPLAY_TIMEZONE ?? "America/Guayaquil", year: "numeric", month: "2-digit", day: "2-digit" }).format(
     new Date(seconds * 1000),
   )
-}
-
-export function convocationBlockers(readiness: CoordinatorReadiness): string[] {
-  const blockers: string[] = []
-  if (readiness.process !== null && !readiness.deadlineOpen) blockers.push("El plazo de entrega del proceso de sílabos ya venció. Administración debe prorrogarlo.")
-  if (!readiness.facultyLogoReady) blockers.push("Administración debe cargar el logo de la facultad antes de que Coordinación abra el proceso de sílabos.")
-  if (!readiness.curriculumReady) blockers.push("La carrera no tiene materias en la malla vigente. Registre la malla con sus materias.")
-  if (readiness.scheduledTotal === 0) blockers.push("Falta registrar paralelos de las materias de la carrera.")
-  const withoutParallel = readiness.scheduledTotal - readiness.scheduledWithParallels
-  if (withoutParallel > 0) blockers.push(withoutParallel === 1 ? "Falta 1 materia sin paralelo." : `Faltan ${withoutParallel} materias sin paralelo.`)
-  const withoutTeacher = readiness.parallelTotal - readiness.parallelsWithTeacher
-  if (withoutTeacher > 0) blockers.push(withoutTeacher === 1 ? "Falta 1 paralelo sin docente." : `Faltan ${withoutTeacher} paralelos sin docente.`)
-  const withoutProfile = readiness.subjectsWithoutProfile
-  if (withoutProfile > 0) {
-    blockers.push(withoutProfile === 1 ? "Falta completar el proyecto de carrera de 1 materia." : `Falta completar el proyecto de carrera de ${withoutProfile} materias.`)
-  }
-  return blockers
 }
 
 export async function institutionalTemplateProblem(executor: Db, errorKey: string): Promise<string | null> {
@@ -96,7 +79,7 @@ export function convocationWriteTx(executor: Db, afterCommit: AfterCommit, now: 
       )
       return row ? { ...row, dueAt: Number(row.dueAt) } : null
     },
-    async readinessBlockers(careerId) {
+    async readinessBlockers(careerId, options) {
       const dashboard = createDashboardRepository(executor)
       const readiness = await coordinatorReadiness(
         careerId,
@@ -106,7 +89,7 @@ export function convocationWriteTx(executor: Db, afterCommit: AfterCommit, now: 
         work.templates,
         institutionDay(now),
       )
-      return convocationBlockers(readiness)
+      return convocationBlockers(options?.resuming ? { ...readiness, deadlineOpen: true } : readiness)
     },
     templateProblem: (errorKey) => institutionalTemplateProblem(executor, errorKey),
     async updateState(id, state) {

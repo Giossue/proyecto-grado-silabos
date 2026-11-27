@@ -272,6 +272,6 @@ export async function extendBoundProcessDeadline(original: Request, session: App
         422,
       )
     }
-    return apiJson({ message: outcome.reopened ? "Plazo prorrogado. El proceso de sílabos se volvió a abrir." : "Plazo prorrogado para todos los procesos de sílabos." })
+    return apiJson({ message: outcome.reopened ? "Plazo prorrogado y proceso reabierto." : "Plazo prorrogado para todos los procesos de sílabos." })
   })
 }

@@ -155,7 +155,7 @@ describe("DeadlineExtensionDialog", () => {
   })
 
   it("en un proceso de sílabos finalizado avisa que prorrogar la vuelve a abrir y pasa el mensaje del servidor", async () => {
-    vi.mocked(extendProcessDeadline).mockResolvedValueOnce({ message: "Plazo prorrogado. El proceso de sílabos se volvió a abrir." })
+    vi.mocked(extendProcessDeadline).mockResolvedValueOnce({ message: "Plazo prorrogado y proceso reabierto." })
     const { unmount, onSaved } = mountDialog(process(0, "cerrado"))
     await flush()
 
@@ -165,7 +165,7 @@ describe("DeadlineExtensionDialog", () => {
     await submit()
 
     expect(extendProcessDeadline).toHaveBeenCalledWith("process-1", { due_at: "2027-02-15" })
-    expect(onSaved.mock.calls).toEqual([["Plazo prorrogado. El proceso de sílabos se volvió a abrir."]])
+    expect(onSaved.mock.calls).toEqual([["Plazo prorrogado y proceso reabierto."]])
     unmount()
   })
 
@@ -175,7 +175,7 @@ describe("DeadlineExtensionDialog", () => {
         code: "plantilla_cambiada",
         counts: { sin_iniciar: 1, borrador: 2, en_revision: 1, correccion_solicitada: 0, aprobado: 3 },
       }))
-      .mockResolvedValueOnce({ message: "Plazo prorrogado. El proceso de sílabos se volvió a abrir." })
+      .mockResolvedValueOnce({ message: "Plazo prorrogado y proceso reabierto." })
     const { unmount, onSaved } = mountDialog(process(0, "cerrado"))
     await flush()
     await chooseDate("2027-02-15")
@@ -184,7 +184,7 @@ describe("DeadlineExtensionDialog", () => {
     expect(document.body.querySelector("#extension-template-confirm")).toBeNull()
     expect(extendProcessDeadline).toHaveBeenNthCalledWith(1, "process-1", { due_at: "2027-02-15" })
     expect(extendProcessDeadline).toHaveBeenNthCalledWith(2, "process-1", { due_at: "2027-02-15", confirmar_rehacer: true })
-    expect(onSaved.mock.calls).toEqual([["Plazo prorrogado. El proceso de sílabos se volvió a abrir."]])
+    expect(onSaved.mock.calls).toEqual([["Plazo prorrogado y proceso reabierto."]])
     unmount()
   })
 
@@ -194,14 +194,14 @@ describe("DeadlineExtensionDialog", () => {
         code: "cambios_pendientes",
         counts: { to_draft: 2, restarted: 0, to_coordination: 1 },
       }))
-      .mockResolvedValueOnce({ message: "Plazo prorrogado. El proceso de sílabos se volvió a abrir." })
+      .mockResolvedValueOnce({ message: "Plazo prorrogado y proceso reabierto." })
     const { unmount, onSaved } = mountDialog(process(0, "cerrado"))
     await flush()
     await chooseDate("2027-02-15")
     await submit()
 
     expect(extendProcessDeadline).toHaveBeenNthCalledWith(2, "process-1", { due_at: "2027-02-15", confirmar_cambios: true })
-    expect(onSaved.mock.calls).toEqual([["Plazo prorrogado. El proceso de sílabos se volvió a abrir."]])
+    expect(onSaved.mock.calls).toEqual([["Plazo prorrogado y proceso reabierto."]])
     unmount()
   })
 
@@ -212,7 +212,7 @@ describe("DeadlineExtensionDialog", () => {
         counts: { sin_iniciar: 0, borrador: 1, en_revision: 0, correccion_solicitada: 0, aprobado: 1 },
         pending_counts: { to_draft: 0, restarted: 1, to_coordination: 0 },
       }))
-      .mockResolvedValueOnce({ message: "Plazo prorrogado. El proceso de sílabos se volvió a abrir." })
+      .mockResolvedValueOnce({ message: "Plazo prorrogado y proceso reabierto." })
     const { unmount } = mountDialog(process(0, "cerrado"))
     await flush()
     await chooseDate("2027-02-15")

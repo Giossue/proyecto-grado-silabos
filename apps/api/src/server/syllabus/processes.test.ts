@@ -213,7 +213,7 @@ describe("POST /api/v1/admin/processes/{process}/pausar", () => {
   it("pauses an open process under a row lock", async () => {
     const { status, text } = await pause({ reason: "Se corrige la configuración institucional." })
     expect(status).toBe(200)
-    expect(text).toBe(JSON.stringify({ message: "Proceso en pausa. Los envíos se detienen y la plantilla queda editable." }))
+    expect(text).toBe(JSON.stringify({ message: "Proceso en pausa." }))
     expect(log).toEqual(["begin", `lock:${PROCESS}`, `pause:${PROCESS}`, "commit"])
   })
 
@@ -247,7 +247,7 @@ describe("POST /api/v1/admin/processes", () => {
 
   it("opens the institutional process with whole institution days", async () => {
     const response = await store(payload())
-    expect(response).toMatchObject({ status: 201, text: '{"message":"Proceso de sílabos abierto. Cada coordinación ya puede abrir el de su carrera."}' })
+    expect(response).toMatchObject({ status: 201, text: '{"message":"Proceso de sílabos abierto."}' })
     expect(created).toEqual([{ periodId: PERIOD, startsAt: "2026-11-24T05:00:00+00:00", dueAt: "2026-12-16T04:59:59+00:00" }])
     expect(log).toEqual(["begin", "lock:in-progress", "create", "commit"])
   })

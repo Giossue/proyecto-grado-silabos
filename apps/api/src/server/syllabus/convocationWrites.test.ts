@@ -64,7 +64,7 @@ function deps(): ConvocationWriteDeps {
               log.push(`lock:convocation:${id}`)
               return locked
             },
-            readinessBlockers: async () => blockers,
+            readinessBlockers: async (_career, options) => (options?.resuming ? blockers.filter((blocker) => !blocker.includes("plazo de entrega")) : blockers),
             templateProblem: async () => problem,
             updateState: async (id, state) => {
               log.push(`state:${id}:${state}`)
@@ -123,7 +123,7 @@ describe("POST /api/v1/coordination/convocations", () => {
   it("starts the career convocation, opens it, generates its syllabi and tells each teacher what to write", async () => {
     const response = await store({ process_id: PROCESS })
     expect(response.status).toBe(201)
-    expect(response.text).toBe(JSON.stringify({ message: "Proceso de sílabos iniciado: se generó un sílabo por cada paralelo.", convocation_id: CONVOCATION }))
+    expect(response.text).toBe(JSON.stringify({ message: "Proceso de sílabos abierto.", convocation_id: CONVOCATION }))
     expect(log).toEqual([
       "begin",
       `lock:process:${PROCESS}`,
@@ -186,12 +186,26 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
     generation = 1
     const response = await resume()
     expect(response.text).toBe(
-      JSON.stringify({ message: "Proceso de sílabos reanudado. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla y el proyecto de carrera quedan protegidos." }),
+      JSON.stringify({ message: "Proceso de sílabos reanudado." }),
     )
     expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierto`, "commit"])
     const at = "20270115080000123"
     expect(notices.notifications).toEqual([])
     expect(notices.mails).toEqual([])
+  })
+
+  it("does not resume while a step of «Antes de empezar» is missing, and changes nothing", async () => {
+    blockers = ["Falta 1 materia sin paralelo.", "Falta completar el proyecto de carrera de 1 materia."]
+    const response = await resume()
+    expect({ status: response.status, errors: response.json?.errors }).toEqual({ status: 422, errors: { convocation: blockers } })
+    expect(log.filter((entry) => entry.startsWith("generate") || entry.startsWith("state"))).toEqual([])
+    blockers = []
+  })
+
+  it("resumes after the deadline, so what was already sent can still be reviewed", async () => {
+    blockers = ["El plazo de entrega del proceso de sílabos ya venció. Administración debe prorrogarlo."]
+    expect((await resume()).status).toBe(200)
+    blockers = []
   })
 
   it("resumes even when nothing new was generated", async () => {

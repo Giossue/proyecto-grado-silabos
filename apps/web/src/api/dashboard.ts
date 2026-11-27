@@ -45,6 +45,7 @@ export type CoordinationConvocation = {
   period: string;
   convocation_id: string | null;
   can_open: boolean;
+  can_resume?: boolean;
   state: 'abierto' | 'pausado' | 'cerrado' | null;
   process_open: boolean;
 };

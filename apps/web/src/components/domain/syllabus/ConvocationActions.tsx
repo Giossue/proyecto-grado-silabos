@@ -78,7 +78,7 @@ export function ConvocationActions({ convocation, onChanged }: ConvocationAction
         Pausar proceso de sílabos
       </Button>
     ) : convocation.state === "pausado" ? (
-      <Button type="button" disabled={!convocation.process_open} onClick={() => select("reanudar")}>
+      <Button type="button" disabled={!convocation.process_open} onClick={() => (convocation.can_resume === false ? setupChecklistState.requestOpen() : select("reanudar"))}>
         <Play data-icon="inline-start" aria-hidden="true" />
         Reanudar proceso de sílabos
       </Button>

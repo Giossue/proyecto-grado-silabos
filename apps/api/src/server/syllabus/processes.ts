@@ -217,7 +217,7 @@ export async function pauseBoundProcess(session: AppSession, process: ProcessRow
     if (error instanceof HttpFailure) return error.response
     throw error
   }
-  return apiJson({ message: "Proceso en pausa. Los envíos se detienen y la plantilla queda editable." })
+  return apiJson({ message: "Proceso en pausa." })
 }
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
@@ -342,5 +342,5 @@ export async function createProcessFor(session: AppSession, input: PhpArray, dep
     if (error instanceof HttpFailure) return error.response
     throw error
   }
-  return apiJson({ message: "Proceso de sílabos abierto. Cada coordinación ya puede abrir el de su carrera." }, 201)
+  return apiJson({ message: "Proceso de sílabos abierto." }, 201)
 }

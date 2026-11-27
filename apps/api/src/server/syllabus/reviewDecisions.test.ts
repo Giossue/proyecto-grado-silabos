@@ -141,7 +141,7 @@ describe("POST /api/v1/coordination/reviews/{revision}/request-correction", () =
   it("requests the correction, bumps the draft version and notifies the teacher after commit", async () => {
     const response = await post({ justification: `  ${JUSTIFICATION}  ` })
     expect(response.status).toBe(200)
-    expect(response.text).toBe(JSON.stringify({ message: "Corrección solicitada; el docente ya puede editar una nueva versión de trabajo." }))
+    expect(response.text).toBe(JSON.stringify({ message: "Corrección solicitada." }))
     expect(log).toEqual([
       "begin",
       "lock:process+convocation",
@@ -266,7 +266,7 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
   it("restarts an approved syllabus with all its history and notifies the teacher", async () => {
     const response = await reset({})
     expect(response.status).toBe(200)
-    expect(response.text).toBe(JSON.stringify({ message: "Sílabo reiniciado con todo su historial. El docente empieza de cero con la malla y la plantilla actuales." }))
+    expect(response.text).toBe(JSON.stringify({ message: "Sílabo reiniciado." }))
     expect(log).toEqual(["begin", `lock:syllabus:${SYLLABUS}`, `restart:${SYLLABUS}:${syllabus.convocationId}:d0000000-0000-4000-8000-000000000001`, "commit"])
     const message = "Coordinación eliminó el sílabo aprobado de Biología. Se borró lo que había escrito; complételo de nuevo."
     expect(notices.notifications).toMatchObject([

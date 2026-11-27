@@ -3,7 +3,7 @@ import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { apiJson } from "../http/responses"
 import type { TemplateStore } from "../shared/templateStore"
-import { administratorMetrics, administratorSetup, coordinatorReadiness, coordinatorSetup, type SetupRepository } from "./setupChecklist"
+import { administratorMetrics, administratorSetup, convocationBlockers, coordinatorReadiness, coordinatorSetup, type SetupRepository } from "./setupChecklist"
 
 export type ProcessRecord = {
   id: string
@@ -175,6 +175,7 @@ async function coordinatorDashboard(careerId: string | null, deps: DashboardCore
             period: process.period,
             convocation_id: convocation?.id ?? null,
             can_open: readiness.canOpen,
+            can_resume: convocation?.state === CONVOCATION_PAUSED && readiness.templateReady && convocationBlockers({ ...readiness, deadlineOpen: true }).length === 0,
             state: convocation?.state ?? null,
             process_open: process.state === PROCESS_OPEN,
           },

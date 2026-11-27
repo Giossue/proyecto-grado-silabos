@@ -207,7 +207,7 @@ describe("POST library/reviews/{r}/verify", () => {
 describe("POST library/reviews/{r}/comments", () => {
   it("returns the syllabus to the teacher with the chosen reasons", async () => {
     const response = await comment({ reasons: ["codigo_incorrecto", "otro"], other: "  Falta la 3.ª edición de Pressman. " })
-    expect(response).toMatchObject({ status: 201, json: { message: "Comentario enviado. El docente corregirá el sílabo y lo reenviará; volverá a biblioteca." } })
+    expect(response).toMatchObject({ status: 201, json: { message: "Comentario enviado al docente." } })
     expect(log).toEqual([
       "begin",
       "lock:process+convocation",

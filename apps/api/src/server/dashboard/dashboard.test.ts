@@ -351,7 +351,7 @@ describe("dashboard", () => {
       action: null,
     })
     expect(body.deadline).toEqual(deadline({ state: "upcoming", starts_at: "2026-11-25", due_at: "2026-12-02", days_until_start: 2, days_until_due: 9, career_pending: true }))
-    expect(body.coordination_convocation).toEqual({ process_id: PROCESS, period: "2026-2", convocation_id: null, can_open: false, state: null, process_open: true })
+    expect(body.coordination_convocation).toEqual({ process_id: PROCESS, period: "2026-2", convocation_id: null, can_open: false, can_resume: false, state: null, process_open: true })
     expect(calls).toContain("readiness:c-1")
     expect(calls).toContain(`convocation:c-1:${PROCESS}`)
   })
@@ -371,7 +371,7 @@ describe("dashboard", () => {
     expect(body.setup.done).toBe(5)
     expect(body.setup.steps[5]).toMatchObject({ done: true, action: null, hint: "Administración debe cargar el logo de la facultad." })
     expect(body.deadline).toEqual(deadline({ convocation_id: CONVOCATION }))
-    expect(body.coordination_convocation).toEqual({ process_id: PROCESS, period: "2026-2", convocation_id: CONVOCATION, can_open: false, state: "abierto", process_open: true })
+    expect(body.coordination_convocation).toEqual({ process_id: PROCESS, period: "2026-2", convocation_id: CONVOCATION, can_open: false, can_resume: false, state: "abierto", process_open: true })
   })
 
   it("waits for Administration without a process in progress", async () => {

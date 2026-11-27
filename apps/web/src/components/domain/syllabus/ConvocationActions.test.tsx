@@ -93,6 +93,21 @@ describe("ConvocationActions", () => {
     expect(stubs.openingOpen).toBe(formOpen)
   })
 
+  it.each([
+    ["con pasos pendientes, «Reanudar» abre «Antes de empezar» en vez de la confirmación", false, 1, false],
+    ["con todo completo, «Reanudar» pide la confirmación", true, 0, true],
+  ])("%s", async (_case, canResume, requested, confirms) => {
+    const { unmount } = renderWithProviders(<ConvocationActions convocation={{ ...openConvocation, state: "pausado", can_resume: canResume }} />)
+    const button = [...document.querySelectorAll("button")].find((item) => item.textContent?.includes("Reanudar proceso de sílabos"))!
+    const before = setupChecklistState.openRequests.value
+    expect(button.disabled).toBe(false)
+    fireEvent.click(button)
+    await flush()
+    expect(setupChecklistState.openRequests.value - before).toBe(requested)
+    expect(document.querySelector('[role="dialog"]') !== null).toBe(confirms)
+    unmount()
+  })
+
   it("avisa que abrió el proceso de sílabos cuando el modal de apertura terminó de cerrarse", async () => {
     vi.useFakeTimers()
     stubs.fading = true

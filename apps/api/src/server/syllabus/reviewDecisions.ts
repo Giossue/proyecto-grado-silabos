@@ -128,7 +128,7 @@ export async function requestCorrectionFor(request: Request, { session, revision
         revisionNumber: revision.number,
       })
     })
-    return apiJson({ message: "Corrección solicitada; el docente ya puede editar una nueva versión de trabajo." })
+    return apiJson({ message: "Corrección solicitada." })
   })
 }
 
@@ -171,6 +171,6 @@ export async function resetSyllabusFor(request: Request, session: AppSession, sy
         revisionNumber: null,
       })
     })
-    return apiJson({ message: "Sílabo reiniciado con todo su historial. El docente empieza de cero con la malla y la plantilla actuales." })
+    return apiJson({ message: "Sílabo reiniciado." })
   })
 }

@@ -90,5 +90,5 @@ export async function closeBoundProcess(session: AppSession, process: ProcessRow
     if (error instanceof HttpFailure) return error.response
     throw error
   }
-  return apiJson({ message: "Proceso de sílabos cerrado. Sus sílabos quedan solo para consulta." })
+  return apiJson({ message: "Proceso de sílabos cerrado." })
 }

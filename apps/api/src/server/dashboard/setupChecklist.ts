@@ -125,6 +125,23 @@ export async function administratorSetup(setup: SetupRepository, templates: Temp
   )
 }
 
+export function convocationBlockers(readiness: CoordinatorReadiness): string[] {
+  const blockers: string[] = []
+  if (readiness.process !== null && !readiness.deadlineOpen) blockers.push("El plazo de entrega del proceso de sílabos ya venció. Administración debe prorrogarlo.")
+  if (!readiness.facultyLogoReady) blockers.push("Administración debe cargar el logo de la facultad antes de que Coordinación abra el proceso de sílabos.")
+  if (!readiness.curriculumReady) blockers.push("La carrera no tiene materias en la malla vigente. Registre la malla con sus materias.")
+  if (readiness.scheduledTotal === 0) blockers.push("Falta registrar paralelos de las materias de la carrera.")
+  const withoutParallel = readiness.scheduledTotal - readiness.scheduledWithParallels
+  if (withoutParallel > 0) blockers.push(withoutParallel === 1 ? "Falta 1 materia sin paralelo." : `Faltan ${withoutParallel} materias sin paralelo.`)
+  const withoutTeacher = readiness.parallelTotal - readiness.parallelsWithTeacher
+  if (withoutTeacher > 0) blockers.push(withoutTeacher === 1 ? "Falta 1 paralelo sin docente." : `Faltan ${withoutTeacher} paralelos sin docente.`)
+  const withoutProfile = readiness.subjectsWithoutProfile
+  if (withoutProfile > 0) {
+    blockers.push(withoutProfile === 1 ? "Falta completar el proyecto de carrera de 1 materia." : `Falta completar el proyecto de carrera de ${withoutProfile} materias.`)
+  }
+  return blockers
+}
+
 export async function coordinatorReadiness(
   careerId: string,
   process: ProcessRecord | null,

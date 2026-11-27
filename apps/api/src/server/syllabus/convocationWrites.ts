@@ -26,7 +26,7 @@ export interface ConvocationWriteTx {
   careerHasConvocation(careerId: string, processId: string): Promise<boolean>
   createConvocation(careerId: string, processId: string): Promise<string>
   lockConvocation(id: string): Promise<LockedConvocation | null>
-  readinessBlockers(careerId: string): Promise<string[]>
+  readinessBlockers(careerId: string, options?: { resuming?: boolean }): Promise<string[]>
   templateProblem(errorKey: string): Promise<string | null>
   updateState(id: string, state: string): Promise<void>
 }
@@ -107,7 +107,7 @@ export async function createConvocationFor(request: Request, session: AppSession
       await openConvocation(tx, convocationId)
       return convocationId
     })
-    return apiJson({ message: "Proceso de sílabos iniciado: se generó un sílabo por cada paralelo.", convocation_id: id }, 201)
+    return apiJson({ message: "Proceso de sílabos abierto.", convocation_id: id }, 201)
   })
 }
 
@@ -155,10 +155,14 @@ export async function resumeConvocationFor(request: Request, session: AppSession
       if (locked.processState !== "abierto") {
         reject({ convocation: ["El proceso institucional no está abierto; el proceso de sílabos se reanudará cuando Administración lo reanude."] })
       }
+      const blockers = await tx.readinessBlockers(locked.careerId, { resuming: true })
+      if (blockers.length > 0) reject({ convocation: blockers })
+      const problem = await tx.templateProblem("convocation")
+      if (problem !== null) reject({ convocation: [problem] })
       await tx.generateConvocation(locked.id)
       await tx.updateState(locked.id, "abierto")
       await notifyConvocationResumed(tx, locked, timestampMs(deps.nowMs()))
     })
-    return apiJson({ message: "Proceso de sílabos reanudado. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla y el proyecto de carrera quedan protegidos." })
+    return apiJson({ message: "Proceso de sílabos reanudado." })
   })
 }

@@ -309,7 +309,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
 
     it("reopens the process, catches up the changes and generates the missing syllabi", async () => {
       const response = await extend({ due_at: "2026-12-20" })
-      expect(response.text).toBe(JSON.stringify({ message: "Plazo prorrogado. El proceso de sílabos se volvió a abrir." }))
+      expect(response.text).toBe(JSON.stringify({ message: "Plazo prorrogado y proceso reabierto." }))
       expect(log).toEqual([
         "begin",
         `lock:process:${PROCESS}`,
