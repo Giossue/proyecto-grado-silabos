@@ -9,10 +9,8 @@ export class GenerationRejected extends Error {
 export type GenerateOptions = { subjectId?: string | null; subjectIds?: string[] | null; parallelId?: string | null; allowEmpty?: boolean; skipIncomplete?: boolean; notifyTeacher?: boolean }
 
 export const SENT_STATES = ["en_revision", "correccion_solicitada", "aprobado"]
+export const CAREER_PATHS = ["career.name", "career.faculty", "career.faculty_logo"]
 export const DOCUMENT_PATHS = [
-  "career.name",
-  "career.faculty",
-  "career.faculty_logo",
   "subject.name",
   "subject.code",
   "subject.cycle",

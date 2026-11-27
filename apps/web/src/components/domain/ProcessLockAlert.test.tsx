@@ -52,17 +52,6 @@ describe("ProcessLockAlert", () => {
     expect(document.body.textContent).toContain("volverán a Borrador")
   })
 
-  it("un aviso propio puede traer su «¿Por qué?»", async () => {
-    const user = userEvent.setup()
-    renderWithProviders(
-      <ProcessLockAlert banner title="Hay un proceso de sílabos abierto" message="Si cambia algo, vuelven a Borrador" why="Se pedirá confirmación antes de cambiar" hideAction />,
-    )
-
-    await user.click(screen.getByRole("button", { name: "¿Por qué?" }))
-
-    expect(document.body.textContent).toContain("Se pedirá confirmación antes de cambiar")
-  })
-
   it("sirve también para avisos propios sin acción ni detalle", () => {
     const { container } = renderWithProviders(<ProcessLockAlert title="Edición no disponible" message="El proceso de sílabos está en pausa" hideAction />)
 

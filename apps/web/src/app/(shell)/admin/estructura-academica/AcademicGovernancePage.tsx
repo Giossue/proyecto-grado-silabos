@@ -1,6 +1,6 @@
 "use client"
 
-import { Building2, Plus, TriangleAlert } from "lucide-react"
+import { Building2, Plus } from "lucide-react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
@@ -58,18 +58,6 @@ export default function AcademicGovernancePage() {
         size="wide"
         loading={!data && !error}
         actionsSkeleton={loading && !data ? ["w-44", "w-34"] : []}
-        banner={
-          data?.convocation_in_progress ? (
-            <ProcessLockAlert
-              banner
-              hideAction
-              icon={TriangleAlert}
-              title="Hay un proceso de sílabos en curso"
-              message="Si cambia una facultad o carrera, sus sílabos enviados o aprobados vuelven a Borrador"
-              why="Los sílabos llevan datos de la facultad y de la carrera, como el logo, el nombre, el código y la modalidad. Si alguno cambia, los sílabos enviados o aprobados vuelven a Borrador para actualizarse con los datos nuevos."
-            />
-          ) : null
-        }
         actions={
           <>
             {data ? (

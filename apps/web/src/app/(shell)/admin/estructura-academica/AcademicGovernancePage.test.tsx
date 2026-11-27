@@ -60,20 +60,13 @@ describe("AcademicGovernancePage", () => {
     expect(document.querySelector('[role="tablist"]')).toBeNull()
   })
 
-  it("el aviso de cambios solo sale con un proceso de sílabos en curso, no con uno finalizado", async () => {
+  it("no avisa que los cambios de facultad o carrera devuelven sílabos a borrador, ni con un proceso en curso", async () => {
     api.getSession.mockResolvedValue({ active_role: { code: "administrador" } })
     api.params = {}
-    const base = { ...governance, lock_reason: "Proceso de sílabos cerrado" }
-    api.getAcademicGovernance.mockResolvedValue({ ...base, convocation_in_progress: false })
-    const finalized = renderWithProviders(<AcademicGovernancePage />)
-    await flush()
-    expect(document.body.textContent).not.toContain("vuelven a Borrador")
-    finalized.unmount()
-
-    api.getAcademicGovernance.mockResolvedValue({ ...base, convocation_in_progress: true })
+    api.getAcademicGovernance.mockResolvedValue({ ...governance, convocation_in_progress: true })
     renderWithProviders(<AcademicGovernancePage />)
     await flush()
-    expect(document.body.textContent).toContain("Hay un proceso de sílabos en curso")
-    expect(document.body.textContent).toContain("vuelven a Borrador")
+    expect(document.body.textContent).not.toContain("Hay un proceso de sílabos en curso")
+    expect(document.body.textContent).not.toContain("vuelven a Borrador")
   })
 })

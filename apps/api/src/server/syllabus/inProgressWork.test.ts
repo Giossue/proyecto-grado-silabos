@@ -237,6 +237,46 @@ describe("InProgressWork academic context", () => {
   })
 })
 
+describe("cambios de facultad o carrera", () => {
+  const stored = { career: { name: "Software", faculty: "Facultad A", faculty_logo: "logo-a" }, subject: { name: "Cálculo" }, scheduled_subject: { modality: "Presencial" } }
+  const changed = { career: { name: "Ingeniería de Software", faculty: "Facultad B", faculty_logo: "logo-b" }, subject: { name: "Cálculo" }, scheduled_subject: { modality: "En línea" } }
+
+  async function syncing(state: string, fresh: object = changed, inherited = true) {
+    const work = new InProgressWork(recordingDb(() => []).db, () => {})
+    const internal = work as unknown as Record<string, () => unknown>
+    const syllabus = { id: SYLLABUS, parallelId: PARALLEL, convocationId: CONVOCATION, state, context: structuredClone(stored), version: 1 }
+    let pending: { context: unknown; backToDraft: boolean }[] = []
+    vi.spyOn(internal, "syllabi").mockResolvedValue([syllabus] as never)
+    vi.spyOn(internal, "profilesFor").mockResolvedValue(new Map() as never)
+    vi.spyOn(internal, "convocationFacts").mockResolvedValue(new Map([[CONVOCATION, { careerId: CAREER, periodId: PERIOD }]]) as never)
+    vi.spyOn(internal, "contextOf").mockResolvedValue({ parallel: { id: PARALLEL, subject_id: "subject", inherited_modality: inherited }, context: fresh } as never)
+    vi.spyOn(internal, "applyChanges").mockImplementation(((changes: typeof pending) => {
+      pending = changes
+    }) as never)
+    const returned = await work.sync(false, CAREER)
+    return { returned, pending }
+  }
+
+  it.each(["en_revision", "aprobado"])("deja como está un sílabo %s: no vuelve a borrador ni cambia sus datos", async (state) => {
+    expect(await syncing(state)).toEqual({ returned: 0, pending: [] })
+  })
+
+  it("actualiza un borrador con los datos nuevos", async () => {
+    const { returned, pending } = await syncing("borrador")
+    expect(returned).toBe(0)
+    expect(pending).toHaveLength(1)
+    expect(pending[0]).toMatchObject({ backToDraft: false, context: changed })
+  })
+
+  it("un cambio de la malla sí lo devuelve a borrador, ya con los datos nuevos de la carrera", async () => {
+    await expect(syncing("aprobado", { ...changed, subject: { name: "Cálculo II" } })).rejects.toThrow()
+  })
+
+  it("una modalidad propia de la materia sigue devolviendo el sílabo a borrador", async () => {
+    await expect(syncing("aprobado", { ...stored, scheduled_subject: { modality: "En línea" } }, false)).rejects.toThrow()
+  })
+})
+
 describe("InProgressWork adapting to a new template", () => {
   const workSyllabus = (started: boolean) => ({ id: SYLLABUS, convocationId: CONVOCATION, parallelId: PARALLEL, state: "sin_iniciar", context: {}, started, version: 1 })
 

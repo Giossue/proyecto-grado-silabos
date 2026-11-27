@@ -32,14 +32,14 @@ import { SYLLABUS_CHANGED } from "../notifications/workflowMessages"
 import { sameStructure, fieldResponseNormalize, documentIsEmpty } from "../configuration/templateRehearsal"
 import { dataGet } from "./identificationCard"
 import { openCurriculum } from "./syllabusSql"
-import { DOCUMENT_PATHS, GenerationRejected, purgeRequired, SENT_STATES, type GenerateOptions, type WorkScope, type WorkSyllabus } from "./inProgressWorkHelpers"
+import { CAREER_PATHS, DOCUMENT_PATHS, GenerationRejected, purgeRequired, SENT_STATES, type GenerateOptions, type WorkScope, type WorkSyllabus } from "./inProgressWorkHelpers"
 import { carryTeacherFields, fieldFingerprint } from "./teacherFields"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export const SYLLABUS_ALIVE = Prisma.sql`exists (select 1 from convocatorias_carreras vivo where vivo.convocatoria_carrera_id = silabos.convocatoria_carrera_id
   and exists (select 1 from convocatorias_universidad vivo_proceso where vivo_proceso.convocatoria_universidad_id = vivo.convocatoria_universidad_id))`
 
-type ParallelRow = { id: string; subject_id: string; code: string; shift: string | null; subject: string; modality: string | null; teachers: number }
+type ParallelRow = { id: string; subject_id: string; code: string; shift: string | null; subject: string; modality: string | null; teachers: number; inherited_modality?: boolean }
 
 export const CONFIRMATION_FIELD = "confirm_purge"
 export const DEFAULT_REASON = "cambió la base institucional (malla, período académico o plantilla)"
@@ -544,7 +544,7 @@ export class InProgressWork {
       this.executor,
       Prisma.sql`select paralelo.paralelo_id::text as id, paralelo.asignatura_id::text as subject_id, paralelo.codigo_paralelo as code, paralelo.jornada_paralelo as shift,
           asignatura.nombre_asignatura as subject,
-          coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modality, 0 as teachers
+          coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modality, asignatura.modalidad_asignatura is null as inherited_modality, 0 as teachers
         from paralelos paralelo
           inner join asignaturas asignatura on asignatura.asignatura_id = paralelo.asignatura_id
           inner join carreras carrera on carrera.carrera_id = asignatura.carrera_id
@@ -573,7 +573,9 @@ export class InProgressWork {
       if (!(isRecord(career) && Object.prototype.hasOwnProperty.call(career, "faculty_logo"))) dataSet(updated, "career.faculty_logo", dataGet(context, "career.faculty_logo"))
       let visible = false
       let silent = false
-      for (const path of [...DOCUMENT_PATHS, ...SILENT_PATHS]) {
+      const sent = SENT_STATES.includes(syllabus.state)
+      const keptWhileSent = (path: string) => sent && parallel.inherited_modality === true && path === "scheduled_subject.modality"
+      for (const path of [...DOCUMENT_PATHS.filter((candidate) => !keptWhileSent(candidate)), ...SILENT_PATHS, ...(sent ? [] : CAREER_PATHS)]) {
         const value = dataGet(context, path)
         if (!phpEquals(dataGet(updated, path), value)) {
           if (DOCUMENT_PATHS.includes(path) && (!onlyStoredPaths || arrHas(updated, path))) visible = true
@@ -583,6 +585,9 @@ export class InProgressWork {
       }
       const documents = await documentsFor(parallel, syllabus)
       if (!visible && !silent && documents.size === 0) continue
+      if (sent && (visible || documents.size > 0)) {
+        for (const path of [...CAREER_PATHS, "scheduled_subject.modality"]) dataSet(updated, path, dataGet(context, path))
+      }
       pending.push({ syllabus, context: updated, documents, backToDraft: (visible || documents.size > 0) && SENT_STATES.includes(syllabus.state) })
     }
     return pending
@@ -771,7 +776,7 @@ export class InProgressWork {
       this.executor,
       Prisma.sql`select paralelo.paralelo_id::text as id, paralelo.asignatura_id::text as subject_id, paralelo.codigo_paralelo as code, paralelo.jornada_paralelo as shift,
           asignatura.nombre_asignatura as subject,
-          coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modality,
+          coalesce(asignatura.modalidad_asignatura::text, carrera.modalidad_carrera::text) as modality, asignatura.modalidad_asignatura is null as inherited_modality,
           (select count(*)::int from asignaciones_paralelo asignacion where asignacion.paralelo_id = paralelo.paralelo_id and asignacion.asignacion_paralelo_activa = true
             and exists (select 1 from asignaciones_rol rol where rol.asignacion_rol_id = asignacion.asignacion_rol_id and rol.asignacion_rol_activa = true
               and rol.rol = 'docente' and rol.carrera_id = ${careerId}::uuid

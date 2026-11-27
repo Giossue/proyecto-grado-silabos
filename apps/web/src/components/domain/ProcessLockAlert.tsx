@@ -17,10 +17,9 @@ type ProcessLockAlertProps = {
   hideAction?: boolean
   icon?: LucideIcon
   banner?: boolean
-  why?: string
 }
 
-export function ProcessLockAlert({ lock, title, message, hideAction, icon, banner, why }: ProcessLockAlertProps) {
+export function ProcessLockAlert({ lock, title, message, hideAction, icon, banner }: ProcessLockAlertProps) {
   const isAdministrator = useSession().session?.active_role?.code === "administrador"
   const href = isAdministrator ? paths.admin.convocations : paths.coordination.reviews
   const actionLabel = isAdministrator ? "Ir a Periodos académicos" : "Ir a Revisión"
@@ -29,7 +28,6 @@ export function ProcessLockAlert({ lock, title, message, hideAction, icon, banne
   const summary = message ? withoutFinalPeriod(message) : isAdministrator ? "Pause el proceso para editar" : "Pause el proceso de sílabos de su carrera para editar"
 
   const reason = ((): string | null => {
-    if (why) return why
     if (message || !lock) return null
     const open = "abierto"
     if (lock.scope === "process") {
