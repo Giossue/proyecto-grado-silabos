@@ -56,14 +56,19 @@ export const CANVAS_ZOOM = { min: 0.2, max: 1 } as const;
 export const ZOOM_LEVELS = [0.5, 0.75, 1] as const;
 export type ZoomChoice = 'fit' | (typeof ZOOM_LEVELS)[number];
 export const laneInset = 16;
-export const subjectHeight = 158;
+export const subjectHeight = 166;
 export const addSubjectHeight = 36;
-export const subjectOffset = Math.round(
-    (laneHeight - laneInset - subjectHeight) / 2,
-);
-export const addSubjectOffset = Math.round(
-    (laneHeight - laneInset - addSubjectHeight) / 2,
-);
+export const canvasMetrics = (textScale = 1) => {
+    const lane = Math.round(laneHeight * textScale);
+    const card = Math.round(subjectHeight * textScale);
+
+    return {
+        laneHeight: lane,
+        subjectHeight: card,
+        subjectOffset: Math.round((lane - laneInset - card) / 2),
+        addSubjectOffset: Math.round((lane - laneInset - addSubjectHeight * textScale) / 2),
+    };
+};
 export const laneStart = 109;
 const spanishRole = (role: string) => ({
     'aria-roledescription': role,
@@ -77,6 +82,7 @@ type CurriculumNodeOptions = Pick<
     'career' | 'curriculum' | 'fixedFields'
 > & {
     subjectsForCycle: (cycle: number) => CurriculumBuilderSubject[];
+    metrics: ReturnType<typeof canvasMetrics>;
     unitStyleFor: (unit: string | null | undefined) => (typeof UNIT_PALETTE)[number];
     laneWidth: number;
     editable: boolean;
@@ -98,7 +104,7 @@ export const buildCurriculumNodes = (options: CurriculumNodeOptions): Node[] => 
             id: `cycle-${cycle}`,
             type: 'cycle',
             domAttributes: spanishRole('nivel'),
-            position: { x: 0, y: (cycle - 1) * laneHeight },
+            position: { x: 0, y: (cycle - 1) * options.metrics.laneHeight },
             data: {
                 cycle,
                 level: toRoman(cycle),
@@ -114,14 +120,14 @@ export const buildCurriculumNodes = (options: CurriculumNodeOptions): Node[] => 
             focusable: false,
             style: {
                 width: `${options.laneWidth}px`,
-                height: `${laneHeight - laneInset}px`,
+                height: `${options.metrics.laneHeight - laneInset}px`,
             },
             zIndex: -1,
         });
 
         let x = laneStart;
         cycleSubjects.forEach((subject, subjectIndex) => {
-            const cycleY = (cycle - 1) * laneHeight + subjectOffset;
+            const cycleY = (cycle - 1) * options.metrics.laneHeight + options.metrics.subjectOffset;
             nodes.push({
                 id: subject.id,
                 type: 'subject',
@@ -148,7 +154,7 @@ export const buildCurriculumNodes = (options: CurriculumNodeOptions): Node[] => 
                 draggable: options.editable && !options.hasOpenEditor && !options.savingLayout,
                 extent: [
                     [laneStart, cycleY],
-                    [laneStart + cycleSubjects.length * subjectStep, cycleY + laneHeight - laneInset],
+                    [laneStart + cycleSubjects.length * subjectStep, cycleY + options.metrics.laneHeight - laneInset],
                 ],
                 connectable: options.editable && !options.hasOpenEditor,
                 selectable: false,
@@ -168,7 +174,7 @@ export const buildCurriculumNodes = (options: CurriculumNodeOptions): Node[] => 
             domAttributes: spanishRole('acción'),
             position: {
                 x,
-                y: (cycle - 1) * laneHeight + addSubjectOffset,
+                y: (cycle - 1) * options.metrics.laneHeight + options.metrics.addSubjectOffset,
             },
             data: {
                 cycle,

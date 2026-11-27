@@ -1,12 +1,13 @@
 import { act, fireEvent } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
+import { accessibilitySettings } from "@/composables/useAccessibility"
 import { buttonNamed, keepClosingDialogs } from "@/components/domain/academic/academicTestUtils"
 import { CurriculumCanvas } from "@/components/domain/academic/curriculum/CurriculumCanvas"
 import { layoutMoves, useCurriculumDraft } from "@/components/domain/academic/curriculum/useCurriculumDraft"
 import { ApiError } from "@/api/client"
 import { toast } from "@/lib/toast"
-import { laneStart, subjectStep } from "@/components/domain/academic/curriculum/curriculumCanvasLayout"
+import { laneStart, subjectStep, canvasMetrics, laneInset } from "@/components/domain/academic/curriculum/curriculumCanvasLayout"
 import { flush, renderWithProviders } from "@/test/render"
 import type { CurriculumBuilderSubject } from "@/types/academic"
 
@@ -117,7 +118,7 @@ const order = (): string[] =>
 const edges = (): { id: string; style: { strokeDasharray?: string } }[] => props().edges as { id: string; style: { strokeDasharray?: string } }[]
 const twoCycles = (): CurriculumBuilderSubject[] => [subject("a", 0), subject("b", 1), { ...subject("d", 0), cycle: 2 }]
 const dragFirstToLast = async (): Promise<void> => {
-  const dragged = { ...node("a"), position: { x: laneStart + 2 * subjectStep, y: 32 } }
+  const dragged = { ...node("a"), position: { x: laneStart + 2 * subjectStep, y: 28 } }
   await call("onNodeDrag", {}, dragged, [dragged])
   await call("onNodeDragStop", {}, dragged, [])
   await flush()
@@ -155,6 +156,24 @@ describe("CurriculumCanvas", () => {
     vi.restoreAllMocks()
   })
 
+  it("con la letra más grande las filas crecen, cada materia queda centrada y arrastrar la mantiene en su sitio", async () => {
+    onTestFinished(() => act(() => accessibilitySettings.reset()))
+    renderWithProviders(<Canvas {...baseProps({ subjects: twoCycles() })} />)
+    await flush()
+    expect([node("a").position.y, node("d").position.y]).toEqual([28, 266])
+
+    await act(async () => accessibilitySettings.update({ textSize: "150" }))
+    await flush()
+
+    const { laneHeight: tallLane, subjectHeight: tallCard, subjectOffset: tallOffset } = canvasMetrics(1.5)
+    expect([node("a").position.y, node("d").position.y]).toEqual([tallOffset, tallLane + tallOffset])
+    expect((nodes().find((item) => item.id === "cycle-1") as unknown as { style: { height: string } }).style.height).toBe(`${tallLane - laneInset}px`)
+    expect(tallLane - laneInset - tallCard - tallOffset).toBeGreaterThanOrEqual(tallOffset - 1)
+    const dragged = { ...node("a"), position: { x: laneStart + subjectStep, y: 0 } }
+    await call("onNodeDrag", {}, dragged, [dragged])
+    expect(node("a").position.y).toBe(tallOffset)
+  })
+
   it("previsualiza el nuevo orden dentro del ciclo y no lo envía hasta guardar", async () => {
     renderWithProviders(<Canvas {...baseProps()} />)
     expect(node("cycle-1").data).not.toHaveProperty("unit")
@@ -168,12 +187,12 @@ describe("CurriculumCanvas", () => {
     await call("onNodeDrag", {}, dragged, [dragged])
     expect(node("b").position.x).toBe(laneStart)
     expect(node("c").position.x).toBe(laneStart + subjectStep)
-    expect(node("a").position.y).toBe(32)
+    expect(node("a").position.y).toBe(28)
 
     await call("onNodeDrag", {}, { ...dragged, position: { ...dragged.position, y: -200 } }, [])
-    expect(node("a").position.y).toBe(32)
+    expect(node("a").position.y).toBe(28)
 
-    await call("onNodeDragStop", {}, { ...dragged, position: { x: laneStart, y: 32 } }, [])
+    await call("onNodeDragStop", {}, { ...dragged, position: { x: laneStart, y: 28 } }, [])
     await flush()
     expect(updateSubjectLayout).not.toHaveBeenCalled()
     expect(order()).toEqual(["b", "c", "a"])

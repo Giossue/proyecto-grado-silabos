@@ -4,17 +4,17 @@ import "@xyflow/react/dist/style.css"
 import { ConnectionMode, NodeChangeset, ReactFlow, type Connection, type Edge, type Node } from "@xyflow/react"
 import { Info } from "lucide-react"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useAccessibility } from "@/composables/useAccessibility"
 import { useFillHeight } from "@/composables/useFillHeight"
 import {
   buildCurriculumNodes,
   buildRequirementEdges,
   CANVAS_ZOOM,
   FALLBACK_UNIT_STYLE,
-  laneHeight,
+  canvasMetrics,
   laneInset,
   laneStart,
   navigationPadding,
-  subjectOffset,
   subjectStep,
   UNIT_PALETTE,
   ZOOM_LEVELS,
@@ -131,6 +131,9 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
     return () => observer.disconnect()
   }, [])
 
+  const textScale = Number(useAccessibility().settings.textSize) / 100
+  const metrics = canvasMetrics(textScale)
+
   const unitStyleFor = (unit: string | null | undefined): (typeof UNIT_PALETTE)[number] => {
     const index = organizationUnits.findIndex((option) => option.value === unit)
 
@@ -166,7 +169,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
     0,
   )
   const laneWidth = Math.max(1120, widestCycle + 200)
-  const contentHeight = Math.max(laneHeight - laneInset, curriculum.cycle_count * laneHeight - laneInset)
+  const contentHeight = Math.max(metrics.laneHeight - laneInset, curriculum.cycle_count * metrics.laneHeight - laneInset)
   const boardWidth = laneWidth + navigationPadding * 2
   const boardHeight = contentHeight + navigationPadding * 2
   const zoom = zoomChoice !== "fit" ? zoomChoice : canvasWidth === 0 ? 1 : Math.min(CANVAS_ZOOM.max, Math.max(CANVAS_ZOOM.min, canvasWidth / boardWidth))
@@ -234,6 +237,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
       fixedFields,
       subjectsForCycle: (cycle) => previewSubjectsForCycle(cycle, preview),
       unitStyleFor,
+      metrics,
       laneWidth,
       editable,
       hasOpenEditor,
@@ -248,7 +252,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
     })
 
   const [nodes, setNodes] = useState<Node[]>(() => buildNodes(null))
-  const nodeInputs = [draft.subjects, requirements, organizationUnits, curriculum.cycle_count, editable, editingSubjectId, draftCycle, savingLayout]
+  const nodeInputs = [draft.subjects, requirements, organizationUnits, curriculum.cycle_count, editable, editingSubjectId, draftCycle, savingLayout, textScale]
   const [seenInputs, setSeenInputs] = useState(nodeInputs)
   if (!sameList(seenInputs, nodeInputs)) {
     setSeenInputs(nodeInputs)
@@ -278,7 +282,7 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
     const subject = subjectById.get(node.id)
     if (!editable || savingLayout || node.type !== "subject" || !subject || typeof subject.cycle !== "number") return
     const cycleSubjects = subjectsForCycle(subject.cycle)
-    const cycleY = (subject.cycle - 1) * laneHeight + subjectOffset
+    const cycleY = (subject.cycle - 1) * metrics.laneHeight + metrics.subjectOffset
     const maxX = laneStart + (cycleSubjects.length - 1) * subjectStep
     const x = Math.max(laneStart, Math.min(maxX, node.position.x))
     const index = Math.max(0, Math.min(cycleSubjects.length - 1, Math.round((x - laneStart) / subjectStep)))
