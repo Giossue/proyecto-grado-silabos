@@ -29,6 +29,7 @@ const row = (overrides: Partial<ReviewRow> = {}): ReviewRow => ({
   responsibleId: LIBRARIAN,
   state: "atendido",
   outcome: "devuelto",
+  syllabusState: "correccion_solicitada",
   ...overrides,
 })
 
@@ -106,7 +107,7 @@ describe("GET /api/v1/library/reviews", () => {
         `"syllabus_id":"${SYLLABUS}","subject":"Cálculo","code":"MAT-101","faculty":"Facultad de Ingeniería","career":"Software · SW-1",` +
         '"period":"2026-2","parallels":["A"],"teachers":["Docente Uno","Docente Dos"],"revision_number":1,' +
         `"revision_id":"${REVISION}","sent_at":"2026-11-20T14:00:00+00:00","sent_by":"Docente Uno","signed_by":null,` +
-        '"responsible":"Bibliotecaria Ñ","state":"atendido","outcome":"devuelto"}],' +
+        '"responsible":"Bibliotecaria Ñ","state":"atendido","outcome":"devuelto","syllabus_state":"correccion_solicitada"}],' +
         '"first_page_url":"http://localhost:3000/api/v1/library/reviews?page=1","from":1,"last_page":1,' +
         '"last_page_url":"http://localhost:3000/api/v1/library/reviews?page=1",' +
         '"links":[{"url":null,"label":"pagination.previous","page":null,"active":false},' +

@@ -31,6 +31,7 @@ const page = (): ReviewsPayload => ({
       sent_by: "Docente Demo",
       state: "atendido",
       outcome: "devuelto",
+      syllabus_state: "correccion_solicitada",
     }],
     current_page: 1,
     last_page: 1,
@@ -105,6 +106,20 @@ describe("LibraryReviewsPage", () => {
 
     fireEvent.click(row)
     expect(navigation.push).toHaveBeenCalledWith("/biblioteca/revisiones/revision-2")
+  })
+
+  it("un envío firmado por Biblioteca sigue «En revisión» en coordinación y solo dice «Aprobado» cuando lo está el sílabo", async () => {
+    const base = page()
+    const item = base.reviews.data[0]!
+    vi.mocked(getLibraryReviews).mockResolvedValue({ ...base, reviews: { ...base.reviews, total: 3, to: 3, data: [
+      { ...item, revision_id: "r-1", outcome: "firmado", syllabus_state: "en_revision" },
+      { ...item, revision_id: "r-2", outcome: null, state: "pendiente", syllabus_state: "en_revision" },
+      { ...item, revision_id: "r-3", outcome: "firmado", syllabus_state: "aprobado" },
+    ] } })
+    const { container } = await mountPage()
+
+    const states = [...container.querySelectorAll("tbody tr")].map((row) => row.querySelector("td:last-child")!.textContent)
+    expect(states).toEqual(["En revisiónEn coordinación", "En revisiónEn biblioteca", "Aprobado"])
   })
 
   it("recuerda la facultad que cada bibliotecario eligió y la usa al volver", async () => {

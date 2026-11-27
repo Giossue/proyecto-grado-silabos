@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Table, TableBody, TableCell, TableEmpty, TableHeader, TableRow } from "@/components/ui/table"
 import { serverSortOf, useServerSort, type ServerSortColumns, type ServerSortState } from "@/composables/useServerSort"
 import { rememberLibraryFaculty, savedLibraryFaculty } from "@/lib/libraryFaculty"
-import { LIBRARY_STATE_FILTERS, libraryStatus, libraryStatusLabel, libraryStatusTone } from "@silabos/shared/lib/libraryStates"
+import { LIBRARY_STATE_FILTERS, libraryStage, libraryStatus, libraryStatusLabel, libraryStatusTone } from "@silabos/shared/lib/libraryStates"
 import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
 import { activateRow, rowLinkClass } from "@/lib/rowActivation"
@@ -252,11 +252,13 @@ export default function LibraryReviewsPage() {
                       </TableCardLine>
                       <TableCardLine>
                         <StatusBadge label={libraryStatusLabel(status)} tone={libraryStatusTone(status)} />
+                        {libraryStage(item) ? ` ${libraryStage(item)}` : ""}
                       </TableCardLine>
                     </TableCell>
                     <TableCell className={cn(!item.responsible && "text-muted-foreground")}>{item.responsible ?? "Sin asignar"}</TableCell>
                     <TableCell className="text-center" data-card-hide="true">
                       <StatusBadge label={libraryStatusLabel(status)} tone={libraryStatusTone(status)} />
+                      {libraryStage(item) ? <span className="mt-1 block text-xs text-muted-foreground">{libraryStage(item)}</span> : null}
                     </TableCell>
                   </TableRow>
                 )

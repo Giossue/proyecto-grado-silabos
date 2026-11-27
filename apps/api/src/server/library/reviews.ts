@@ -31,6 +31,8 @@ export type ReviewRow = {
   responsibleId: string | null
   state: string
   outcome: string | null
+  /** Estado del sílabo: el mismo que ven docente y coordinación. */
+  syllabusState: string
 }
 
 export type SyllabusSummary = {
@@ -129,6 +131,7 @@ async function listing(reviews: LibraryReviewRepository, links: ListingLinks, in
       responsible: item.responsibleId === null ? null : (names.get(item.responsibleId) ?? null),
       state: item.state,
       outcome: item.state === "atendido" && typeof item.outcome === "string" ? item.outcome : null,
+      syllabus_state: item.syllabusState,
     }
   })
   return {

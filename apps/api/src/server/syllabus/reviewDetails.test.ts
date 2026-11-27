@@ -8,7 +8,7 @@ import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW
 import { goldenTemplate } from "../configuration/testing"
 import type { LibraryReviewRepository } from "../library/reviews"
 import { coordinationReviewDetail, libraryReviewDetail, type HistoryEntry, type ReviewDetailStore, type ReviewRevision } from "./reviewDetails"
-import type { DetailSyllabus, ReviewComment } from "./syllabusDetail"
+import type { DetailRevision, DetailSyllabus, ReviewComment } from "./syllabusDetail"
 import type { SignatureRecord } from "./snapshotDocuments"
 
 const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` })
@@ -63,7 +63,13 @@ const libraryReviews = (): LibraryReviewRepository => ({
   existing: async () => 0,
 })
 
-const deps = () => ({ bridge: fakeDeps(world), store: store(), libraryReviews: libraryReviews(), logos: { faculty: async () => null } })
+let approvedRevisions: DetailRevision[]
+const syllabusStore = () => ({
+  revisions: async () => approvedRevisions,
+  signedFacts: async () => ({ coordination: null, verification: null }),
+})
+
+const deps = () => ({ bridge: fakeDeps(world), store: store(), libraryReviews: libraryReviews(), logos: { faculty: async () => null }, syllabusStore: syllabusStore() })
 
 const entry = (overrides: Partial<HistoryEntry> = {}): HistoryEntry => ({
   id: FIRST,
@@ -87,7 +93,7 @@ const revision = (overrides: Partial<ReviewRevision> = {}): ReviewRevision => ({
   ...overrides,
 })
 
-async function call(handler: typeof coordinationReviewDetail, url: string, id: string) {
+async function call(handler: (request: Request, id: string, input: Parameters<typeof libraryReviewDetail>[2]) => Promise<Response>, url: string, id: string) {
   const response = await handler(apiRequest(url, { cookie }), id, deps())
   const text = await response.text()
   return { status: response.status, text, json: text.startsWith("{") ? (JSON.parse(text) as Record<string, ReturnType<typeof JSON.parse>>) : null }
@@ -109,6 +115,7 @@ afterAll(async () => {
 })
 
 beforeEach(() => {
+  approvedRevisions = []
   world = {
     sessions: new Map([[golden.sessionId, { id: golden.sessionId, userId: golden.userId, payload: sessionPayload(loggedInAttributes()), lastActivity: NOW }]]),
     users: [makeUser()],
@@ -220,8 +227,8 @@ describe("GET library/reviews/{revision}", () => {
     const review = json!.review
     expect(Object.keys(review)).toEqual([
       "syllabus_id", "subject", "code", "faculty", "career", "period", "parallels", "teachers", "revision_number", "revision_id", "sent_at", "sent_by",
-      "state", "outcome", "responsible", "assigned_to_other", "can_comment", "can_verify", "decision_block", "signing_statement", "signatures",
-      "verified_at", "verified_by", "approved_at", "presentation", "template_variables", "sections", "comments", "comment_reasons",
+      "state", "outcome", "syllabus_state", "responsible", "assigned_to_other", "can_comment", "can_verify", "decision_block", "signing_statement", "signatures",
+      "verified_at", "verified_by", "approved_at", "approved_document", "presentation", "template_variables", "sections", "comments", "comment_reasons",
     ])
     expect(review).toMatchObject({
       syllabus_id: SYLLABUS,
@@ -244,6 +251,8 @@ describe("GET library/reviews/{revision}", () => {
       verified_at: null,
       verified_by: null,
       approved_at: null,
+      approved_document: null,
+      syllabus_state: "en_revision",
       template_variables: { nombre_asignatura: "Biología" },
       comments: [{ comment: "El ISBN es incorrecto.", commented_at: "2026-11-10T10:00:00+00:00", commented_by: "Bibliotecario", revision_number: 1 }],
       comment_reasons: [
@@ -265,6 +274,20 @@ describe("GET library/reviews/{revision}", () => {
     submission = { ...submission!, state: "atendido", outcome: "firmado", verifiedAt: "2026-11-19T10:00:00+00:00", verifiedBy: "Bibliotecario" }
     history = [entry({ library: { verifiedAt: "2026-11-19T10:00:00+00:00", verifier: "Bibliotecario", inherited: false } })]
     expect((await library()).json!.review).toMatchObject({ state: "atendido", outcome: "firmado", assigned_to_other: false, can_verify: false, signing_statement: null, verified_by: "Bibliotecario" })
+  })
+
+  it("gives the librarian the whole signed document only once coordination approves the syllabus", async () => {
+    submission = { ...submission!, state: "atendido", outcome: "firmado", verifiedAt: "2026-11-19T10:00:00+00:00", verifiedBy: "Bibliotecario" }
+    expect((await library()).json!.review).toMatchObject({ syllabus_state: "en_revision", approved_at: null, approved_document: null })
+
+    syllabus = { ...syllabus, state: "aprobado" }
+    approvedRevisions = [{ id: SECOND, number: 2, submittedAt: 1_795_000_000, submittedBy: "Ana Pérez", approval: { approver: "Coordinadora", at: 1_795_100_000 }, verified: true, versionOrigin: 1, correctionRequested: false, fingerprint: "b".repeat(64) }]
+    const review = (await library()).json!.review
+    expect(review.syllabus_state).toBe("aprobado")
+    expect(review.approved_at).toBe("2026-11-19T14:53:20+00:00")
+    expect(review.approved_document.revision_id).toBe(SECOND)
+    expect(review.approved_document.sections.map((section: { id: string }) => section.id)).toEqual(["datos", "bibliografia"])
+    expect(review.sections).toHaveLength(1)
   })
 
   it("rejects other roles, invalid filters and revisions that never went to the library", async () => {

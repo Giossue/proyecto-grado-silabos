@@ -23,6 +23,8 @@ export type LibraryReviewItem = {
   responsible?: string | null;
   state: LibraryReviewState;
   outcome: LibraryReviewOutcome | null;
+  /** Estado del sílabo, el mismo que ven docente y coordinación. */
+  syllabus_state: string;
 };
 
 export type LibraryComment = {
@@ -44,6 +46,8 @@ export type LibraryReviewDetail = LibraryReviewItem & {
   verified_by: string | null;
   /** Coordinación aprobó el sílabo y ya hay PDF. */
   approved_at?: string | null;
+  /** El sílabo completo y firmado; solo cuando Coordinación ya lo aprobó. */
+  approved_document?: { revision_id: string; approved_at: string; sections: SnapshotSection[]; template_variables: Record<string, string> } | null;
   presentation: ReviewDetail['presentation'];
   template_variables: Record<string, string>;
   sections: SnapshotSection[];

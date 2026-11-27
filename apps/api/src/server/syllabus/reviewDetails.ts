@@ -10,6 +10,7 @@ import { isPhpArray, list, phpShape, record, type PhpRecord } from "../configura
 import { templatePresentationOf } from "../configuration/templatePresentation"
 import { TemplateValidationError } from "../configuration/templateRuntime"
 import { createLibraryReviewRepository } from "../library/reviewQueries"
+import { libraryReviewPayload, type LibraryReviewDetailDeps } from "../library/reviewDetail"
 import { authorizeListing, type LibraryReviewRepository } from "../library/reviews"
 import { isoFromSeconds } from "./draftField"
 import { dataGet } from "./identificationCard"
@@ -217,7 +218,7 @@ export async function coordinationReviewDetailFor(
   })
 }
 
-export async function libraryReviewDetail(request: Request, revisionId: string, deps: ReviewDetailDeps): Promise<Response> {
+export async function libraryReviewDetail(request: Request, revisionId: string, deps: ReviewDetailDeps & Pick<LibraryReviewDetailDeps, "syllabusStore">): Promise<Response> {
   let revision: ReviewRevision | null = null
   const authorized = await authorizeListing(request, { bridge: deps.bridge, reviews: deps.libraryReviews }, async () => {
     revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
@@ -226,54 +227,5 @@ export async function libraryReviewDetail(request: Request, revisionId: string, 
   if (authorized instanceof Response) return authorized
   if (revision === null) return modelNotFound(MODELS.revision, revisionId)
   const bound = revision as ReviewRevision
-  const { session } = authorized
-  const submission = await deps.store.librarySubmission(bound.id)
-  if (submission === null) return aborted(404)
-  const syllabus = await deps.store.syllabus(bound.syllabusId, session.user.id)
-  const summary = syllabus === null ? undefined : (await deps.libraryReviews.summaries([syllabus.id])).get(syllabus.id)
-  if (syllabus === null || summary === undefined) return aborted(404)
-  return respond(request, deps, async () => {
-    const history = await deps.store.history(syllabus.id)
-    const entry = history.find((item) => item.id === bound.id)
-    const responsible = submission.responsibleId === null ? null : await deps.store.userName(submission.responsibleId)
-    const block = decisionBlock(syllabus)
-    const reviewable = submission.state === "pendiente" && syllabus.state === "en_revision" && revisionStage(entry) === LIBRARY && block === null
-    const signatures = await deps.store.signatures(syllabus.id)
-    const snapshot = presentSnapshot(record(await deps.store.snapshot(bound.id)))
-    const definition = snapshotDefinition(snapshot)
-    const libraryKeys = list(definition.library_sections ?? [])
-    return {
-      review: {
-        syllabus_id: syllabus.id,
-        subject: summary.subject,
-        code: summary.code,
-        faculty: summary.faculty,
-        career: summary.career,
-        period: summary.period,
-        parallels: [summary.parallel],
-        teachers: summary.teachers,
-        revision_number: bound.number,
-        revision_id: bound.id,
-        sent_at: isoFromSeconds(submission.sentAt),
-        sent_by: submission.sentBy,
-        state: submission.state,
-        outcome: submission.state === "atendido" && typeof submission.outcome === "string" ? submission.outcome : null,
-        responsible,
-        assigned_to_other: submission.state === "pendiente" && submission.responsibleId !== null && submission.responsibleId !== session.user.id,
-        can_comment: reviewable,
-        can_verify: reviewable,
-        decision_block: block,
-        signing_statement: reviewable && !signatures.some((signature) => signature.role === LIBRARY) ? signingStatement(syllabus.id, LIBRARY, bound.fingerprint) : null,
-        signatures: signatureSummary(signatures),
-        verified_at: submission.verifiedAt,
-        verified_by: submission.verifiedBy,
-        approved_at: entry?.approval?.at ?? null,
-        presentation: templatePresentationOf(definition, await presentationLogos(request, dataGet(syllabus.context, "career.faculty_id"), deps.logos)),
-        template_variables: isPhpArray(snapshot.template_variables) ? snapshot.template_variables : [],
-        sections: list(isPhpArray(snapshot.sections) ? snapshot.sections : []).filter((section) => isPhpArray(section) && libraryKeys.includes(record(section).key ?? null)),
-        comments: (await deps.store.comments(syllabus.id, LIBRARY)).map(({ comment, commented_at, commented_by, revision_number }) => ({ comment, commented_at, commented_by, revision_number })),
-        comment_reasons: COMMENT_REASONS.map(([code, label]) => ({ code, label })),
-      },
-    }
-  })
+  return libraryReviewPayload(request, authorized.session, bound, deps)
 }

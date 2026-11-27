@@ -1,4 +1,5 @@
 import { libraryStatusLabel } from "@silabos/shared/lib/libraryStates"
+import { SYLLABUS_STATE_LABELS } from "@silabos/shared/lib/syllabusStates"
 import type { LibrarySort, ListSort } from "@silabos/shared/schemas/listSort"
 import { Prisma } from "../../generated/prisma/client"
 import type { Db } from "../../prisma/db"
@@ -27,6 +28,9 @@ export const RESPONSIBLE_SQL = Prisma.raw(`COALESCE(
             )
         )`)
 
+// A superseded delivery reads «Anterior»; any other one shows the state of its syllabus.
+const SHOWN_STATE: Record<"firmado" | "devuelto" | "pendiente", string> = { pendiente: "en_revision", devuelto: "correccion_solicitada", firmado: "aprobado" }
+
 export const STATE_SQL = Prisma.sql`CASE (${OUTCOME_SQL}) WHEN 'pendiente' THEN 'pendiente' ELSE 'atendido' END`
 
 export const LIBRARY_FROM = Prisma.sql`from envios_biblioteca
@@ -50,10 +54,10 @@ const SORT_KEYS: Record<LibrarySort, Prisma.Sql> = {
     from paralelos as paralelo_orden inner join asignaturas as asignatura_orden on asignatura_orden.asignatura_id = paralelo_orden.asignatura_id
     where paralelo_orden.paralelo_id = silabo.paralelo_id)`,
   responsible: USER_NAME(Prisma.sql`(${RESPONSIBLE_SQL})`),
-  state: Prisma.sql`case (${OUTCOME_SQL}) ${Prisma.join(
-    ["pendiente", "firmado", "devuelto", "reemplazado"].map((status) => Prisma.sql`when ${status} then ${libraryStatusLabel(status)}::text`),
+  state: Prisma.sql`case when (${OUTCOME_SQL}) = 'reemplazado' then ${libraryStatusLabel("reemplazado")}::text else case silabo.estado_silabo ${Prisma.join(
+    Object.keys(SYLLABUS_STATE_LABELS).map((status) => Prisma.sql`when ${status} then ${libraryStatusLabel(status)}::text`),
     " ",
-  )} end`,
+  )} end end`,
   period: CONVOCATION_OF("periodo_orden.fecha_fin_periodo"),
   teacher: Prisma.sql`(select min(usuario_docente.nombre_usuario) from docentes_vigentes_silabo as docente_orden
     inner join usuarios as usuario_docente on usuario_docente.usuario_id = docente_orden.usuario_id
@@ -81,7 +85,10 @@ function conditions(filters: ReviewFilters, current: string | null): Prisma.Sql 
         and posterior.numero_revision > revision.numero_revision)`,
   ]
   if (filters.state !== null) {
-    where.push(["firmado", "devuelto", "reemplazado"].includes(filters.state) ? Prisma.sql`(${OUTCOME_SQL}) = ${filters.state}` : Prisma.sql`(${STATE_SQL}) = ${filters.state}`)
+    const shown = SHOWN_STATE[filters.state as keyof typeof SHOWN_STATE]
+    if (shown !== undefined) where.push(Prisma.sql`silabo.estado_silabo = ${shown} and (${OUTCOME_SQL}) <> 'reemplazado'`)
+    else if (filters.state === "reemplazado") where.push(Prisma.sql`(${OUTCOME_SQL}) = 'reemplazado'`)
+    else where.push(Prisma.sql`(${STATE_SQL}) = ${filters.state}`)
   }
   if (filters.search !== null && filters.search !== "") {
     const term = filters.search
@@ -141,7 +148,7 @@ export function createLibraryReviewRepository(db: Db): LibraryReviewRepository {
       if (total === 0) return { total: 0, items: [] }
       const found = await db.$queryRaw<PageRow[]>`select revision.revision_silabo_id::text as "revisionId", revision.silabo_id::text as "syllabusId",
           revision.numero_revision as "revisionNumber", revision.enviado_por::text as "sentBy", envios_biblioteca.verificado_por::text as "signedBy",
-          ${isoText(Prisma.raw("revision.enviado_en"))} as "sentAt", ${STATE_SQL} as state, ${OUTCOME_SQL} as outcome, (${RESPONSIBLE_SQL})::text as "responsibleId"
+          ${isoText(Prisma.raw("revision.enviado_en"))} as "sentAt", ${STATE_SQL} as state, ${OUTCOME_SQL} as outcome, silabo.estado_silabo as "syllabusState", (${RESPONSIBLE_SQL})::text as "responsibleId"
         ${LIBRARY_FROM}
         where ${where}
         order by ${libraryOrder(sort)}
@@ -160,6 +167,7 @@ export function createLibraryReviewRepository(db: Db): LibraryReviewRepository {
             responsibleId: row.responsibleId,
             state: row.state,
             outcome: row.outcome,
+            syllabusState: row.syllabusState,
           }),
         ),
       }
@@ -230,9 +238,13 @@ export function createLibraryReviewRepository(db: Db): LibraryReviewRepository {
 export async function libraryReviewCounts(db: Db): Promise<Record<string, number>> {
   const filters: ReviewFilters = { state: null, search: null, facultyId: null, period: "actual", periodId: null, handledBy: null }
   const where = conditions(filters, await currentProcessId(db))
-  const totals = await db.$queryRaw<{ outcome: string | null; total: number }[]>`select resultado_envio as outcome, count(*)::int as total
-    from (select ${OUTCOME_SQL} as resultado_envio ${LIBRARY_FROM} where ${where}) as envios group by resultado_envio`
-  const counts: Record<string, number> = { pendiente: 0, firmado: 0, devuelto: 0, reemplazado: 0 }
-  for (const { outcome, total } of totals) if (outcome !== null && outcome in counts) counts[outcome] = Number(total)
+  const totals = await db.$queryRaw<{ state: string; outcome: string; total: number }[]>`select estado as state, resultado_envio as outcome, count(*)::int as total
+    from (select silabo.estado_silabo as estado, ${OUTCOME_SQL} as resultado_envio ${LIBRARY_FROM} where ${where}) as envios group by estado, resultado_envio`
+  const counts = { pendiente: 0, coordinacion: 0, firmado: 0, devuelto: 0 }
+  for (const { state, outcome, total } of totals) {
+    if (outcome === "reemplazado") continue
+    for (const [key, shown] of Object.entries(SHOWN_STATE)) if (shown === state) counts[key as keyof typeof SHOWN_STATE] += Number(total)
+    if (state === SHOWN_STATE.pendiente && outcome === "firmado") counts.coordinacion += Number(total)
+  }
   return counts
 }

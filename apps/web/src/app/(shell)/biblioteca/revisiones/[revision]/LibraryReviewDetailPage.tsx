@@ -7,13 +7,13 @@ import { useState } from "react"
 import { ApiError } from "@/api/client"
 import { commentLibraryReview, verifyLibraryReview } from "@/api/library"
 import { EmptyState } from "@/components/domain/EmptyState"
-import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
 import { StatusBadge, type StatusTone } from "@/components/domain/StatusBadge"
 import { FreeTextContent } from "@/components/domain/syllabus/FreeTextContent"
 import { SignatureDialog, type StatementSigner } from "@/components/domain/syllabus/SignatureDialog"
+import { SyllabusDocumentPreview, type PreviewSection } from "@/components/domain/syllabus/SyllabusDocumentPreview"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -24,8 +24,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { afterDialogExit } from "@/lib/dialogExit"
 import { applyApiErrors, errorMessages, SERVER_ERROR, serverMessage, useSchemaForm } from "@/lib/forms"
 import { goBack } from "@/lib/goBack"
-import { libraryStatus, libraryStatusLabel, libraryStatusTone } from "@silabos/shared/lib/libraryStates"
+import { libraryStage, libraryStatus, libraryStatusLabel, libraryStatusTone } from "@silabos/shared/lib/libraryStates"
 import { openRevisionPdf } from "@/lib/openPdf"
+import { isSignatureField } from "@/lib/syllabusForm"
+import type { SyllabusField } from "@/api/syllabi"
 import { paths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
 import { libraryCommentFormSchema, OTHER_REASON, OTHER_REASON_MIN, type LibraryCommentValues } from "@silabos/shared/schemas/library"
@@ -67,18 +69,28 @@ export default function LibraryReviewDetailPage() {
   const canSign = Boolean(review?.can_verify && review.signing_statement)
   const canSendWithoutSigning = Boolean(review?.can_verify && !review.signing_statement)
   const canReturn = selectedReasons.length > 0 && (!otherSelected || otherReason.trim().length >= OTHER_REASON_MIN)
-  const fields = (review?.sections ?? []).flatMap((section) => section.fields.map((field) => ({ ...field, title: field.label.trim() || section.title })))
-  const outcomeBadge: { label: string; tone: StatusTone } | null =
+  // Library only checks the books: the signature box is read in the whole document, once Coordination approves it.
+  const fields = (review?.sections ?? []).flatMap((section) =>
+    section.fields.filter((field) => !isSignatureField(field as unknown as SyllabusField)).map((field) => ({ ...field, title: field.label.trim() || section.title })),
+  )
+  const approvedDocument = review?.approved_document ?? null
+  const approvedSections: PreviewSection[] = (approvedDocument?.sections ?? []).map((section) => ({
+    id: section.key,
+    title: section.title,
+    orientation: section.orientation,
+    fields: section.fields.map((field) => ({ ...field, id: field.id ?? field.key })),
+  }))
+  const stateBadge: { label: string; tone: StatusTone } | null =
     review === null || review.outcome === null ? null : { label: libraryStatusLabel(libraryStatus(review)), tone: libraryStatusTone(libraryStatus(review)) }
+  const stage = review === null || review.outcome === null ? null : libraryStage(review)
 
   const load = (): void => {
     void query.refetch()
   }
 
-  const openPdf = async (): Promise<void> => {
-    if (!review) return
+  const openPdf = async (revision: string): Promise<void> => {
     setOpeningPdf(true)
-    const failure = await openRevisionPdf(review.revision_id)
+    const failure = await openRevisionPdf(revision)
     setOpeningPdf(false)
     if (failure) toast.error(failure)
   }
@@ -170,20 +182,20 @@ export default function LibraryReviewDetailPage() {
         size="narrow"
         eyebrow={backLink}
         titleBadge={
-          outcomeBadge ? (
+          stateBadge ? (
             <>
-              <StatusBadge label={outcomeBadge.label} tone={outcomeBadge.tone} />
+              <StatusBadge label={stateBadge.label} tone={stateBadge.tone} />
+              {stage ? <span className="text-sm text-muted-foreground">{stage}</span> : null}
               {review.outcome === "reemplazado" ? <span className="text-sm text-muted-foreground">Hay un envío más reciente · solo consulta</span> : null}
             </>
           ) : null
         }
         tools={
-          review.approved_at ? (
-            <IconTooltip label="Ver PDF">
-              <Button type="button" variant="ghost" size="icon" aria-label="Ver PDF" disabled={openingPdf} onClick={() => void openPdf()}>
-                {openingPdf ? <Spinner /> : <FileText aria-hidden="true" />}
-              </Button>
-            </IconTooltip>
+          approvedDocument ? (
+            <Button type="button" variant="outline" data-labeled-tool disabled={openingPdf} onClick={() => void openPdf(approvedDocument.revision_id)}>
+              {openingPdf ? <Spinner data-icon="inline-start" /> : <FileText data-icon="inline-start" aria-hidden="true" />}
+              Ver PDF
+            </Button>
           ) : null
         }
         actions={
@@ -214,7 +226,9 @@ export default function LibraryReviewDetailPage() {
           </Alert>
         ) : null}
 
-        {fields.length ? (
+        {approvedDocument ? (
+          <SyllabusDocumentPreview presentation={review.presentation} sections={approvedSections} />
+        ) : fields.length ? (
           <article className="flex flex-col gap-6 rounded-md bg-card px-6 py-6 text-card-foreground shadow-surface ring-1 ring-surface-ring" aria-label="Bibliografía">
             {fields.map((field) => (
               <section key={field.key} className="flex min-w-0 flex-col gap-2">

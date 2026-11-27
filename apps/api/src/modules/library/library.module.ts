@@ -11,13 +11,15 @@ import { LibraryDecisionPreloader, LibraryRevisionPreloader } from "./library-re
 import { LibraryReviewsRepository } from "./library-reviews.repository"
 import { LibraryController } from "./library.controller"
 import { LibraryService } from "./library.service"
-import { LIBRARY_DECISIONS, LIBRARY_DETAIL_STORE, LIBRARY_LOGO_STORE } from "./library.tokens"
+import { LIBRARY_DECISIONS, LIBRARY_DETAIL_STORE, LIBRARY_LOGO_STORE, LIBRARY_SYLLABUS_STORE } from "./library.tokens"
+import { syllabusDetailStoreOn } from "../../server/syllabus/syllabusDetailQueries"
 
 @Module({
   controllers: [LibraryController],
   providers: [
     LibraryReviewsRepository,
     { provide: LIBRARY_DETAIL_STORE, useFactory: (prisma: PrismaService) => reviewDetailStoreOn(prisma), inject: [PrismaService] },
+    { provide: LIBRARY_SYLLABUS_STORE, useFactory: (prisma: PrismaService) => syllabusDetailStoreOn(prisma), inject: [PrismaService] },
     { provide: LIBRARY_LOGO_STORE, useFactory: (prisma: PrismaService) => createLogoStore(prisma), inject: [PrismaService] },
     { provide: LIBRARY_DECISIONS, useFactory: (prisma: PrismaService) => ({ settings: () => signatureSettings(), ...createLibraryDecisionDeps(prisma) }), inject: [PrismaService] },
     LibraryService,

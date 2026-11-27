@@ -18,7 +18,8 @@ describe("library list order", () => {
 
   it("sorts the state by the label shown in the table", () => {
     const { text, values } = libraryOrder({ column: "state", direction: "asc" })
-    expect(values).toEqual(["pendiente", "En revisión", "firmado", "Aprobado", "devuelto", "Corrección solicitada", "reemplazado", "Anterior"])
+    expect(values).toEqual(["Anterior", "sin_iniciar", "Sin iniciar", "borrador", "Borrador", "en_revision", "En revisión", "correccion_solicitada", "Corrección solicitada", "aprobado", "Aprobado"])
+    expect(text).toContain("silabo.estado_silabo")
     expect(text).toMatch(/ asc nulls last, revision\.enviado_en desc, envios_biblioteca\.envio_biblioteca_id asc$/)
   })
 })

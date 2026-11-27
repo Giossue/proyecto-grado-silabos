@@ -102,7 +102,7 @@ const repository = (): DashboardRepository => ({
     return finalized
   },
   async libraryCounts() {
-    return { pendiente: 3, firmado: 0, devuelto: 2, reemplazado: 1 }
+    return { pendiente: 3, coordinacion: 1, firmado: 0, devuelto: 2, reemplazado: 1 }
   },
 })
 
@@ -239,9 +239,9 @@ describe("dashboard", () => {
     expect(response.status).toBe(200)
     expect(response.json).toEqual({
       metrics: [
-        { key: "library_pending", label: "En revisión", value: 3, suffix: null, hint: "Enviados por los docentes; falta verificar la bibliografía" },
-        { key: "library_signed", label: "Aprobados", value: 0, suffix: null, hint: "Bibliografía aprobada y firmada" },
-        { key: "library_commented", label: "Corrección solicitada", value: 2, suffix: null, hint: "Con observaciones para el docente" },
+        { key: "library_pending", label: "En revisión", value: 3, suffix: null, hint: "2 por revisar en Biblioteca y 1 en Coordinación" },
+        { key: "library_signed", label: "Aprobados", value: 0, suffix: null, hint: "Con la aprobación de Coordinación" },
+        { key: "library_commented", label: "Corrección solicitada", value: 2, suffix: null, hint: "Devueltos al docente para que los corrija" },
       ],
       setup: null,
       deadline: deadline(),

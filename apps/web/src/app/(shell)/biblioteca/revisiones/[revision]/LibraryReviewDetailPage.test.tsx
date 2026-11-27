@@ -40,6 +40,7 @@ const detail = (overrides: Partial<LibraryReviewDetail> = {}): LibraryReviewDeta
   sent_by: "Docente Demo",
   state: "pendiente",
   outcome: null,
+  syllabus_state: "en_revision",
   can_comment: true,
   can_verify: true,
   signing_statement: "silabos-ueb|silabo:syllabus-1|accion:aprobacion_biblioteca|huella:abc",
@@ -249,21 +250,39 @@ describe("LibraryReviewDetailPage", () => {
     expect(container.textContent).toContain("Bibliografía básica")
   })
 
-  it("con el sílabo aprobado ofrece el ícono «Ver PDF», también en el historial", async () => {
+  it("con el sílabo aprobado ofrece el botón «Ver PDF» con texto, también en el historial", async () => {
     openRevisionPdf.mockResolvedValue(null)
-    vi.mocked(getLibraryReview).mockResolvedValue({ review: detail({ state: "atendido", outcome: "firmado", verified_at: "2026-10-01T10:00:00Z", verified_by: "Bibliotecario Demo", approved_at: "2026-10-02T10:00:00Z", can_comment: false, can_verify: false, signing_statement: null }) })
-    const { container } = await mountPage()
+    vi.mocked(getLibraryReview).mockResolvedValue({ review: detail({ state: "atendido", outcome: "firmado", verified_at: "2026-10-01T10:00:00Z", verified_by: "Bibliotecario Demo", syllabus_state: "aprobado", approved_at: "2026-10-02T10:00:00Z", approved_document: { revision_id: "revision-3", approved_at: "2026-10-02T10:00:00Z", template_variables: {}, sections: [{ key: "datos", title: "Descripción de la asignatura", orientation: "portrait", fields: [{ id: "descripcion", key: "descripcion", label: "Descripción", quien_llena: "carrera", value: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Contenido de todo el sílabo" }] }] } }] }] }, can_comment: false, can_verify: false, signing_statement: null }) })
+    await mountPage()
 
-    fireEvent.click(container.querySelector('button[aria-label="Ver PDF"]')!)
+    fireEvent.click(headerButton("Ver PDF")!)
 
-    expect(openRevisionPdf).toHaveBeenCalledWith("revision-2")
+    expect(openRevisionPdf).toHaveBeenCalledWith("revision-3")
+    expect(headerButton("Ver PDF")!.textContent).toBe("Ver PDF")
+    expect(document.querySelector('[aria-label="Vista previa del sílabo"]')!.textContent).toContain("Contenido de todo el sílabo")
+    expect(document.querySelector('article[aria-label="Bibliografía"]')).toBeNull()
+    expect(document.querySelector("h1")!.parentElement!.textContent).toContain("Aprobado")
   })
 
   it("verificado pero sin la aprobación de Coordinación no ofrece «Ver PDF»", async () => {
     vi.mocked(getLibraryReview).mockResolvedValue({ review: detail({ state: "atendido", outcome: "firmado", verified_at: "2026-10-01T10:00:00Z", verified_by: "Bibliotecario Demo", approved_at: null, can_comment: false, can_verify: false, signing_statement: null }) })
+    await mountPage()
+
+    expect(headerButton("Ver PDF")).toBeUndefined()
+    expect(document.body.textContent).toContain("En revisión")
+    expect(document.body.textContent).toContain("En coordinación")
+    expect(document.body.textContent).not.toContain("Aprobado")
+    expect(document.querySelector('[aria-label="Vista previa del sílabo"]')).toBeNull()
+  })
+
+  it("antes de la aprobación no muestra el cuadro de firma de Biblioteca, solo la bibliografía", async () => {
+    const signature = { key: "firma_biblioteca", label: "", quien_llena: "institucional", value: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Bibliografía verificada por" }, { type: "variable", attrs: { id: "firma_biblioteca" } }] }] } }
+    const base = detail()
+    vi.mocked(getLibraryReview).mockResolvedValue({ review: detail({ sections: [{ ...base.sections[0]!, fields: [...base.sections[0]!.fields, signature] as LibraryReviewDetail["sections"][number]["fields"] }] }) })
     const { container } = await mountPage()
 
-    expect(container.querySelector('button[aria-label="Ver PDF"]')).toBeNull()
+    expect(container.textContent).toContain("Sommerville, Ingeniería de software")
+    expect(container.textContent).not.toContain("Bibliografía verificada por")
   })
 
   it("si se llegó desde el historial, el enlace de arriba vuelve al historial", async () => {

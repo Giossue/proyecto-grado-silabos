@@ -18,7 +18,7 @@ const history = (): HistoryPayload => ({
   reviews: {
     data: [{
       revision_id: "revision-1", syllabus_id: "syllabus-1", subject: "Álgebra Lineal", code: "SW-B1-002", career: "Software", period: "2025-2026",
-      parallels: ["A"], teachers: ["Domenica Arias"], revision_number: 1, sent_at: "2025-11-02T10:00:00-05:00", sent_by: "Domenica Arias", signed_by: "Bibliotecaria Demo", state: "atendido", outcome: "firmado",
+      parallels: ["A"], teachers: ["Domenica Arias"], revision_number: 1, sent_at: "2025-11-02T10:00:00-05:00", sent_by: "Domenica Arias", signed_by: "Bibliotecaria Demo", state: "atendido", outcome: "firmado", syllabus_state: "aprobado",
     }],
     current_page: 1, last_page: 1, per_page: 20, from: 1, to: 1, total: 1,
   },

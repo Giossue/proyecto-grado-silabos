@@ -111,10 +111,10 @@ async function libraryMetrics(deps: DashboardCoreDeps) {
       label: "En revisión",
       value: count("pendiente"),
       suffix: null,
-      hint: count("pendiente") === 0 ? "Nada pendiente por ahora" : "Enviados por los docentes; falta verificar la bibliografía",
+      hint: count("pendiente") === 0 ? "Nada pendiente por ahora" : `${count("pendiente") - count("coordinacion")} por revisar en Biblioteca y ${count("coordinacion")} en Coordinación`,
     },
-    { key: "library_signed", label: "Aprobados", value: count("firmado"), suffix: null, hint: "Bibliografía aprobada y firmada" },
-    { key: "library_commented", label: "Corrección solicitada", value: count("devuelto"), suffix: null, hint: "Con observaciones para el docente" },
+    { key: "library_signed", label: "Aprobados", value: count("firmado"), suffix: null, hint: "Con la aprobación de Coordinación" },
+    { key: "library_commented", label: "Corrección solicitada", value: count("devuelto"), suffix: null, hint: "Devueltos al docente para que los corrija" },
   ]
 }
 

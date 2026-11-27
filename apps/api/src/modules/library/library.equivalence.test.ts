@@ -29,7 +29,7 @@ import { AUTH_BRIDGE, RATE_LIMITER } from "../auth/auth.tokens"
 import { FallbackModule } from "../fallback/fallback.module"
 import { LibraryReviewsRepository } from "./library-reviews.repository"
 import { LibraryModule } from "./library.module"
-import { LIBRARY_DECISIONS, LIBRARY_DETAIL_STORE, LIBRARY_LOGO_STORE } from "./library.tokens"
+import { LIBRARY_DECISIONS, LIBRARY_DETAIL_STORE, LIBRARY_LOGO_STORE, LIBRARY_SYLLABUS_STORE } from "./library.tokens"
 
 const SESSION_ID = golden.sessionId
 const COOKIE = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
@@ -100,8 +100,11 @@ const row = (overrides: Partial<ReviewRow> = {}): ReviewRow => ({
   responsibleId: OTHER_LIBRARIAN,
   state: "pendiente",
   outcome: "pendiente",
+  syllabusState: "en_revision",
   ...overrides,
 })
+
+const syllabusStore = { revisions: async () => [], signedFacts: async () => ({ coordination: null, verification: null }) }
 
 function librarian(): FakeWorld {
   return {
@@ -311,7 +314,7 @@ async function legacy(call: Call): Promise<Response> {
   const decision = DECISION.exec(url.pathname)
   if (url.pathname === "/api/v1/library/reviews" && call.method === "GET") return libraryReviews(web, listingDeps)
   if (url.pathname === "/api/v1/library/history" && call.method === "GET") return libraryHistory(web, listingDeps)
-  if (detail && call.method === "GET") return libraryReviewDetail(web, decodeURIComponent(detail[1]), { bridge: state.bridge, store, libraryReviews: repository, logos })
+  if (detail && call.method === "GET") return libraryReviewDetail(web, decodeURIComponent(detail[1]), { bridge: state.bridge, store, libraryReviews: repository, logos, syllabusStore })
   if (decision && call.method === "POST") {
     const handler = decision[2] === "verify" ? verifyLibraryReview : commentLibraryReview
     return handler(web, decodeURIComponent(decision[1]), decisionDeps)
@@ -371,6 +374,8 @@ beforeAll(async () => {
     .useValue(repository)
     .overrideProvider(LIBRARY_DETAIL_STORE)
     .useValue(store)
+    .overrideProvider(LIBRARY_SYLLABUS_STORE)
+    .useValue(syllabusStore)
     .overrideProvider(LIBRARY_LOGO_STORE)
     .useValue(logos)
     .overrideProvider(LIBRARY_DECISIONS)

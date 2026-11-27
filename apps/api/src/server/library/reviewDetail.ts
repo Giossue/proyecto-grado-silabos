@@ -10,12 +10,17 @@ import { LIBRARY_COMMENT_REASONS } from "@silabos/shared/schemas/library"
 import { isoFromSeconds } from "../syllabus/draftField"
 import { dataGet } from "../syllabus/identificationCard"
 import { decisionBlock } from "../syllabus/policy"
-import { presentSnapshot, signingStatement, snapshotDefinition } from "../syllabus/snapshotDocuments"
-import { signatureSummary } from "../syllabus/syllabusDetail"
+import { presentSnapshot, signedDocumentVariables, signingStatement, snapshotDefinition, type SignatureRecord } from "../syllabus/snapshotDocuments"
+import { signatureSummary, type SyllabusDetailStore } from "../syllabus/syllabusDetail"
 import type { HistoryEntry, ReviewDetailStore, ReviewRevision } from "../syllabus/reviewDetails"
 import type { LibraryReviewRepository } from "./reviews"
 
-export type LibraryReviewDetailDeps = { store: ReviewDetailStore; libraryReviews: LibraryReviewRepository; logos: LogoStore }
+export type LibraryReviewDetailDeps = {
+  store: ReviewDetailStore
+  libraryReviews: LibraryReviewRepository
+  logos: LogoStore
+  syllabusStore: Pick<SyllabusDetailStore, "revisions" | "signedFacts">
+}
 
 const LIBRARY = "biblioteca"
 const COORDINATION = "coordinacion"
@@ -23,6 +28,22 @@ const COORDINATION = "coordinacion"
 function revisionStage(entry: HistoryEntry | undefined): string | null {
   if (entry?.approval) return null
   return entry?.library?.verifiedAt ? COORDINATION : LIBRARY
+}
+
+/** The whole signed syllabus, which Library reads only once Coordination has approved it. */
+async function approvedDocument(syllabusId: string, signatures: SignatureRecord[], deps: LibraryReviewDetailDeps): Promise<PhpRecord | null> {
+  const approved = (await deps.syllabusStore.revisions(syllabusId)).filter((revision) => revision.approval !== null).sort((left, right) => left.number - right.number).at(-1)
+  if (approved === undefined) return null
+  const stored = record(await deps.store.snapshot(approved.id))
+  const facts = await deps.syllabusStore.signedFacts(syllabusId, approved)
+  const variables = signedDocumentVariables(stored, { ...facts, submittedAt: approved.submittedAt, approval: approved.approval, signatures })
+  const snapshot = presentSnapshot({ ...stored, template_variables: variables })
+  return {
+    revision_id: approved.id,
+    approved_at: isoFromSeconds((approved.approval as { at: number }).at),
+    sections: isPhpArray(snapshot.sections) ? snapshot.sections : [],
+    template_variables: variables,
+  }
 }
 
 async function respond(build: () => Promise<PhpRecord>): Promise<Response> {
@@ -51,6 +72,7 @@ export async function libraryReviewPayload(request: Request, session: AppSession
     const snapshot = presentSnapshot(record(await deps.store.snapshot(bound.id)))
     const definition = snapshotDefinition(snapshot)
     const libraryKeys = list(definition.library_sections ?? [])
+    const document = syllabus.state === "aprobado" ? await approvedDocument(syllabus.id, signatures, deps) : null
     return {
       review: {
         syllabus_id: syllabus.id,
@@ -67,6 +89,7 @@ export async function libraryReviewPayload(request: Request, session: AppSession
         sent_by: submission.sentBy,
         state: submission.state,
         outcome: submission.state === "atendido" && typeof submission.outcome === "string" ? submission.outcome : null,
+        syllabus_state: syllabus.state,
         responsible,
         assigned_to_other: submission.state === "pendiente" && submission.responsibleId !== null && submission.responsibleId !== session.user.id,
         can_comment: reviewable,
@@ -76,7 +99,8 @@ export async function libraryReviewPayload(request: Request, session: AppSession
         signatures: signatureSummary(signatures),
         verified_at: submission.verifiedAt,
         verified_by: submission.verifiedBy,
-        approved_at: entry?.approval?.at ?? null,
+        approved_at: document?.approved_at ?? null,
+        approved_document: document,
         presentation: templatePresentationOf(definition, await presentationLogos(request, dataGet(syllabus.context, "career.faculty_id"), deps.logos)),
         template_variables: isPhpArray(snapshot.template_variables) ? snapshot.template_variables : [],
         sections: list(isPhpArray(snapshot.sections) ? snapshot.sections : []).filter((section) => isPhpArray(section) && libraryKeys.includes(record(section).key ?? null)),
