@@ -3,6 +3,7 @@ import { BLOCK_KEYS, CATALOG_FIELDS, defineBlock, given, isInt, MULTIPLES } from
 import { documentLines } from "./documentHtml"
 import { legacyUnitsBlock } from "./legacyUnits"
 import ruleCatalog from "./ruleCatalog.json"
+import { withoutRowIds } from "./templateInheritance"
 import { isList, isPhpArray, isRecord, list, phpCount, phpString, record, type PhpRecord } from "./phpValues"
 import { TemplateValidationError } from "./templateRuntime"
 import { definitionError } from "./templateStyle"
@@ -25,6 +26,7 @@ const SHARED: [string, string][] = [
   ["titulo", "title"],
   ["error", "errorMessage"],
   ["solo_si", "keep_if"],
+  ["desde", "copy_of"],
 ]
 const LEAF_KEYS: Record<string, string[]> = {
   [TEXT]: ["tipo", "max", "min"],
@@ -60,6 +62,8 @@ const NAMES: Record<string, string> = {
   initial: "al_empezar",
   items: "columnas",
   properties: "campos",
+  copy_of: "desde",
+  rows_from: "filas_desde",
 }
 
 type RouteKind = "plain" | "full" | "leaf" | "list" | "object"
@@ -119,6 +123,7 @@ function shortSchema(schema: PhpRecord): unknown {
   if (schema.type === "array" && items.type === "object" && Object.keys(items).every((key) => key === "type" || key === "properties")) {
     return {
       ...(has(shared, "titulo") ? { titulo: shared.titulo } : {}),
+      ...(has(schema, "rows_from") ? { filas_desde: schema.rows_from } : {}),
       filas: `${phpString(schema.minItems)}-${phpString(schema.maxItems)}`,
       ...(schema.initial !== schema.minItems ? { al_empezar: schema.initial } : {}),
       ...shared,
@@ -143,7 +148,7 @@ export function shortBlock(block: PhpRecord): PhpRecord {
   return {
     titulo: block.label,
     ...(phpCount(block.props ?? []) !== 0 ? { propiedades: shortFields(block.props) } : {}),
-    ...(phpCount(block.value ?? []) !== 0 ? { campos: shortFields(block.value) } : {}),
+    ...(phpCount(block.value ?? []) !== 0 ? { campos: shortFields(withoutRowIds(block.value)) } : {}),
     ...(phpCount(block.rules ?? []) !== 0 ? { reglas: list(block.rules).map(shortRule) } : {}),
     ...(catalog !== null ? { catalogo: { lista: given(catalog, "list"), columnas: shortCatalogColumns(given(catalog, "map")) } } : {}),
     diseño: documentLines({ type: "doc", content: block.layout }),
@@ -210,8 +215,8 @@ function expandSchema(raw: unknown, internal: string, short: string, routes: Rou
     return raw
   }
   const shared = SHARED.map(([key]) => key)
-  if (has(raw, "columnas") || has(raw, "filas")) {
-    onlyKeys(raw, [...shared, "filas", "al_empezar", "columnas"], short)
+  if (has(raw, "columnas") || has(raw, "filas") || has(raw, "filas_desde")) {
+    onlyKeys(raw, [...shared, "filas_desde", "filas", "al_empezar", "columnas"], short)
     routes.push([internal, short, "list"])
     if (!has(raw, "columnas")) definitionError(`${short}.columnas: escriba las columnas de cada fila.`)
     return {
@@ -220,6 +225,7 @@ function expandSchema(raw: unknown, internal: string, short: string, routes: Rou
       ...rows(given(raw, "filas"), `${short}.filas`),
       ...(has(raw, "al_empezar") ? { initial: raw.al_empezar } : {}),
       items: { type: "object", properties: expandFields(raw.columnas, `${internal}.items.properties`, `${short}.columnas`, routes) },
+      ...(has(raw, "filas_desde") ? { rows_from: raw.filas_desde } : {}),
     }
   }
   if (has(raw, "campos")) {

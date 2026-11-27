@@ -3,6 +3,7 @@ import { ruleFailures } from "@silabos/shared/lib/blocks/rules"
 import { holds } from "@silabos/shared/lib/blocks/condition"
 import { Scope } from "@silabos/shared/lib/blocks/scope"
 import type { BlockDefinition as LibBlockDefinition, BlockRule, Condition } from "@silabos/shared/lib/blocks/types"
+import { ROW_ID } from "@silabos/shared/lib/blocks/values"
 import { filledText, resolveBlock, toDocument } from "@silabos/shared/lib/blocks/walk"
 import {
   isList,
@@ -469,6 +470,25 @@ function emptyFor(schema: PhpRecord, props: PhpRecord): unknown {
   return null
 }
 
+const STORED_ROW_ID = /^[A-Za-z0-9_-]{1,64}$/
+
+function withRowIds(rows: PhpRecord[], received: unknown[]): PhpRecord[] {
+  const used = new Set<string>()
+  const kept = rows.map((_, index) => {
+    const id = at(received[index], ROW_ID)
+    if (typeof id !== "string" || !STORED_ROW_ID.test(id) || used.has(id)) return null
+    used.add(id)
+    return id
+  })
+  let number = 0
+  const free = (): string => {
+    let id = `r${++number}`
+    while (used.has(id)) id = `r${++number}`
+    return id
+  }
+  return rows.map((row, index) => ({ [ROW_ID]: kept[index] ?? free(), ...row }))
+}
+
 function schemaValue(schema: PhpRecord, raw: unknown, props: PhpRecord, fresh: boolean): unknown {
   const label = typeof schema.title === "string" ? schema.title : "Una celda"
   const error = typeof schema.errorMessage === "string" ? schema.errorMessage : null
@@ -498,7 +518,7 @@ function schemaValue(schema: PhpRecord, raw: unknown, props: PhpRecord, fresh: b
     const count = !givenList && fresh ? Number(schema.initial) : Math.max(items.length, Number(schema.minItems))
     const clean: unknown[] = []
     for (let index = 0; index < count; index++) clean.push(schemaValue(record(schema.items), items[index] ?? null, props, !givenList && fresh))
-    return clean
+    return schema.row_ids === true ? withRowIds(clean as PhpRecord[], items) : clean
   }
   return null
 }
@@ -962,9 +982,32 @@ const TABLES_FIXED = "Las tablas de este campo las define Administración: escri
 const BLOCKS_FIXED = "Los bloques de este campo los define Administración: no los agregue ni los quite."
 const VARIABLES_FIXED = "Use solo los datos del sistema que ya trae este campo en la plantilla."
 
+const HEADERS_FIXED = "Los encabezados de las tablas los define Administración: no los cambie ni los borre."
+
+function headersOf(node: unknown): PhpRecord[] {
+  return nodeType(node) === "tableHeader" ? [record(node)] : content(node).flatMap(headersOf)
+}
+
+function textIn(node: unknown): string {
+  if (nodeType(node) === "text") return phpString(at(node, "text"))
+  return content(node).map(textIn).join("")
+}
+
+function withTemplateHeaders(template: PhpRecord, document: PhpRecord): PhpRecord {
+  const headers = headersOf(template)
+  if (headers.length === 0 || headers.length !== headersOf(document).length) return document
+  let index = 0
+  const visit = (node: PhpRecord): PhpRecord => {
+    if (nodeType(node) === "tableHeader") return headers[index++]
+    return isList(node.content) ? { ...node, content: node.content.map((child) => visit(record(child))) } : node
+  }
+  return visit(document)
+}
+
 function assertCareerEdit(template: PhpRecord, document: PhpRecord, attribute: string, saving: boolean): void {
   if (!phpIdentical(blocksOf(template), blocksOf(document))) fail(BLOCKS_FIXED, attribute)
   if (!phpEquals(tablesOf(template), tablesOf(document))) fail(TABLES_FIXED, attribute)
+  if (saving && !phpEquals(headersOf(template).map(textIn), headersOf(document).map(textIn))) fail(HEADERS_FIXED, attribute)
   const known = variablesOf(template)
   if (saving && variablesOf(document).some((id) => !known.includes(id))) fail(VARIABLES_FIXED, attribute)
 }
@@ -1070,7 +1113,7 @@ function careerShape(definitionContent: unknown, value: unknown, definition: Tem
   if (matches(template, adopted, "career")) return seal(template, adopted)
   if (!saving && !editedCopy(value)) return seal(template, followCurrent(template, shaped))
   assertCareerEdit(template, shaped, attribute, saving)
-  const edited = withoutExtraTail(template, within(attribute, () => editedResponses(template, shaped, saving, true)))
+  const edited = withTemplateHeaders(template, withoutExtraTail(template, within(attribute, () => editedResponses(template, shaped, saving, true))))
   return saving ? { ...edited, attrs: { [EDITED]: true } } : edited
 }
 
@@ -1163,7 +1206,7 @@ function followShape(definitionContent: unknown, stored: unknown, definition: Te
   const template = responseTemplate(normalizeFieldDocument(definitionContent, definition))
   const adopted = adopt(template, document, false)
   if (matches(template, adopted, "career")) return adopted
-  return editedCopy(stored) ? editedResponses(template, document, false, false) : followCurrent(template, document)
+  return editedCopy(stored) ? withTemplateHeaders(template, editedResponses(template, document, false, false)) : followCurrent(template, document)
 }
 
 export function writable(definitionContent: unknown, definition: TemplateDefinition): boolean {

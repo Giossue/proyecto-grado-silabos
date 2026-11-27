@@ -31,7 +31,7 @@ import {
   type TextSchema,
   type ValueSchema,
 } from "@silabos/shared/lib/blocks/types"
-import { emptyValue, getAt, setAt, settle } from "@silabos/shared/lib/blocks/values"
+import { emptyRow, emptyValue, getAt, isBlankRow, ROW_ID, setAt, settle } from "@silabos/shared/lib/blocks/values"
 import { cn } from "@/lib/utils"
 
 type Scalar = TextSchema | NumberSchema | ChoiceSchema
@@ -214,7 +214,11 @@ export function BlockForm({ id, kind, blockProps, value, disabled = false, requi
     </IconTooltip>
   )
 
-  const isBlank = (row: unknown): boolean => isRecord(row) && Object.values(row).every((cell) => String(cell ?? "").trim() === "")
+  const cleared = (schema: ListSchema, row: unknown): unknown => {
+    const empty = emptyValue(schema.items, blockProps)
+    const id = schema.row_ids && isRecord(row) ? row[ROW_ID] : undefined
+    return id === undefined ? empty : { [ROW_ID]: id, ...(empty as Record<string, unknown>) }
+  }
 
   const clearButton = (schema: ListSchema, path: Path, index: number, name: string, tip = name): ReactNode => (
     <IconTooltip label={`Limpiar ${tip}`}>
@@ -223,9 +227,9 @@ export function BlockForm({ id, kind, blockProps, value, disabled = false, requi
           type="button"
           variant="ghost"
           size="icon-sm"
-          disabled={disabled || isBlank(listOf(path)[index])}
+          disabled={disabled || isBlankRow(listOf(path)[index])}
           aria-label={`Limpiar ${name}`}
-          onClick={() => write([...path, index], emptyValue(schema.items, blockProps))}
+          onClick={() => write([...path, index], cleared(schema, listOf(path)[index]))}
         >
           <Eraser aria-hidden="true" />
         </Button>
@@ -234,7 +238,7 @@ export function BlockForm({ id, kind, blockProps, value, disabled = false, requi
   )
 
   const addButton = (schema: ListSchema, path: Path, name: string): ReactNode => (
-    <Button type="button" variant="outline" size="sm" className="w-fit" disabled={!canAdd(path, schema)} onClick={() => write(path, [...listOf(path), emptyValue(schema.items, blockProps)])}>
+    <Button type="button" variant="outline" size="sm" className="w-fit" disabled={!canAdd(path, schema)} onClick={() => write(path, [...listOf(path), emptyRow(schema, blockProps)])}>
       <Plus data-icon="inline-start" aria-hidden="true" />
       {`Agregar ${name}`}
     </Button>

@@ -1,8 +1,20 @@
 import { holds } from './condition';
 import { Scope, type Path } from './scope';
-import { isChoice, type ValueSchema } from './types';
+import { isChoice, type ListSchema, type ValueSchema } from './types';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+
+export const ROW_ID = '_id';
+
+const newRowId = (): string => `w${Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+
+export const emptyRow = (schema: ListSchema, props: Record<string, unknown>): unknown => {
+    const row = emptyValue(schema.items, props);
+    return schema.row_ids && isRecord(row) ? { [ROW_ID]: newRowId(), ...row } : row;
+};
+
+export const isBlankRow = (row: unknown): boolean =>
+    isRecord(row) && Object.entries(row).every(([key, cell]) => key === ROW_ID || String(cell ?? '').trim() === '');
 
 export const emptyValue = (schema: ValueSchema, props: Record<string, unknown>): unknown => {
     switch (schema.type) {
@@ -13,7 +25,7 @@ export const emptyValue = (schema: ValueSchema, props: Record<string, unknown>):
         case 'object':
             return Object.fromEntries(Object.entries(schema.properties).map(([key, field]) => [key, emptyValue(field, props)]));
         case 'array':
-            return Array.from({ length: schema.minItems }, () => emptyValue(schema.items, props));
+            return Array.from({ length: schema.minItems }, () => emptyRow(schema, props));
     }
 };
 
@@ -28,7 +40,7 @@ const keep = (schema: ValueSchema, value: unknown, props: Record<string, unknown
     }
     if (schema.type === 'array') {
         const items = Array.isArray(value) ? value.map((item) => keep(schema.items, item, props)) : [];
-        while (items.length < schema.minItems) items.push(emptyValue(schema.items, props));
+        while (items.length < schema.minItems) items.push(emptyRow(schema, props));
         return items;
     }
     return value;

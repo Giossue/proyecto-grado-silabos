@@ -207,10 +207,11 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
                     <TableCell data-card-hide="true">{uploadedOn(document)}</TableCell>
                     {manages ? (
                       <TableCell className="text-center" data-card-no-label="true">
-                        <Button type="button" variant="ghost" size="sm" aria-label={`Actualizar ${document.title}`} onClick={() => setEditing(document)}>
-                          <Pencil data-icon="inline-start" aria-hidden="true" />
-                          Actualizar
-                        </Button>
+                        <IconTooltip label="Actualizar">
+                          <Button type="button" variant="ghost" size="icon-sm" aria-label={`Actualizar ${document.title}`} onClick={() => setEditing(document)}>
+                            <Pencil aria-hidden="true" />
+                          </Button>
+                        </IconTooltip>
                         <IconTooltip label="Eliminar">
                           <Button
                             type="button"

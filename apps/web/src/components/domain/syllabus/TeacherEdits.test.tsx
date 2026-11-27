@@ -1,7 +1,9 @@
+import { createRef } from "react"
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import type { SyllabusDetail, SyllabusField } from "@/api/syllabi"
 import { SyllabusTeacherForm } from "@/components/domain/syllabus/SyllabusTeacherForm"
+import { FreeTextEditor, type FreeTextEditorHandle } from "@/components/domain/syllabus/FreeTextEditor"
 import { TeacherEditsToggle } from "@/components/domain/syllabus/TeacherEditsToggle"
 import { keepTeacherEdits, withoutDocumentMarks } from "@/lib/teacherEdits"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
@@ -49,5 +51,32 @@ describe("la casilla de Coordinación", () => {
     expect(withoutDocumentMarks(marked)).toEqual(doc("Nuevo"))
     expect(keepTeacherEdits(space, true).attrs).toBeUndefined()
     expect(keepTeacherEdits(marked, false).attrs).toBeUndefined()
+  })
+})
+
+describe("los encabezados de las tablas en el editor", () => {
+  it("no dejan escribir ni borrar, y las celdas sí", async () => {
+    const paragraph = (text: string): DocumentNode => ({ type: "paragraph", content: [{ type: "text", text }] })
+    const grid: DocumentNode = { type: "doc", content: [{ type: "table", content: [
+      { type: "tableRow", content: [{ type: "tableHeader", content: [paragraph("Encabezado")] }] },
+      { type: "tableRow", content: [{ type: "tableCell", content: [paragraph("Celda")] }] },
+    ] }] }
+    const ref = createRef<FreeTextEditorHandle>()
+    render(<FreeTextEditor id="t" label="Tabla" value={grid} spaces allowTables={false} ref={ref} />)
+    await vi.waitFor(() => expect(ref.current?.editor).toBeTruthy())
+    const editor = ref.current!.editor!
+    const positionOf = (text: string): number => {
+      let found = -1
+      editor.state.doc.descendants((node, position) => {
+        if (node.isText && node.text === text) found = position
+      })
+      return found
+    }
+    editor.commands.insertContentAt(positionOf("Encabezado"), "X")
+    editor.commands.deleteRange({ from: positionOf("Encabezado"), to: positionOf("Encabezado") + 3 })
+    expect(editor.getText()).toContain("Encabezado")
+    expect(editor.getText()).not.toContain("XEncabezado")
+    editor.commands.insertContentAt(positionOf("Celda"), "Y")
+    expect(editor.getText()).toContain("YCelda")
   })
 })

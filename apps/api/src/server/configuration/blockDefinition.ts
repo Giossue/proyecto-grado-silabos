@@ -8,6 +8,7 @@ const KEY = /^[a-z][a-z0-9_]{0,40}$/
 const KIND = /^[a-z][a-z0-9_]{0,40}$/
 const CODE = /^[a-z][a-z0-9_]{0,60}$/
 const NAME = /^[a-z][a-z0-9_]{0,40}$/
+const LIST_REFERENCE = /^[a-z][a-z0-9_]{0,40}\.[a-z][a-z0-9_]{0,40}$/
 const PATH = /^(\{[a-z][a-z0-9_.]*\}|[a-z][a-z0-9_]*|\*)(\.(\{[a-z][a-z0-9_.]*\}|[a-z][a-z0-9_]*|\*))*$/
 const TYPES = ["string", "number", "object", "array"]
 export const MULTIPLES = [1, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]
@@ -103,11 +104,16 @@ function arraySchema(schema: PhpRecord, where: string): PhpRecord {
   const max = integer(given(schema, "maxItems") ?? 100, `${where}.maxItems`, Math.max(1, min), 100)
   const items = given(schema, "items")
   if (!isPhpArray(items)) definitionError(`${where}.items: falta el esquema de cada elemento.`)
+  const source = given(schema, "rows_from")
+  if (source !== null && (typeof source !== "string" || !pcreMatch(LIST_REFERENCE, source))) {
+    definitionError(`${where}.rows_from: escriba la tabla y su lista como «tabla.lista».`)
+  }
   return {
     minItems: min,
     maxItems: max,
     initial: integer(given(schema, "initial") ?? min, `${where}.initial`, min, max),
     items: schemaOf(items, `${where}.items`, false),
+    ...(source === null ? {} : { rows_from: source }),
   }
 }
 
@@ -121,6 +127,11 @@ function schemaOf(schema: unknown, where: string, props: boolean): PhpRecord {
     if (isset(raw, name)) clean[name] = text(raw[name], `${where}.${name}`, 300)
   }
   if (isset(raw, "keep_if")) clean.keep_if = defineBlockCondition(raw.keep_if, `${where}.keep_if`)
+  if (isset(raw, "copy_of")) {
+    if (props) definitionError(`${where}: las propiedades no admiten «desde».`)
+    if (typeof raw.copy_of !== "string" || !pcreMatch(KEY, raw.copy_of)) definitionError(`${where}.copy_of: escriba la clave de la columna que se copia.`)
+    clean.copy_of = raw.copy_of
+  }
   if (type === "string") {
     if (isset(raw, "oneOf")) return { ...clean, oneOf: options(raw.oneOf, `${where}.oneOf`) }
     return {

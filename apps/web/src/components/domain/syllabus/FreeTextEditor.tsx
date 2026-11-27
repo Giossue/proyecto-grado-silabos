@@ -72,16 +72,16 @@ const OneSpace = Extension.create({
   ],
 })
 
-type ShapeNode = { type: { name: string }; attrs: Record<string, unknown>; descendants: (visit: (node: ShapeNode) => boolean | void) => void }
+type ShapeNode = { type: { name: string }; attrs: Record<string, unknown>; textContent: string; descendants: (visit: (node: ShapeNode) => boolean | void) => void }
 
-// Tables and blocks that come with the template keep their shape; only what is written inside the cells changes.
+// Tables and blocks that come with the template keep their shape and headers; only what is written inside the cells changes.
 const fixedShape = (document: ShapeNode): string => {
   const parts: unknown[] = []
   document.descendants((node) => {
     if (node.type.name === "documentBlock") parts.push(["block", node.attrs.kind, node.attrs.props])
     if (["table", "tableRow"].includes(node.type.name)) parts.push(node.type.name)
     if (["tableCell", "tableHeader"].includes(node.type.name)) {
-      parts.push([node.type.name, node.attrs.colspan ?? 1, node.attrs.rowspan ?? 1])
+      parts.push([node.type.name, node.attrs.colspan ?? 1, node.attrs.rowspan ?? 1, node.type.name === "tableHeader" ? node.textContent : null])
       return false
     }
   })

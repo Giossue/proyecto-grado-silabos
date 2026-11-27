@@ -1,6 +1,7 @@
 import { defineBlock, given, pcreMatch } from "./blockDefinition"
 import { isList, isPhpArray, isRecord, isScalar, list, mbStrlen, phpIntCast, phpString, phpTrim, record, type PhpRecord } from "./phpValues"
 import { guardTable } from "./repeatableTable"
+import { linkedBlocks } from "./templateInheritance"
 import { defineAnyBlock } from "./templateShortForm"
 import { normalizeTemplateDocument, type TemplateDefinition } from "./templateRuntime"
 import { defineDocumentStyle, definitionError } from "./templateStyle"
@@ -126,11 +127,12 @@ export function defineTemplate(raw: unknown, sections: DraftSectionSource[] = []
   if (!isObjectLike(rawBlocks)) definitionError("«blocks» debe ser un objeto con una definición por bloque.")
   const blocks: Record<string, PhpRecord> = {}
   for (const [kind, block] of entriesOf(rawBlocks)) blocks[kind] = defineAnyBlock(kind, block, keys)
+  const linked = linkedBlocks(blocks)
   const document = defineDocumentStyle(given(raw, "document") ?? [])
   const requiredSections = sectionKeys(given(raw, "required_sections") ?? [], "required_sections")
   const librarySections = sectionKeys(given(raw, "library_sections") ?? [], "library_sections")
   const teacher = teacherFields(given(raw, "teacher_fields") ?? [], sections)
-  const context: TemplateDefinition = { document: {}, variables: {}, blocks }
+  const context: TemplateDefinition = { document: {}, variables: {}, blocks: linked }
   const presets = definePresets(given(raw, "presets") ?? [], sections).map((preset) => {
     if (!isPhpArray(preset.content)) throw new TypeError("TemplateDocument::normalize(): Argument #1 ($document) must be of type array")
     return { ...preset, content: normalizeTemplateDocument(preset.content, keys, context) }
@@ -139,7 +141,7 @@ export function defineTemplate(raw: unknown, sections: DraftSectionSource[] = []
     response_policy: "protected",
     document,
     variables,
-    blocks,
+    blocks: linked,
     required_sections: requiredSections,
     library_sections: librarySections,
     presets,
@@ -155,7 +157,7 @@ export function withBlocks(definition: TemplateDefinition, changes: unknown): Te
     guardTable(kind, Object.prototype.hasOwnProperty.call(blocks, kind) ? record(blocks[kind]) : null, changed, variables)
     blocks[kind] = changed
   }
-  return { ...definition, blocks }
+  return { ...definition, blocks: linkedBlocks(blocks) }
 }
 
 function withLimits(schema: PhpRecord, path: string[], limits: ListLimit): PhpRecord {
@@ -199,6 +201,6 @@ export function withListLimits(definition: TemplateDefinition, lists: ListLimit[
   }
   const variables = Object.keys(definition.variables)
   for (const kind of changed) blocks[kind] = defineBlock(kind, blocks[kind], variables)
-  return { ...definition, blocks }
+  return { ...definition, blocks: linkedBlocks(blocks) }
 }
 

@@ -18,7 +18,7 @@ import { ruleFailures, ruleResults } from "@silabos/shared/lib/blocks/rules"
 import { blockDefinition, templateRuntime } from "@/lib/blocks/runtime"
 import { Scope, type Path } from "@silabos/shared/lib/blocks/scope"
 import { isChoice, isText, numberDigits, numberText, optionTitle, type BlockDefinition, type ListSchema, type ValueSchema } from "@silabos/shared/lib/blocks/types"
-import { emptyValue, getAt, setAt, settle } from "@silabos/shared/lib/blocks/values"
+import { emptyRow, emptyValue, getAt, setAt, settle } from "@silabos/shared/lib/blocks/values"
 import { resolveBlock, toDocument, type ResolvedNode } from "@silabos/shared/lib/blocks/walk"
 import type { DocumentNode } from "@silabos/shared/lib/templateDocument"
 
@@ -212,7 +212,7 @@ export function DocumentBlockContent({ kind, blockProps, value, mode = "read", l
               className="w-fit"
               disabled={!canAdd(path, schema)}
               aria-label={`Agregar ${schema.title ?? "fila"}${where ? ` (${where})` : ""}`}
-              onClick={() => write(path, [...listOf(path), emptyValue(schema.items, blockProps)])}
+              onClick={() => write(path, [...listOf(path), emptyRow(schema, blockProps)])}
             >
               <Plus data-icon="inline-start" aria-hidden="true" />
               {`Agregar ${schema.title ?? "fila"}`}

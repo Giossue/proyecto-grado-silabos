@@ -139,3 +139,31 @@ describe("un campo que es entero «Texto libre» se escribe con formato", () => 
     expect(JSON.stringify(field.template)).toContain("response")
   })
 })
+
+describe("los encabezados de las tablas no se pueden cambiar", () => {
+  const cell = (type: string, text: string): PhpRecord => ({ type, content: [text === "" ? { type: "paragraph", attrs: { textAlign: "left" } } : line(text)] })
+  const grid = (header: string, body: string): PhpRecord => ({
+    type: "doc",
+    content: [{ type: "table", content: [{ type: "tableRow", content: [cell("tableHeader", header)] }, { type: "tableRow", content: [cell("tableCell", body)] }] }],
+  })
+  const base = grid("Resultados de aprendizaje", "Fijo")
+
+  it("Coordinación no puede guardar un encabezado cambiado, pero sí las celdas", () => {
+    expect(() => careerResponse(base, grid("Resultados de aprendizaj", "Fijo"), definition)).toThrow()
+    expect(() => careerResponse(base, grid("", "Fijo"), definition)).toThrow()
+    expect(textOf(careerResponse(base, grid("Resultados de aprendizaje", "Otra celda"), definition))).toContain("Otra celda")
+  })
+
+  it("lo que ya se guardó con un encabezado recortado se lee con el de la plantilla", () => {
+    const stored = { ...grid("Resultados de aprendizaj", "Otra celda"), attrs: { edited: true } }
+    const read = textOf(followTemplate(base, stored, definition))
+    expect(read).toContain("Resultados de aprendizaje")
+    expect(read).toContain("Otra celda")
+    expect(textOf(careerResponse(base, stored, definition, "value", false))).toContain("Resultados de aprendizaje")
+  })
+
+  it("el docente con permiso de editar tampoco puede cambiarlos", () => {
+    const template = careerResponse(base, marked(base), definition)
+    expect(() => fieldResponseNormalize(template, grid("Otro título", "Fijo"), definition)).toThrow()
+  })
+})
