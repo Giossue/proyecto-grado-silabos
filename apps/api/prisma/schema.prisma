@@ -407,27 +407,6 @@ model mensajes_ia {
   @@index([sesion_ia_id, creado_en])
 }
 
-model mensajes_ia_plantilla {
-  mensaje_ia_plantilla_id String                   @id @db.Uuid
-  plantilla_id            String                   @db.Uuid
-  usuario_id              String                   @db.Uuid
-  contenido_mensaje       Json
-  rol                     String                   @db.VarChar(20)
-  estado                  String                   @db.VarChar(20)
-  codigo_error            String?
-  completado_en           DateTime?                @db.Timestamptz(6)
-  clave_idempotencia      String?
-  enviado_en              DateTime                 @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  ocultado_en             DateTime?                @db.Timestamptz(6)
-  actualizado_en          DateTime                 @default(now()) @db.Timestamptz(6)
-  plantilla_silabo        plantilla_silabo         @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "mensajes_ia_plantilla_plantilla_id_fk")
-  usuarios                usuarios                 @relation(fields: [usuario_id], references: [usuario_id], onUpdate: NoAction, map: "mensajes_ia_plantilla_usuario_id_fk")
-  propuestas_ia_plantilla propuestas_ia_plantilla?
-
-  @@index([plantilla_id, usuario_id, enviado_en])
-  @@index([usuario_id])
-}
-
 model notificaciones {
   notificacion_id      String               @id @db.Uuid
   usuario_id           String               @db.Uuid
@@ -481,42 +460,15 @@ model periodos_academicos {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model plantilla_silabo {
-  plantilla_id            String                    @id @db.Uuid
-  plantilla_modificada_en DateTime?                 @db.Timestamptz(6)
-  definicion_plantilla    Json                      @default("{}") @db.Json
-  creado_en               DateTime                  @default(now()) @db.Timestamptz(6)
-  actualizado_en          DateTime                  @default(now()) @db.Timestamptz(6)
+  plantilla_id            String                @id @db.Uuid
+  plantilla_modificada_en DateTime?             @db.Timestamptz(6)
+  definicion_plantilla    Json                  @default("{}") @db.Json
+  creado_en               DateTime              @default(now()) @db.Timestamptz(6)
+  actualizado_en          DateTime              @default(now()) @db.Timestamptz(6)
   campos_plantilla        campos_plantilla[]
   definiciones_campo      definiciones_campo[]
-  mensajes_ia_plantilla   mensajes_ia_plantilla[]
-  propuestas_ia_plantilla propuestas_ia_plantilla[]
   secciones_plantilla     secciones_plantilla[]
   sesiones_ia             sesiones_ia[]
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model propuestas_ia_plantilla {
-  propuesta_ia_plantilla_id                                 String                @id @db.Uuid
-  plantilla_id                                              String                @db.Uuid
-  mensaje_ia_plantilla_id                                   String                @unique(map: "propuestas_ia_plantilla_mensaje_ia_plantilla_id_unica") @db.Uuid
-  solicitada_por                                            String                @db.Uuid
-  estructura_propuesta                                      Json
-  cambios_propuesta                                         Json
-  huella_plantilla_base                                     String                @db.Char(64)
-  version_borrador_propuesta                                String                @db.VarChar(100)
-  estado_propuesta                                          String                @default("pendiente") @db.VarChar(20)
-  decidida_por                                              String?               @db.Uuid
-  decidida_en                                               DateTime?             @db.Timestamptz(6)
-  creada_en                                                 DateTime              @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  actualizado_en                                            DateTime              @default(now()) @db.Timestamptz(6)
-  usuarios_propuestas_ia_plantilla_decidida_porTousuarios   usuarios?             @relation("propuestas_ia_plantilla_decidida_porTousuarios", fields: [decidida_por], references: [usuario_id], onDelete: Restrict, onUpdate: NoAction, map: "propuestas_ia_plantilla_decidida_por_fk")
-  mensajes_ia_plantilla                                     mensajes_ia_plantilla @relation(fields: [mensaje_ia_plantilla_id], references: [mensaje_ia_plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "propuestas_ia_plantilla_mensaje_ia_plantilla_id_fk")
-  plantilla_silabo                                          plantilla_silabo      @relation(fields: [plantilla_id], references: [plantilla_id], onDelete: Cascade, onUpdate: NoAction, map: "propuestas_ia_plantilla_plantilla_id_fk")
-  usuarios_propuestas_ia_plantilla_solicitada_porTousuarios usuarios              @relation("propuestas_ia_plantilla_solicitada_porTousuarios", fields: [solicitada_por], references: [usuario_id], onUpdate: NoAction, map: "propuestas_ia_plantilla_solicitada_por_fk")
-
-  @@index([decidida_por])
-  @@index([plantilla_id, estado_propuesta])
-  @@index([solicitada_por])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -666,10 +618,7 @@ model usuarios {
   firmas_silabo                                                                    firmas_silabo[]
   invitaciones_activacion_invitaciones_activacion_emitida_por_usuario_idTousuarios invitaciones_activacion[] @relation("invitaciones_activacion_emitida_por_usuario_idTousuarios")
   invitaciones_activacion_invitaciones_activacion_usuario_idTousuarios             invitaciones_activacion[] @relation("invitaciones_activacion_usuario_idTousuarios")
-  mensajes_ia_plantilla                                                            mensajes_ia_plantilla[]
   notificaciones                                                                   notificaciones[]
-  propuestas_ia_plantilla_propuestas_ia_plantilla_decidida_porTousuarios           propuestas_ia_plantilla[] @relation("propuestas_ia_plantilla_decidida_porTousuarios")
-  propuestas_ia_plantilla_propuestas_ia_plantilla_solicitada_porTousuarios         propuestas_ia_plantilla[] @relation("propuestas_ia_plantilla_solicitada_porTousuarios")
   revisiones_coordinacion                                                          revisiones_coordinacion[]
   revisiones_silabo_revisiones_silabo_correccion_solicitada_porTousuarios          revisiones_silabo[]       @relation("revisiones_silabo_correccion_solicitada_porTousuarios")
   revisiones_silabo_revisiones_silabo_enviado_porTousuarios                        revisiones_silabo[]       @relation("revisiones_silabo_enviado_porTousuarios")

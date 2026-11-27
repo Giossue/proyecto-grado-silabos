@@ -18,8 +18,8 @@ Datos ya comprobados: `syncDocumentOn` (`apps/api/src/modules/template/template-
 ## Tasks
 
 - [x] T1 (S3, S4) — permiso como columna del campo — en línea — RED 16 pruebas, GREEN; migración `20261127020000` probada en copia y aplicada en local; commit `0b892a9`.
-- [x] T2 (S2, S4, S5) — IA del docente en las dos tablas, con las propuestas dentro del mensaje — en línea — RED y GREEN; migración `20261127030000` probada en copia; evidencia en L7.
-- [ ] T3 (S2, S4, S5) — asistente de plantilla de Administración en las mismas dos tablas — en línea — pendiente.
+- [x] T2 (S2, S4, S5) — IA del docente en las dos tablas, con las propuestas dentro del mensaje — en línea — RED y GREEN; migración `20261127030000` probada en copia y aplicada en local; commit `c20d8cc`.
+- [x] T3 (S2, S4, S5) — asistente de plantilla de Administración en las mismas dos tablas — en línea — RED 12 pruebas, GREEN; migración `20261127040000` probada en copia; evidencia en L8.
 - [ ] T4 (S2–S6) — documentación, verificación completa, migración probada sobre copia de la base local y reinicio de `silabos-worker` — en línea — pendiente.
 
 Riesgo: item 1 (la migración traslada y borra datos guardados).
@@ -33,3 +33,4 @@ Riesgo: item 1 (la migración traslada y borra datos guardados).
 - L5 (2026-11-27) — Entrega en tres migraciones, una por tarea (T1, T2, T3), cada una con su traslado de datos antes de borrar.
 - L6 (2026-11-27) — T1. RED: 16 pruebas fallaron antes del cambio; GREEN después. Migración en una copia de la base local: 17 permisos iguales, `plantilla_modificada_en` y `actualizado_en` de los campos sin cambios; cambiar el permiso no marca la plantilla y renombrar un campo sí. Con el código real sobre la copia: apagar y encender, importar el JSON (campos con identificadores nuevos) y restablecer el formato conservan los 17. Quedan 37 tablas del sistema tras T1.
 - L7 (2026-11-27) — T2. Sobre una copia de la base local: la conversación, sus 6 propuestas (1 aceptada, 5 pendientes) y el historial para la IA se leen idénticos con el código anterior (antes de migrar) y con el nuevo (después). Con el código nuevo sobre la copia: reutiliza la conversación, impide dos pedidos abiertos y claves repetidas, marca «reemplazada» solo el mismo destino y abre otra conversación para otro sílabo. `prisma migrate diff` sin diferencias en las tablas nuevas.
+- L8 (2026-11-27) — T3. La base local no tenía conversaciones de Administración, así que en una copia se crearon con el código anterior (18 mensajes, 3 personas, 2 chats cerrados, propuestas aplicada, reemplazada, pendiente y descartada, y una conversación con dos pedidos abiertos). Conversación, propuestas, última propuesta, historial, claves y respuestas se leen idénticos antes y después de migrar; el pedido abierto antiguo repetido quedó fallido. Con el código nuevo sobre la copia pasan 15 comprobaciones (aplicar, descartar, Nuevo chat, claves de chats cerrados, un solo pedido abierto y separación entre docente y Administración). Quedan 35 tablas del sistema. `prisma migrate diff` solo repite el aviso conocido del índice parcial de pedido abierto.
