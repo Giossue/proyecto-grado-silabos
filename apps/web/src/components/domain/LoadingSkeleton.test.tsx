@@ -163,13 +163,13 @@ describe("LoadingSkeleton", () => {
     expect(container.querySelector('[data-skeleton="settings-field"]')).toBeNull()
   })
 
-  it("la lista por ciclos con selección anticipa la casilla de todas y la de cada ciclo", () => {
-    const selectable = render(<LoadingSkeleton variant="accordion" rows={3} filters={2} selectable />).container
-    expect(all(selectable, '[data-skeleton="accordion-select-all"]')).toHaveLength(1)
+  it("la lista por ciclos anticipa la casilla de cada ciclo, sin buscador ni casilla para todas", () => {
+    const selectable = render(<LoadingSkeleton variant="accordion" rows={3} selectable />).container
+    expect(selectable.querySelector('[data-skeleton="table-toolbar"], [data-skeleton="accordion-select-all"]')).toBeNull()
     expect(all(selectable, '[data-skeleton="accordion-row"] [data-skeleton="accordion-checkbox"]')).toHaveLength(3)
 
-    const plain = render(<LoadingSkeleton variant="accordion" rows={3} filters={2} />).container
-    expect(plain.querySelector('[data-skeleton="accordion-select-all"], [data-skeleton="accordion-checkbox"]')).toBeNull()
+    const plain = render(<LoadingSkeleton variant="accordion" rows={3} />).container
+    expect(plain.querySelector('[data-skeleton="accordion-checkbox"]')).toBeNull()
   })
 
   it("las tarjetas de sílabo llevan la paginación de la pantalla", () => {

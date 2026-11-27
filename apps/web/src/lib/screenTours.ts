@@ -94,7 +94,6 @@ export const screenTours: Record<string, TourStep[]> = {
   '/coordinacion/proyecto-carrera': [
     step(TABS, 'Materias y documentos', 'Materias y archivos para sus docentes', 'bottom'),
     step(MALLA, 'Malla', 'Elija qué malla ver', 'bottom'),
-    step(FILTERS, 'Buscar', 'Encuentre una materia por nombre, ciclo o estado', 'bottom'),
     step('[data-tour="career-select"]', 'Varias a la vez', 'Seleccione materias y pulse «Llenar un campo». Reemplaza lo que tengan', 'bottom'),
     step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenarla', 'top'),
     step(ACTIONS, 'Subir documento', 'Suba un archivo para sus docentes', 'left'),
@@ -173,7 +172,6 @@ for (const screen of ['malla', 'materias-asignaciones', 'docentes', 'proyecto-ca
 }
 screenTours['/admin/carreras/:career/proyecto-carrera'] = [
   step(MALLA, 'Malla', 'Elija qué malla ver', 'bottom'),
-  step(FILTERS, 'Buscar', 'Encuentre una materia por nombre, ciclo o estado', 'bottom'),
   step('[data-tour="career-select"]', 'Varias a la vez', 'Seleccione materias y pulse «Llenar un campo». Reemplaza lo que tengan', 'bottom'),
   step('[data-tour="career-subjects"]', 'Materias por ciclo', 'Pulse una materia para llenarla', 'top'),
 ];

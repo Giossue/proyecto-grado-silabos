@@ -145,23 +145,6 @@ function LoadingBody({
   if (variant === "accordion") {
     return (
       <div className="flex min-w-0 flex-col gap-4">
-        <div data-skeleton="table-toolbar" className="flex flex-col gap-3 lg:flex-row lg:items-end">
-          <Skeleton className="h-9 w-full lg:min-w-64 lg:flex-1" />
-          {filters > 0 ? <Skeleton className="h-9 w-full sm:hidden" /> : null}
-          {filters > 0 ? (
-            <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:flex lg:items-end">
-              {range(filters).map((filter) => (
-                <Skeleton key={filter} className="h-9 w-full lg:w-44" />
-              ))}
-            </div>
-          ) : null}
-        </div>
-        {selectable ? (
-          <div data-skeleton="accordion-select-all" className="flex items-center gap-3 px-4">
-            <Skeleton className="size-4" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-        ) : null}
         <div className="flex flex-col gap-2">
           {range(Math.max(1, rows)).map((group) => (
             <div key={group} data-skeleton="accordion-row" className="flex items-center gap-2 rounded-md bg-card px-4 py-3 ring-1 ring-surface-ring">

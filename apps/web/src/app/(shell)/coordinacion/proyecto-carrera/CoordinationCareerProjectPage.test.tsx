@@ -247,18 +247,14 @@ describe("Proyecto de carrera", () => {
     expect(checked("Seleccionar las materias del ciclo 1")).toBe("false")
   })
 
-  it("«Seleccionar todas» toma solo las que se ven y conserva las ya seleccionadas", async () => {
+  it("no tiene buscador, filtros ni una casilla para seleccionar todas", async () => {
     await mountPage()
-    await mark("Seleccionar las materias del ciclo 1")
-    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "estructuras" } })
-    await flush()
-    expect(checked("Seleccionar todas las materias que se ven")).toBe("false")
 
-    await mark("Seleccionar todas las materias que se ven")
-
-    expect(selectionBar()!.textContent).toContain("3 materias seleccionadas")
-    await mark("Seleccionar todas las materias que se ven")
-    expect(selectionBar()!.textContent).toContain("2 materias seleccionadas")
+    expect(screen.queryByRole("searchbox")).toBeNull()
+    expect(screen.queryByRole("combobox", { name: "Ciclo" })).toBeNull()
+    expect(screen.queryByRole("combobox", { name: "Estado del proyecto de carrera" })).toBeNull()
+    expect(document.body.textContent).not.toContain("Seleccionar todas")
+    expect(checkbox("Seleccionar las materias del ciclo 1")).not.toBeNull()
   })
 
   it("después de llenar avisa, quita la selección y vuelve a leer las materias", async () => {
@@ -292,13 +288,12 @@ describe("Proyecto de carrera, una malla a la vez", () => {
     vi.mocked(getScheduledSubjects).mockResolvedValue(scheduled(TWO_MALLAS))
   })
 
-  it("abre la malla vigente y muestra solo sus ciclos, materias, contadores y ciclos del filtro", async () => {
+  it("abre la malla vigente y muestra solo sus ciclos, materias y contadores", async () => {
     await mountPage()
 
     expect(getMallas).toHaveBeenCalledWith(null)
     expect(selector()!.textContent).toBe("Malla SW-9 · Vigente · 3 ciclos")
     expect(cycleRows()).toEqual(["Ciclo 11/2", "Ciclo 21/1"])
-    expect(await optionsOf("Ciclo")).toEqual(["Todos los ciclos", "1", "2"])
     await openCycles()
     expect(cardNames()).toEqual(["Programación Básica", "Matemática Discreta", "Estructuras de Datos"])
     expect(document.querySelector('[data-slot="card"]')!.textContent).not.toContain("Malla")
@@ -330,26 +325,12 @@ describe("Proyecto de carrera, una malla a la vez", () => {
 
     expect(cycleRows()).toEqual(["Ciclo 31/1", "Ciclo 50/1"])
     expect(cardNames()).toEqual([])
-    expect(await optionsOf("Ciclo")).toEqual(["Todos los ciclos", "3", "5"])
     await openCycles()
     expect(cardNames()).toEqual(["Algoritmos", "Lógica"])
     expect(cardLinks()).toEqual(["/coordinacion/proyecto-carrera/sw-8/v1", "/coordinacion/proyecto-carrera/sw-8/v2"])
     expect(navigation.replace).toHaveBeenLastCalledWith("/coordinacion/proyecto-carrera?malla=sw-8")
     expect(navigation.push).not.toHaveBeenCalled()
     expect(getScheduledSubjects).toHaveBeenCalledTimes(1)
-  })
-
-  it("al cambiar de malla se quitan la búsqueda y los filtros de la anterior", async () => {
-    await mountPage()
-    await choose(screen.getByRole("combobox", { name: "Ciclo" }), "2")
-    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "estructuras" } })
-    await flush()
-
-    await chooseMalla("SW-8")
-
-    expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("")
-    expect(screen.getByRole("combobox", { name: "Ciclo" }).textContent).toBe("Todos los ciclos")
-    expect(cycleRows()).toEqual(["Ciclo 31/1", "Ciclo 50/1"])
   })
 
   it("al abrir una materia y volver conserva la malla elegida", async () => {

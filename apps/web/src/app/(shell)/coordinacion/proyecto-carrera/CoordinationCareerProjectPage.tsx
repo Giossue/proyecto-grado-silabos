@@ -11,7 +11,6 @@ import { MallaToolbar, isOfMalla, openMallas, shownMalla } from "@/components/do
 import { BulkFieldDialog, type BulkSubject } from "@/components/domain/academic/BulkFieldDialog"
 import { SubjectSelectionBar } from "@/components/domain/academic/SubjectSelectionBar"
 import { SupportDocumentsPanel } from "@/components/domain/academic/SupportDocumentsPanel"
-import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { EmptyState } from "@/components/domain/EmptyState"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { MallaSelectorSkeleton } from "@/components/domain/loading/MallaSelectorSkeleton"
@@ -25,12 +24,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAcademicCareerScope } from "@/composables/useAcademicCareerScope"
-import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
 import { sameCode } from "@/composables/useCodeLookup"
 import { paths } from "@/lib/routes"
 import { rowLinkClass } from "@/lib/rowActivation"
@@ -45,11 +41,6 @@ type Subject = ScheduledSubjects["options"]["activeSubjects"][number] & { malla_
 const statusOf = (subject: Subject): string =>
   subject.profile_complete ? "Completa" : subject.profile_total ? `${subject.profile_filled ?? 0} de ${subject.profile_total} campos` : "Incompleta"
 const cycleLabel = (subject: Subject): string => (subject.ciclo ? String(subject.ciclo) : "Sin ciclo")
-const searchable = (subject: Subject) => [subject.nombre]
-const subjectFilters: Record<string, ClientFilterDefinition<Subject>> = {
-  ciclo: { matches: (subject, value) => cycleLabel(subject) === value },
-  estado: { matches: (subject, value) => (value === "complete" ? Boolean(subject.profile_complete) : !subject.profile_complete) },
-}
 const compareCycles = (left: string, right: string): number => left.localeCompare(right, "es", { numeric: true })
 const completeCount = (list: Subject[]): number => list.filter((subject) => subject.profile_complete).length
 const cycleSelectionLabel = (cycle: string): string => (cycle === "Sin ciclo" ? "Seleccionar las materias sin ciclo" : `Seleccionar las materias del ciclo ${cycle}`)
@@ -74,7 +65,7 @@ function TabsSkeleton() {
 const subjectsSkeleton = (
   <div className="flex min-w-0 flex-col gap-4">
     <MallaSelectorSkeleton />
-    <LoadingSkeleton variant="accordion" rows={3} filters={2} selectable />
+    <LoadingSkeleton variant="accordion" rows={3} selectable />
   </div>
 )
 
@@ -124,10 +115,8 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
     (): Subject[] => (data?.options.activeSubjects ?? []).filter((subject) => malla !== null && isOfMalla(subject, malla) && subject.generates_syllabus !== false),
     [data, malla],
   )
-  const filter = useClientFilter(subjects, searchable, subjectFilters)
-  const cycleOptions = [...new Set(subjects.map(cycleLabel))].sort(compareCycles)
   const byCycle = new Map<string, Subject[]>()
-  for (const subject of filter.items) byCycle.set(cycleLabel(subject), [...(byCycle.get(cycleLabel(subject)) ?? []), subject])
+  for (const subject of subjects) byCycle.set(cycleLabel(subject), [...(byCycle.get(cycleLabel(subject)) ?? []), subject])
   const groups = [...byCycle].sort(([left], [right]) => compareCycles(left, right)).map(([cycle, list]) => ({ cycle, list }))
   useEffect(() => {
     if (scope.data === null) router.replace(paths.dashboard)
@@ -154,7 +143,6 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
     if (!next) return
     setChosenMalla({ address: addressMalla, code: next.code })
     setMarked(new Set())
-    filter.clear()
     replaceAddress("malla", next.code.toLowerCase())
   }
 
@@ -233,70 +221,13 @@ export default function CoordinationCareerProjectPage({ adminCareer = null }: { 
             <LoadErrorState message={subjectsError} onRetry={() => void load()} />
           ) : subjectsReady ? (
             <div className="flex flex-col gap-4">
-              <ClientFilterBar
-                filter={filter}
-                inputId="career-project-search"
-                label="Buscar por materia"
-                placeholder="Buscar por materia"
-                filters={
-                  <>
-                    <Field>
-                      <FieldLabel htmlFor="career-project-cycle" className="sr-only">
-                        Ciclo
-                      </FieldLabel>
-                      <Select value={filter.values.ciclo} onValueChange={(value) => filter.setValue("ciclo", value)}>
-                        <SelectTrigger id="career-project-cycle">
-                          <SelectValue placeholder="Todos los ciclos" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem value="all">Todos los ciclos</SelectItem>
-                            {cycleOptions.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="career-project-state" className="sr-only">
-                        Estado del proyecto de carrera
-                      </FieldLabel>
-                      <Select value={filter.values.estado} onValueChange={(value) => filter.setValue("estado", value)}>
-                        <SelectTrigger id="career-project-state">
-                          <SelectValue placeholder="Todos los estados" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem value="all">Todos los estados</SelectItem>
-                            <SelectItem value="complete">Completas</SelectItem>
-                            <SelectItem value="incomplete">Incompletas</SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                  </>
-                }
-              />
-
-              {selectable && filter.items.length ? (
-                <div data-tour="career-select" className="flex w-fit items-center gap-3 px-4">
-                  <Checkbox id="career-project-select-all" aria-label="Seleccionar todas las materias que se ven" checked={selectionOf(filter.items)} onCheckedChange={(value) => select(filter.items, value === true)} />
-                  <FieldLabel htmlFor="career-project-select-all" className="font-normal">
-                    {filter.active ? "Seleccionar las que se ven" : "Seleccionar todas"}
-                  </FieldLabel>
-                </div>
-              ) : null}
-
               <div data-tour="career-subjects" className="flex flex-col gap-2">
                 {!groups.length ? (
-                  <EmptyState title={filter.active ? "Ninguna materia coincide con la búsqueda" : malla ? "La malla todavía no tiene materias" : "La carrera no tiene mallas vigentes"} />
+                  <EmptyState title={malla ? "La malla todavía no tiene materias" : "La carrera no tiene mallas vigentes"} />
                 ) : null}
-                {groups.map((group) => (
-                  <Collapsible key={`${malla?.id}-${group.cycle}-${filter.active}`} defaultOpen={filter.active} className="group/cycle rounded-md bg-card ring-1 ring-surface-ring">
-                    <div className="flex items-center">
+                {groups.map((group, position) => (
+                  <Collapsible key={`${malla?.id}-${group.cycle}`} className="group/cycle rounded-md bg-card ring-1 ring-surface-ring">
+                    <div {...(selectable && position === 0 ? { "data-tour": "career-select" } : {})} className="flex items-center">
                     {selectable ? <Checkbox className="ml-4" aria-label={cycleSelectionLabel(group.cycle)} checked={selectionOf(group.list)} onCheckedChange={(value) => select(group.list, value === true)} /> : null}
                     <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 px-4 py-3 text-left font-semibold">
                       <span className="flex-1">{group.cycle === "Sin ciclo" ? group.cycle : `Ciclo ${group.cycle}`}</span>
