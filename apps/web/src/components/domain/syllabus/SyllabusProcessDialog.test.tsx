@@ -78,7 +78,7 @@ describe("syllabus process dates", () => {
 
     expect(document.body.textContent).toContain("El campo fecha de inicio es obligatorio")
     expect(document.body.textContent).toContain("El campo fecha límite es obligatorio")
-    expect(document.body.textContent).toContain("El campo periodo académico debe ser un UUID válido")
+    expect(document.body.textContent).toContain("El campo proceso de sílabos debe ser un UUID válido")
     expect(document.body.textContent).not.toContain("los sílabos parten del proyecto de carrera de cada materia")
     expect(api.createProcess).not.toHaveBeenCalled()
 
@@ -86,7 +86,7 @@ describe("syllabus process dates", () => {
   })
 
   it("al enviar el formulario abre el periodo directo, sin frase", async () => {
-    api.createProcess.mockReset().mockResolvedValue({ message: "Periodo académico abierto." })
+    api.createProcess.mockReset().mockResolvedValue({ message: "Proceso de sílabos abierto." })
     const { unmount } = render(<SyllabusProcessDialog open onOpenChange={vi.fn()} template={null} periods={[]} period={{ id: PERIOD_ID, codigo: "2026-2027", starts_on: "2026-09-22", ends_on: "2027-01-02" }} />)
     await flush()
     act(() => stubs.pickers.get("process-starts")!.onValueChange!("2026-10-01"))

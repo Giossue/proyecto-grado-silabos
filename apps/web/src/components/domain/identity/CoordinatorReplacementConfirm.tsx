@@ -22,7 +22,7 @@ export function CoordinatorReplacementConfirm({ message, processing, onConfirm, 
         <DialogHeader>
           <DialogTitle>Reemplazar coordinador</DialogTitle>
           <DialogDescription>
-            {shownMessage} Al confirmar, deja de coordinarla. Lo que aprobó en el periodo académico en curso vuelve a revisión para que lo firme el nuevo coordinador
+            {shownMessage} Al confirmar, deja de coordinarla. Lo que aprobó en el proceso de sílabos en curso vuelve a revisión para que lo firme el nuevo coordinador
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

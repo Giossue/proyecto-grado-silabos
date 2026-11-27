@@ -39,8 +39,8 @@ let log: string[]
 
 const periodDb = (): Db => ({ $queryRaw: async () => (period === null ? [] : [period]) }) as unknown as Db
 
-const OPEN_REASON = "Pause el periodo académico de su carrera para editar el proyecto de carrera."
-const FINALIZED_REASON = "El proyecto de carrera no se puede editar con el periodo académico finalizado."
+const OPEN_REASON = "Pause el proceso de sílabos de su carrera para editar el proyecto de carrera."
+const FINALIZED_REASON = "El proyecto de carrera no se puede editar con el proceso de sílabos finalizado."
 const allowedPeriods = [
   null,
   { processState: "abierto", convocationState: null },

@@ -415,7 +415,7 @@ describe("POST /api/v1/coordination/academic/curriculum-import", () => {
     state.locked = true
     const file = await xlsx([CURRICULUM_HEADER, ["IMP-001", "Programación I", "1", "Unidad básica", "", "48", "32", "64", "3", ""]])
     const response = await curriculum(file, { confirm: "1" })
-    expect(await response.text()).toBe('{"message":"Periodo académico activo","errors":{"process":["Periodo académico activo"]}}')
+    expect(await response.text()).toBe('{"message":"Proceso de sílabos activo","errors":{"process":["Proceso de sílabos activo"]}}')
     expect(state.subjects).toHaveLength(1)
   })
 })

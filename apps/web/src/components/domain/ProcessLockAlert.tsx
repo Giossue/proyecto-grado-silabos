@@ -26,19 +26,19 @@ export function ProcessLockAlert({ lock, title, message, hideAction, icon, banne
   const actionLabel = isAdministrator ? "Ir a Periodos académicos" : "Ir a Revisión"
   const Icon = icon ?? Lock
   const headline = title ?? "Edición bloqueada"
-  const summary = message ? withoutFinalPeriod(message) : isAdministrator ? "Pause el proceso para editar" : "Pause el periodo académico de su carrera para editar"
+  const summary = message ? withoutFinalPeriod(message) : isAdministrator ? "Pause el proceso para editar" : "Pause el proceso de sílabos de su carrera para editar"
 
   const reason = ((): string | null => {
     if (why) return why
     if (message || !lock) return null
     const open = "abierto"
     if (lock.scope === "process") {
-      return `Hay un periodo académico ${open}. No puede editar la plantilla mientras siga abierto, porque los docentes ya están llenando sus sílabos con ella. Para editarla, pause el periodo académico. Al reanudar, si la plantilla cambió, se pedirá confirmación y los sílabos de este período se adaptarán a ella: se conserva lo escrito y los enviados o aprobados vuelven a borrador. Los de períodos anteriores no se tocan`
+      return `Hay un proceso de sílabos ${open}. No puede editar la plantilla mientras siga abierto, porque los docentes ya están llenando sus sílabos con ella. Para editarla, pause el proceso de sílabos. Al reanudar, si la plantilla cambió, se pedirá confirmación y los sílabos de este período se adaptarán a ella: se conserva lo escrito y los enviados o aprobados vuelven a borrador. Los de períodos anteriores no se tocan`
     }
     const consequence = "Si el cambio afecta sílabos enviados o aprobados, se pedirá confirmación y volverán a Borrador; se conserva lo escrito"
-    const institutional = lock.institutional_pause ? "Administración pausó el periodo académico, pero el de su carrera sigue abierto. " : ""
+    const institutional = lock.institutional_pause ? "Administración pausó el proceso de sílabos, pero el de su carrera sigue abierto. " : ""
 
-    return `${institutional}El periodo académico de su carrera está ${open}. Pausarlo permite corregir la malla y el proyecto de carrera. ${consequence}`
+    return `${institutional}El proceso de sílabos de su carrera está ${open}. Pausarlo permite corregir la malla y el proyecto de carrera. ${consequence}`
   })()
 
   const reasonPopover = reason ? (

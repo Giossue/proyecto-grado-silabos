@@ -102,9 +102,9 @@ function editability(session: AppSession, syllabus: DetailSyllabus, today: strin
   const reason = !editableState
     ? "El sílabo no admite cambios en su estado actual."
     : closed
-      ? "El periodo académico está cerrado: el sílabo queda solo para consulta."
+      ? "El proceso de sílabos está cerrado: el sílabo queda solo para consulta."
       : !running
-        ? "El periodo académico está en pausa. Podrá seguir editando cuando se reanude."
+        ? "El proceso de sílabos está en pausa. Podrá seguir editando cuando se reanude."
         : late
           ? "El plazo de entrega venció. Pida una prórroga a Administración."
           : "No tiene una asignación vigente para editar este sílabo."

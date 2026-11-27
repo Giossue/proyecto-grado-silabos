@@ -65,7 +65,7 @@ export function SyllabusProcessDialog({
       setOpen(false)
       onSaved?.(result.message)
     } catch (reason) {
-      applyApiErrors(form.setError, reason, { fallback: "No se pudo abrir el periodo académico" })
+      applyApiErrors(form.setError, reason, { fallback: "No se pudo abrir el proceso de sílabos" })
     } finally {
       setProcessing(false)
     }
@@ -77,7 +77,7 @@ export function SyllabusProcessDialog({
       onOpenChange={setOpen}
       disabled={disabled}
       triggerLabel={triggerLabel}
-      title="Abrir periodo académico"
+      title="Abrir proceso de sílabos"
       description={period ? `Elija las fechas de elaboración del período ${period.codigo}` : "Fechas de inicio y entrega de los sílabos para todas las carreras"}
       showTrigger={display !== "menu"}
     >
@@ -99,7 +99,7 @@ export function SyllabusProcessDialog({
             ) : (
               <Field data-invalid={Boolean(periodErrors)}>
                 <FieldLabel htmlFor="process-period" required>
-                  Periodo académico
+                  Proceso de sílabos
                 </FieldLabel>
                 <Select value={values.period_id} onValueChange={(value) => update("period_id", value)} required>
                   <SelectTrigger id="process-period" aria-required="true">
@@ -131,11 +131,11 @@ export function SyllabusProcessDialog({
                 Fecha límite de entrega
               </FieldLabel>
               <DatePicker id="process-due" value={values.due_at} onValueChange={(value) => update("due_at", value)} minValue={dueMinimum} maxValue={periodEnd} required ariaInvalid={Boolean(dueErrors)} />
-              <p className="text-sm text-muted-foreground">Esta fecha se heredará en el periodo académico de cada carrera</p>
+              <p className="text-sm text-muted-foreground">Esta fecha se heredará en el proceso de sílabos de cada carrera</p>
               <FieldError errors={dueErrors} />
             </Field>
             <p className="text-sm text-muted-foreground">Una vez abierto, sus fechas no se pueden editar</p>
-            <FormDialogActions close={close} processing={processing} icon={CalendarPlus} label="Abrir periodo académico" />
+            <FormDialogActions close={close} processing={processing} icon={CalendarPlus} label="Abrir proceso de sílabos" />
           </FieldGroup>
         </form>
       )}

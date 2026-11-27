@@ -70,7 +70,7 @@ export const deadlineExtensionSchema = z.object({
 
 export function processCreationSchema(periodExists?: Exists) {
   return z.object({
-    period_id: requiredField("periodo académico", [is.uuid(), ...(periodExists ? [is.existing(periodExists)] : [])]),
+    period_id: requiredField("proceso de sílabos", [is.uuid(), ...(periodExists ? [is.existing(periodExists)] : [])]),
     starts_at: requiredField("fecha de inicio", [is.date()]),
     due_at: requiredField("fecha límite", [is.date()]),
   })

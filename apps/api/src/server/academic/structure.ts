@@ -9,7 +9,7 @@ import { unmatchedRoute, routeAllows } from "../http/router"
 import { resolveCareerScope } from "./careerScope"
 
 export const FORBIDDEN = "No tiene permiso para hacer esto."
-export const CONVOCATION_LOCK_REASON = "Periodo académico activo"
+export const CONVOCATION_LOCK_REASON = "Proceso de sílabos activo"
 const UUID = /^[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}$/
 
 export { CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES, studyModalityLabel }

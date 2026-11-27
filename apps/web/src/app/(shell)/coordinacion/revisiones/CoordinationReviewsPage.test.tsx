@@ -63,7 +63,7 @@ describe("CoordinationReviewsPage", () => {
     await flush()
 
     expect(container.textContent).not.toContain("Avance del proceso")
-    expect(container.querySelector(".actions")!.textContent).toContain("Pausar periodo académico")
+    expect(container.querySelector(".actions")!.textContent).toContain("Pausar proceso de sílabos")
     expect(container.textContent).toContain("Álgebra Lineal")
     expect(container.textContent).toContain("27 oct 2026")
     expect(container.textContent).not.toContain("Por revisar")
@@ -81,12 +81,12 @@ describe("CoordinationReviewsPage", () => {
     unmount()
   })
 
-  it("sin todo listo, «Abrir periodo académico» sigue activo y abre «Antes de empezar»", async () => {
+  it("sin todo listo, «Abrir proceso de sílabos» sigue activo y abre «Antes de empezar»", async () => {
     vi.mocked(getDashboard).mockResolvedValue({ ...summary(null), coordination_convocation: { ...summary(null).coordination_convocation!, can_open: false } })
     const { container, unmount } = mountPage()
     await flush()
 
-    const open = [...container.querySelectorAll<HTMLButtonElement>(".actions button")].find((button) => button.textContent?.includes("Abrir periodo académico"))!
+    const open = [...container.querySelectorAll<HTMLButtonElement>(".actions button")].find((button) => button.textContent?.includes("Abrir proceso de sílabos"))!
     expect(open.disabled).toBe(false)
     const requests = setupChecklistState.openRequests.value
     fireEvent.click(open)
@@ -110,22 +110,22 @@ describe("CoordinationReviewsPage", () => {
     unmount()
   })
 
-  it("sin periodo académico ofrece abrirlo y el seguimiento se puede abrir y dice que aún no hay datos", async () => {
+  it("sin proceso de sílabos ofrece abrirlo y el seguimiento se puede abrir y dice que aún no hay datos", async () => {
     vi.mocked(getDashboard).mockResolvedValue(summary(null))
     const first = mountPage()
     await flush()
 
-    expect(first.container.querySelector(".actions")!.textContent).toContain("Abrir periodo académico")
+    expect(first.container.querySelector(".actions")!.textContent).toContain("Abrir proceso de sílabos")
     const seguimiento = [...first.container.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent === "Seguimiento")!
     expect(seguimiento.hasAttribute("data-disabled")).toBe(false)
-    expect(first.container.textContent).not.toContain("Disponible cuando abra el periodo académico")
+    expect(first.container.textContent).not.toContain("Disponible cuando abra el proceso de sílabos")
     first.unmount()
 
     navigation.reset("/coordinacion/revisiones?tab=seguimiento")
     const tracking = mountPage()
     await flush()
     expect(tracking.container.querySelector('[role="tab"][data-state="active"]')!.textContent).toContain("Seguimiento")
-    expect(tracking.container.textContent).toContain("Aún no hay periodo académico abierto en su carrera")
+    expect(tracking.container.textContent).toContain("Aún no hay proceso de sílabos abierto en su carrera")
     expect(tracking.container.querySelector("#convocation-syllabi-search-none")).not.toBeNull()
     expect(tracking.container.querySelector("#convocation-syllabi-search-state-none")).not.toBeNull()
     expect(tracking.container.querySelector("table")).not.toBeNull()
@@ -133,13 +133,13 @@ describe("CoordinationReviewsPage", () => {
     tracking.unmount()
   })
 
-  it("con periodo académico la pestaña Seguimiento recibe clics", async () => {
+  it("con proceso de sílabos la pestaña Seguimiento recibe clics", async () => {
     const { container, unmount } = mountPage()
     await flush()
     const seguimiento = [...container.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent === "Seguimiento")!
 
     expect(seguimiento.hasAttribute("data-disabled")).toBe(false)
-    expect(container.textContent).not.toContain("Aún no hay periodo académico abierto")
+    expect(container.textContent).not.toContain("Aún no hay proceso de sílabos abierto")
     unmount()
   })
 

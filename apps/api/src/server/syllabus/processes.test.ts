@@ -173,11 +173,11 @@ describe("GET /api/v1/admin/processes", () => {
       rows = [process(row)]
       return (JSON.parse((await send((request) => syllabusProcesses(request, deps()), "/api/v1/admin/processes")).text).processes[0] as { extension_block_reason: unknown }).extension_block_reason
     }
-    expect(await reasons({ extensions: 2 })).toBe("Ya se usaron las 2 prórrogas de este periodo académico.")
+    expect(await reasons({ extensions: 2 })).toBe("Ya se usaron las 2 prórrogas de este proceso de sílabos.")
     expect(await reasons({ dueOn: "2027-03-20" })).toBe("El plazo ya llega al último día de clases (20/03/2027).")
     rows = [process({ state: "cerrado" }), process({ id: CLOSED, state: "pausado" })]
     const blocked = JSON.parse((await send((request) => syllabusProcesses(request, deps()), "/api/v1/admin/processes")).text)
-    expect(blocked.processes[0].extension_block_reason).toBe("Hay otro periodo académico en curso; finalícelo o elimínelo antes de reabrir este")
+    expect(blocked.processes[0].extension_block_reason).toBe("Hay otro proceso de sílabos en curso; finalícelo o elimínelo antes de reabrir este")
     expect(blocked.active_process).toEqual({ name: "2026-2", period: "2026-2", state: "pausado" })
     const template = goldenTemplate()
     template.sections[0].blocks[0].fields = []
@@ -247,7 +247,7 @@ describe("POST /api/v1/admin/processes", () => {
 
   it("opens the institutional process with whole institution days", async () => {
     const response = await store(payload())
-    expect(response).toMatchObject({ status: 201, text: '{"message":"Periodo académico abierto. Cada coordinación ya puede abrir el de su carrera."}' })
+    expect(response).toMatchObject({ status: 201, text: '{"message":"Proceso de sílabos abierto. Cada coordinación ya puede abrir el de su carrera."}' })
     expect(created).toEqual([{ periodId: PERIOD, startsAt: "2026-11-24T05:00:00+00:00", dueAt: "2026-12-16T04:59:59+00:00" }])
     expect(log).toEqual(["begin", "lock:in-progress", "create", "commit"])
   })
@@ -271,9 +271,9 @@ describe("POST /api/v1/admin/processes", () => {
       message: "El campo fecha de inicio es obligatorio. (y 1 error más)",
       errors: { starts_at: ["El campo fecha de inicio es obligatorio."], due_at: ["El campo fecha límite es obligatorio."] },
     })
-    expect((await store(payload({ period_id: undefined }))).json?.errors).toEqual({ period_id: ["El campo periodo académico es obligatorio."] })
+    expect((await store(payload({ period_id: undefined }))).json?.errors).toEqual({ period_id: ["El campo proceso de sílabos es obligatorio."] })
     expect((await store(payload({ period_id: "e0000000-0000-4000-8000-0000000000ff" }))).json?.errors).toEqual({
-      period_id: ["El valor seleccionado en periodo académico no es válido."],
+      period_id: ["El valor seleccionado en proceso de sílabos no es válido."],
     })
     expect(created).toEqual([])
   })
@@ -296,8 +296,8 @@ describe("POST /api/v1/admin/processes", () => {
   it("does not open without a usable template, active careers or an active coordination for each", async () => {
     templates.template = null
     expect((await store(payload())).json).toEqual({
-      message: "La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir el periodo académico.",
-      errors: { process: ["La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir el periodo académico."] },
+      message: "La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir el proceso de sílabos.",
+      errors: { process: ["La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir el proceso de sílabos."] },
     })
     templates.template = officialTemplate()
     templates.template.sections = templates.template.sections.filter((section) => section.key !== "revision")
@@ -315,18 +315,18 @@ describe("POST /api/v1/admin/processes", () => {
   it("keeps a single process in progress and one process per period", async () => {
     inProgress = { id: PROCESS, period: "2026-2" }
     expect((await store(payload())).json?.errors).toEqual({
-      process: ["El periodo académico «2026-2» sigue vigente. Finalícelo o elimínelo antes de abrir otro."],
+      process: ["El proceso de sílabos «2026-2» sigue vigente. Finalícelo o elimínelo antes de abrir otro."],
     })
     inProgress = null
     periodsWithProcess.add(PERIOD)
-    expect((await store(payload())).json?.errors).toEqual({ period_id: ["Este periodo académico ya se abrió."] })
+    expect((await store(payload())).json?.errors).toEqual({ period_id: ["Este proceso de sílabos ya se abrió."] })
     expect(created).toEqual([])
     expect(log.filter((entry) => entry === "rollback")).toHaveLength(2)
   })
 
   it("reads dates like ProcessDates and the date rule, and validates forms and malformed periods natively", async () => {
     expect(await store(payload({ starts_at: "mañana" }))).toMatchObject({ status: 422, text: expect.stringContaining("El campo fecha de inicio debe ser una fecha válida.") })
-    expect(await store(payload({ period_id: "abc" }))).toMatchObject({ status: 422, text: expect.stringContaining("periodo académico debe ser un UUID") })
+    expect(await store(payload({ period_id: "abc" }))).toMatchObject({ status: 422, text: expect.stringContaining("proceso de sílabos debe ser un UUID") })
     const form = await createProcess(
       new Request(apiRequest("/api/v1/admin/processes", { cookie, method: "POST", headers: { "x-csrf-token": golden.csrfToken, "content-type": "application/x-www-form-urlencoded" } }), {
         body: "period_id=x",

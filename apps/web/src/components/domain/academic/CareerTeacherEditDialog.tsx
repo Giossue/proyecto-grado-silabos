@@ -30,7 +30,7 @@ export function CareerTeacherEditDialog({ teacher, removeDisabled, open, onOpenC
           icon: UserMinus,
           destructive: true,
           disabled: removeDisabled,
-          disabledReason: "No se puede desactivar mientras el periodo académico esté en curso",
+          disabledReason: "No se puede desactivar mientras el proceso de sílabos esté en curso",
         },
       ]
     : [{ key: "reactivate", label: "Reactivar", icon: UserCheck }]

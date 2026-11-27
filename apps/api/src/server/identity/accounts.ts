@@ -273,7 +273,7 @@ export async function createCareerTeacher(ctx: ActionContext, data: { name: stri
 
 export async function removeCareerTeacher(ctx: ActionContext, target: { id: string }, careerId: string): Promise<number> {
   const { tx } = ctx
-  if (await tx.careerLocked(careerId)) throw invalid("process", "Periodo académico activo")
+  if (await tx.careerLocked(careerId)) throw invalid("process", "Proceso de sílabos activo")
   const grant = await tx.lockActiveGrant(target.id, ROLE_TEACHER, careerId)
   if (grant === null) throw new Missing(MODELS.roleAssignment)
   const parallels = await tx.lockActiveParallelAssignments(grant.id)

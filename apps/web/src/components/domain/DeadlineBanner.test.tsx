@@ -64,28 +64,28 @@ describe("DeadlineBanner", () => {
   })
 
   it("finalizada dice que los sílabos quedan para consulta, sin conteo", () => {
-    expect(banner({ state: "closed", days_until_due: 0 }).textContent).toBe("El periodo académico finalizóSus sílabos quedan solo para consulta")
-    expect(banner({ state: "closed" }, "coordinador").textContent).toBe("El periodo académico finalizóLos sílabos de la carrera quedan solo para consulta")
-    expect(banner({ state: "closed" }, "bibliotecario").textContent).toBe("El periodo académico finalizóLos sílabos quedan solo para consulta")
+    expect(banner({ state: "closed", days_until_due: 0 }).textContent).toBe("El proceso de sílabos finalizóSus sílabos quedan solo para consulta")
+    expect(banner({ state: "closed" }, "coordinador").textContent).toBe("El proceso de sílabos finalizóLos sílabos de la carrera quedan solo para consulta")
+    expect(banner({ state: "closed" }, "bibliotecario").textContent).toBe("El proceso de sílabos finalizóLos sílabos quedan solo para consulta")
   })
 
-  it("Administración sabe qué puede hacer con el periodo académico finalizado", () => {
-    expect(banner({ state: "closed", classes_ended: false }, "administrador").textContent).toBe("El periodo académico finalizóPuede reabrirlo con una prórroga o abrir uno nuevo")
-    expect(banner({ state: "closed", classes_ended: true }, "administrador").textContent).toBe("El periodo académico finalizóPuede abrir uno nuevo")
+  it("Administración sabe qué puede hacer con el proceso de sílabos finalizado", () => {
+    expect(banner({ state: "closed", classes_ended: false }, "administrador").textContent).toBe("El proceso de sílabos finalizóPuede reabrirlo con una prórroga o abrir uno nuevo")
+    expect(banner({ state: "closed", classes_ended: true }, "administrador").textContent).toBe("El proceso de sílabos finalizóPuede abrir uno nuevo")
   })
 
-  it("Coordinación ve que aún no abre el periodo académico de su carrera", () => {
-    expect(banner({ state: "active", career_pending: true }, "coordinador").textContent).toContain("Aún no abre el periodo académico de su carrera")
+  it("Coordinación ve que aún no abre el proceso de sílabos de su carrera", () => {
+    expect(banner({ state: "active", career_pending: true }, "coordinador").textContent).toContain("Aún no abre el proceso de sílabos de su carrera")
     expect(banner({ state: "paused", paused_by: "administracion", career_pending: true }, "coordinador").textContent).not.toContain("Aún no abre")
   })
 
   it.each([
-    ["docente", "administracion", "El periodo académico está en pausaLe avisaremos cuando se reanude para que siga con sus sílabos"],
-    ["docente", "coordinacion", "El periodo académico está en pausaLe avisaremos cuando se reanude para que siga con sus sílabos"],
-    ["coordinador", "administracion", "El periodo académico está en pausaAdministración pausó el periodo académico. Las revisiones se retoman cuando lo reanude; le avisaremos"],
-    ["coordinador", "coordinacion", "El periodo académico de su carrera está en pausaLos docentes no editan y no se revisa. Puede cambiar la malla y el proyecto de carrera, y luego reanudarlo desde Revisión"],
-    ["administrador", "administracion", "El periodo académico está en pausaPuede reanudarlo desde Periodos académicos"],
-    ["bibliotecario", "administracion", "El periodo académico está en pausaAdministración pausó el periodo académico. Las revisiones se retoman cuando lo reanude; le avisaremos"],
+    ["docente", "administracion", "El proceso de sílabos está en pausaLe avisaremos cuando se reanude para que siga con sus sílabos"],
+    ["docente", "coordinacion", "El proceso de sílabos está en pausaLe avisaremos cuando se reanude para que siga con sus sílabos"],
+    ["coordinador", "administracion", "El proceso de sílabos está en pausaAdministración pausó el proceso de sílabos. Las revisiones se retoman cuando lo reanude; le avisaremos"],
+    ["coordinador", "coordinacion", "El proceso de sílabos de su carrera está en pausaLos docentes no editan y no se revisa. Puede cambiar la malla y el proyecto de carrera, y luego reanudarlo desde Revisión"],
+    ["administrador", "administracion", "El proceso de sílabos está en pausaPuede reanudarlo desde Periodos académicos"],
+    ["bibliotecario", "administracion", "El proceso de sílabos está en pausaAdministración pausó el proceso de sílabos. Las revisiones se retoman cuando lo reanude; le avisaremos"],
   ] as const)("en pausa, a %s (pausó %s) le dice lo que le toca", (audience, pausedBy, expected) => {
     expect(banner({ state: "paused", days_until_due: 0, paused_by: pausedBy }, audience).textContent).toBe(expected)
   })

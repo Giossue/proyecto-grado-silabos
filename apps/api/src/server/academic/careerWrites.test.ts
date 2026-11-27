@@ -320,7 +320,7 @@ describe("POST /api/v1/coordination/academic/asignatura", () => {
 
   it("refuses while a convocation of the career is open and is forbidden for an administrator", async () => {
     locked = true
-    expect((await create("asignatura", subjectBody)).json).toEqual({ message: "Periodo académico activo", errors: { process: ["Periodo académico activo"] } })
+    expect((await create("asignatura", subjectBody)).json).toEqual({ message: "Proceso de sílabos activo", errors: { process: ["Proceso de sílabos activo"] } })
     world.assignments = [makeAssignment({ role: "administrador", careerId: null })]
     expect((await create("asignatura", subjectBody)).text).toBe(FORBIDDEN)
   })
@@ -438,7 +438,7 @@ describe("PATCH /api/v1/coordination/academic/asignatura/{record}", () => {
   it("is forbidden for a subject of another career, refuses while the convocation is open and answers 500 for a null position, like the NOT NULL column", async () => {
     expect((await update("asignatura", OTHER_SUBJECT, { ...subjectBody, code: "OTR-101" })).text).toBe(FORBIDDEN)
     locked = true
-    expect((await update("asignatura", SUBJECT, subjectBody)).json?.errors).toEqual({ process: ["Periodo académico activo"] })
+    expect((await update("asignatura", SUBJECT, subjectBody)).json?.errors).toEqual({ process: ["Proceso de sílabos activo"] })
     locked = false
     expect(await update("asignatura", SUBJECT, { ...subjectBody, position: null })).toMatchObject({ status: 500, text: '{"message":"Server Error"}' })
     expect((await update("paralelo", SUBJECT, subjectBody)).status).toBe(404)

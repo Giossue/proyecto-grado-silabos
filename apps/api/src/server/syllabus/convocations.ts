@@ -174,9 +174,9 @@ export async function pauseConvocationFor(session: AppSession, convocation: Conv
       await tx.updateState(convocation.id, "pausado")
     })
   } catch (error) {
-    if (error instanceof StateChanged) return validationError({ convocation: ["Solo un periodo académico abierto puede pausarse."] })
+    if (error instanceof StateChanged) return validationError({ convocation: ["Solo un proceso de sílabos abierto puede pausarse."] })
     if (error instanceof HttpFailure) return error.response
     throw error
   }
-  return apiJson({ message: "Periodo académico en pausa. Los docentes de la carrera no editan ni envían; la malla y el proyecto de carrera quedan editables." })
+  return apiJson({ message: "Proceso de sílabos en pausa. Los docentes de la carrera no editan ni envían; la malla y el proyecto de carrera quedan editables." })
 }

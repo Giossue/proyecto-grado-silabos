@@ -218,7 +218,7 @@ describe("TeacherAssignmentsPanel", () => {
 
   it("la ficha del inactivo solo ofrece reactivarlo, también con el periodo en curso", async () => {
     vi.mocked(reactivateCareerTeacher).mockResolvedValue({ message: "Docente reactivado en su carrera." })
-    mountPanel({ ...withFormer, career: { ...data.career, lock_reason: "Periodo académico activo" } })
+    mountPanel({ ...withFormer, career: { ...data.career, lock_reason: "Proceso de sílabos activo" } })
     await openRow("Docente anterior")
 
     const dialog = screen.getByRole("dialog")
@@ -237,12 +237,12 @@ describe("TeacherAssignmentsPanel", () => {
   })
 
   it("con el periodo en curso no deja desactivar y dice por qué", async () => {
-    mountPanel({ ...data, career: { ...data.career, lock_reason: "Periodo académico activo" } })
+    mountPanel({ ...data, career: { ...data.career, lock_reason: "Proceso de sílabos activo" } })
     await openRow("Docente activo")
 
     const dialog = screen.getByRole("dialog")
     expect(dialog.querySelector('button[aria-label="Desactivar"]')).toBeDisabled()
-    expect(dialog.textContent).toContain("No se puede desactivar mientras el periodo académico esté en curso")
+    expect(dialog.textContent).toContain("No se puede desactivar mientras el proceso de sílabos esté en curso")
   })
 
   it("la ficha del docente se retira cuando termina la animación de salida", async () => {

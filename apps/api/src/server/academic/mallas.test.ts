@@ -14,7 +14,7 @@ const PREVIOUS = "01a1c5bc-9000-7000-8000-000000000002"
 const OLD = "01a1c5bc-9000-7000-8000-000000000003"
 const FOREIGN = "01a1c5bc-9000-7000-8000-000000000004"
 const NEW_ID = "01a2aaaa-0000-7000-8000-000000000009"
-const CLOSING_REFUSED = "No se puede cerrar la malla: sus materias tienen sílabos en un periodo académico abierto."
+const CLOSING_REFUSED = "No se puede cerrar la malla: sus materias tienen sílabos en un proceso de sílabos abierto."
 
 let world: FakeWorld
 let log: string[]

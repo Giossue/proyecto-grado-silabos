@@ -16,7 +16,7 @@ import { PhpInput, WebRequest } from "./web-request.decorator"
 const ADMIN = "administrador"
 const SESSION = { verified: true, activeRole: "required" } as const
 const BOUND = { ...SESSION, preload: TemplatePreloader }
-const VALIDATION = { description: "Errores por campo; también «Proceso activo» mientras hay un periodo académico abierto.", type: ValidationErrorDto }
+const VALIDATION = { description: "Errores por campo; también «Proceso activo» mientras hay un proceso de sílabos abierto.", type: ValidationErrorDto }
 const MISSING = { description: "La plantilla, la sección o el campo no existe.", type: MessageDto }
 
 @ApiTags("Plantilla")
@@ -73,7 +73,7 @@ export class TemplateController {
   @Roles(ADMIN)
   @ApiParam({ name: "field", format: "uuid" })
   @ApiBody({ type: AiReadPermissionDto })
-  @ApiOkResponse({ description: "Activa o desactiva la lectura de la IA en un campo, también con un periodo académico abierto." })
+  @ApiOkResponse({ description: "Activa o desactiva la lectura de la IA en un campo, también con un proceso de sílabos abierto." })
   @ApiUnprocessableEntityResponse({ description: "Valor no válido, o se intenta activar un campo bloqueado." })
   @ApiNotFoundResponse(MISSING)
   saveAiReadPermission(@CurrentSession() session: AppSession, @PhpInput() input: PhpArray, @Preloaded() target: StructureTarget, @Param("field") field: string) {

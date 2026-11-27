@@ -19,13 +19,13 @@ type Transition = "pausar" | "reanudar"
 
 const DIALOGS: Record<Transition, { title: string; description: string; label: string }> = {
   pausar: {
-    title: "Pausar el periodo académico",
+    title: "Pausar el proceso de sílabos",
     description:
       "Hasta que lo reanude, los docentes de su carrera no podrán editar ni enviar, y Coordinación y Biblioteca no podrán revisar sus sílabos. Los borradores se conservan. Durante la pausa puede corregir la malla, los datos curriculares y el proyecto de carrera",
     label: "Pausar",
   },
   reanudar: {
-    title: "Reanudar el periodo académico",
+    title: "Reanudar el proceso de sílabos",
     description: "Los docentes vuelven a trabajar, los paralelos creados durante la pausa reciben su sílabo y la malla, los datos curriculares y el proyecto de carrera quedan protegidos de nuevo",
     label: "Reanudar",
   },
@@ -56,7 +56,7 @@ export function ConvocationActions({ convocation, onChanged }: ConvocationAction
       setPending(null)
       onChanged?.(result.message)
     } catch (failure) {
-      form.setError(SERVER_ERROR, { type: "server", message: errorMessage(failure, "No se pudo cambiar el periodo académico") })
+      form.setError(SERVER_ERROR, { type: "server", message: errorMessage(failure, "No se pudo cambiar el proceso de sílabos") })
     }
   })
 
@@ -70,17 +70,17 @@ export function ConvocationActions({ convocation, onChanged }: ConvocationAction
       // With something left to do, the button opens «Antes de empezar», which says what is missing.
       <Button type="button" onClick={() => (convocation.can_open ? setOpeningOpen(true) : setupChecklistState.requestOpen())}>
         <Play data-icon="inline-start" aria-hidden="true" />
-        Abrir periodo académico
+        Abrir proceso de sílabos
       </Button>
     ) : convocation.state === "abierto" ? (
       <Button type="button" onClick={() => select("pausar")}>
         <Pause data-icon="inline-start" aria-hidden="true" />
-        Pausar periodo académico
+        Pausar proceso de sílabos
       </Button>
     ) : convocation.state === "pausado" ? (
       <Button type="button" disabled={!convocation.process_open} onClick={() => select("reanudar")}>
         <Play data-icon="inline-start" aria-hidden="true" />
-        Reanudar periodo académico
+        Reanudar proceso de sílabos
       </Button>
     ) : null
 

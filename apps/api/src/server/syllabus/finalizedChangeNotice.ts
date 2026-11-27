@@ -10,7 +10,7 @@ import { openCurriculum } from "./syllabusSql"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
 export const FINALIZED_MODE = "convocatoria_finalizada"
-export const ANOTHER_IN_PROGRESS = "Hay otro periodo académico en curso; finalícelo o elimínelo antes de reabrir este"
+export const ANOTHER_IN_PROGRESS = "Hay otro proceso de sílabos en curso; finalícelo o elimínelo antes de reabrir este"
 export const TEMPLATE_NOT_READY = "La plantilla no está lista para usarse. Complétela; «Antes de empezar» indica qué falta."
 export const MAX_EXTENSIONS = 2
 const REOPEN_PATHS = ["parallel.code", "parallel.shift", "scheduled_subject.period", "scheduled_subject.teaching_weeks"]
@@ -44,7 +44,7 @@ export function reopenFactsOn(executor: Executor): ReopenFacts {
 }
 
 export async function deadlineBlockReason(facts: ReopenFacts, process: ExtensibleProcess, now: number): Promise<string | null> {
-  if (process.extensions >= MAX_EXTENSIONS) return `Ya se usaron las ${MAX_EXTENSIONS} prórrogas de este periodo académico.`
+  if (process.extensions >= MAX_EXTENSIONS) return `Ya se usaron las ${MAX_EXTENSIONS} prórrogas de este proceso de sílabos.`
   const limitOn = process.periodEndsOn
   if (institutionDay(process.dueAt) >= limitOn) return `El plazo ya llega al último día de clases (${displayDay(limitOn)}).`
   if (limitOn < institutionDay(now)) return `Las clases del período terminaron el ${displayDay(limitOn)}.`
@@ -182,7 +182,7 @@ export class FinalizedChangeNotice {
     const period = convocations[0].period
     return new GenerationRejected({
       purge_required: [
-        `El periodo académico ${period} ya finalizó. Este cambio no afecta sus sílabos: conservan los datos que tenían. Se aplicará en el próximo periodo académico, o en este si lo reabre con una prórroga. Evite estos cambios hasta abrir el próximo periodo académico, salvo que sea necesario.`,
+        `El proceso de sílabos del periodo ${period} ya finalizó. Este cambio no afecta sus sílabos: conservan los datos que tenían. Se aplicará en el próximo proceso de sílabos, o en este si lo reabre con una prórroga. Evite estos cambios hasta abrir el próximo proceso de sílabos, salvo que sea necesario.`,
       ],
       purge_count: ["0"],
       purge_mode: [FINALIZED_MODE],

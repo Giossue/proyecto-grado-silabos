@@ -211,7 +211,7 @@ describe("«Asistente IA» en el sílabo del docente: disponibilidad", () => {
   it.each([
     ["en revisión", { state: "en_revision" }],
     ["aprobado", { state: "aprobado" }],
-    ["sin poder editarse", { editable: false, edit_block_reason: "El periodo académico está en pausa" }],
+    ["sin poder editarse", { editable: false, edit_block_reason: "El proceso de sílabos está en pausa" }],
     ["sin iniciar y bloqueado", { state: "sin_iniciar", iniciado_en: null, editable: false }],
   ] as Array<[string, Partial<SyllabusDetail>]>)("en un sílabo %s ni siquiera consulta el asistente", async (_name, overrides) => {
     const page = await open(syllabus(overrides))
@@ -555,7 +555,7 @@ describe("«Asistente IA»: el panel y los pedidos", () => {
     await submitMessage()
 
     expect(panel()).toBeNull()
-    expect(page.container.querySelector(".edit-blocked")!.textContent).toContain("El periodo académico está en pausa")
+    expect(page.container.querySelector(".edit-blocked")!.textContent).toContain("El proceso de sílabos está en pausa")
     expect(assistantButton(page)).toBeUndefined()
     page.unmount()
   })

@@ -69,7 +69,7 @@ export function ConvocationRowActions({ row, menu = true, onChanged, ref }: Conv
           {!row.lock_reason ? (
             <DropdownMenuItem onSelect={() => setProcessOpen(true)}>
               <CalendarPlus aria-hidden="true" />
-              Abrir periodo académico
+              Abrir proceso de sílabos
             </DropdownMenuItem>
           ) : null}
           {row.lock_reason ? (
@@ -95,7 +95,7 @@ export function ConvocationRowActions({ row, menu = true, onChanged, ref }: Conv
           periods={[]}
           period={{ id: row.id, codigo: row.code, starts_on: row.starts_on, ends_on: row.ends_on }}
           display="menu"
-          triggerLabel="Abrir periodo académico"
+          triggerLabel="Abrir proceso de sílabos"
           onSaved={(message) => void changedAfterExit(message)}
         />
       ) : null}

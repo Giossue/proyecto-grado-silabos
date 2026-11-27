@@ -4,7 +4,7 @@ export function workflowMessage(eventType: string, subject: string | null, revis
   if (eventType === TEMPLATE_REDONE) {
     return [
       "Sus sílabos volvieron a borrador",
-      "Administración cambió la plantilla del periodo académico. Se conservó lo que ya había escrito; revíselos y envíelos otra vez.",
+      "Administración cambió la plantilla del proceso de sílabos. Se conservó lo que ya había escrito; revíselos y envíelos otra vez.",
     ]
   }
   if (subject === null) throw new Error("El aviso necesita un sílabo.")

@@ -10,7 +10,7 @@ import { reviewDetailStoreOn } from "./reviewDetailQueries"
 import { InProgressWork } from "./inProgressWork"
 import { rowsOf } from "./teacherSyllabusQueries"
 
-const CLOSED = "El periodo académico está cerrado: la revisión queda solo para consulta y no admite decisiones."
+const CLOSED = "El proceso de sílabos está cerrado: la revisión queda solo para consulta y no admite decisiones."
 const SYLLABUS_ALIVE = Prisma.sql`exists (select 1 from convocatorias_carreras vivo where vivo.convocatoria_carrera_id = silabos.convocatoria_carrera_id
   and exists (select 1 from convocatorias_universidad vivo_proceso where vivo_proceso.convocatoria_universidad_id = vivo.convocatoria_universidad_id))`
 const REVISION_ALIVE = Prisma.sql`exists (select 1 from silabos where silabos.silabo_id = revisiones_silabo.silabo_id and ${SYLLABUS_ALIVE})`
@@ -37,8 +37,8 @@ export async function lockedDecisionBlock(executor: Db, syllabusId: string, lock
       limit 1 ${lock ? Prisma.sql`for share of convocatoria` : Prisma.empty}`,
   )
   if (!state || !["abierto", "pausado"].includes(state.state)) return CLOSED
-  if (state.state === "pausado") return "El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude."
-  if (state.process_state === "pausado") return "Administración pausó el periodo académico: las revisiones se retoman cuando se reanude."
+  if (state.state === "pausado") return "El proceso de sílabos de la carrera está en pausa: las revisiones se retoman cuando se reanude."
+  if (state.process_state === "pausado") return "Administración pausó el proceso de sílabos: las revisiones se retoman cuando se reanude."
   return null
 }
 

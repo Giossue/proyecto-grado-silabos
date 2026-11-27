@@ -1716,7 +1716,7 @@
     ]
   },
   {
-    "nombre": "Periodo académico abierto",
+    "nombre": "Proceso de sílabos abierto",
     "convocatoria": "abierta",
     "turnos": [
       {
@@ -1745,13 +1745,13 @@
               {
                 "funcion": "responder",
                 "argumentos": {
-                  "mensaje": "El periodo académico está abierto: para cambiar la plantilla primero hay que pausarlo."
+                  "mensaje": "El proceso de sílabos está abierto: para cambiar la plantilla primero hay que pausarlo."
                 }
               }
             ]
           ],
           "errores": [
-            "El periodo académico está abierto"
+            "El proceso de sílabos está abierto"
           ]
         }
       }

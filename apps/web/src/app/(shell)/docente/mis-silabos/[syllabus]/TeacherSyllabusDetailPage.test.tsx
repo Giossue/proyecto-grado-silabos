@@ -742,7 +742,7 @@ describe("TeacherSyllabusDetailPage", () => {
       const draft = syllabus("borrador")
       draft.state = state as SyllabusDetail["state"]
       draft.editable = false
-      draft.edit_block_reason = "El periodo académico está en pausa. Podrá seguir editando cuando se reanude"
+      draft.edit_block_reason = "El proceso de sílabos está en pausa. Podrá seguir editando cuando se reanude"
       draft.edit_blocked_by_convocation = true
       vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: draft })
       const page = mountPage()
@@ -754,10 +754,10 @@ describe("TeacherSyllabusDetailPage", () => {
     }
   })
 
-  it("un borrador de un periodo académico finalizado se ve como formulario, sin poder editarlo", async () => {
+  it("un borrador de un proceso de sílabos finalizado se ve como formulario, sin poder editarlo", async () => {
     const draft = syllabus("borrador")
     draft.editable = false
-    draft.edit_block_reason = "El periodo académico finalizó"
+    draft.edit_block_reason = "El proceso de sílabos finalizó"
     draft.edit_blocked_by_convocation = true
     vi.mocked(getTeacherSyllabus).mockResolvedValue({ syllabus: draft })
     const page = mountPage()
@@ -769,7 +769,7 @@ describe("TeacherSyllabusDetailPage", () => {
     page.unmount()
   })
 
-  it("un bloqueo que no es del periodo académico sí muestra su motivo", async () => {
+  it("un bloqueo que no es del proceso de sílabos sí muestra su motivo", async () => {
     const draft = syllabus("borrador")
     draft.editable = false
     draft.edit_block_reason = "No tiene una asignación vigente para editar este sílabo"
@@ -794,7 +794,7 @@ describe("TeacherSyllabusDetailPage", () => {
     await settle()
 
     expect(editors.props.get(editorIds(page)[0]!)!.disabled).toBe(true)
-    expect(page.container.querySelector(".edit-blocked")!.textContent).toContain("El periodo académico está en pausa. Podrá seguir editando cuando se reanude")
+    expect(page.container.querySelector(".edit-blocked")!.textContent).toContain("El proceso de sílabos está en pausa. Podrá seguir editando cuando se reanude")
     expect(buttonNamed(page, "Enviar")).toBeUndefined()
     page.unmount()
   })

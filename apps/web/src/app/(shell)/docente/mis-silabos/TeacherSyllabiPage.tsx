@@ -82,7 +82,7 @@ export default function TeacherSyllabiPage() {
   const emptyCopy = (): { title: string; description?: string } => {
     if (result?.filters.q || result?.filters.state) return { title: "Ningún sílabo coincide con la búsqueda" }
     if (deadline?.state === "paused") return { title: "No tiene sílabos asignados" }
-    if (result?.convocation_open === false) return { title: "Todavía no hay un periodo académico abierto", description: "Cuando Coordinación lo abra, aquí verá sus sílabos" }
+    if (result?.convocation_open === false) return { title: "Todavía no hay un proceso de sílabos abierto", description: "Cuando Coordinación lo abra, aquí verá sus sílabos" }
     return { title: "No tiene sílabos asignados" }
   }
 

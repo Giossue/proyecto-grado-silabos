@@ -262,7 +262,7 @@ describe("dashboard", () => {
       metrics: [
         { key: "progress", label: "Avance del proceso", value: 8, suffix: "%", hint: "1 de 13 sílabos aprobados" },
         { key: "days_left", label: "Días para la entrega", value: 7, suffix: "días", hint: "Entrega hasta el 30 de noviembre" },
-        { key: "careers_without_convocation", label: "Carreras sin abrir", value: 0, suffix: null, hint: "Coordinaciones que aún no abren su periodo académico" },
+        { key: "careers_without_convocation", label: "Carreras sin abrir", value: 0, suffix: null, hint: "Coordinaciones que aún no abren su proceso de sílabos" },
         { key: "not_started", label: "Sílabos sin iniciar", value: 11, suffix: null, hint: "Docentes que todavía no empiezan" },
       ],
       setup: {
@@ -271,14 +271,14 @@ describe("dashboard", () => {
         done: 6,
         total: 6,
         steps: [
-          { key: "faculties", label: "Registrar las facultades", hint: "Cargue el logo de cada facultad; Coordinación lo necesita para abrir su periodo académico.", done: true, action: null },
+          { key: "faculties", label: "Registrar las facultades", hint: "Cargue el logo de cada facultad; Coordinación lo necesita para abrir su proceso de sílabos.", done: true, action: null },
           { key: "careers", label: "Registrar las carreras", hint: "Cada carrera registra su modalidad aprobada. Puede importarlas desde Excel.", done: true, action: null },
           { key: "accounts", label: "Crear las cuentas de coordinación y de biblioteca", hint: "Al menos una de cada una, también por importación desde Excel. Los docentes los crea cada Coordinación.", done: true, action: null },
           { key: "coordinators", label: "Asignar un coordinador a cada carrera", hint: "Todas las carreras tienen coordinador.", done: true, action: null },
           { key: "template", label: "Armar la plantilla del sílabo", hint: TEMPLATE_HINT, done: true, action: null },
           {
             key: "process",
-            label: "Abrir el periodo académico",
+            label: "Abrir el proceso de sílabos",
             hint: "Desde Periodos académicos, indique las fechas del periodo lectivo y de elaboración y entrega; cada Coordinación abrirá después el de su carrera.",
             done: true,
             action: null,
@@ -345,7 +345,7 @@ describe("dashboard", () => {
     expect(body.setup.steps[4]).toMatchObject({ done: true, hint: "Completo en las 2 materias." })
     expect(body.setup.steps[5]).toEqual({
       key: "convocation",
-      label: "Abrir el periodo académico de la carrera",
+      label: "Abrir el proceso de sílabos de la carrera",
       hint: "Administración debe cargar el logo de la facultad.",
       done: false,
       action: null,
@@ -380,8 +380,8 @@ describe("dashboard", () => {
     const body = (await call(dashboardIndex, "/api/v1/dashboard")).json as unknown as DashboardBody
     expect(body.deadline).toBeNull()
     expect(body.coordination_convocation).toBeNull()
-    expect(body.setup.steps[1].hint).toBe("Espera a que Administración abra el periodo académico para saber cuál es.")
-    expect(body.setup.steps[5].hint).toBe("Espera a que Administración abra el periodo académico.")
+    expect(body.setup.steps[1].hint).toBe("Espera a que Administración abra el proceso de sílabos para saber cuál es.")
+    expect(body.setup.steps[5].hint).toBe("Espera a que Administración abra el proceso de sílabos.")
   })
 
   it("answers Laravel's model 404 for a missing career and uses the official definition for a template without one", async () => {

@@ -23,12 +23,12 @@ const shell = {
 };
 const basics = [shell.menu, shell.notifications, shell.accessibility, shell.user];
 
-const checklist = step(CHECKLIST, 'Antes de empezar', 'Lo que falta preparar antes de abrir un periodo académico. Pulse un paso y le mostramos dónde se hace', 'left');
+const checklist = step(CHECKLIST, 'Antes de empezar', 'Lo que falta preparar antes de abrir un proceso de sílabos. Pulse un paso y le mostramos dónde se hace', 'left');
 
 /** Guía por pantalla, con la ruta del frontend como clave. Después de estos pasos, la guía cierra sola. */
 export const screenTours: Record<string, TourStep[]> = {
   '/admin/periodos': [
-    step(METRICS, 'Resumen', 'Cómo va el periodo académico: avance, días que faltan y carreras que aún no empiezan', 'bottom'),
+    step(METRICS, 'Resumen', 'Cómo va el proceso de sílabos: avance, días que faltan y carreras que aún no empiezan', 'bottom'),
     step(ACTIONS, 'Nuevo periodo académico', 'Ponga las fechas de clases y de entrega de sílabos. Si faltan pasos, abre «Antes de empezar». Solo puede haber uno a la vez', 'left'),
     step(FILTERS, 'Buscar', 'Busque un período o filtre por estado', 'bottom'),
     step(TABLE, 'Períodos', 'Pulse un período para ver qué puede hacer: abrir, pausar, dar más plazo, finalizar o eliminar', 'top'),
@@ -46,7 +46,7 @@ export const screenTours: Record<string, TourStep[]> = {
     step(TABLE, 'Cuentas', 'Pulse una persona para ver sus datos, cambiar sus roles o quitarle el acceso', 'top'),
   ],
   '/admin/plantilla': [
-    step('[data-tour="template-edit"]', 'Editar', 'Abre la plantilla para cambiarla. Si hay un periodo académico abierto, primero páuselo', 'left'),
+    step('[data-tour="template-edit"]', 'Editar', 'Abre la plantilla para cambiarla. Si hay un proceso de sílabos abierto, primero páuselo', 'left'),
     // Pasos del editor: solo aparecen mientras se edita.
     step('[data-tour="template-back"]', 'Volver', 'Sale del editor. Si no guardó, le avisa antes', 'bottom'),
     step('[aria-label="Formato del texto"]', 'Formato', 'Negrita, colores, listas y tablas. Escriba dentro de un campo para usarlo', 'bottom'),
@@ -65,7 +65,7 @@ export const screenTours: Record<string, TourStep[]> = {
   ],
   '/coordinacion/revisiones': [
     step(DEADLINE, 'Plazo', 'Hasta cuándo pueden entregar los docentes', 'bottom'),
-    step(ACTIONS, 'Periodo académico de su carrera', 'Ábralo cuando termine «Antes de empezar». Páuselo para cambiar la malla o el proyecto de carrera y luego reanúdelo', 'left'),
+    step(ACTIONS, 'Proceso de sílabos de su carrera', 'Ábralo cuando termine «Antes de empezar». Páuselo para cambiar la malla o el proyecto de carrera y luego reanúdelo', 'left'),
     step(TABS, 'Por revisar y seguimiento', '«Cola de revisión» es lo que le toca revisar. «Seguimiento» muestra cómo va cada sílabo', 'bottom'),
     step(FILTERS, 'Buscar', 'Busque una materia por nombre o código', 'bottom'),
     step(TABLE, 'Sílabos', 'Llegan con la bibliografía ya verificada por Biblioteca. Pulse uno para revisarlo: puede pedir correcciones o firmarlo y aprobarlo', 'top'),

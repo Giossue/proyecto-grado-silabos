@@ -28,8 +28,8 @@ export function institutionDay(seconds: number): string {
 
 export function convocationBlockers(readiness: CoordinatorReadiness): string[] {
   const blockers: string[] = []
-  if (readiness.process !== null && !readiness.deadlineOpen) blockers.push("El plazo de entrega del periodo académico ya venció. Administración debe prorrogarlo.")
-  if (!readiness.facultyLogoReady) blockers.push("Administración debe cargar el logo de la facultad antes de que Coordinación abra el periodo académico.")
+  if (readiness.process !== null && !readiness.deadlineOpen) blockers.push("El plazo de entrega del proceso de sílabos ya venció. Administración debe prorrogarlo.")
+  if (!readiness.facultyLogoReady) blockers.push("Administración debe cargar el logo de la facultad antes de que Coordinación abra el proceso de sílabos.")
   if (!readiness.curriculumReady) blockers.push("La carrera no tiene materias en la malla vigente. Registre la malla con sus materias.")
   if (readiness.scheduledTotal === 0) blockers.push("Falta registrar paralelos de las materias de la carrera.")
   const withoutParallel = readiness.scheduledTotal - readiness.scheduledWithParallels

@@ -123,7 +123,7 @@ describe("POST /api/v1/coordination/convocations", () => {
   it("starts the career convocation, opens it, generates its syllabi and tells each teacher what to write", async () => {
     const response = await store({ process_id: PROCESS })
     expect(response.status).toBe(201)
-    expect(response.text).toBe(JSON.stringify({ message: "Periodo académico iniciado: se generó un sílabo por cada paralelo.", convocation_id: CONVOCATION }))
+    expect(response.text).toBe(JSON.stringify({ message: "Proceso de sílabos iniciado: se generó un sílabo por cada paralelo.", convocation_id: CONVOCATION }))
     expect(log).toEqual([
       "begin",
       `lock:process:${PROCESS}`,
@@ -133,7 +133,7 @@ describe("POST /api/v1/coordination/convocations", () => {
       `state:${CONVOCATION}:abierto`,
       "commit",
     ])
-    const message = "Se abrió el periodo académico de Software; la entrega vence el 10 de diciembre de 2026, 23:59."
+    const message = "Se abrió el proceso de sílabos de Software; la entrega vence el 10 de diciembre de 2026, 23:59."
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType, item.resourceId, item.periodId])).toEqual([
       [TEACHER, `flujo:convocatoria.abierta:${CONVOCATION}:${TEACHER}`, "Tiene 2 sílabos por elaborar", message, "convocatoria", CONVOCATION, PERIOD],
       [OTHER_TEACHER, `flujo:convocatoria.abierta:${CONVOCATION}:${OTHER_TEACHER}`, "Tiene un sílabo por elaborar", message, "convocatoria", CONVOCATION, PERIOD],
@@ -160,17 +160,17 @@ describe("POST /api/v1/coordination/convocations", () => {
 
   it("rejects a process that stopped being open or a career that already has its convocation, atomically", async () => {
     process = { id: PROCESS, state: "pausado", periodId: PERIOD }
-    expect((await store({ process_id: PROCESS })).json?.errors).toEqual({ process_id: ["El periodo académico todavía no está abierto."] })
+    expect((await store({ process_id: PROCESS })).json?.errors).toEqual({ process_id: ["El proceso de sílabos todavía no está abierto."] })
     process = { id: PROCESS, state: "abierto", periodId: PERIOD }
     existing = true
-    expect((await store({ process_id: PROCESS })).json?.errors).toEqual({ process_id: ["Esta carrera ya abrió este periodo académico."] })
+    expect((await store({ process_id: PROCESS })).json?.errors).toEqual({ process_id: ["Esta carrera ya abrió este proceso de sílabos."] })
     expect(notices.notifications).toEqual([])
   })
 
   it("reports every missing piece of the career before opening and keeps nothing", async () => {
-    blockers = ["Administración debe cargar el logo de la facultad antes de que Coordinación abra el periodo académico.", "Falta 1 paralelo sin docente."]
+    blockers = ["Administración debe cargar el logo de la facultad antes de que Coordinación abra el proceso de sílabos.", "Falta 1 paralelo sin docente."]
     expect((await store({ process_id: PROCESS })).json).toEqual({
-      message: "Administración debe cargar el logo de la facultad antes de que Coordinación abra el periodo académico. (y 1 error más)",
+      message: "Administración debe cargar el logo de la facultad antes de que Coordinación abra el proceso de sílabos. (y 1 error más)",
       errors: { convocation: blockers },
     })
     blockers = []
@@ -189,13 +189,13 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
     generation = 1
     const response = await resume()
     expect(response.text).toBe(
-      JSON.stringify({ message: "Periodo académico reanudado. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla y el proyecto de carrera quedan protegidos." }),
+      JSON.stringify({ message: "Proceso de sílabos reanudado. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla y el proyecto de carrera quedan protegidos." }),
     )
     expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierto`, "commit"])
     const at = "20270115080000123"
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
-      [TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${TEACHER}:${at}`, "Se reanudó el periodo académico", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
-      [OTHER_TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${OTHER_TEACHER}:${at}`, "Se reanudó el periodo académico", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
+      [TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${TEACHER}:${at}`, "Se reanudó el proceso de sílabos", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
+      [OTHER_TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${OTHER_TEACHER}:${at}`, "Se reanudó el proceso de sílabos", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
     ])
     expect(notices.mails).toEqual([])
   })
@@ -217,10 +217,10 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
 
   it("rejects under the lock when the state changed or Administration paused the process", async () => {
     locked = { ...(locked as LockedConvocation), state: "abierto" }
-    expect((await resume()).json?.errors).toEqual({ convocation: ["Solo un periodo académico pausado puede reanudarse."] })
+    expect((await resume()).json?.errors).toEqual({ convocation: ["Solo un proceso de sílabos pausado puede reanudarse."] })
     locked = { ...(locked as LockedConvocation), state: "pausado", processState: "pausado" }
     expect((await resume()).json?.errors).toEqual({
-      convocation: ["El proceso institucional no está abierto; el periodo académico se reanudará cuando Administración lo reanude."],
+      convocation: ["El proceso institucional no está abierto; el proceso de sílabos se reanudará cuando Administración lo reanude."],
     })
     locked = { ...(locked as LockedConvocation), processState: "abierto" }
     generation = new GenerationRejected({ convocation: ["No existen paralelos de la carrera."] })

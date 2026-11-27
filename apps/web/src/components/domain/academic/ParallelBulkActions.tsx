@@ -55,7 +55,7 @@ type ParallelBulkActionsProps = {
 
 const NO_TEACHER = "none"
 const FINALIZED_MESSAGE =
-  "El periodo académico de su carrera ya finalizó. Estos cambios no afectan sus sílabos: conservan los datos que tenían. Se aplicarán en el próximo periodo académico, o en este si lo reabre con una prórroga"
+  "El proceso de sílabos de su carrera ya finalizó. Estos cambios no afectan sus sílabos: conservan los datos que tenían. Se aplicarán en el próximo proceso de sílabos, o en este si lo reabre con una prórroga"
 
 const shiftMessage = (count: number): string =>
   count === 1

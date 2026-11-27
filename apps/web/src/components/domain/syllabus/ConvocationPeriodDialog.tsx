@@ -112,7 +112,7 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
       setOpen(false)
       onSaved?.(message)
     } catch (reason) {
-      const next = applyApiErrors(schemaForm.setError, reason, { fallback: "No se pudo abrir el periodo académico" })
+      const next = applyApiErrors(schemaForm.setError, reason, { fallback: "No se pudo abrir el proceso de sílabos" })
       if (next.starts_on || next.ends_on) goTo(1)
     } finally {
       setProcessing(false)
@@ -198,7 +198,7 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
               ) : (
                 <Button type="submit" disabled={processing || disabled || !processComplete}>
                   {processing ? <Spinner data-icon="inline-start" /> : <CalendarPlus data-icon="inline-start" aria-hidden="true" />}
-                  Abrir periodo académico
+                  Abrir proceso de sílabos
                 </Button>
               )}
             </FormDialogFooter>

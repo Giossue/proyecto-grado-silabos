@@ -470,7 +470,7 @@ describe("template assistant", () => {
     script([
       call("agregar_campo", { seccion: "descripcion", nombre: "X", quien_llena: "docente", contenido_html: "", despues_de: "(final)" }),
       call("ver_estado"),
-      call("responder", { mensaje: "El periodo académico está abierto." }),
+      call("responder", { mensaje: "El proceso de sílabos está abierto." }),
     ])
 
     const outcome = await run("Agrega un campo")
@@ -478,7 +478,7 @@ describe("template assistant", () => {
     const names = gateway.requests[0].tools.map((tool) => tool.name)
     expect(names).not.toContain("agregar_campo")
     expect(names).toContain("ver_plantilla")
-    expect(gateway.requests[0].messages[0].content).toContain("El periodo académico está abierto")
+    expect(gateway.requests[0].messages[0].content).toContain("El proceso de sílabos está abierto")
     expect(gateway.toolResults(1)[0]).toContain("no se pueden proponer cambios")
     expect(gateway.toolResults(2)[1]).toContain('"estado":"abierta"')
     expect(outcome.status).toBe(OUTCOME_ANSWER)

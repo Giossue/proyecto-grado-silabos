@@ -58,7 +58,7 @@ import { scrollBehavior } from "@/lib/motion"
 type ValidationResult = { field_id: string | null; code: string; severity: string; message: string }
 type CopySource = { id: string; parallel: string }
 
-const PAUSED_MESSAGE = "El periodo académico está en pausa. Podrá seguir editando cuando se reanude"
+const PAUSED_MESSAGE = "El proceso de sílabos está en pausa. Podrá seguir editando cuando se reanude"
 const EDITABLE_STATES = ["borrador", "correccion_solicitada"]
 const NO_RESULTS: ValidationResult[] = []
 

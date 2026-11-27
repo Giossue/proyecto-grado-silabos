@@ -9,7 +9,7 @@ import { phpIntCast } from "./governanceWrites"
 import { isUuid, type MallaReadRepository, type MallaRecord } from "./structure"
 
 export const MALLA_NOT_FOUND = "La malla no existe en esta carrera."
-export const MALLA_CLOSING_REFUSED = "No se puede cerrar la malla: sus materias tienen sílabos en un periodo académico abierto."
+export const MALLA_CLOSING_REFUSED = "No se puede cerrar la malla: sus materias tienen sílabos en un proceso de sílabos abierto."
 
 export type MallaData = { code: string; cycleCount: number; state: string }
 export type MallaColumn = "codigo_malla" | "estado_malla"

@@ -105,15 +105,15 @@ export type AssistantDeps = {
 }
 
 export function processNotice(state: string): ProcessNotice {
-  if (state === "abierta") return { estado: "abierta", aviso: "Hay un periodo académico abierto: la plantilla no se puede cambiar hasta pausarlo." }
+  if (state === "abierta") return { estado: "abierta", aviso: "Hay un proceso de sílabos abierto: la plantilla no se puede cambiar hasta pausarlo." }
   if (state === "pausada") {
     return {
       estado: "pausada",
       aviso:
-        "El periodo académico está en pausa: si se aplican cambios, al reanudarlo los sílabos en curso vuelven a borrador y conservan lo escrito en los campos que siguen encajando; los campos que cambien su estructura quedan vacíos.",
+        "El proceso de sílabos está en pausa: si se aplican cambios, al reanudarlo los sílabos en curso vuelven a borrador y conservan lo escrito en los campos que siguen encajando; los campos que cambien su estructura quedan vacíos.",
     }
   }
-  return { estado: "ninguna", aviso: "No hay periodo académico abierto ni en pausa: los cambios se aplican a los próximos sílabos." }
+  return { estado: "ninguna", aviso: "No hay proceso de sílabos abierto ni en pausa: los cambios se aplican a los próximos sílabos." }
 }
 
 export class TemplateAssistant {
@@ -126,7 +126,7 @@ export class TemplateAssistant {
   constructor(private readonly deps: AssistantDeps) {}
 
   assumingProcess(state: string): TemplateAssistant {
-    if (!PROCESS_STATES.includes(state)) throw new Error(`Estado de periodo académico desconocido: ${state}.`)
+    if (!PROCESS_STATES.includes(state)) throw new Error(`Estado de proceso de sílabos desconocido: ${state}.`)
     const assistant = new TemplateAssistant(this.deps)
     assistant.assumedProcess = state
     return assistant
@@ -251,7 +251,7 @@ export class TemplateAssistant {
 
   private opening(tools: TemplateTools, request: string, fromEditor: boolean, continues: boolean, lastProposal: LastProposal | null): string {
     let state = tools.locked()
-      ? "El periodo académico está abierto: solo puede consultar y explicar; no proponga cambios."
+      ? "El proceso de sílabos está abierto: solo puede consultar y explicar; no proponga cambios."
       : "Puede proponer cambios en el borrador. Nada se guarda hasta que el administrador los aplique."
     if (fromEditor) {
       state +=

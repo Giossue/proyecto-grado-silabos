@@ -119,7 +119,7 @@ export default function AdminProcessesPage() {
                 <ConvocationPeriodDialog disabled onSaved={(message) => void changed(message)} />
               </span>
             </TooltipTrigger>
-            <TooltipContent>Hay un periodo académico abierto o pausado. Finalícelo o elimínelo antes de abrir otro</TooltipContent>
+            <TooltipContent>Hay un proceso de sílabos abierto o pausado. Finalícelo o elimínelo antes de abrir otro</TooltipContent>
           </Tooltip>
         ) : loaded ? (
           // With setup steps left, the button opens «Antes de empezar» instead of the form.

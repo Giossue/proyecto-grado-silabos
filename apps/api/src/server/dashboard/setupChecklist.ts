@@ -88,7 +88,7 @@ export async function administratorSetup(setup: SetupRepository, templates: Temp
       step(
         "faculties",
         "Registrar las facultades",
-        "Cargue el logo de cada facultad; Coordinación lo necesita para abrir su periodo académico.",
+        "Cargue el logo de cada facultad; Coordinación lo necesita para abrir su proceso de sílabos.",
         await setup.activeFacultyExists(),
       ),
       step(
@@ -117,7 +117,7 @@ export async function administratorSetup(setup: SetupRepository, templates: Temp
     ],
     step(
       "process",
-      "Abrir el periodo académico",
+      "Abrir el proceso de sílabos",
       "Desde Periodos académicos, indique las fechas del periodo lectivo y de elaboración y entrega; cada Coordinación abrirá después el de su carrera.",
       await setup.processExists(),
     ),
@@ -176,13 +176,13 @@ export async function coordinatorReadiness(
 
 function convocationHint(readiness: CoordinatorReadiness): string {
   const { process } = readiness
-  if (process === null) return "Espera a que Administración abra el periodo académico."
-  if (process.state === "pausado") return "El periodo académico está en pausa."
-  if (!readiness.deadlineOpen) return "El plazo institucional venció. Administración debe prorrogarlo antes de abrir el periodo académico."
+  if (process === null) return "Espera a que Administración abra el proceso de sílabos."
+  if (process.state === "pausado") return "El proceso de sílabos está en pausa."
+  if (!readiness.deadlineOpen) return "El plazo institucional venció. Administración debe prorrogarlo antes de abrir el proceso de sílabos."
   if (!readiness.templateReady) return "Administración debe completar la plantilla institucional."
   if (!readiness.facultyLogoReady) return "Administración debe cargar el logo de la facultad."
   if (readiness.subjectsWithoutProfile > 0) return `Complete el proyecto de carrera de ${readiness.subjectsWithoutProfile} materia(s).`
-  if (readiness.canOpen) return "Todo está listo. Puede abrir el periodo académico."
+  if (readiness.canOpen) return "Todo está listo. Puede abrir el proceso de sílabos."
   return "Complete los pasos anteriores para poder abrirlo."
 }
 
@@ -192,7 +192,7 @@ export async function coordinatorSetup(careerId: string | null, readiness: Coord
   const { scheduledTotal, scheduledWithParallels, parallelTotal, parallelsWithTeacher, subjectsWithoutProfile } = readiness
   return build(
     "Antes de empezar",
-    "En este orden. Al abrir el periodo académico se crea un sílabo por paralelo con su docente.",
+    "En este orden. Al abrir el proceso de sílabos se crea un sílabo por paralelo con su docente.",
     [
       step(
         "curriculum",
@@ -203,7 +203,7 @@ export async function coordinatorSetup(careerId: string | null, readiness: Coord
       step(
         "scheduled_subjects",
         "Programar las materias del período",
-        period === null ? "Espera a que Administración abra el periodo académico para saber cuál es." : `Registre las materias que se impartirán en ${period}.`,
+        period === null ? "Espera a que Administración abra el proceso de sílabos para saber cuál es." : `Registre las materias que se impartirán en ${period}.`,
         scheduledTotal > 0,
       ),
       step(
@@ -233,7 +233,7 @@ export async function coordinatorSetup(careerId: string | null, readiness: Coord
         scheduledTotal > 0 && subjectsWithoutProfile === 0,
       ),
     ],
-    step("convocation", "Abrir el periodo académico de la carrera", convocationHint(readiness), readiness.convocation !== null, readiness.canOpen ? "open_convocation" : null),
+    step("convocation", "Abrir el proceso de sílabos de la carrera", convocationHint(readiness), readiness.convocation !== null, readiness.canOpen ? "open_convocation" : null),
   )
 }
 
@@ -267,7 +267,7 @@ export async function administratorMetrics(process: ProcessRecord | null, setup:
       label: "Carreras sin abrir",
       value: process === null ? 0 : await setup.careersWithoutConvocation(process.id),
       suffix: null,
-      hint: process === null ? "Sin proceso en curso" : "Coordinaciones que aún no abren su periodo académico",
+      hint: process === null ? "Sin proceso en curso" : "Coordinaciones que aún no abren su proceso de sílabos",
     },
     { key: "not_started", label: "Sílabos sin iniciar", value: counts.notStarted, suffix: null, hint: "Docentes que todavía no empiezan" },
   ]

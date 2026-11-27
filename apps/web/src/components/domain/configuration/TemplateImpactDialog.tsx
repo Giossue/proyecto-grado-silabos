@@ -28,9 +28,9 @@ export function TemplateImpactDialog({ impact, onConfirm, onCancel }: TemplateIm
         <DialogHeader>
           <DialogTitle>Sílabos afectados</DialogTitle>
           {counted ? (
-            <DialogDescription>Al reanudar el periodo académico en pausa:</DialogDescription>
+            <DialogDescription>Al reanudar el proceso de sílabos en pausa:</DialogDescription>
           ) : (
-            <DialogDescription data-impact-unknown>No se pudieron contar los sílabos afectados. Al reanudar un periodo académico en pausa, sus sílabos conservan lo escrito en los campos que siguen igual y los enviados o aprobados vuelven a borrador</DialogDescription>
+            <DialogDescription data-impact-unknown>No se pudieron contar los sílabos afectados. Al reanudar un proceso de sílabos en pausa, sus sílabos conservan lo escrito en los campos que siguen igual y los enviados o aprobados vuelven a borrador</DialogDescription>
           )}
         </DialogHeader>
         {lines.length ? (

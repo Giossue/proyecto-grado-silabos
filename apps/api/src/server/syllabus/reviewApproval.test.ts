@@ -18,7 +18,7 @@ const REVISION = "70000000-0000-4000-8000-000000000001"
 const FINGERPRINT = "cd".repeat(32)
 const STATEMENT = `silabos-ueb|silabo:${SYLLABUS}|accion:aprobacion_coordinacion|huella:${FINGERPRINT}`
 const KEY = "4f3c2b1a-0d9e-4c8b-a7f6-e5d4c3b2a190"
-const PAUSED = "El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude."
+const PAUSED = "El proceso de sílabos de la carrera está en pausa: las revisiones se retoman cuando se reanude."
 const ISO_NOW = new Date(NOW * 1000).toISOString().slice(0, 19) + "+00:00"
 
 let world: FakeWorld

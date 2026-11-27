@@ -64,7 +64,7 @@ export class CoordinationAcademicController {
   @Patch("mallas/:malla")
   @ApiOperation({
     summary: "Edita el código o el estado de la malla.",
-    description: "Hacerla vigente no cambia las demás mallas. No se cierra si sus materias tienen sílabos en un periodo académico abierto.",
+    description: "Hacerla vigente no cambia las demás mallas. No se cierra si sus materias tienen sílabos en un proceso de sílabos abierto.",
   })
   @ApiParam({ name: "malla", format: "uuid" })
   @ApiBody({ type: MallaUpdateDto })
@@ -79,7 +79,7 @@ export class CoordinationAcademicController {
   }
 
   @Get("curriculum/:curriculum")
-  @ApiOperation({ summary: "Malla de la carrera: asignaturas, requisitos y bloqueo por periodo académico." })
+  @ApiOperation({ summary: "Malla de la carrera: asignaturas, requisitos y bloqueo por proceso de sílabos." })
   @ApiParam({ name: "curriculum", format: "uuid" })
   curriculum(@Req() request: ApiRequest, @Param("curriculum") curriculum: string): Promise<WebReply> {
     return handled(request, (web) => curriculumBuilder(web, curriculum, this.deps.structure()))
@@ -160,7 +160,7 @@ export class CoordinationAcademicController {
   }
 
   @Post("parallels")
-  @ApiOperation({ summary: "Crea paralelos; si el periodo académico está abierto y tienen docente, genera sus sílabos y avisa al docente." })
+  @ApiOperation({ summary: "Crea paralelos; si el proceso de sílabos está abierto y tienen docente, genera sus sílabos y avisa al docente." })
   @ApiBody({ type: ParallelsDto })
   @ApiUnprocessableEntityResponse(VALIDATION)
   createParallels(@Req() request: ApiRequest): Promise<WebReply> {
@@ -173,7 +173,7 @@ export class CoordinationAcademicController {
   }
 
   @Put("parallels/:parallel/teacher")
-  @ApiOperation({ summary: "Asigna o cambia el docente del paralelo; con periodo académico abierto genera el sílabo y avisa al docente." })
+  @ApiOperation({ summary: "Asigna o cambia el docente del paralelo; con proceso de sílabos abierto genera el sílabo y avisa al docente." })
   @ApiParam({ name: "parallel", format: "uuid" })
   @ApiBody({ type: ParallelTeacherDto })
   @ApiUnprocessableEntityResponse(VALIDATION)

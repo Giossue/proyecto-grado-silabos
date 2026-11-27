@@ -170,7 +170,7 @@ describe("ParallelBulkActions", () => {
     expect(changed.mock.calls.at(-1)).toEqual(["Jornada actualizada en los paralelos seleccionados"])
   })
 
-  it("con el periodo académico finalizado, asignar docente aplica directo con confirmación y avisa una vez", async () => {
+  it("con el proceso de sílabos finalizado, asignar docente aplica directo con confirmación y avisa una vez", async () => {
     deadline.state = "closed"
     const actor = userEvent.setup()
     mountBar()
@@ -179,7 +179,7 @@ describe("ParallelBulkActions", () => {
     await chooseFromSubmenu(actor, "Asignar docente", "Docente Uno")
     expect(api.replaceParallelTeacher).toHaveBeenCalledWith("p1", TEACHER_ID, "confirmed")
     expect(purge.announcePurge).toHaveBeenCalledTimes(1)
-    expect(purge.announcePurge.mock.calls[0]![0]).toContain("El periodo académico de su carrera ya finalizó")
+    expect(purge.announcePurge.mock.calls[0]![0]).toContain("El proceso de sílabos de su carrera ya finalizó")
   })
 
   it("asignar otro docente donde el sílabo ya tiene trabajo aplica directo y avisa una vez", async () => {

@@ -62,7 +62,7 @@ export function SetupChecklist() {
     panel.current = checklist({
       id: `setup-${role}`,
       title: setup?.title,
-      description: "Complete estos pasos para poder abrir el periodo académico",
+      description: "Complete estos pasos para poder abrir el proceso de sílabos",
       launcherText: "Antes de empezar",
       progressText: "{{done}} de {{total}}",
       launcherProgressText: "{{done}}/{{total}}",

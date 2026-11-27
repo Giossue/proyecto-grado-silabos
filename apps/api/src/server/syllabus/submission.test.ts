@@ -180,7 +180,7 @@ describe("POST teacher/syllabi/{s}/signing-statement", () => {
     expect((await statementOf({ version_bloqueo: 7 })).json).toEqual({ message: "El expediente no está listo para envío.", errors: { syllabus: ["El expediente no está listo para envío."] } })
     syllabus = draft()
     schedule = { ...schedule, startsOn: "2026-11-30" }
-    expect((await statementOf({ version_bloqueo: 7 })).json).toMatchObject({ errors: { deadline: ["El periodo académico todavía no inicia; podrá enviar a partir del 30/11/2026."] } })
+    expect((await statementOf({ version_bloqueo: 7 })).json).toMatchObject({ errors: { deadline: ["El proceso de sílabos todavía no inicia; podrá enviar a partir del 30/11/2026."] } })
     schedule = { ...schedule, startsOn: "2026-11-01", dueOn: "2026-11-20" }
     expect((await statementOf({ version_bloqueo: 7 })).json).toMatchObject({ errors: { deadline: ["El plazo de entrega venció el 20/11/2026. Pida una prórroga a Administración."] } })
     schedule = { ...schedule, dueOn: "2026-12-01" }

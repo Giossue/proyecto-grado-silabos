@@ -154,8 +154,8 @@ describe("careerProfileBlock", () => {
 
   it("locks while the career period is open or finalized, and not before opening or while paused", async () => {
     const blockedBy = async (rows: { processState: string; convocationState: string | null }[]) => careerProfileBlock(database(rows).db, CAREER)
-    const open = "Pause el periodo académico de su carrera para editar el proyecto de carrera."
-    const finalized = "El proyecto de carrera no se puede editar con el periodo académico finalizado."
+    const open = "Pause el proceso de sílabos de su carrera para editar el proyecto de carrera."
+    const finalized = "El proyecto de carrera no se puede editar con el proceso de sílabos finalizado."
     expect(await blockedBy([])).toBeNull()
     expect(await blockedBy([{ processState: "abierto", convocationState: null }])).toBeNull()
     expect(await blockedBy([{ processState: "abierto", convocationState: "preparacion" }])).toBeNull()

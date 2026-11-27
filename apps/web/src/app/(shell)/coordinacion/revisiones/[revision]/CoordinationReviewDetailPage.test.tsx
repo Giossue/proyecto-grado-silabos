@@ -148,24 +148,24 @@ describe("CoordinationReviewDetailPage", () => {
   })
 
   it("en pausa no repite el motivo junto al estado: lo explica la franja", async () => {
-    vi.mocked(getReview).mockResolvedValue({ ...detail(false), convocation_closed: false, decision_block: "El periodo académico de la carrera está en pausa: las revisiones se retoman cuando se reanude." })
+    vi.mocked(getReview).mockResolvedValue({ ...detail(false), convocation_closed: false, decision_block: "El proceso de sílabos de la carrera está en pausa: las revisiones se retoman cuando se reanude." })
     const { container } = await mountPage()
 
     expect(container.querySelector('[data-testid="role-deadline-banner"]')).toBeNull()
     expect(container.textContent).not.toContain("está en pausa")
-    expect(container.textContent).not.toContain("Periodo académico finalizado")
+    expect(container.textContent).not.toContain("Proceso de sílabos finalizado")
     expect(headerButton("Firmar y aprobar")).toBeUndefined()
     expect(headerButton("Aprobar")).toBeUndefined()
   })
 
-  it("deja la revisión solo para consulta con el periodo académico finalizado", async () => {
+  it("deja la revisión solo para consulta con el proceso de sílabos finalizado", async () => {
     vi.mocked(getReview).mockResolvedValue(detail(false))
     const { container } = await mountPage()
 
-    const banner = [...container.querySelectorAll('[role="status"]')].find((item) => item.textContent?.includes("Periodo académico finalizado"))
+    const banner = [...container.querySelectorAll('[role="status"]')].find((item) => item.textContent?.includes("Proceso de sílabos finalizado"))
     expect(banner?.textContent).toContain("Este sílabo queda solo para consulta")
-    expect(container.textContent).not.toContain("Periodo académico finalizado · solo consulta")
-    expect(container.textContent).not.toContain("Periodo académico cerrado")
+    expect(container.textContent).not.toContain("Proceso de sílabos finalizado · solo consulta")
+    expect(container.textContent).not.toContain("Proceso de sílabos cerrado")
     expect(headerButton("Solicitar corrección")).toBeUndefined()
     expect(headerButton("Firmar y aprobar")).toBeUndefined()
   })

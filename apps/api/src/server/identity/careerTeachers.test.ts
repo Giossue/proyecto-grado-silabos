@@ -154,7 +154,7 @@ describe("DELETE /api/v1/coordination/academic/teachers/{user}", () => {
   it("waits while the convocation of the career is open and refuses teachers of another career", async () => {
     const test = coordination()
     test.identity.careers[0].locked = true
-    expect(await (await remove(test, TEACHER)).json()).toEqual({ message: "Periodo académico activo", errors: { process: ["Periodo académico activo"] } })
+    expect(await (await remove(test, TEACHER)).json()).toEqual({ message: "Proceso de sílabos activo", errors: { process: ["Proceso de sílabos activo"] } })
     expect(test.identity.grants.find((row) => row.id === TEACHER_ROLE)?.active).toBe(true)
     expect((await remove(test, FOREIGN)).status).toBe(403)
   })

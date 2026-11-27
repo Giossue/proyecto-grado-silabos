@@ -182,9 +182,9 @@ describe("Página del proyecto de carrera de una materia", () => {
   })
 
   it.each([
-    ["abierto", "Pause el periodo académico de su carrera para editar el proyecto de carrera.", "yes"],
-    ["finalizado", "El proyecto de carrera no se puede editar con el periodo académico finalizado.", "no"],
-  ])("con el periodo académico %s queda de solo lectura con el motivo que da el servidor", async (_state, reason, action) => {
+    ["abierto", "Pause el proceso de sílabos de su carrera para editar el proyecto de carrera.", "yes"],
+    ["finalizado", "El proyecto de carrera no se puede editar con el proceso de sílabos finalizado.", "no"],
+  ])("con el proceso de sílabos %s queda de solo lectura con el motivo que da el servidor", async (_state, reason, action) => {
     vi.mocked(getSubjectProfile).mockResolvedValue(profile({ lock_reason: reason }))
     await mountPage()
 
@@ -196,7 +196,7 @@ describe("Página del proyecto de carrera de una materia", () => {
   })
 
   it("sin bloqueo del servidor se edita aunque la malla esté bloqueada", async () => {
-    vi.mocked(getScheduledSubjects).mockResolvedValue(scheduled("Periodo académico activo"))
+    vi.mocked(getScheduledSubjects).mockResolvedValue(scheduled("Proceso de sílabos activo"))
     vi.mocked(getSubjectProfile).mockResolvedValue(profile({ lock_reason: null }))
     await mountPage()
 

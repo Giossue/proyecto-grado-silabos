@@ -92,7 +92,7 @@ describe("CatalogActions", () => {
     await flush()
 
     expect(document.body.textContent).toContain(
-      "«Software» dejará de participar en nuevos periodos académicos. Se retirarán 1 coordinador y 12 docentes de esta carrera; quien tenga rol en otra carrera lo conserva. Su historial se conserva y podrá reactivarla después",
+      "«Software» dejará de participar en nuevos procesos de sílabos. Se retirarán 1 coordinador y 12 docentes de esta carrera; quien tenga rol en otra carrera lo conserva. Su historial se conserva y podrá reactivarla después",
     )
   })
 
@@ -105,16 +105,16 @@ describe("CatalogActions", () => {
     expect(document.body.querySelector('button[aria-label="Eliminar"]')).toBeNull()
   })
 
-  it("con un periodo académico bloqueando no se abre la hoja ni hay acciones", async () => {
-    await open({ entity: "facultad", lockReason: "Periodo académico activo" })
+  it("con un proceso de sílabos bloqueando no se abre la hoja ni hay acciones", async () => {
+    await open({ entity: "facultad", lockReason: "Proceso de sílabos activo" })
 
     expect(document.body.querySelector('button[aria-label="Desactivar facultad"]')).toBeNull()
   })
 
-  it("avisa que abrió el periodo académico cuando el formulario terminó de cerrarse", async () => {
+  it("avisa que abrió el proceso de sílabos cuando el formulario terminó de cerrarse", async () => {
     await open({ entity: "periodo", recordName: "2026-2027" })
     vi.useFakeTimers()
-    act(() => process.props!.onSaved!("Periodo académico abierto."))
+    act(() => process.props!.onSaved!("Proceso de sílabos abierto."))
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
     })
@@ -123,7 +123,7 @@ describe("CatalogActions", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DIALOG_EXIT_MS)
     })
-    expect(changed.mock.calls).toEqual([["Periodo académico abierto."]])
+    expect(changed.mock.calls).toEqual([["Proceso de sílabos abierto."]])
   })
 
   it("un período sigue teniendo Eliminar", async () => {

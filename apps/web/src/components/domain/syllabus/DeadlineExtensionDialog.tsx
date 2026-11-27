@@ -72,7 +72,7 @@ export function DeadlineExtensionDialog({ process, display = "button", open, onO
       triggerLabel="Prorrogar plazo"
       showTrigger={display !== "menu"}
       title="Prorrogar el plazo de entrega"
-      description="Mueve la fecha límite de entrega hacia adelante para todas los periodos académicos"
+      description="Mueve la fecha límite de entrega hacia adelante para todos los procesos de sílabos"
       trigger={<Button variant="outline">Prorrogar plazo</Button>}
     >
       {({ close }) => (
@@ -82,7 +82,7 @@ export function DeadlineExtensionDialog({ process, display = "button", open, onO
             {finalized ? (
               <Alert>
                 <RefreshCcw aria-hidden="true" />
-                <AlertDescription>Al prorrogar, el periodo académico se vuelve a abrir con la nueva fecha y sus sílabos reciben los cambios pendientes</AlertDescription>
+                <AlertDescription>Al prorrogar, el proceso de sílabos se vuelve a abrir con la nueva fecha y sus sílabos reciben los cambios pendientes</AlertDescription>
               </Alert>
             ) : null}
             <Field data-invalid={errors.due_at !== undefined}>

@@ -54,7 +54,7 @@ export function SyllabusProcessActions({ process, menu = true, onCompleted, chil
       const response = await deleteProcess(process.id)
       onCompleted?.(response.message)
     } catch (cause) {
-      toast.error(cause instanceof ApiError ? (cause.errors.process?.[0] ?? cause.message) : "No se pudo eliminar el periodo académico")
+      toast.error(cause instanceof ApiError ? (cause.errors.process?.[0] ?? cause.message) : "No se pudo eliminar el proceso de sílabos")
     } finally {
       setProcessing(false)
     }

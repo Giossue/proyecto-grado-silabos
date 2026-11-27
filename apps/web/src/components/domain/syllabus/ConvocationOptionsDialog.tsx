@@ -27,7 +27,7 @@ const actionsFor = (row: ConvocationRow): DialogAction[] => {
     const locked = Boolean(reason)
 
     return [
-      { key: "abrir", label: "Abrir periodo académico", icon: CalendarPlus, disabled: locked, disabledReason: reason },
+      { key: "abrir", label: "Abrir proceso de sílabos", icon: CalendarPlus, disabled: locked, disabledReason: reason },
       { key: "eliminar-periodo", label: "Eliminar periodo", icon: Trash2, destructive: true, disabled: locked, disabledReason: reason },
     ]
   }
@@ -70,13 +70,13 @@ export function ConvocationOptionsDialog({ row, open, onOpenChange, onAction }: 
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Periodo académico {row.code}</DialogTitle>
-          <DialogDescription>Elija qué hacer con el periodo académico</DialogDescription>
+          <DialogDescription>Elija qué hacer con el proceso de sílabos</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2">
           {groups.map((group, groupIndex) => (
             <Fragment key={groupIndex}>
               {groupIndex > 0 ? <Separator /> : null}
-              <ul className="flex flex-col gap-1" aria-label={groupIndex === 0 ? "Opciones del periodo académico" : "Opciones delicadas"}>
+              <ul className="flex flex-col gap-1" aria-label={groupIndex === 0 ? "Opciones del proceso de sílabos" : "Opciones delicadas"}>
                 {group.map((action) => {
                   const Icon = action.icon
 

@@ -83,8 +83,8 @@ const mark = (label: string): Promise<void> => pressElement(checkbox(label))
 const selectionBar = (): HTMLElement | null => document.querySelector<HTMLElement>('[role="region"][aria-label="Acciones sobre las materias seleccionadas"]')
 const barButton = (text: string) => [...(selectionBar()?.querySelectorAll("button") ?? [])].find((item) => item.textContent?.trim() === text)
 const excelButton = () => [...document.querySelectorAll("button")].find((item) => item.textContent?.includes("Excel"))
-const OPEN_REASON = "Pause el periodo académico de su carrera para editar el proyecto de carrera."
-const CLOSED = "El proyecto de carrera no se puede editar con el periodo académico finalizado."
+const OPEN_REASON = "Pause el proceso de sílabos de su carrera para editar el proyecto de carrera."
+const CLOSED = "El proyecto de carrera no se puede editar con el proceso de sílabos finalizado."
 const scheduled = (subjects: unknown[]) => ({ career: { lock_reason: null, lock: null }, options: { activeSubjects: subjects } }) as unknown as ScheduledSubjects
 const mountPage = async () => {
   const view = renderWithProviders(<CoordinationCareerProjectPage />)
@@ -183,7 +183,7 @@ describe("Proyecto de carrera", () => {
     expect(selectionBar()).toBeNull()
   })
 
-  it("con el periodo académico abierto ofrece ir a pausarlo", async () => {
+  it("con el proceso de sílabos abierto ofrece ir a pausarlo", async () => {
     vi.mocked(getScheduledSubjects).mockResolvedValue({
       ...scheduled([subject("m2", "Matemática Discreta", 1)]),
       career: { lock_reason: null, lock: null, profile_lock_reason: OPEN_REASON },
@@ -197,7 +197,7 @@ describe("Proyecto de carrera", () => {
   it("sin bloqueo del servidor deja seleccionar materias aunque la malla esté bloqueada", async () => {
     vi.mocked(getScheduledSubjects).mockResolvedValue({
       ...scheduled([subject("m2", "Matemática Discreta", 1)]),
-      career: { lock_reason: "Periodo académico activo", lock: { scope: "convocation" }, profile_lock_reason: null },
+      career: { lock_reason: "Proceso de sílabos activo", lock: { scope: "convocation" }, profile_lock_reason: null },
     } as unknown as ScheduledSubjects)
     await mountPage()
 

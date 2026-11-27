@@ -226,9 +226,9 @@ describe("GET teacher/syllabi/{syllabus}", () => {
   })
 
   it.each([
-    [{ convocationState: "pausado" }, "El periodo académico está en pausa. Podrá seguir editando cuando se reanude.", true],
-    [{ processState: "pausado" }, "El periodo académico está en pausa. Podrá seguir editando cuando se reanude.", true],
-    [{ convocationState: "cerrado" }, "El periodo académico está cerrado: el sílabo queda solo para consulta.", true],
+    [{ convocationState: "pausado" }, "El proceso de sílabos está en pausa. Podrá seguir editando cuando se reanude.", true],
+    [{ processState: "pausado" }, "El proceso de sílabos está en pausa. Podrá seguir editando cuando se reanude.", true],
+    [{ convocationState: "cerrado" }, "El proceso de sílabos está cerrado: el sílabo queda solo para consulta.", true],
     [{ dueOn: "2026-11-22" }, "El plazo de entrega venció. Pida una prórroga a Administración.", true],
   ])("explains why the convocation blocks editing (%o)", async (overrides, reason, byConvocation) => {
     syllabus = draft(overrides)

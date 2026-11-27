@@ -76,7 +76,7 @@ describe("ConvocationActions", () => {
 
     const modal = container.querySelector("[data-modal]")!
     expect(modal.getAttribute("data-state")).toBe("closed")
-    expect(modal.textContent).toContain("Pausar el periodo académico")
+    expect(modal.textContent).toContain("Pausar el proceso de sílabos")
   })
 
   it.each([
@@ -84,7 +84,7 @@ describe("ConvocationActions", () => {
     ["si ya se puede abrir, abre el formulario de apertura", true, 0, true],
   ])("%s", async (_case, canOpen, requested, formOpen) => {
     renderWithProviders(<ConvocationActions convocation={{ process_id: "p-1", period: "2026-2027", convocation_id: null, can_open: canOpen, state: null, process_open: true }} />)
-    const button = [...document.querySelectorAll("button")].find((item) => item.textContent?.includes("Abrir periodo académico"))!
+    const button = [...document.querySelectorAll("button")].find((item) => item.textContent?.includes("Abrir proceso de sílabos"))!
     const before = setupChecklistState.openRequests.value
     expect(button.disabled).toBe(false)
     fireEvent.click(button)
@@ -93,20 +93,20 @@ describe("ConvocationActions", () => {
     expect(stubs.openingOpen).toBe(formOpen)
   })
 
-  it("avisa que abrió el periodo académico cuando el modal de apertura terminó de cerrarse", async () => {
+  it("avisa que abrió el proceso de sílabos cuando el modal de apertura terminó de cerrarse", async () => {
     vi.useFakeTimers()
     stubs.fading = true
     const onChanged = vi.fn()
     render(<ConvocationActions convocation={{ process_id: "p-1", period: "2026-2027", convocation_id: null, can_open: true, state: null, process_open: true }} onChanged={onChanged} />)
 
     await act(async () => {
-      stubs.opened?.("Periodo académico abierto.", "c-1")
+      stubs.opened?.("Proceso de sílabos abierto.", "c-1")
       await Promise.resolve()
     })
     expect(onChanged).not.toHaveBeenCalled()
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DIALOG_EXIT_MS)
     })
-    expect(onChanged.mock.calls).toEqual([["Periodo académico abierto."]])
+    expect(onChanged.mock.calls).toEqual([["Proceso de sílabos abierto."]])
   })
 })

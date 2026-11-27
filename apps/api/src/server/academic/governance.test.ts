@@ -148,7 +148,7 @@ describe("GET admin/academic/{section?}", () => {
   it("serializes the catalogs in Laravel's order and shape", async () => {
     const response = await list()
     const text = await response.text()
-    expect(text.startsWith('{"lock_reason":"Periodo académico activo","convocation_in_progress":true,"catalogs":{"faculties":[{"id":"')).toBe(true)
+    expect(text.startsWith('{"lock_reason":"Proceso de sílabos activo","convocation_in_progress":true,"catalogs":{"faculties":[{"id":"')).toBe(true)
     expect(text).toContain(
       `{"id":"${FACULTY}","nombre":"Ciencias Administrativas","catalog_libraries":["BIB-1"],"activo":true,` +
         `"deactivate_block":"Desactive primero las carreras activas de esta facultad.","lock_reason":null,"logo_url":"http://localhost:3000/logos/facultad/${FACULTY}?v=1794318825"}`,
@@ -166,14 +166,14 @@ describe("GET admin/academic/{section?}", () => {
       name: "Software",
       cycle_count: 9,
       active: true,
-      deactivate_block: "La carrera participa en un periodo académico en curso. Espere a que se cierre.",
+      deactivate_block: "La carrera participa en un proceso de sílabos en curso. Espere a que se cierre.",
       deactivate_users: { coordinators: 1, teachers: 3 },
       lock_reason: null,
     })
     expect(body.catalogs.careers[1]).toMatchObject({ coordinator: null, modality: null, modality_label: null, cycle_count: null, deactivate_block: null, deactivate_users: { coordinators: 0, teachers: 0 } })
   })
 
-  it("locks a period with an open process as «Periodo académico activo» and with a closed one as «Periodo académico cerrado»", async () => {
+  it("locks a period with an open process as «Proceso de sílabos activo» and with a closed one as «Proceso de sílabos cerrado»", async () => {
     let body = await json()
     expect(body.catalogs.periods[0]).toEqual({
       id: PERIOD,
@@ -184,15 +184,15 @@ describe("GET admin/academic/{section?}", () => {
       status: "en_curso",
       status_label: "En curso",
       institutional_process: { id: PROCESS, state: "abierto" },
-      lock_reason: "Periodo académico activo",
+      lock_reason: "Proceso de sílabos activo",
     })
     expect(body.catalogs.periods[1]).toMatchObject({ status: "finalizado", status_label: "Finalizado", institutional_process: null, lock_reason: null })
 
     processes = [{ id: PROCESS, periodId: PERIOD, state: "cerrado" }]
     body = await json()
-    expect(body.lock_reason).toBe("Periodo académico cerrado")
+    expect(body.lock_reason).toBe("Proceso de sílabos cerrado")
     expect(body.convocation_in_progress).toBe(false)
-    expect(body.catalogs.periods[0].lock_reason).toBe("Periodo académico cerrado")
+    expect(body.catalogs.periods[0].lock_reason).toBe("Proceso de sílabos cerrado")
   })
 
   it("keeps a period current on its last day and upcoming before it starts", async () => {
