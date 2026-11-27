@@ -33,6 +33,10 @@ const openSection = async (title: string): Promise<void> => {
   fireEvent.click([...document.body.querySelectorAll<HTMLButtonElement>('[data-slot="accordion-trigger"]')].find((item) => item.textContent?.includes(title))!)
   await flush()
 }
+const saveIn = (title: string): HTMLButtonElement => {
+  const section = [...document.body.querySelectorAll('[data-slot="accordion-item"]')].find((item) => item.querySelector('[data-slot="accordion-trigger"]')?.textContent?.includes(title))!
+  return [...section.querySelectorAll<HTMLButtonElement>("button")].find((item) => item.textContent?.trim() === "Guardar")!
+}
 const setInput = async (id: string, value: string): Promise<void> => {
   fireEvent.change(document.body.querySelector<HTMLInputElement>(`#${id}`)!, { target: { value } })
   await flush()
@@ -181,7 +185,7 @@ describe("Configuración › Sistema", () => {
     await flush()
     await openSection("Asistente de IA")
     await setInput("settings-ai-model", "deepseek-flash")
-    fireEvent.click(button("Guardar")[0]!)
+    fireEvent.click(saveIn("Asistente de IA"))
     await flush()
     await submitConfirmation("mala")
     const dialog = (): HTMLElement => document.body.querySelector<HTMLElement>('[role="dialog"]')!
@@ -192,7 +196,7 @@ describe("Configuración › Sistema", () => {
     expect(dialog().textContent).toContain("Guardar el asistente de IA")
     expect(dialog().textContent).toContain("La contraseña no es correcta")
 
-    fireEvent.click(button("Guardar")[0]!)
+    fireEvent.click(saveIn("Asistente de IA"))
     await waitFor(() => expect(dialog().dataset.state).toBe("open"))
     expect(dialog().textContent).toContain("Por seguridad, confirme su contraseña actual para guardar")
   })

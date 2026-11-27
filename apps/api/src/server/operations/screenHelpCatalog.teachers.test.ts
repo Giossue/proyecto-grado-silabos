@@ -62,3 +62,18 @@ describe("screen help about what the teacher assistant may read", () => {
     expect(catalog["/admin/configuracion/sistema"].content).toContain("apagado")
   })
 })
+
+describe("screen help about the assistant on the teacher syllabus", () => {
+  it("explains the panel as the screen names it, what each button does, its limits and its notice", () => {
+    const text = catalog["/docente/mis-silabos/:syllabus"].content
+    for (const part of [
+      "Si Administración lo activa", "«Asistente IA»", "«Usar»", "«Descartar»", "«Qué se envía»", "20 pedidos al día",
+      "DeepSeek", "datos personales", "revíselas", "no envía el sílabo", "no busca en internet", "no cambia las tablas",
+    ]) expect(text, part).toContain(part)
+  })
+
+  it("keeps what the screen already explained", () => {
+    const text = catalog["/docente/mis-silabos/:syllabus"].content
+    for (const part of ["Los campos con asterisco son suyos", "Todo se guarda solo mientras escribe", "Su formación y experiencia llega de su último sílabo", "pulse «Enviar»"]) expect(text, part).toContain(part)
+  })
+})

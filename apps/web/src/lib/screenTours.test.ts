@@ -17,6 +17,12 @@ describe('screenTours', () => {
     expect(steps.at(-1)?.selector).toBe('[data-tour="syllabus-submit"]');
   });
 
+  it('la guía del sílabo del docente señala «Asistente IA» después de «Vista previa»', () => {
+    const steps = screenTours['/docente/mis-silabos/:syllabus'] ?? [];
+    expect(steps.map((item) => item.title)).toEqual(['Plazo', 'Correcciones', 'Secciones', 'Su parte', 'Vista previa', 'Asistente IA', 'Enviar']);
+    expect(steps.find((item) => item.title === 'Asistente IA')).toMatchObject({ selector: '[aria-label="Asistente IA"]', description: 'Pida ideas para sus textos. Usted decide cuáles usar' });
+  });
+
   it('la guía de la plantilla señala el menú «Más» del editor, no «Opciones avanzadas»', () => {
     const steps = screenTours['/admin/plantilla'] ?? [];
     expect(steps.map((item) => item.selector)).not.toContain('[aria-label="Opciones avanzadas"]');

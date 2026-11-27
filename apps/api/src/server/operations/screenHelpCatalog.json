@@ -169,7 +169,7 @@
     },
     "/docente/mis-silabos/:syllabus": {
         "title": "Su sílabo",
-        "content": "Aquí llena su sílabo. Los campos con asterisco son suyos; lo demás ya viene escrito. Todo se guarda solo mientras escribe.\n\nSu formación y experiencia llega de su último sílabo: revísela.\n\nCuando termine, pulse «Enviar». La primera vez lo firma con su archivo de firma electrónica."
+        "content": "Aquí llena su sílabo. Los campos con asterisco son suyos; lo demás ya viene escrito. Todo se guarda solo mientras escribe.\n\nSu formación y experiencia llega de su último sílabo: revísela.\n\nSi Administración lo activa, junto a «Vista previa» verá «Asistente IA». Escriba lo que necesita y le responde con propuestas: cada una dice para qué campo es y en qué se basó. «Usar» coloca el texto en ese campo para que lo revise y lo edite, y se guarda como lo demás; «Descartar» quita la propuesta. El asistente no hace nada por su cuenta: no envía el sílabo, no busca en internet ni en la biblioteca y no cambia las tablas. Tiene 20 pedidos al día. Sus respuestas las genera una inteligencia artificial (DeepSeek): revíselas antes de usarlas y no escriba datos personales. En «Qué se envía» ve qué recibe.\n\nCuando termine, pulse «Enviar». La primera vez lo firma con su archivo de firma electrónica."
     },
     "/docente/notificaciones": {
         "title": "Notificaciones",
