@@ -65,7 +65,7 @@ export default function AdminProcessesPage() {
   const [creating, setCreating] = useState(false)
   const rowActions = useRef<ConvocationRowActionsHandle>(null)
   const loaded = governance !== null && processData !== null
-  const setupReady = (summary?.setup?.steps ?? []).every((step) => step.key === "process" || step.done)
+  const setupReady = (summary?.setup?.steps ?? []).every((step) => step.key !== "template" || step.done)
 
   const rows = useMemo<ConvocationRow[]>(() => {
     const byPeriod = new Map((processData?.processes ?? []).map((process) => [process.period_id, process]))

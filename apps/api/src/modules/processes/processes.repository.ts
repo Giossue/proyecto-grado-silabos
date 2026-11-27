@@ -85,14 +85,6 @@ export class ProcessesRepository implements ProcessRepository {
     return row ? dateOnly(row.fecha_fin_periodo) : null
   }
 
-  activeCareerCount(): Promise<number> {
-    return this.prisma.carreras.count({ where: { carrera_activa: true } })
-  }
-
-  activeCareersWithoutCoordinator(): Promise<number> {
-    return this.prisma.carreras.count({ where: { carrera_activa: true, asignaciones_rol: { none: { rol: "coordinador", asignacion_rol_activa: true } } } })
-  }
-
   transaction<T>(work: (tx: ProcessTx) => Promise<T>): Promise<T> {
     return this.prisma.$transaction((tx) => work(processTxOn(tx)), PROCESS_TRANSACTION)
   }

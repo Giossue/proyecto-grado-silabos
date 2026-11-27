@@ -67,7 +67,7 @@ async function openConvocation(tx: ConvocationWriteTx, convocationId: string): P
   if (blockers.length > 0) reject({ convocation: blockers })
   const problem = await tx.templateProblem("convocation")
   if (problem !== null) reject({ convocation: [problem] })
-  await tx.generateConvocation(convocation.id)
+  await tx.generateConvocation(convocation.id, { skipIncomplete: true })
   await tx.updateState(convocation.id, "abierto")
   const message = `Se abrió el proceso de sílabos de ${convocation.careerLabel}; la entrega vence el ${notificationDate(convocation.dueAt)}.`
   for (const [teacherId, count] of await tx.teacherSyllabusCounts([convocation.id])) {
@@ -159,7 +159,7 @@ export async function resumeConvocationFor(request: Request, session: AppSession
       if (blockers.length > 0) reject({ convocation: blockers })
       const problem = await tx.templateProblem("convocation")
       if (problem !== null) reject({ convocation: [problem] })
-      await tx.generateConvocation(locked.id)
+      await tx.generateConvocation(locked.id, { skipIncomplete: true })
       await tx.updateState(locked.id, "abierto")
       await notifyConvocationResumed(tx, locked, timestampMs(deps.nowMs()))
     })

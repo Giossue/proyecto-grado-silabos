@@ -129,7 +129,7 @@ describe("POST /api/v1/coordination/convocations", () => {
       `lock:process:${PROCESS}`,
       `create:${CAREER}:${PROCESS}`,
       `lock:convocation:${CONVOCATION}`,
-      `generate:${CONVOCATION}:{}`,
+      `generate:${CONVOCATION}:{"skipIncomplete":true}`,
       `state:${CONVOCATION}:abierto`,
       "commit",
     ])
@@ -188,7 +188,7 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
     expect(response.text).toBe(
       JSON.stringify({ message: "Proceso de sílabos reanudado." }),
     )
-    expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierto`, "commit"])
+    expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{"skipIncomplete":true}`, `state:${CONVOCATION}:abierto`, "commit"])
     const at = "20270115080000123"
     expect(notices.notifications).toEqual([])
     expect(notices.mails).toEqual([])
@@ -211,7 +211,7 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
   it("resumes even when nothing new was generated", async () => {
     generation = 0
     expect((await resume()).status).toBe(200)
-    expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierto`, "commit"])
+    expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{"skipIncomplete":true}`, `state:${CONVOCATION}:abierto`, "commit"])
   })
 
   it("is forbidden unless the coordinator of the career resumes a paused convocation", async () => {

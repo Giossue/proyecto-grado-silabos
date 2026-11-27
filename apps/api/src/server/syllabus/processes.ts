@@ -46,8 +46,6 @@ export interface ProcessRepository {
   find(id: string): Promise<ProcessRow | null>
   counts(processId: string): Promise<{ state: string; total: number }[]>
   periodEndsOn(periodId: string): Promise<string | null>
-  activeCareerCount(): Promise<number>
-  activeCareersWithoutCoordinator(): Promise<number>
   transaction<T>(work: (tx: ProcessTx) => Promise<T>): Promise<T>
 }
 
@@ -302,11 +300,6 @@ async function assertInstitutionReady(deps: ProcessCoreDeps): Promise<SyllabusTe
   }
   const problem = templateProblem(template, template.definition, "process")
   if (problem !== null) throw new CreateRejected({ process: [problem] })
-  if ((await deps.processes.activeCareerCount()) === 0) throw new CreateRejected({ process: ["No existen carreras activas en la estructura institucional."] })
-  const withoutCoordinator = await deps.processes.activeCareersWithoutCoordinator()
-  if (withoutCoordinator > 0) {
-    throw new CreateRejected({ process: [`La estructura institucional no está lista: ${withoutCoordinator} carrera(s) sin coordinación activa.`] })
-  }
   return template
 }
 

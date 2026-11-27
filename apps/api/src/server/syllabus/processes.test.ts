@@ -22,8 +22,6 @@ let log: string[]
 let today: string
 let hasFields: boolean
 let periodEnds: Map<string, string>
-let activeCareers: number
-let withoutCoordinator: number
 let inProgress: { id: string; period: string | null } | null
 let periodsWithProcess: Set<string>
 let created: { periodId: string; startsAt: string; dueAt: string }[]
@@ -57,8 +55,6 @@ function deps(): ProcessDeps {
         { state: "sin_iniciar", total: 5 },
       ],
       periodEndsOn: async (id) => periodEnds.get(id) ?? null,
-      activeCareerCount: async () => activeCareers,
-      activeCareersWithoutCoordinator: async () => withoutCoordinator,
       transaction: async (work) => {
         log.push("begin")
         try {
@@ -112,8 +108,6 @@ beforeEach(() => {
   today = "2026-11-23"
   hasFields = true
   periodEnds = new Map([[PERIOD, "2027-03-12"]])
-  activeCareers = 2
-  withoutCoordinator = 0
   inProgress = null
   periodsWithProcess = new Set()
   created = []
@@ -293,6 +287,10 @@ describe("POST /api/v1/admin/processes", () => {
     expect((await store(payload())).json?.errors).toEqual({ period_id: ["El período académico ya terminó (20/11/2026). Elija uno vigente."] })
   })
 
+  it("opens with only the template ready, whatever the careers and coordinators", async () => {
+    expect((await store(payload())).status).toBe(201)
+  })
+
   it("does not open without a usable template, active careers or an active coordination for each", async () => {
     templates.template = null
     expect((await store(payload())).json).toEqual({
@@ -303,11 +301,6 @@ describe("POST /api/v1/admin/processes", () => {
     templates.template.sections = templates.template.sections.filter((section) => section.key !== "revision")
     expect((await store(payload())).json?.errors).toEqual({ process: ["La plantilla no tiene las áreas obligatorias: revision."] })
     templates.template = officialTemplate()
-    activeCareers = 0
-    expect((await store(payload())).json?.errors).toEqual({ process: ["No existen carreras activas en la estructura institucional."] })
-    activeCareers = 2
-    withoutCoordinator = 1
-    expect((await store(payload())).json?.errors).toEqual({ process: ["La estructura institucional no está lista: 1 carrera(s) sin coordinación activa."] })
     expect(created).toEqual([])
     expect(log).toEqual([])
   })

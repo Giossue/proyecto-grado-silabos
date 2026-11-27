@@ -102,18 +102,6 @@ export function processRepositoryOn(executor: Db, transaction: <T>(work: (tx: Pr
       )
       return row?.endsOn ?? null
     },
-    async activeCareerCount() {
-      const [row] = await rowsOf<{ total: number }>(executor, Prisma.sql`select count(*)::int as total from carreras where carreras.carrera_activa = true`)
-      return row?.total ?? 0
-    },
-    async activeCareersWithoutCoordinator() {
-      const [row] = await rowsOf<{ total: number }>(
-        executor,
-        Prisma.sql`select count(*)::int as total from carreras where (carreras.carrera_activa = true and not exists (select asignaciones_rol.asignacion_rol_id from asignaciones_rol
-          where (asignaciones_rol.carrera_id = carreras.carrera_id and asignaciones_rol.rol = ${"coordinador"} and asignaciones_rol.asignacion_rol_activa = true)))`,
-      )
-      return row?.total ?? 0
-    },
     transaction,
   }
 }

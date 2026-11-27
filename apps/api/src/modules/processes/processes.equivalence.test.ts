@@ -57,8 +57,6 @@ type State = {
   inProgress: { id: string; period: string | null } | null
   periodsWithProcess: Set<string>
   periodEnds: Map<string, string>
-  activeCareers: number
-  withoutCoordinator: number
   problem: string | null
   templateChange: TemplateChange | null
   otherInProgress: boolean
@@ -93,8 +91,6 @@ function freshState(): State {
     inProgress: null,
     periodsWithProcess: new Set(),
     periodEnds: new Map([[PERIOD, "2027-03-12"]]),
-    activeCareers: 2,
-    withoutCoordinator: 0,
     problem: null,
     templateChange: null,
     otherInProgress: false,
@@ -162,8 +158,6 @@ const repository: ProcessRepository = {
     { state: "sin_iniciar", total: 5 },
   ],
   periodEndsOn: async (id) => state.periodEnds.get(id) ?? null,
-  activeCareerCount: async () => state.activeCareers,
-  activeCareersWithoutCoordinator: async () => state.withoutCoordinator,
   transaction: (work) => inTransaction(() => work(processTx)),
 }
 
@@ -371,11 +365,9 @@ describe("institutional processes served by Nest answer exactly like the route h
     const answers = [...(await expectSame({ method: "POST", path: BASE, body }))]
     scenario = (current) => void (current.periodsWithProcess = new Set([PERIOD]))
     answers.push(...(await expectSame({ method: "POST", path: BASE, body })))
-    scenario = (current) => void (current.withoutCoordinator = 2)
-    answers.push(...(await expectSame({ method: "POST", path: BASE, body })))
     scenario = (current) => void (current.templates = { template: null, values: [] })
     answers.push(...(await expectSame({ method: "POST", path: BASE, body })))
-    expect(statuses(answers)).toEqual([422, 422, 422, 422])
+    expect(statuses(answers)).toEqual([422, 422, 422])
   })
 
   it("shows the impact view and answers unknown, malformed and upper-case ids the same way", async () => {

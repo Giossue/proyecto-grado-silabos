@@ -56,10 +56,10 @@ function step(key: string, label: string, hint: string, done: boolean, action: s
   return { key, label, hint, done, action }
 }
 
-function build(title: string, intro: string, steps: SetupStep[], start: SetupStep | null = null, startAction: string | null = null): SetupChecklist {
+function build(title: string, intro: string, steps: SetupStep[], start: SetupStep | null = null, startAction: string | null = null, warnings: string[] = []): SetupChecklist {
   const all = [...steps]
   if (start !== null) {
-    const previousDone = steps.every((item) => item.done)
+    const previousDone = steps.every((item) => item.done || warnings.includes(item.key))
     all.push(startAction === null ? start : { ...start, action: !start.done && previousDone ? startAction : null })
   }
   return { title, intro, done: all.filter((item) => item.done).length, total: all.length, steps: all }
@@ -83,7 +83,7 @@ export async function administratorSetup(setup: SetupRepository, templates: Temp
   const hint = problem !== null && template !== null && (await templateHasStructure(template, setup)) ? problem : TEMPLATE_HINT
   return build(
     "Antes de empezar",
-    "En este orden. Cada paso habilita el siguiente; las coordinaciones no pueden empezar hasta que termine.",
+    "Para abrir solo se exige la plantilla; lo demás lo necesita cada coordinación para empezar la suya.",
     [
       step(
         "faculties",
@@ -109,7 +109,7 @@ export async function administratorSetup(setup: SetupRepository, templates: Temp
         careerCount === 0
           ? "Primero registre las carreras."
           : careersWithoutCoordinator > 0
-            ? `Faltan ${careersWithoutCoordinator} de ${careerCount} carreras.`
+            ? `Faltan ${careersWithoutCoordinator} de ${careerCount} carreras. No impide abrir.`
             : "Todas las carreras tienen coordinador.",
         careerCount > 0 && careersWithoutCoordinator === 0,
       ),
@@ -122,6 +122,7 @@ export async function administratorSetup(setup: SetupRepository, templates: Temp
       await setup.processExists(),
     ),
     "open_process",
+    ["faculties", "careers", "accounts", "coordinators"],
   )
 }
 
@@ -130,11 +131,7 @@ export function convocationBlockers(readiness: CoordinatorReadiness): string[] {
   if (readiness.process !== null && !readiness.deadlineOpen) blockers.push("El plazo de entrega del proceso de sílabos ya venció. Administración debe prorrogarlo.")
   if (!readiness.facultyLogoReady) blockers.push("Administración debe cargar el logo de la facultad antes de que Coordinación abra el proceso de sílabos.")
   if (!readiness.curriculumReady) blockers.push("La carrera no tiene materias en la malla vigente. Registre la malla con sus materias.")
-  if (readiness.scheduledTotal === 0) blockers.push("Falta registrar paralelos de las materias de la carrera.")
-  const withoutParallel = readiness.scheduledTotal - readiness.scheduledWithParallels
-  if (withoutParallel > 0) blockers.push(withoutParallel === 1 ? "Falta 1 materia sin paralelo." : `Faltan ${withoutParallel} materias sin paralelo.`)
-  const withoutTeacher = readiness.parallelTotal - readiness.parallelsWithTeacher
-  if (withoutTeacher > 0) blockers.push(withoutTeacher === 1 ? "Falta 1 paralelo sin docente." : `Faltan ${withoutTeacher} paralelos sin docente.`)
+  if (readiness.parallelsWithTeacher === 0) blockers.push("Falta al menos un paralelo con docente.")
   const withoutProfile = readiness.subjectsWithoutProfile
   if (withoutProfile > 0) {
     blockers.push(withoutProfile === 1 ? "Falta completar el proyecto de carrera de 1 materia." : `Falta completar el proyecto de carrera de ${withoutProfile} materias.`)
@@ -168,10 +165,7 @@ export async function coordinatorReadiness(
     deadlineOpen &&
     found === null &&
     facts.subjectsCount > 0 &&
-    scheduledTotal > 0 &&
-    facts.scheduledWithParallels === scheduledTotal &&
-    facts.parallelTotal > 0 &&
-    facts.parallelsWithTeacher === facts.parallelTotal &&
+    facts.parallelsWithTeacher > 0 &&
     subjectsWithoutProfile === 0 &&
     templateReady &&
     facultyLogoReady
@@ -207,9 +201,10 @@ export async function coordinatorSetup(careerId: string | null, readiness: Coord
   if (careerId === null || readiness === null) return build("Antes de empezar", "", [])
   const period = readiness.process?.period ?? null
   const { scheduledTotal, scheduledWithParallels, parallelTotal, parallelsWithTeacher, subjectsWithoutProfile } = readiness
+  const warning = parallelsWithTeacher > 0 ? " No impide empezar." : " Se necesita al menos uno."
   return build(
     "Antes de empezar",
-    "En este orden. Al abrir el proceso de sílabos se crea un sílabo por paralelo con su docente.",
+    "Al abrir el proceso de sílabos se crea un sílabo por paralelo con su docente; los demás se crean al asignarlo.",
     [
       step(
         "curriculum",
@@ -235,8 +230,8 @@ export async function coordinatorSetup(careerId: string | null, readiness: Coord
         scheduledTotal === 0
           ? "Primero programe las materias del período."
           : scheduledWithParallels < scheduledTotal
-            ? `${scheduledWithParallels} de ${scheduledTotal} materias programadas tienen paralelos.`
-            : `${parallelsWithTeacher} de ${parallelTotal} paralelos tienen un docente vigente.`,
+            ? `${scheduledWithParallels} de ${scheduledTotal} materias programadas tienen paralelos.${warning}`
+            : `${parallelsWithTeacher} de ${parallelTotal} paralelos tienen un docente vigente.${warning}`,
         scheduledTotal > 0 && scheduledWithParallels === scheduledTotal && parallelTotal > 0 && parallelsWithTeacher === parallelTotal,
       ),
       step(
@@ -251,6 +246,8 @@ export async function coordinatorSetup(careerId: string | null, readiness: Coord
       ),
     ],
     step("convocation", "Abrir el proceso de sílabos de la carrera", convocationHint(readiness), readiness.convocation !== null, readiness.canOpen ? "open_convocation" : null),
+    null,
+    ["parallels"],
   )
 }
 

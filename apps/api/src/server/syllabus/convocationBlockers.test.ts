@@ -22,11 +22,15 @@ describe("convocation blockers", () => {
     expect(convocationBlockers({ ...ready, curriculumReady: false })).toEqual(["La carrera no tiene materias en la malla vigente. Registre la malla con sus materias."])
   })
 
-  it("keeps counting the subjects without parallel and the career project as before", () => {
-    expect(convocationBlockers({ ...ready, scheduledWithParallels: 1, subjectsWithoutProfile: 2 })).toEqual([
-      "Falta 1 materia sin paralelo.",
+  it("does not block for subjects without parallel or parallels without teacher", () => {
+    expect(convocationBlockers({ ...ready, scheduledWithParallels: 1, parallelTotal: 3, parallelsWithTeacher: 1 })).toEqual([])
+    expect(convocationBlockers(ready)).toEqual([])
+  })
+
+  it("asks for at least one parallel with teacher and for the whole career project", () => {
+    expect(convocationBlockers({ ...ready, parallelsWithTeacher: 0, subjectsWithoutProfile: 2 })).toEqual([
+      "Falta al menos un paralelo con docente.",
       "Falta completar el proyecto de carrera de 2 materias.",
     ])
-    expect(convocationBlockers(ready)).toEqual([])
   })
 })

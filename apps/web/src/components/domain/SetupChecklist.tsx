@@ -32,6 +32,8 @@ export function SetupChecklist() {
   const handledRequests = useRef(openRequests)
 
   const pending = steps.some((step) => !step.done)
+  const started = start?.done === true
+  const label = started ? "Pendientes" : "Antes de empezar"
   const signature = JSON.stringify({ setup, role })
 
   const syncScrollHidden = (value: boolean): void => {
@@ -49,7 +51,7 @@ export function SetupChecklist() {
       titleGuard.current?.disconnect()
       const launcher = document.querySelector<HTMLElement>(".setup-checklist .driver-checklist-launcher")
       if (!launcher) return
-      launcher.dataset.tip = launcher.querySelector(".driver-checklist-launcher-text")?.textContent?.trim() || "Antes de empezar"
+      launcher.dataset.tip = launcher.querySelector(".driver-checklist-launcher-text")?.textContent?.trim() || label
       launcher.removeAttribute("title")
       titleGuard.current = new MutationObserver(() => launcher.removeAttribute("title"))
       titleGuard.current.observe(launcher, { attributes: true, attributeFilter: ["title"] })
@@ -61,9 +63,9 @@ export function SetupChecklist() {
     if (!pending) return
     panel.current = checklist({
       id: `setup-${role}`,
-      title: setup?.title,
-      description: "Complete estos pasos para abrir o reanudar el proceso de sílabos",
-      launcherText: "Antes de empezar",
+      title: started ? label : setup?.title,
+      description: started ? "Esta lista no pausa el proceso de sílabos" : "Revise estos pasos antes de abrir el proceso de sílabos",
+      launcherText: label,
       progressText: "{{done}} de {{total}}",
       launcherProgressText: "{{done}}/{{total}}",
       className: "setup-checklist setup-pending",

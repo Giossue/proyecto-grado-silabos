@@ -267,7 +267,7 @@ describe("dashboard", () => {
       ],
       setup: {
         title: "Antes de empezar",
-        intro: "En este orden. Cada paso habilita el siguiente; las coordinaciones no pueden empezar hasta que termine.",
+        intro: "Para abrir solo se exige la plantilla; lo demás lo necesita cada coordinación para empezar la suya.",
         done: 6,
         total: 6,
         steps: [
@@ -324,10 +324,11 @@ describe("dashboard", () => {
     setup.processExists = false
     setup.activeCareers = 0
     expect((await steps())[3]).toMatchObject({ done: false, hint: "Primero registre las carreras." })
-    expect((await steps())[5].action).toBeNull()
+    expect((await steps())[3].done).toBe(false)
     setup.activeCareers = 3
     setup.withoutCoordinator = 1
-    expect((await steps())[3]).toMatchObject({ done: false, hint: "Faltan 1 de 3 carreras." })
+    expect((await steps())[3]).toMatchObject({ done: false, hint: "Faltan 1 de 3 carreras. No impide abrir." })
+    expect((await steps())[5]).toMatchObject({ done: false, action: "open_process" })
     setup.withoutCoordinator = 0
     expect((await steps())[5]).toMatchObject({ done: false, action: "open_process" })
   })
@@ -341,7 +342,7 @@ describe("dashboard", () => {
     expect(body.metrics).toEqual([])
     expect(body.setup.steps.map((item) => item.key)).toEqual(["curriculum", "scheduled_subjects", "teachers", "parallels", "career_project", "convocation"])
     expect(body.setup.steps[1].hint).toBe("Registre las materias que se impartirán en 2026-2.")
-    expect(body.setup.steps[3]).toMatchObject({ key: "parallels", done: false, hint: "1 de 2 paralelos tienen un docente vigente." })
+    expect(body.setup.steps[3]).toMatchObject({ key: "parallels", done: false, hint: "1 de 2 paralelos tienen un docente vigente. No impide empezar." })
     expect(body.setup.steps[4]).toMatchObject({ done: true, hint: "Completo en las 2 materias." })
     expect(body.setup.steps[5]).toEqual({
       key: "convocation",
