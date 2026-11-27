@@ -90,10 +90,13 @@ export function CurriculumSubjectNode({ data, dragging }: { data: SubjectNodeDat
 
   if (!data.subject) return null
 
+  const canRequire = data.subject.cycle !== 1
+  const canBeRequired = data.subject.cycle !== data.curriculum.cycle_count
+
   return (
     <TooltipProvider>
       {/* A requirement comes from an earlier cycle: nothing enters the first one or leaves the last one. */}
-      <ConnectHandle editable={data.editable && data.subject.cycle !== 1} type="target" />
+      <ConnectHandle editable={data.editable && canRequire} type="target" />
       <article
         className={cn(
           "relative w-full overflow-hidden rounded-md bg-card text-card-foreground shadow-surface ring-1 ring-surface-ring data-[dragging=true]:shadow-menu data-[dragging=true]:ring-3 data-[dragging=true]:ring-ring/50",
@@ -117,14 +120,18 @@ export function CurriculumSubjectNode({ data, dragging }: { data: SubjectNodeDat
                 <ArrowRight aria-hidden="true" />
                 Mover a la derecha
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => data.onRelate("requires")}>
-                <Link2 aria-hidden="true" />
-                Requiere otra materia…
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => data.onRelate("required-by")}>
-                <Unlink aria-hidden="true" />
-                Es requisito de otra materia…
-              </DropdownMenuItem>
+              {canRequire ? (
+                <DropdownMenuItem onSelect={() => data.onRelate("requires")}>
+                  <Link2 aria-hidden="true" />
+                  Requiere otra materia…
+                </DropdownMenuItem>
+              ) : null}
+              {canBeRequired ? (
+                <DropdownMenuItem onSelect={() => data.onRelate("required-by")}>
+                  <Unlink aria-hidden="true" />
+                  Es requisito de otra materia…
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
                 <Trash2 aria-hidden="true" />
                 Eliminar
@@ -200,7 +207,7 @@ export function CurriculumSubjectNode({ data, dragging }: { data: SubjectNodeDat
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <ConnectHandle editable={data.editable && data.subject.cycle !== data.curriculum.cycle_count} type="source" />
+      <ConnectHandle editable={data.editable && canBeRequired} type="source" />
     </TooltipProvider>
   )
 }

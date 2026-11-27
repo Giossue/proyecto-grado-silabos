@@ -37,15 +37,16 @@ describe("CurriculumSubjectNode", () => {
   })
 
   it.each([
-    [1, ["source"]],
-    [2, ["target", "source"]],
-    [3, ["target"]],
-  ])("en una malla de 3 ciclos, la materia del ciclo %i solo ofrece las conexiones posibles", (cycle, offered) => {
+    [1, 3, ["source"], ["Es requisito de otra materia…"]],
+    [2, 3, ["target", "source"], ["Requiere otra materia…", "Es requisito de otra materia…"]],
+    [3, 3, ["target"], ["Requiere otra materia…"]],
+    [1, 1, [], []],
+  ])("la materia del ciclo %i de %i solo ofrece las conexiones posibles, en el icono + y en su menú", (cycle, cycleCount, offered, relations) => {
     renderWithProviders(
       <CurriculumSubjectNode
         data={{
           career: { id: "career", name: "Software", modality: null },
-          curriculum: { id: "c1", cycle_count: 3, editable: true, lock_reason: null },
+          curriculum: { id: "c1", cycle_count: cycleCount, editable: true, lock_reason: null },
           fixedFields: [],
           subject: { ...subject, cycle },
           unitStyle: { backgroundColor: "", color: "" },
@@ -66,6 +67,8 @@ describe("CurriculumSubjectNode", () => {
     const shown = handles.filter((handle) => handle.querySelector("svg") && handle.getAttribute("aria-label") && handle.getAttribute("data-connectable") === "true")
     expect(shown.map((handle) => handle.getAttribute("data-handle"))).toEqual(offered)
     expect(handles.filter((handle) => !shown.includes(handle)).every((handle) => !handle.querySelector("svg") && handle.getAttribute("data-connectable") === "false")).toBe(true)
+    const menu = [...document.querySelectorAll("button")].map((item) => item.textContent?.trim())
+    expect(menu).toEqual(["Editar", "Mover a la izquierda", "Mover a la derecha", ...relations, "Eliminar"])
   })
 
   it("al eliminar la materia, avisa a la malla solo cuando el modal terminó de cerrarse", async () => {
