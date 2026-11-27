@@ -61,6 +61,28 @@ describe("NotificationsPopover", () => {
     vi.spyOn(sessionState, "load").mockImplementation(load)
   })
 
+  const sessionWith = (...codes: ("administrador" | "docente" | "coordinador" | "bibliotecario")[]) => {
+    const roles = codes.map((code, index) => ({ id: `role-${index}`, code, career_id: null, career_name: null }))
+    return { user: administratorSession.user, active_role: roles[0]!, available_roles: roles }
+  }
+
+  it.each([["coordinador"], ["bibliotecario"], ["bibliotecario", "coordinador"]] as const)("no muestra la campana a quien solo revisa: %s", async (...codes) => {
+    sessionState.replace(sessionWith(...(codes.filter(Boolean) as Parameters<typeof sessionWith>)))
+    renderWithProviders(<NotificationsPopover />)
+    await flush()
+
+    expect(bell()).toBeNull()
+    expect(getNotifications).not.toHaveBeenCalled()
+  })
+
+  it.each([["coordinador", "docente"], ["bibliotecario", "administrador"]] as const)("conserva la campana a un %s que además es %s", async (active, other) => {
+    sessionState.replace(sessionWith(active, other))
+    renderWithProviders(<NotificationsPopover />)
+    await flush()
+
+    expect(bell()).not.toBeNull()
+  })
+
   it("abre un panel desplegable anclado a la campana, sin oscurecer ni bloquear la página", async () => {
     const user = userEvent.setup()
     await mountOpen(user)

@@ -26,6 +26,7 @@ import { sessionState, useSession } from "@/state/session"
 type Status = NotificationStatus
 
 const PREVIEW_LIMIT = 10
+const ROLES_WITH_NOTICES = ["docente", "administrador"]
 const statusOptions = [{ value: "all", label: "Todas" }, { value: "unread", label: "No leídas" }]
 const LIBRARY_NOTICES = ["silabo.enviado", "silabo.reenviado_biblioteca", "coordinacion.aprobado"]
 
@@ -52,7 +53,8 @@ export function NotificationsPopover() {
   const [status, setStatus] = useState<Status>("unread")
   const [actionError, setActionError] = useState<string | null>(null)
   const queryClient = useQueryClient()
-  const countQuery = useQuery(unreadCountQuery())
+  const receivesNotices = session?.available_roles.some((role) => ROLES_WITH_NOTICES.includes(role.code)) ?? true
+  const countQuery = useQuery({ ...unreadCountQuery(), enabled: receivesNotices })
   const preview = useQuery({ ...notificationPreviewQuery(queryClient, status), enabled: open })
   const unreadCount = countQuery.data ?? 0
   const items = (preview.data?.notifications.data ?? []).slice(0, PREVIEW_LIMIT)
@@ -120,6 +122,8 @@ export function NotificationsPopover() {
     }
     await queryClient.invalidateQueries({ queryKey: notificationKeys.all })
   }
+
+  if (!receivesNotices) return null
 
   return (
     <Popover open={open} onOpenChange={changeOpen}>
